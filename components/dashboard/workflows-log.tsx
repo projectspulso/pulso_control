@@ -29,6 +29,15 @@ export function WorkflowsLog() {
     )
   }
 
+  if (!execucoes || !Array.isArray(execucoes)) {
+    return (
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+        <h2 className="text-xl font-bold text-white mb-2">Workflows Recentes</h2>
+        <p className="text-zinc-400 text-center">Nenhuma execução encontrada</p>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-lg">
       <div className="p-6 border-b border-zinc-800">
@@ -37,7 +46,7 @@ export function WorkflowsLog() {
       </div>
       
       <div className="divide-y divide-zinc-800 max-h-96 overflow-y-auto">
-        {execucoes?.slice(0, 20).map((exec) => {
+        {execucoes.slice(0, 20).map((exec) => {
           const status = statusConfig[exec.status as keyof typeof statusConfig] || statusConfig.PENDENTE
           const StatusIcon = status.icon
           

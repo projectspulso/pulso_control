@@ -30,16 +30,24 @@ export function IdeiasLista() {
     )
   }
 
+  if (!ideias || !Array.isArray(ideias)) {
+    return (
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+        <p className="text-zinc-400 text-center">Nenhuma ideia encontrada</p>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-lg">
       <div className="p-6 border-b border-zinc-800">
         <h2 className="text-xl font-bold text-white">Ideias Recentes</h2>
-        <p className="text-sm text-zinc-400 mt-1">{ideias?.length || 0} ideias no total</p>
+        <p className="text-sm text-zinc-400 mt-1">{ideias.length} ideias no total</p>
       </div>
       
       <div className="divide-y divide-zinc-800">
-        {ideias?.slice(0, 10).map((ideia) => {
-          const status = statusConfig[ideia.status as keyof typeof statusConfig]
+        {ideias.slice(0, 10).map((ideia) => {
+          const status = statusConfig[ideia.status as keyof typeof statusConfig] || statusConfig.RASCUNHO
           const StatusIcon = status.icon
           
           return (
