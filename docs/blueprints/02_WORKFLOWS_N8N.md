@@ -45,6 +45,7 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 **Duração Média**: 15-30s por roteiro
 
 **Nodes Principais**:
+
 1. Schedule Trigger (Cron)
 2. Supabase Query (buscar ideias)
 3. Loop Over Items
@@ -56,12 +57,14 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 9. Discord Notification
 
 **APIs Utilizadas**:
+
 - Supabase REST API
 - OpenAI API (GPT-4) ou Anthropic (Claude)
 
 **Custo Estimado**: $0.01-0.03 por roteiro
 
 **Exemplo de Fluxo**:
+
 ```javascript
 // Input
 {
@@ -85,6 +88,7 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 ```
 
 **KPIs**:
+
 - Roteiros gerados/dia: 5-10 (Fase 1)
 - Taxa de aprovação: >70% (após ajustes)
 - Tempo médio: <30s
@@ -104,6 +108,7 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 **Duração Média**: 2-5 min por roteiro
 
 **Nodes Principais**:
+
 1. Webhook Trigger
 2. Supabase Query (roteiros aprovados)
 3. Create Conteúdo Base
@@ -117,6 +122,7 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 11. Notification
 
 **APIs Utilizadas**:
+
 - Supabase REST + Storage API
 - ElevenLabs API ou Google TTS
 - (Futuro) Video generation API
@@ -124,12 +130,14 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 **Custo Estimado**: $0.15-0.30 por áudio (ElevenLabs)
 
 **Variantes Geradas**:
+
 - YouTube Shorts (9:16, 60s)
 - TikTok (9:16, 60s, legenda maior)
 - Instagram Reels (9:16, 60s)
 - Kwai (9:16, 60s, legenda em destaque)
 
 **Exemplo de Output**:
+
 ```javascript
 {
   "conteudo": {
@@ -156,6 +164,7 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 ```
 
 **Próxima Etapa Manual** (até automatizar vídeo):
+
 - Download do áudio
 - Edição em CapCut/Premiere
 - Upload do vídeo final para Storage
@@ -176,6 +185,7 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 **Duração Média**: 1-3 min por post
 
 **Nodes Principais**:
+
 1. Schedule Trigger
 2. Buscar Variantes Prontas
 3. Loop Items
@@ -192,22 +202,26 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 11. Notification
 
 **APIs Utilizadas**:
+
 - YouTube Data API v3
 - TikTok API (limitado)
 - Instagram Graph API
 - Supabase
 
 **Limitações**:
+
 - YouTube: 10.000 unidades/dia
 - TikTok: API restrita
 - Instagram: Apenas Business accounts
 
 **Alternativa Fase 1** (Recomendada):
+
 - Usar **Publer** ou **Buffer** API
 - n8n prepara assets + metadata
 - Ferramenta externa publica
 
 **Exemplo de Post**:
+
 ```javascript
 {
   "post": {
@@ -235,6 +249,7 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 **Duração Média**: 5-10 min (todos os posts)
 
 **Nodes Principais**:
+
 1. Schedule Trigger (Cron)
 2. Buscar Posts Publicados (últimos 30 dias)
 3. Filter Recent Posts
@@ -252,6 +267,7 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 12. Notification
 
 **Métricas Coletadas**:
+
 - Views
 - Likes / Dislikes
 - Comentários
@@ -261,17 +277,20 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 - CTR (cliques em links)
 
 **APIs Utilizadas**:
+
 - YouTube Analytics API v2
 - YouTube Data API v3
 - TikTok Research API
 - Instagram Graph API Insights
 
 **Anomalias Detectadas**:
+
 - 🚀 **VIRAL**: >10k views em 24h
 - ⚠️ **BAIXA PERFORMANCE**: <100 views em 7 dias
 - 💚 **ALTO ENGAJAMENTO**: Taxa likes/views >5%
 
 **Exemplo Output**:
+
 ```javascript
 {
   "metricas_diarias": {
@@ -307,6 +326,7 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 **Duração Média**: 3-5 min
 
 **Nodes Principais**:
+
 1. Schedule Trigger (Cron)
 2. Fetch Performance Summary
 3. Fetch Daily Metrics (trend)
@@ -328,38 +348,48 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 5. **Insights de IA** (padrões + recomendações)
 
 **Exemplo de Relatório**:
+
 ```markdown
 # 📊 Relatório Semanal PULSO
+
 **Período**: 13/11 - 20/11/2025
 
 ## 🏆 TOP PERFORMERS
+
 1. **O Segredo do Triângulo** (YouTube)
    - 15.2k views | 890 likes | 5.8% eng.
 
 ## ⚠️ BAIXA PERFORMANCE (3)
+
 - Vídeo X - 89 views em 7 dias
 
 ## 📱 PERFORMANCE POR PLATAFORMA
+
 - **YouTube**: 8.5k avg views | 4.2% eng.
 - **TikTok**: 12.3k avg views | 6.1% eng. 🏅
 
 ## ⏰ MELHORES HORÁRIOS
+
 1. 14h-15h | Média: 9.8k views
 2. 18h-19h | Média: 8.2k views
 
 ## 🤖 INSIGHTS DA IA
+
 **Padrões identificados:**
+
 1. Vídeos com "mistério" no título têm 2.3x mais views
 2. TikTok supera YouTube em 45% de engajamento
 3. Posts às 14h têm melhor performance
 
 **Recomendações:**
+
 1. Criar mais conteúdo de mistérios
 2. Focar esforços no TikTok
 3. Agendar posts principais às 14h
 ```
 
 **Notificações**:
+
 - Discord (completo)
 - Email (resumo executivo)
 - WhatsApp (alertas críticos)
@@ -369,12 +399,14 @@ Os 5 workflows do PULSO automatizam todo o ciclo de vida do conteúdo, desde a g
 ## 🔐 Credenciais Necessárias
 
 ### Supabase
+
 ```env
 SUPABASE_URL=https://nlcisbfdiokmipyihtuz.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=***
 ```
 
 ### IA & TTS
+
 ```env
 OPENAI_API_KEY=sk-***
 ANTHROPIC_API_KEY=sk-ant-*** (opcional)
@@ -384,6 +416,7 @@ GOOGLE_TTS_API_KEY=*** (alternativa)
 ```
 
 ### Plataformas
+
 ```env
 # YouTube
 YOUTUBE_CLIENT_ID=***
@@ -401,6 +434,7 @@ INSTAGRAM_ACCESS_TOKEN=***
 ```
 
 ### Notificações
+
 ```env
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/***
 SMTP_HOST=smtp.gmail.com
@@ -413,24 +447,29 @@ SMTP_PASSWORD=***
 ## 📊 Ordem de Implementação
 
 ### ✅ Prioridade 1 (Semana 1)
+
 1. **Workflow 1** - Ideia → Roteiro
    - Core do sistema de criação
 
 ### ✅ Prioridade 2 (Semana 2)
+
 2. **Workflow 4** - Coleta Métricas
    - Começar a coletar dados o quanto antes
 
 ### ✅ Prioridade 3 (Semana 3)
+
 3. **Workflow 2** - Roteiro → Produção
    - Automatizar produção de áudio
    - Vídeo manual inicialmente
 
 ### 🔄 Prioridade 4 (Semana 4)
+
 4. **Workflow 3** - Publicação
    - Pode ser semi-manual no início
    - Usar Publer/Buffer como ponte
 
 ### 📊 Prioridade 5 (Semana 5)
+
 5. **Workflow 5** - Análise & Alertas
    - Quando já tiver dados suficientes
 
@@ -439,29 +478,35 @@ SMTP_PASSWORD=***
 ## 🧪 Testes Recomendados
 
 ### Workflow 1
+
 ```sql
 -- Criar ideia de teste
 INSERT INTO pulso_content.ideias (canal_id, titulo, descricao, status)
 VALUES (...);
 ```
+
 - Executar workflow manualmente
 - Verificar roteiro gerado
 - Validar qualidade do prompt
 
 ### Workflow 2
+
 ```sql
 -- Aprovar roteiro
 UPDATE pulso_content.roteiros SET status = 'APROVADO' WHERE id = '...';
 ```
+
 - Disparar via webhook
 - Verificar áudio gerado
 - Validar upload no Storage
 
 ### Workflow 4
+
 ```sql
 -- Simular post publicado
 INSERT INTO pulso_distribution.posts (...) VALUES (...);
 ```
+
 - Executar coleta
 - Verificar métricas salvas
 - Validar anomalias detectadas
@@ -470,16 +515,17 @@ INSERT INTO pulso_distribution.posts (...) VALUES (...);
 
 ## 💰 Custos Estimados (Mensal)
 
-| Serviço | Uso Estimado | Custo Mensal |
-|---------|--------------|--------------|
-| **OpenAI** (roteiros) | 300 roteiros × $0.02 | $6.00 |
-| **ElevenLabs** (TTS) | 300 áudios × $0.25 | $75.00 |
-| **Supabase** | Storage 10GB | $0 (free tier) |
-| **n8n Cloud** | Workflows ativos | $20-40 |
-| **APIs (YouTube/etc)** | Leitura | $0 (gratuito) |
-| **Total** | | **~$100-120/mês** |
+| Serviço                | Uso Estimado         | Custo Mensal      |
+| ---------------------- | -------------------- | ----------------- |
+| **OpenAI** (roteiros)  | 300 roteiros × $0.02 | $6.00             |
+| **ElevenLabs** (TTS)   | 300 áudios × $0.25   | $75.00            |
+| **Supabase**           | Storage 10GB         | $0 (free tier)    |
+| **n8n Cloud**          | Workflows ativos     | $20-40            |
+| **APIs (YouTube/etc)** | Leitura              | $0 (gratuito)     |
+| **Total**              |                      | **~$100-120/mês** |
 
 **Alternativa Econômica**:
+
 - Google TTS (gratuito): -$75
 - Total: **~$25-45/mês**
 
@@ -488,26 +534,31 @@ INSERT INTO pulso_distribution.posts (...) VALUES (...);
 ## 🎯 KPIs por Workflow
 
 ### WF1: Ideia → Roteiro
+
 - Roteiros gerados/dia: 5-10
 - Tempo médio: <30s
 - Taxa de erro: <5%
 
 ### WF2: Roteiro → Produção
+
 - Conteúdos produzidos/dia: 3-7
 - Tempo médio: 2-5 min
 - Qualidade do áudio: >4/5
 
 ### WF3: Publicação
+
 - Posts publicados/dia: 4-28
 - Taxa de sucesso: >95%
 - Tempo de agendamento: <2 min
 
 ### WF4: Coleta Métricas
+
 - Posts rastreados: 100%
 - Frequência: 2x/dia
 - Anomalias detectadas: registradas
 
 ### WF5: Análise
+
 - Relatórios gerados: Semanal
 - Insights acionáveis: 3-5 por relatório
 - Implementação de recomendações: >50%
@@ -526,6 +577,7 @@ automation/n8n/workflows/
 ```
 
 Após criar cada workflow no n8n:
+
 1. Export JSON
 2. Salvar na pasta `workflows/`
 3. Versionar no Git
