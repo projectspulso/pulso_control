@@ -1,12 +1,6 @@
 {
-  "buildCommand": "cd apps/control && npm install && npm run build",
-  "outputDirectory": "apps/control/.next",
-  "devCommand": "cd apps/control && npm run dev",
-  "installCommand": "cd apps/control && npm install",
-  "framework": null,
-  "git": {
-    "deploymentEnabled": {
-      "main": true
-    }
-  }
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install"
 }
