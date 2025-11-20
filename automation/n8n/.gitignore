@@ -1,0 +1,6 @@
+# Ignorar dados do n8n (credenciais, execuções)
+data/
+*.sqlite
+
+# Workflows exportados ficam versionados
+!workflows/

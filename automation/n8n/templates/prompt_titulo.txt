@@ -1,0 +1,36 @@
+# Template: Título Otimizado para {{PLATAFORMA}}
+
+## Contexto
+**Assunto**: {{ASSUNTO}}
+**Série**: {{SERIE}}
+**Canal**: {{CANAL}}
+
+## Regras por Plataforma
+
+### YouTube Shorts
+- Máximo: 60 caracteres
+- Usar 1-2 emojis relevantes
+- Criar curiosidade sem clickbait
+- Incluir palavra-chave principal
+- Capitalizar palavras-chave
+- Exemplo: "🤯 O Mistério Que a Ciência NÃO Explica"
+
+### TikTok
+- Máximo: 100 caracteres
+- Tom jovem e casual
+- Pode usar gírias moderadamente
+- Emojis mais liberais (2-3)
+- Hashtags incluídas no título
+- Exemplo: "Isso VAI te deixar sem dormir 😱 #mistério #dark"
+
+### Instagram Reels
+- Máximo: 2200 caracteres (mas primeira linha é crucial)
+- Primeira linha: Hook forte
+- Pode ter mais contexto depois
+- Hashtags separadas (5-7 ideal)
+- Emojis para quebrar texto
+- Exemplo linha 1: "A verdade sobre o Triângulo das Bermudas 🌊"
+
+## Formato de Saída
+
+Retorne APENAS o título/legenda otimizado, sem explicações adicionais.
