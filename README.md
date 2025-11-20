@@ -36,20 +36,24 @@ Sistema completo de automação para criação, produção, distribuição e an�
 ## 🛠️ Setup Inicial
 
 ### 1. Instalar dependências
+
 ```bash
 npm install
 ```
 
 ### 2. Configurar variáveis de ambiente
+
 ```bash
 cp .env.example .env
 # Editar .env com suas credenciais
 ```
 
 ### 3. Popular banco de dados
+
 Execute o SQL em `database/sql/seeds/001_initial_data.sql` no Supabase SQL Editor
 
 ### 4. Testar conexão
+
 ```bash
 npm run db:test
 ```
