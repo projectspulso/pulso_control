@@ -4,7 +4,9 @@ import { useIdeias } from '@/lib/hooks/use-ideias'
 import { formatDate } from '@/lib/utils'
 import { Clock, CheckCircle2, Circle, AlertCircle } from 'lucide-react'
 
-const statusConfig = {
+type IdeiaStatus = 'RASCUNHO' | 'APROVADA' | 'EM_PRODUCAO' | 'CONCLUIDA' | 'ARQUIVADA'
+
+const statusConfig: Record<IdeiaStatus, { label: string; color: string; icon: any }> = {
   'RASCUNHO': { label: 'Rascunho', color: 'text-gray-400', icon: Circle },
   'APROVADA': { label: 'Aprovada', color: 'text-green-400', icon: CheckCircle2 },
   'EM_PRODUCAO': { label: 'Em Produção', color: 'text-yellow-400', icon: Clock },
@@ -46,8 +48,9 @@ export function IdeiasLista() {
       </div>
       
       <div className="divide-y divide-zinc-800">
-        {ideias.slice(0, 10).map((ideia) => {
-          const status = statusConfig[ideia.status as keyof typeof statusConfig] || statusConfig.RASCUNHO
+        {ideias.slice(0, 10).map((ideia: any) => {
+          const ideiaStatus = (ideia?.status || 'RASCUNHO') as IdeiaStatus
+          const status = statusConfig[ideiaStatus]
           const StatusIcon = status.icon
           
           return (

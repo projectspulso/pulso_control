@@ -4,7 +4,9 @@ import { useWorkflowExecucoes } from '@/lib/hooks/use-workflows'
 import { formatDateTime } from '@/lib/utils'
 import { CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react'
 
-const statusConfig = {
+type WorkflowStatus = 'SUCESSO' | 'ERRO' | 'EXECUTANDO' | 'PENDENTE'
+
+const statusConfig: Record<WorkflowStatus, { label: string; color: string; icon: any }> = {
   'SUCESSO': { label: 'Sucesso', color: 'text-green-400', icon: CheckCircle2 },
   'ERRO': { label: 'Erro', color: 'text-red-400', icon: XCircle },
   'EXECUTANDO': { label: 'Executando', color: 'text-yellow-400', icon: Loader2 },
@@ -46,8 +48,9 @@ export function WorkflowsLog() {
       </div>
       
       <div className="divide-y divide-zinc-800 max-h-96 overflow-y-auto">
-        {execucoes.slice(0, 20).map((exec) => {
-          const status = statusConfig[exec.status as keyof typeof statusConfig] || statusConfig.PENDENTE
+        {execucoes.slice(0, 20).map((exec: any) => {
+          const execStatus = (exec?.status || 'PENDENTE') as WorkflowStatus
+          const status = statusConfig[execStatus]
           const StatusIcon = status.icon
           
           return (
@@ -58,7 +61,7 @@ export function WorkflowsLog() {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <StatusIcon className={`w-4 h-4 ${status.color} ${exec.status === 'EXECUTANDO' ? 'animate-spin' : ''}`} />
+                    <StatusIcon className={`w-4 h-4 ${status.color} ${execStatus === 'EXECUTANDO' ? 'animate-spin' : ''}`} />
                     <span className="font-medium text-white">
                       {exec.workflow?.nome || 'Workflow'}
                     </span>
