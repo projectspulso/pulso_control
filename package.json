@@ -1,21 +1,36 @@
 {
-  "name": "pulso_projects",
-  "version": "1.0.0",
-  "description": "Este repositório centraliza:",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
+  "name": "control",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "db:seed": "node scripts/setup-database.js",
-    "db:test": "node apps/api/index.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@supabase/supabase-js": "^2.83.0",
-    "dotenv": "^17.2.3"
+    "@supabase/supabase-js": "^2.84.0",
+    "@tanstack/react-query": "^5.90.10",
+    "@tanstack/react-query-devtools": "^5.90.2",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.554.0",
+    "next": "16.0.3",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "recharts": "^3.4.1",
+    "tailwind-merge": "^3.4.0",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "babel-plugin-react-compiler": "1.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
