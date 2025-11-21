@@ -22,7 +22,7 @@ export const workflowsApi = {
       .limit(50)
     
     if (workflowId) {
-      query = query.eq('workflow_id', workflowId)
+      query = query.eq('workflow_id', workflowId as any)
     }
     
     const { data, error } = await query
@@ -40,9 +40,9 @@ export const workflowsApi = {
     
     const stats = {
       total: data.length,
-      sucesso: data.filter(e => e.status === 'SUCESSO').length,
-      erro: data.filter(e => e.status === 'ERRO').length,
-      executando: data.filter(e => e.status === 'EXECUTANDO').length
+      sucesso: data.filter((e: any) => e.status === 'SUCESSO').length,
+      erro: data.filter((e: any) => e.status === 'ERRO').length,
+      executando: data.filter((e: any) => e.status === 'EXECUTANDO').length
     }
     
     return stats

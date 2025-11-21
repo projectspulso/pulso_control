@@ -32,7 +32,7 @@ export const roteirosApi = {
           serie:serie_id(nome)
         )
       `)
-      .eq('id', id)
+      .eq('id', id as any)
       .single()
     
     if (error) throw error
@@ -43,7 +43,7 @@ export const roteirosApi = {
     const { data, error } = await supabase
       .from('roteiros')
       .select('*')
-      .eq('ideia_id', ideiaId)
+      .eq('ideia_id', ideiaId as any)
       .order('versao', { ascending: false })
     
     if (error) throw error
@@ -53,7 +53,7 @@ export const roteirosApi = {
   async create(roteiro: RoteiroInsert) {
     const { data, error } = await supabase
       .from('roteiros')
-      .insert(roteiro)
+      .insert(roteiro as any)
       .select()
       .single()
     
@@ -62,10 +62,10 @@ export const roteirosApi = {
   },
 
   async update(id: string, updates: RoteiroUpdate) {
-    const { data, error } = await supabase
+    const { data, error} = await supabase
       .from('roteiros')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id)
+      .update({ ...updates, updated_at: new Date().toISOString() } as any)
+      .eq('id', id as any)
       .select()
       .single()
     
@@ -77,7 +77,7 @@ export const roteirosApi = {
     const { error } = await supabase
       .from('roteiros')
       .delete()
-      .eq('id', id)
+      .eq('id', id as any)
     
     if (error) throw error
   },
@@ -89,7 +89,7 @@ export const roteirosApi = {
     
     if (error) throw error
     
-    const stats = data.reduce((acc, roteiro) => {
+    const stats = data.reduce((acc, roteiro: any) => {
       acc[roteiro.status] = (acc[roteiro.status] || 0) + 1
       return acc
     }, {} as Record<string, number>)

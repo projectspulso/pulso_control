@@ -46,15 +46,15 @@ export function WorkflowsLog() {
         <h2 className="text-xl font-bold text-white">Workflows Recentes</h2>
         <p className="text-sm text-zinc-400 mt-1">Últimas 20 execuções</p>
       </div>
-      
+
       <div className="divide-y divide-zinc-800 max-h-96 overflow-y-auto">
         {execucoes.slice(0, 20).map((exec: any) => {
           const execStatus = (exec?.status || 'PENDENTE') as WorkflowStatus
           const status = statusConfig[execStatus]
           const StatusIcon = status.icon
-          
+
           return (
-            <div 
+            <div
               key={exec.id}
               className="p-4 hover:bg-zinc-800/50 transition-colors"
             >

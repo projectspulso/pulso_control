@@ -52,9 +52,11 @@ export function useAtualizarRoteiro() {
   return useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: RoteiroUpdate }) => 
       roteirosApi.update(id, updates),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['roteiros'] })
-      queryClient.invalidateQueries({ queryKey: ['roteiros', data.id] })
+      if (data?.id) {
+        queryClient.invalidateQueries({ queryKey: ['roteiros', data.id] })
+      }
     }
   })
 }

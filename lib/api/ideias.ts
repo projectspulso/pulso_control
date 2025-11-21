@@ -31,7 +31,7 @@ export const ideiasApi = {
         serie:serie_id(id, nome, slug),
         roteiros(id, titulo, status, versao)
       `)
-      .eq('id', id)
+      .eq('id', id as any)
       .single()
     
     if (error) throw error
@@ -47,7 +47,7 @@ export const ideiasApi = {
         canal:canal_id(id, nome),
         serie:serie_id(id, nome)
       `)
-      .eq('status', status)
+      .eq('status', status as any)
       .order('prioridade', { ascending: false })
     
     if (error) throw error
@@ -58,7 +58,7 @@ export const ideiasApi = {
   async create(ideia: IdeiaInsert) {
     const { data, error } = await supabase
       .from('ideias')
-      .insert(ideia)
+      .insert(ideia as any)
       .select()
       .single()
     
@@ -70,8 +70,8 @@ export const ideiasApi = {
   async update(id: string, updates: IdeiaUpdate) {
     const { data, error } = await supabase
       .from('ideias')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id)
+      .update({ ...updates, updated_at: new Date().toISOString() } as any)
+      .eq('id', id as any)
       .select()
       .single()
     
@@ -84,7 +84,7 @@ export const ideiasApi = {
     const { error } = await supabase
       .from('ideias')
       .delete()
-      .eq('id', id)
+      .eq('id', id as any)
     
     if (error) throw error
   },
@@ -97,7 +97,7 @@ export const ideiasApi = {
     
     if (error) throw error
     
-    const stats = data.reduce((acc, ideia) => {
+    const stats = data.reduce((acc, ideia: any) => {
       acc[ideia.status] = (acc[ideia.status] || 0) + 1
       return acc
     }, {} as Record<string, number>)

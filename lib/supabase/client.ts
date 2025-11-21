@@ -5,8 +5,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
 // Cliente Supabase - Configure suas credenciais no .env.local
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  db: { schema: 'public' },
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false
   }

@@ -58,9 +58,11 @@ export function useAtualizarIdeia() {
   return useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: IdeiaUpdate }) => 
       ideiasApi.update(id, updates),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['ideias'] })
-      queryClient.invalidateQueries({ queryKey: ['ideias', data.id] })
+      if (data?.id) {
+        queryClient.invalidateQueries({ queryKey: ['ideias', data.id] })
+      }
     }
   })
 }

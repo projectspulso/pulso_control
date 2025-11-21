@@ -46,15 +46,15 @@ export function IdeiasLista() {
         <h2 className="text-xl font-bold text-white">Ideias Recentes</h2>
         <p className="text-sm text-zinc-400 mt-1">{ideias.length} ideias no total</p>
       </div>
-      
+
       <div className="divide-y divide-zinc-800">
         {ideias.slice(0, 10).map((ideia: any) => {
           const ideiaStatus = (ideia?.status || 'RASCUNHO') as IdeiaStatus
           const status = statusConfig[ideiaStatus]
           const StatusIcon = status.icon
-          
+
           return (
-            <div 
+            <div
               key={ideia.id}
               className="p-4 hover:bg-zinc-800/50 transition-colors cursor-pointer"
             >
@@ -89,8 +89,8 @@ export function IdeiasLista() {
               </div>
               {ideia.tags && ideia.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {ideia.tags.map((tag) => (
-                    <span 
+                  {ideia.tags.map((tag: string) => (
+                    <span
                       key={tag}
                       className="text-xs px-2 py-1 bg-purple-500/10 text-purple-400 rounded"
                     >

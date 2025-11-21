@@ -8,7 +8,7 @@ export const metricasApi = {
         *,
         plataforma:plataforma_id(nome_exibicao)
       `)
-      .eq('post_id', postId)
+      .eq('post_id', postId as any)
       .order('data_ref', { ascending: false })
     
     if (error) throw error
@@ -22,7 +22,7 @@ export const metricasApi = {
     
     if (error) throw error
     
-    const totais = data.reduce((acc, m) => ({
+    const totais = data.reduce((acc, m: any) => ({
       views: acc.views + (m.views || 0),
       likes: acc.likes + (m.likes || 0),
       comentarios: acc.comentarios + (m.comentarios || 0),

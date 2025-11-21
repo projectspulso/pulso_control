@@ -25,7 +25,7 @@ export const canaisApi = {
           plataforma:plataforma_id(*)
         )
       `)
-      .eq('id', id)
+      .eq('id', id as any)
       .single()
     
     if (error) throw error
@@ -51,7 +51,7 @@ export const seriesApi = {
     const { data, error } = await supabase
       .from('series')
       .select('*')
-      .eq('canal_id', canalId)
+      .eq('canal_id', canalId as any)
       .order('ordem_padrao', { ascending: true })
     
     if (error) throw error
@@ -64,7 +64,7 @@ export const plataformasApi = {
     const { data, error } = await supabase
       .from('plataformas')
       .select('*')
-      .eq('ativo', true)
+      .eq('ativo', true as any)
       .order('nome_exibicao')
     
     if (error) throw error
