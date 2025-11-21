@@ -9,15 +9,28 @@ import {
   FileText, 
   BarChart3,
   Settings,
-  Zap
+  Zap,
+  Lightbulb,
+  FileEdit,
+  Clapperboard,
+  FolderOpen,
+  Calendar,
+  Send,
+  Plug
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Ideias', href: '/ideias', icon: Lightbulb },
+  { name: 'Roteiros', href: '/roteiros', icon: FileEdit },
+  { name: 'Produção', href: '/producao', icon: Clapperboard },
+  { name: 'Assets', href: '/assets', icon: FolderOpen },
+  { name: 'Calendário', href: '/calendario', icon: Calendar },
+  { name: 'Publicar', href: '/publicar', icon: Send },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Canais', href: '/canais', icon: Megaphone },
   { name: 'Workflows', href: '/workflows', icon: Workflow },
-  { name: 'Conteúdo', href: '/conteudo', icon: FileText },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Integrações', href: '/integracoes', icon: Plug },
   { name: 'Configurações', href: '/settings', icon: Settings },
 ]
 

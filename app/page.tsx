@@ -7,13 +7,25 @@ import { useCanais } from "@/lib/hooks/use-core";
 import { useIdeias } from "@/lib/hooks/use-ideias";
 import { Megaphone, TrendingUp, Zap } from "lucide-react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 export default function Home() {
   const { data: canais } = useCanais()
   const { data: ideias } = useIdeias()
+  const [currentTime, setCurrentTime] = useState('')
 
   // Atividade recente (últimas 5 ideias)
   const atividadeRecente = ideias?.slice(0, 5) || []
+
+  // Atualizar tempo apenas no cliente
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleTimeString('pt-BR'))
+    }
+    updateTime()
+    const interval = setInterval(updateTime, 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <main className="p-8">
@@ -33,7 +45,7 @@ export default function Home() {
           </div>
           <div className="text-right">
             <p className="text-sm text-zinc-500">Última atualização</p>
-            <p className="text-white font-medium">{new Date().toLocaleTimeString('pt-BR')}</p>
+            <p className="text-white font-medium">{currentTime || '--:--:--'}</p>
           </div>
         </div>
       </header>
@@ -53,23 +65,29 @@ export default function Home() {
           </p>
         </Link>
 
-        <div className="bg-gradient-to-br from-blue-600/20 to-blue-600/5 border border-blue-600/30 rounded-lg p-6">
+        <Link
+          href="/ideias"
+          className="bg-gradient-to-br from-blue-600/20 to-blue-600/5 border border-blue-600/30 rounded-lg p-6 hover:border-blue-600/50 transition-all group"
+        >
           <div className="flex items-center gap-3 mb-2">
             <TrendingUp className="h-5 w-5 text-blue-400" />
             <span className="text-sm text-zinc-400">Ideias Total</span>
           </div>
-          <p className="text-3xl font-bold text-white">{ideias?.length || 0}</p>
-        </div>
+          <p className="text-3xl font-bold text-white group-hover:text-blue-400 transition-colors">{ideias?.length || 0}</p>
+        </Link>
 
-        <div className="bg-gradient-to-br from-green-600/20 to-green-600/5 border border-green-600/30 rounded-lg p-6">
+        <Link
+          href="/roteiros"
+          className="bg-gradient-to-br from-green-600/20 to-green-600/5 border border-green-600/30 rounded-lg p-6 hover:border-green-600/50 transition-all group"
+        >
           <div className="flex items-center gap-3 mb-2">
             <Zap className="h-5 w-5 text-green-400" />
-            <span className="text-sm text-zinc-400">Em Produção</span>
+            <span className="text-sm text-zinc-400">Roteiros</span>
           </div>
-          <p className="text-3xl font-bold text-white">
+          <p className="text-3xl font-bold text-white group-hover:text-green-400 transition-colors">
             {ideias?.filter((i: any) => i.status === 'EM_PRODUCAO').length || 0}
           </p>
-        </div>
+        </Link>
 
         <div className="bg-gradient-to-br from-yellow-600/20 to-yellow-600/5 border border-yellow-600/30 rounded-lg p-6">
           <div className="flex items-center gap-3 mb-2">

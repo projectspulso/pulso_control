@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 const STATUS_CONFIG = {
+  RASCUNHO: { label: 'Rascunho', color: 'bg-zinc-500' },
   NOVA: { label: 'Nova', color: 'bg-blue-500' },
   EM_ANALISE: { label: 'Em Análise', color: 'bg-yellow-500' },
   APROVADA: { label: 'Aprovada', color: 'bg-green-500' },
@@ -113,7 +114,10 @@ export default function CanalPage() {
       {/* Pipeline de ideias */}
       <div className="space-y-3">
         {ideiasFiltered?.map((ideia: any) => {
-          const statusConfig = STATUS_CONFIG[ideia.status as keyof typeof STATUS_CONFIG]
+          const statusConfig = STATUS_CONFIG[ideia.status as keyof typeof STATUS_CONFIG] || { 
+            label: ideia.status, 
+            color: 'bg-zinc-600' 
+          }
           
           return (
             <div

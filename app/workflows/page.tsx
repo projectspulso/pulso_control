@@ -1,8 +1,9 @@
 'use client'
 
 import { useWorkflows, useWorkflowExecucoes } from '@/lib/hooks/use-workflows'
+import { useN8nWorkflows } from '@/lib/hooks/use-n8n'
 import { formatDateTime } from '@/lib/utils'
-import { Workflow, Play, Pause, Settings, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react'
+import { Workflow, Play, Pause, Settings, CheckCircle2, XCircle, Clock, Loader2, Zap } from 'lucide-react'
 
 const STATUS_CONFIG = {
   'SUCESSO': { label: 'Sucesso', color: 'text-green-400', bgColor: 'bg-green-500/10', icon: CheckCircle2 },
@@ -14,6 +15,7 @@ const STATUS_CONFIG = {
 export default function WorkflowsPage() {
   const { data: workflows, isLoading: loadingWorkflows } = useWorkflows()
   const { data: execucoes, isLoading: loadingExecucoes } = useWorkflowExecucoes()
+  const { data: n8nWorkflows, isLoading: loadingN8n } = useN8nWorkflows()
 
   // Stats das execuções
   const stats = execucoes?.reduce((acc: any, exec: any) => {
@@ -64,11 +66,62 @@ export default function WorkflowsPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Lista de Workflows */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Workflows n8n Ativos */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg">
           <div className="p-6 border-b border-zinc-800">
-            <h2 className="text-xl font-bold text-white">Workflows Ativos</h2>
+            <div className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-orange-500" />
+              <h2 className="text-xl font-bold text-white">n8n Workflows</h2>
+            </div>
+            <p className="text-xs text-zinc-500 mt-1">Workflows na instância do n8n</p>
+          </div>
+          <div className="divide-y divide-zinc-800 max-h-[600px] overflow-y-auto">
+            {loadingN8n ? (
+              <div className="p-8 flex justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-zinc-600" />
+              </div>
+            ) : (
+              <>
+                {n8nWorkflows?.map((workflow: any) => (
+                  <div key={workflow.id} className="p-4 hover:bg-zinc-800/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                          <Zap className="h-4 w-4 text-orange-500" />
+                          <h3 className="font-semibold text-white text-sm">{workflow.name}</h3>
+                        </div>
+                        {workflow.tags && workflow.tags.length > 0 && (
+                          <div className="flex gap-1 ml-7 mt-1">
+                            {workflow.tags.map((tag: string) => (
+                              <span key={tag} className="text-xs px-2 py-0.5 bg-zinc-800 text-zinc-400 rounded">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded ${workflow.active ? 'bg-green-500/10 text-green-400' : 'bg-zinc-800 text-zinc-500'}`}>
+                        {workflow.active ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {(!n8nWorkflows || n8nWorkflows.length === 0) && (
+                  <div className="p-8 text-center text-zinc-500">
+                    Nenhum workflow no n8n
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Lista de Workflows do Banco */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg">
+          <div className="p-6 border-b border-zinc-800">
+            <h2 className="text-xl font-bold text-white">Workflows Registrados</h2>
+            <p className="text-xs text-zinc-500 mt-1">Workflows configurados no sistema</p>
           </div>
           <div className="divide-y divide-zinc-800">
             {workflows?.map((workflow: any) => {
