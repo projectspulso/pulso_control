@@ -4,10 +4,7 @@ export const canaisApi = {
   async getAll() {
     const { data, error } = await supabase
       .from('canais')
-      .select(`
-        *,
-        series:series(count)
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
     
     if (error) throw error
@@ -17,14 +14,7 @@ export const canaisApi = {
   async getById(id: string) {
     const { data, error } = await supabase
       .from('canais')
-      .select(`
-        *,
-        series:series(*),
-        canais_plataformas(
-          *,
-          plataforma:plataforma_id(*)
-        )
-      `)
+      .select('*')
       .eq('id', id as any)
       .single()
     
@@ -37,10 +27,7 @@ export const seriesApi = {
   async getAll() {
     const { data, error } = await supabase
       .from('series')
-      .select(`
-        *,
-        canal:canal_id(id, nome)
-      `)
+      .select('*')
       .order('ordem_padrao', { ascending: true })
     
     if (error) throw error

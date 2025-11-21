@@ -9,10 +9,7 @@ export const roteirosApi = {
   async getAll() {
     const { data, error } = await supabase
       .from('roteiros')
-      .select(`
-        *,
-        ideia:ideia_id(id, titulo, status)
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
     
     if (error) throw error
@@ -22,16 +19,7 @@ export const roteirosApi = {
   async getById(id: string) {
     const { data, error } = await supabase
       .from('roteiros')
-      .select(`
-        *,
-        ideia:ideia_id(
-          id, 
-          titulo, 
-          descricao,
-          canal:canal_id(nome),
-          serie:serie_id(nome)
-        )
-      `)
+      .select('*')
       .eq('id', id as any)
       .single()
     

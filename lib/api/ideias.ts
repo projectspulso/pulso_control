@@ -10,11 +10,7 @@ export const ideiasApi = {
   async getAll() {
     const { data, error } = await supabase
       .from('ideias')
-      .select(`
-        *,
-        canal:canal_id(id, nome, slug),
-        serie:serie_id(id, nome, slug)
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
     
     if (error) throw error
@@ -25,12 +21,7 @@ export const ideiasApi = {
   async getById(id: string) {
     const { data, error } = await supabase
       .from('ideias')
-      .select(`
-        *,
-        canal:canal_id(id, nome, slug),
-        serie:serie_id(id, nome, slug),
-        roteiros(id, titulo, status, versao)
-      `)
+      .select('*')
       .eq('id', id as any)
       .single()
     
@@ -42,11 +33,7 @@ export const ideiasApi = {
   async getByStatus(status: Ideia['status']) {
     const { data, error } = await supabase
       .from('ideias')
-      .select(`
-        *,
-        canal:canal_id(id, nome),
-        serie:serie_id(id, nome)
-      `)
+      .select('*')
       .eq('status', status as any)
       .order('prioridade', { ascending: false })
     
