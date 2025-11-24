@@ -159,10 +159,13 @@ export default function CalendarioPage() {
   
   // Canais únicos para filtro
   const canaisUnicos = useMemo(() => {
-    if (!conteudos) return []
-    const canais = new Set(conteudos.map(c => c.canal?.nome).filter(Boolean))
-    return Array.from(canais)
-  }, [conteudos])
+    if (!conteudos) return [];
+    // Filtra apenas canais reais, sem duplicados e sem 'Sem canal'
+    const canais = conteudos
+      .map(c => c.canal?.nome)
+      .filter(nome => nome && nome !== 'Sem canal');
+    return Array.from(new Set(canais));
+  }, [conteudos]);
 
   const getEventoStyle: EventPropGetter<EventoCalendario> = useCallback((event) => {
     const status = event.resource.status as keyof typeof STATUS_CONFIG
