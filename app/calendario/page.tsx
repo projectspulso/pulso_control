@@ -124,7 +124,14 @@ export default function CalendarioPage() {
   const eventos: EventoCalendario[] = useMemo(() => {
     return conteudosFiltrados.map(conteudo => ({
       id: conteudo.id,
-      title: conteudo.ideia?.titulo || 'Sem título',
+      title:
+        conteudo.ideia?.titulo?.trim() && conteudo.ideia?.titulo !== ''
+          ? conteudo.ideia.titulo
+          : conteudo.roteiro?.titulo?.trim() && conteudo.roteiro?.titulo !== ''
+            ? conteudo.roteiro.titulo
+            : conteudo.canal?.nome?.trim() && conteudo.canal?.nome !== ''
+              ? conteudo.canal.nome
+              : 'Sem título',
       start: new Date(conteudo.data_prevista!),
       end: new Date(conteudo.data_prevista!),
       resource: conteudo,
