@@ -40,6 +40,7 @@ export const roteirosApi = {
 
   async create(roteiro: RoteiroInsert) {
     const { data, error } = await supabase
+      .schema('pulso_content')
       .from('roteiros')
       .insert(roteiro as any)
       .select()
@@ -51,8 +52,9 @@ export const roteirosApi = {
 
   async update(id: string, updates: RoteiroUpdate) {
     const { data, error} = await supabase
+      .schema('pulso_content')
       .from('roteiros')
-      .update({ ...updates, updated_at: new Date().toISOString() } as any)
+      .update(updates as any)
       .eq('id', id as any)
       .select()
       .single()
@@ -63,6 +65,7 @@ export const roteirosApi = {
 
   async delete(id: string) {
     const { error } = await supabase
+      .schema('pulso_content')
       .from('roteiros')
       .delete()
       .eq('id', id as any)

@@ -37,12 +37,39 @@ export function useConteudosProducao() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pipeline_producao')
-        .select('*')
+        .select(`
+          *,
+          ideia_titulo,
+          ideia_descricao,
+          canal_id,
+          canal_nome,
+          roteiro_titulo,
+          roteiro_status
+        `)
         .order('prioridade', { ascending: false })
         .order('created_at', { ascending: false })
       
-      if (error) throw error
-      return data as ConteudoProducao[]
+      if (error) {
+        console.error('Erro ao buscar pipeline:', error)
+        throw error
+      }
+      
+      // Transformar para o formato esperado
+      return data.map(item => ({
+        ...item,
+        ideia: {
+          titulo: item.ideia_titulo,
+          descricao: item.ideia_descricao,
+        },
+        canal: {
+          id: item.canal_id,
+          nome: item.canal_nome,
+        },
+        roteiro: item.roteiro_id ? {
+          titulo: item.roteiro_titulo,
+          status: item.roteiro_status,
+        } : null,
+      }))
     },
   })
 }

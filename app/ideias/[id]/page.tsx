@@ -81,8 +81,10 @@ export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: st
         id: resolvedParams.id,
         updates: { status: 'APROVADA' as any }
       })
+      alert('Ideia aprovada com sucesso!')
     } catch (error) {
       console.error('Erro ao aprovar ideia:', error)
+      alert(`Erro ao aprovar ideia: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     }
   }
 

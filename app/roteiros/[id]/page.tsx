@@ -148,7 +148,7 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
                 </span>
               </div>
               <h1 className="text-3xl font-bold text-white mb-2">
-                {roteiro.roteiro_titulo || 'Sem título'}
+                {roteiro.titulo || 'Sem título'}
               </h1>
               <div className="flex items-center gap-4 text-sm text-zinc-400">
                 {roteiro.duracao_segundos && (

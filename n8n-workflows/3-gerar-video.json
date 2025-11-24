@@ -1,0 +1,266 @@
+{
+  "name": "PULSO - Gerar Vídeo",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gerar-video",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "v1v2v3v4-v5v6-v7v8-v9v0-v1v2v3v4v5v6",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "gerar-video"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  a.*,\n  r.titulo,\n  r.conteudo_md,\n  r.ideia_id,\n  i.canal_id\nFROM pulso_assets.audios a\nLEFT JOIN pulso_content.roteiros r ON a.roteiro_id = r.id\nLEFT JOIN pulso_content.ideias i ON r.ideia_id = i.id\nWHERE a.id = '{{ $json.body.audioId }}'"
+      },
+      "id": "v2v3v4v5-v6v7-v8v9-v0v1-v2v3v4v5v6v7",
+      "name": "Buscar Audio",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [460, 300],
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "audio_id",
+              "name": "audio_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "audio_url",
+              "name": "audio_url",
+              "value": "={{ $json.arquivo_url }}",
+              "type": "string"
+            },
+            {
+              "id": "titulo",
+              "name": "titulo",
+              "value": "={{ $json.titulo }}",
+              "type": "string"
+            },
+            {
+              "id": "roteiro_id",
+              "name": "roteiro_id",
+              "value": "={{ $json.roteiro_id }}",
+              "type": "string"
+            },
+            {
+              "id": "template",
+              "name": "template",
+              "value": "={{ $('Webhook').item.json.body.template || 'padrao' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "v3v4v5v6-v7v8-v9v0-v1v2-v3v4v5v6v7v8",
+      "name": "Preparar Dados",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.remotion.dev/v1/render",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "compositionId",
+              "value": "={{ $json.template }}"
+            },
+            {
+              "name": "inputProps",
+              "value": "={{ {\n  \"audioUrl\": $json.audio_url,\n  \"titulo\": $json.titulo,\n  \"duracao\": 60\n} }}"
+            },
+            {
+              "name": "codec",
+              "value": "h264"
+            },
+            {
+              "name": "resolution",
+              "value": "={{ { \"width\": 1080, \"height\": 1920 } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "v4v5v6v7-v8v9-v0v1-v2v3-v4v5v6v7v8v9",
+      "name": "Remotion Render",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REMOTION_CREDENTIAL_ID",
+          "name": "Remotion API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO pulso_assets.videos (\n  audio_id,\n  titulo,\n  arquivo_url,\n  duracao_segundos,\n  resolucao,\n  formato,\n  thumbnail_url\n) VALUES (\n  '{{ $('Preparar Dados').item.json.audio_id }}',\n  '{{ $('Preparar Dados').item.json.titulo }}',\n  '{{ $json.videoUrl }}',\n  60,\n  '1080x1920',\n  'mp4',\n  '{{ $json.thumbnailUrl }}'\n)\nRETURNING *"
+      },
+      "id": "v5v6v7v8-v9v0-v1v2-v3v4-v5v6v7v8v9v0",
+      "name": "Salvar Video",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 300],
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE pulso_content.roteiros \nSET \n  video_id = '{{ $('Salvar Video').item.json.id }}',\n  status = 'PRONTO_PUBLICAR'\nWHERE id = '{{ $('Preparar Dados').item.json.roteiro_id }}'"
+      },
+      "id": "v6v7v8v9-v0v1-v2v3-v4v5-v6v7v8v9v0v1",
+      "name": "Atualizar Roteiro",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 300],
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO pulso_content.workflow_execucoes (\n  workflow_id,\n  entidade_tipo,\n  entidade_id,\n  status,\n  mensagem,\n  inicio_em\n)\nSELECT \n  w.id,\n  'video',\n  '{{ $('Salvar Video').item.json.id }}',\n  'SUCESSO',\n  'Vídeo gerado com sucesso',\n  NOW()\nFROM pulso_content.workflows w\nWHERE w.slug = 'gerar-video'\nLIMIT 1"
+      },
+      "id": "v7v8v9v0-v1v2-v3v4-v5v6-v7v8v9v0v1v2",
+      "name": "Log Execução",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1560, 300],
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"success\": true,\n  \"video_id\": $('Salvar Video').item.json.id,\n  \"video_url\": $('Salvar Video').item.json.arquivo_url,\n  \"message\": \"Vídeo gerado com sucesso!\"\n} }}"
+      },
+      "id": "v8v9v0v1-v2v3-v4v5-v6v7-v8v9v0v1v2v3",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Buscar Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Audio": {
+      "main": [
+        [
+          {
+            "node": "Preparar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Dados": {
+      "main": [
+        [
+          {
+            "node": "Remotion Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remotion Render": {
+      "main": [
+        [
+          {
+            "node": "Salvar Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Video": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Roteiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Roteiro": {
+      "main": [
+        [
+          {
+            "node": "Log Execução",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Execução": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

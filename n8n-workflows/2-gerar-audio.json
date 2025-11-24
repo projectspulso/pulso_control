@@ -1,0 +1,254 @@
+{
+  "name": "PULSO - Gerar Audio",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gerar-audio",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "a1a2a3a4-b5b6-c7c8-d9d0-e1e2e3e4e5e6",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "gerar-audio"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  r.*,\n  i.titulo as ideia_titulo,\n  i.canal_id\nFROM pulso_content.roteiros r\nLEFT JOIN pulso_content.ideias i ON r.ideia_id = i.id\nWHERE r.id = '{{ $json.body.roteiroId }}'"
+      },
+      "id": "b2b3b4b5-c6c7-d8d9-e0e1-f2f3f4f5f6f7",
+      "name": "Buscar Roteiro",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "texto",
+              "name": "texto",
+              "value": "={{ $json.conteudo_md.replace(/[#*\\[\\]]/g, '').replace(/PAUSA/g, '...') }}",
+              "type": "string"
+            },
+            {
+              "id": "roteiro_id",
+              "name": "roteiro_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "titulo",
+              "name": "titulo",
+              "value": "={{ $json.titulo }}",
+              "type": "string"
+            },
+            {
+              "id": "voz_id",
+              "name": "voz_id",
+              "value": "={{ $('Webhook').item.json.body.vozId || 'EXAVITQu4vr4xnSDxMaL' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3c4c5c6-d7d8-e9e0-f1f2-g3g4g5g6g7g8",
+      "name": "Preparar Texto",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.elevenlabs.io/v1/text-to-speech/{{ $json.voz_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "elevenLabsApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.texto }}"
+            },
+            {
+              "name": "model_id",
+              "value": "eleven_multilingual_v2"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "d4d5d6d7-e8e9-f0f1-g2g3-h4h5h6h7h8h9",
+      "name": "ElevenLabs TTS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucketName": "audios",
+        "fileName": "={{ $('Preparar Texto').item.json.roteiro_id }}_{{ Date.now() }}.mp3",
+        "fileData": "={{ $binary.data }}",
+        "options": {
+          "contentType": "audio/mpeg"
+        }
+      },
+      "id": "e5e6e7e8-f9f0-g1g2-h3h4-i5i6i7i8i9i0",
+      "name": "Upload Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO pulso_assets.audios (\n  roteiro_id,\n  titulo,\n  arquivo_url,\n  duracao_segundos,\n  voz_id,\n  qualidade\n) VALUES (\n  '{{ $('Preparar Texto').item.json.roteiro_id }}',\n  '{{ $('Preparar Texto').item.json.titulo }}',\n  '{{ $json.path }}',\n  0,\n  '{{ $('Preparar Texto').item.json.voz_id }}',\n  'ALTA'\n)\nRETURNING *"
+      },
+      "id": "f6f7f8f9-g0g1-h2h3-i4i5-j6j7j8j9j0j1",
+      "name": "Salvar Audio",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE pulso_content.roteiros \nSET \n  audio_id = '{{ $('Salvar Audio').item.json.id }}',\n  status = 'COM_AUDIO'\nWHERE id = '{{ $('Preparar Texto').item.json.roteiro_id }}'"
+      },
+      "id": "g7g8g9g0-h1h2-i3i4-j5j6-k7k8k9k0k1k2",
+      "name": "Atualizar Roteiro",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO pulso_content.workflow_execucoes (\n  workflow_id,\n  entidade_tipo,\n  entidade_id,\n  status,\n  mensagem,\n  inicio_em\n)\nSELECT \n  w.id,\n  'audio',\n  '{{ $('Salvar Audio').item.json.id }}',\n  'SUCESSO',\n  'Áudio gerado com sucesso',\n  NOW()\nFROM pulso_content.workflows w\nWHERE w.slug = 'gerar-audio'\nLIMIT 1"
+      },
+      "id": "h8h9h0h1-i2i3-j4j5-k6k7-l8l9l0l1l2l3",
+      "name": "Log Execução",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "i9i0i1i2-j3j4-k5k6-l7l8-m9m0m1m2m3m4",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Buscar Roteiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Roteiro": {
+      "main": [
+        [
+          {
+            "node": "Preparar Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Texto": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs TTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ElevenLabs TTS": {
+      "main": [
+        [
+          {
+            "node": "Upload Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Supabase": {
+      "main": [
+        [
+          {
+            "node": "Salvar Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Audio": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Roteiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Roteiro": {
+      "main": [
+        [
+          {
+            "node": "Log Execução",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Execução": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

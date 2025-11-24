@@ -18,7 +18,7 @@ export default function RoteirosPage() {
     const matchStatus = filtroStatus === 'TODOS' || roteiro.status === filtroStatus
     const matchCanal = filtroCanal === 'TODOS' || roteiro.canal_id === filtroCanal
     const matchBusca = !busca || 
-      roteiro.roteiro_titulo?.toLowerCase().includes(busca.toLowerCase()) ||
+      roteiro.titulo?.toLowerCase().includes(busca.toLowerCase()) ||
       roteiro.conteudo_md?.toLowerCase().includes(busca.toLowerCase())
     
     return matchStatus && matchCanal && matchBusca
@@ -140,7 +140,7 @@ export default function RoteirosPage() {
                   </div>
 
                   <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-violet-400 transition-colors line-clamp-2">
-                    {roteiro.roteiro_titulo || 'Sem título'}
+                    {roteiro.titulo || 'Sem título'}
                   </h3>
 
                   <p className="text-sm text-zinc-400 mb-4 line-clamp-3">

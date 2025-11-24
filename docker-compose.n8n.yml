@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-pulso
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      # Básico
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=pulso2025
+      
+      # API
+      - N8N_API_KEY=${N8N_API_KEY}
+      - N8N_ENCRYPTION_KEY=pulso-secret-key-2025
+      
+      # Webhook
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      
+      # Timezone
+      - GENERIC_TIMEZONE=America/Sao_Paulo
+      - TZ=America/Sao_Paulo
+      
+      # Performance
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+      
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n-backup:/backup
+    
+    networks:
+      - n8n-network
+
+volumes:
+  n8n_data:
+    driver: local
+
+networks:
+  n8n-network:
+    driver: bridge

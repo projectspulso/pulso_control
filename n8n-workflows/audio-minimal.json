@@ -1,0 +1,71 @@
+{
+  "name": "PULSO - Gerar Audio Simples",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gerar-audio",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-audio",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.*, i.titulo as ideia_titulo FROM pulso_content.roteiros r LEFT JOIN pulso_content.ideias i ON r.ideia_id = i.id WHERE r.id = '{{ $json.body.roteiroId }}'"
+      },
+      "id": "pg-buscar",
+      "name": "Buscar Roteiro",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/EXAVITQu4vr4xnSDxMaL",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "elevenLabsApi",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\"text\": \"{{ $json.conteudo_md }}\", \"model_id\": \"eleven_multilingual_v2\"}",
+        "options": {}
+      },
+      "id": "http-eleven",
+      "name": "ElevenLabs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-audio",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Buscar Roteiro", "type": "main", "index": 0}]]
+    },
+    "Buscar Roteiro": {
+      "main": [[{"node": "ElevenLabs", "type": "main", "index": 0}]]
+    },
+    "ElevenLabs": {
+      "main": [[{"node": "Responder", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

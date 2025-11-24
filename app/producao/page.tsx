@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useConteudosProducao, useAtualizarStatusProducao, useEstatisticasProducao, type StatusProducao } from '@/lib/hooks/use-producao'
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, PointerSensor, useSensor, useSensors, DragOverEvent, useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -81,11 +81,50 @@ function CardConteudo({ conteudo }: CardProps) {
   )
 }
 
+interface ColunaProps {
+  status: StatusProducao
+  titulo: string
+  cor: string
+  conteudos: any[]
+}
+
+function ColunaKanban({ status, titulo, cor, conteudos }: ColunaProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: status,
+  })
+
+  return (
+    <div 
+      ref={setNodeRef}
+      className={`bg-zinc-900/50 border ${isOver ? 'border-violet-500 bg-violet-500/10' : 'border-zinc-800'} rounded-lg p-4 transition-all`}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-white">{titulo}</h3>
+        <span className={`${cor} text-white text-xs px-2 py-1 rounded`}>
+          {conteudos.length}
+        </span>
+      </div>
+
+      <SortableContext
+        items={conteudos.map(c => c.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-3 min-h-[200px]">
+          {conteudos.map(conteudo => (
+            <CardConteudo key={conteudo.id} conteudo={conteudo} />
+          ))}
+        </div>
+      </SortableContext>
+    </div>
+  )
+}
+
 export default function ProducaoPage() {
   const { data: conteudos, isLoading } = useConteudosProducao()
   const { data: stats } = useEstatisticasProducao()
   const atualizarStatus = useAtualizarStatusProducao()
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeConteudo, setActiveConteudo] = useState<any>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -96,19 +135,33 @@ export default function ProducaoPage() {
   )
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
+    const id = event.active.id as string
+    setActiveId(id)
+    const conteudo = conteudos?.find(c => c.id === id)
+    setActiveConteudo(conteudo)
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     
-    if (!over) return
+    if (!over) {
+      setActiveId(null)
+      setActiveConteudo(null)
+      return
+    }
     
     const conteudoId = active.id as string
     const novoStatus = over.id as StatusProducao
     
-    atualizarStatus.mutate({ id: conteudoId, novoStatus })
+    // Só atualiza se mudou de coluna
+    const conteudo = conteudos?.find(c => c.id === conteudoId)
+    if (conteudo && conteudo.status !== novoStatus) {
+      console.log('Atualizando status:', { conteudoId, novoStatus })
+      atualizarStatus.mutate({ id: conteudoId, novoStatus })
+    }
+    
     setActiveId(null)
+    setActiveConteudo(null)
   }
 
   const conteudoPorStatus = (status: StatusProducao) => {
@@ -159,33 +212,25 @@ export default function ProducaoPage() {
         >
           <div className="grid grid-cols-6 gap-4">
             {COLUNAS.map(coluna => (
-              <div key={coluna.id} className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-white">{coluna.titulo}</h3>
-                  <span className={`${coluna.cor} text-white text-xs px-2 py-1 rounded`}>
-                    {conteudoPorStatus(coluna.id).length}
-                  </span>
-                </div>
-
-                <SortableContext
-                  items={conteudoPorStatus(coluna.id).map(c => c.id)}
-                  strategy={verticalListSortingStrategy}
-                  id={coluna.id}
-                >
-                  <div className="space-y-3 min-h-[200px]">
-                    {conteudoPorStatus(coluna.id).map(conteudo => (
-                      <CardConteudo key={conteudo.id} conteudo={conteudo} />
-                    ))}
-                  </div>
-                </SortableContext>
-              </div>
+              <ColunaKanban
+                key={coluna.id}
+                status={coluna.id}
+                titulo={coluna.titulo}
+                cor={coluna.cor}
+                conteudos={conteudoPorStatus(coluna.id)}
+              />
             ))}
           </div>
 
           <DragOverlay>
-            {activeId ? (
-              <div className="bg-zinc-900 border-2 border-violet-500 rounded-lg p-4 opacity-90">
-                Movendo...
+            {activeId && activeConteudo ? (
+              <div className="bg-zinc-900 border-2 border-violet-500 rounded-lg p-4 opacity-90 rotate-3">
+                <h4 className="text-sm font-medium text-white mb-2">
+                  {activeConteudo.ideia?.titulo || 'Sem título'}
+                </h4>
+                <div className="text-xs text-zinc-400">
+                  Arrastando...
+                </div>
               </div>
             ) : null}
           </DragOverlay>

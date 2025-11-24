@@ -44,6 +44,7 @@ export const ideiasApi = {
   // Criar nova ideia
   async create(ideia: IdeiaInsert) {
     const { data, error } = await supabase
+      .schema('pulso_content')
       .from('ideias')
       .insert(ideia as any)
       .select()
@@ -56,19 +57,24 @@ export const ideiasApi = {
   // Atualizar ideia
   async update(id: string, updates: IdeiaUpdate) {
     const { data, error } = await supabase
+      .schema('pulso_content')
       .from('ideias')
-      .update({ ...updates, updated_at: new Date().toISOString() } as any)
+      .update(updates as any)
       .eq('id', id as any)
       .select()
       .single()
     
-    if (error) throw error
+    if (error) {
+      console.error('Erro no Supabase ao atualizar ideia:', error)
+      throw error
+    }
     return data
   },
 
   // Deletar ideia
   async delete(id: string) {
     const { error } = await supabase
+      .schema('pulso_content')
       .from('ideias')
       .delete()
       .eq('id', id as any)
