@@ -286,6 +286,9 @@ export default function CalendarioPage() {
             
             {/* Linha 2: Filtros de Status (chips clicáveis) */}
             <div className="flex items-center gap-2 flex-wrap">
+              <div className="w-full mb-2">
+                <span className="text-sm font-semibold text-zinc-300">Filtrar por Status</span>
+              </div>
               <span className="text-xs text-zinc-500 mr-1">Status:</span>
               <button
                 onClick={() => setFiltroStatus('TODOS')}
