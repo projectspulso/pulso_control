@@ -42,12 +42,12 @@ interface EventoCalendario {
     id: string
     status: string
     prioridade: number
-    ideia: { titulo: string; descricao?: string }
-    canal: { nome: string; tipo: string }
+    ideia?: { titulo: string; descricao?: string }
+    canal?: { nome: string; tipo: string }
     roteiro?: { titulo: string; status: string }
-    responsavel?: string
-    observacoes?: string
-    data_prevista: string
+    responsavel?: string | null
+    observacoes?: string | null
+    data_prevista: string | null
   }
 }
 
@@ -212,35 +212,38 @@ export default function CalendarioPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-[1800px] mx-auto">
-        {/* Header */}
+        {/* Header com controles completos */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold text-white mb-1">📅 Calendário Editorial</h1>
               <p className="text-sm text-zinc-400">
-                {estatisticas?.total || 0} conteúdos agendados em {format(date, 'MMMM/yyyy', { locale: ptBR })}
+                Mostrando {conteudosFiltrados?.length || 0} de {estatisticas?.total || 0} conteúdos • {format(date, 'MMMM/yyyy', { locale: ptBR })}
               </p>
             </div>
             <Link
               href="/producao"
-              className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-violet-500/20"
             >
               <Grid3x3 className="h-4 w-4" />
               Ver Kanban
             </Link>
           </div>
           
-          {/* Controles únicos consolidados */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 mb-4">
-            <div className="flex items-center justify-between mb-4">
+          {/* Painel de controle unificado */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xl space-y-4">
+            {/* Linha 1: Navegação e Visualizações */}
+            <div className="flex items-center justify-between">
               {/* Navegação de datas */}
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => handleNavigate('TODAY')}
-                  className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-violet-500/20"
                 >
+                  <Calendar className="h-4 w-4 inline mr-2" />
                   Hoje
                 </button>
+                <div className="h-6 w-px bg-zinc-700"></div>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleNavigate('PREV')}
@@ -257,18 +260,19 @@ export default function CalendarioPage() {
                     <ChevronRight className="h-5 w-5" />
                   </button>
                 </div>
-                <h2 className="text-xl font-bold text-white ml-2 capitalize min-w-[200px]">
+                <h2 className="text-lg font-bold text-white capitalize min-w-[180px]">
                   {format(date, 'MMMM yyyy', { locale: ptBR })}
                 </h2>
               </div>
 
               {/* Visualizações */}
               <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500 mr-2">Visualização:</span>
                 {(['month', 'week', 'day', 'agenda'] as View[]).map(v => (
                   <button
                     key={v}
                     onClick={() => setView(v)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                       view === v 
                         ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' 
                         : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'
@@ -280,7 +284,44 @@ export default function CalendarioPage() {
               </div>
             </div>
             
-            {/* Filtros e Busca */}
+            {/* Linha 2: Filtros de Status (chips clicáveis) */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-zinc-500 mr-1">Status:</span>
+              <button
+                onClick={() => setFiltroStatus('TODOS')}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  filtroStatus === 'TODOS'
+                    ? 'bg-zinc-700 text-white ring-2 ring-zinc-600'
+                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+                }`}
+              >
+                Todos ({estatisticas?.total || 0})
+              </button>
+              {Object.entries(STATUS_CONFIG).map(([status, config]) => {
+                const count = estatisticas?.porStatus[status] || 0
+                if (count === 0) return null
+                return (
+                  <button
+                    key={status}
+                    onClick={() => setFiltroStatus(filtroStatus === status ? 'TODOS' : status)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+                      filtroStatus === status
+                        ? 'text-white ring-2 ring-offset-2 ring-offset-zinc-900'
+                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    }`}
+                    style={{
+                      backgroundColor: filtroStatus === status ? config.color : undefined,
+                    }}
+                  >
+                    <span>{config.icon}</span>
+                    <span>{config.label}</span>
+                    <span className="opacity-70">({count})</span>
+                  </button>
+                )
+              })}
+            </div>
+            
+            {/* Linha 3: Busca e Filtros Adicionais */}
             <div className="flex items-center gap-3">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
@@ -289,20 +330,23 @@ export default function CalendarioPage() {
                   placeholder="Buscar por título ou canal..."
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-700 text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-violet-500 text-sm"
+                  className="w-full bg-zinc-800 border border-zinc-700 text-white pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 text-sm transition-all"
                 />
               </div>
               
-              <select
-                value={filtroCanal}
-                onChange={(e) => setFiltroCanal(e.target.value)}
-                className="bg-zinc-800 border border-zinc-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-violet-500 text-sm"
-              >
-                <option value="TODOS">Todos os canais</option>
-                {canaisUnicos.map(canal => (
-                  <option key={canal} value={canal}>{canal}</option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-zinc-500" />
+                <select
+                  value={filtroCanal}
+                  onChange={(e) => setFiltroCanal(e.target.value)}
+                  className="bg-zinc-800 border border-zinc-700 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 text-sm transition-all min-w-[180px]"
+                >
+                  <option value="TODOS">Todos os canais</option>
+                  {canaisUnicos.map(canal => (
+                    <option key={canal} value={canal}>{canal}</option>
+                  ))}
+                </select>
+              </div>
               
               {(filtroStatus !== 'TODOS' || filtroCanal !== 'TODOS' || busca) && (
                 <button
@@ -311,33 +355,13 @@ export default function CalendarioPage() {
                     setFiltroCanal('TODOS')
                     setBusca('')
                   }}
-                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors flex items-center gap-2"
+                  className="px-4 py-2.5 bg-red-600/10 border border-red-600/20 hover:bg-red-600/20 text-red-400 rounded-lg text-sm transition-all flex items-center gap-2 font-medium"
                 >
                   <X className="h-4 w-4" />
-                  Limpar
+                  Limpar Filtros
                 </button>
               )}
             </div>
-          </div>
-          
-          {/* Estatísticas rápidas */}
-          <div className="grid grid-cols-6 gap-3 mb-4">
-            {Object.entries(STATUS_CONFIG).map(([status, config]) => {
-              const count = estatisticas?.porStatus[status] || 0
-              return (
-                <button
-                  key={status}
-                  onClick={() => setFiltroStatus(filtroStatus === status ? 'TODOS' : status)}
-                  className={`bg-zinc-900 border ${filtroStatus === status ? 'border-violet-500 ring-2 ring-violet-500/20' : 'border-zinc-800'} rounded-lg p-3 hover:border-zinc-700 transition-all`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">{config.icon}</span>
-                    <span className="text-2xl font-bold text-white">{count}</span>
-                  </div>
-                  <p className="text-xs text-zinc-400 text-left">{config.label}</p>
-                </button>
-              )
-            })}
           </div>
         </div>
 
