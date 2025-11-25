@@ -26,6 +26,7 @@ const navigation = [
   { name: 'Produção', href: '/producao', icon: Clapperboard },
   { name: 'Assets', href: '/assets', icon: FolderOpen },
   { name: 'Calendário', href: '/calendario', icon: Calendar },
+  { name: 'Organograma', href: '/organograma', icon: BarChart3 },
   { name: 'Publicar', href: '/publicar', icon: Send },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Canais', href: '/canais', icon: Megaphone },
