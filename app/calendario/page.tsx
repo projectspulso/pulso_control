@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { Calendar as BigCalendar, dateFnsLocalizer, View, Event, EventPropGetter } from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay, addMonths, startOfMonth, endOfMonth, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { useConteudosAgendados, useAtualizarDataPrevista } from '@/lib/hooks/use-producao'
+import { useConteudosProducao } from '@/lib/hooks/use-producao'
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -98,64 +98,52 @@ export default function CalendarioPage() {
   const [filtroCanal, setFiltroCanal] = useState<string>('TODOS')
   const [busca, setBusca] = useState('')
   
-  const mesInicio = startOfMonth(date)
-  const mesFim = endOfMonth(date)
-  
-  const { data: conteudos, isLoading } = useConteudosAgendados(mesInicio, mesFim)
-  const atualizarData = useAtualizarDataPrevista()
+  const { data: conteudos, isLoading } = useConteudosProducao()
 
-  // Filtrar conteúdos
+  // Filtrar conteúdos da view pipeline_producao
   const conteudosFiltrados = useMemo(() => {
-    if (!conteudos) return []
-    
+    if (!conteudos) return [];
     return conteudos.filter(c => {
-      if (!c.data_prevista) return false
-      
-      const matchStatus = filtroStatus === 'TODOS' || c.status === filtroStatus
-      const matchCanal = filtroCanal === 'TODOS' || c.canal?.nome === filtroCanal
-      const matchBusca = !busca || 
-        c.ideia?.titulo?.toLowerCase().includes(busca.toLowerCase()) ||
-        c.canal?.nome?.toLowerCase().includes(busca.toLowerCase())
-      
-      return matchStatus && matchCanal && matchBusca
-    })
-  }, [conteudos, filtroStatus, filtroCanal, busca])
+      if (!c.data_prevista) return false;
+      const matchStatus = filtroStatus === 'TODOS' || c.status === filtroStatus;
+      const matchCanal = filtroCanal === 'TODOS' || c.canal_nome === filtroCanal;
+      const matchBusca = !busca || c.ideia_titulo?.toLowerCase().includes(busca.toLowerCase());
+      return matchStatus && matchCanal && matchBusca;
+    });
+  }, [conteudos, filtroStatus, filtroCanal, busca]);
 
   const eventos: EventoCalendario[] = useMemo(() => {
     return conteudosFiltrados.map(conteudo => ({
       id: conteudo.id,
-      title: conteudo.ideia?.titulo?.trim() || '',
+      title: conteudo.ideia_titulo?.trim() || '',
       start: new Date(conteudo.data_prevista!),
       end: new Date(conteudo.data_prevista!),
       resource: conteudo,
     }));
-  }, [conteudosFiltrados])
+  }, [conteudosFiltrados]);
   
   // Estatísticas do mês
   const estatisticas = useMemo(() => {
-    if (!conteudos) return null
-    
-    const total = conteudos.length
+    if (!conteudos) return null;
+    const total = conteudos.length;
     const porStatus = conteudos.reduce((acc, c) => {
-      acc[c.status] = (acc[c.status] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-    
+      acc[c.status] = (acc[c.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
     const porCanal = conteudos.reduce((acc, c) => {
-      const canal = c.canal?.nome || 'Sem canal'
-      acc[canal] = (acc[canal] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-    
-    return { total, porStatus, porCanal }
-  }, [conteudos])
+      const canal = c.canal_nome || 'Sem canal';
+      acc[canal] = (acc[canal] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    return { total, porStatus, porCanal };
+  }, [conteudos]);
   
   // Canais únicos para filtro
   const canaisUnicos = useMemo(() => {
     if (!conteudos) return [];
     // Filtra apenas canais reais, sem duplicados e sem 'Sem canal'
     const canais = conteudos
-      .map(c => c.canal?.nome)
+      .map(c => c.canal_nome)
       .filter(nome => nome && nome !== 'Sem canal');
     return Array.from(new Set(canais));
   }, [conteudos]);
@@ -450,9 +438,9 @@ export default function CalendarioPage() {
               </div>
               <div className="space-y-2">
                 {Object.entries(estatisticas.porCanal).slice(0, 3).map(([canal, count]) => (
-                  <div key={canal} className="flex justify-between text-sm">
-                    <span className="text-zinc-400 truncate">{canal}:</span>
-                    <span className="text-white font-semibold ml-2">{count}</span>
+                  <div key={String(canal)} className="flex justify-between text-sm">
+                    <span className="text-zinc-400 truncate">{String(canal)}:</span>
+                    <span className="text-white font-semibold ml-2">{count as number}</span>
                   </div>
                 ))}
               </div>
