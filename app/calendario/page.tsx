@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { Calendar as BigCalendar, dateFnsLocalizer, View, Event, EventPropGetter } from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay, addMonths, startOfMonth, endOfMonth, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { useConteudosProducao } from '@/lib/hooks/use-producao'
+import { useConteudosProducao, type ConteudoProducao } from '@/lib/hooks/use-producao'
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -38,17 +38,7 @@ interface EventoCalendario {
   title: string
   start: Date
   end: Date
-  resource: {
-    id: string
-    status: string
-    prioridade: number
-    ideia?: { titulo: string; descricao?: string }
-    canal?: { nome: string; tipo: string }
-    roteiro?: { titulo: string; status: string }
-    responsavel?: string | null
-    observacoes?: string | null
-    data_prevista: string | null
-  }
+  resource: ConteudoProducao
 }
 
 const STATUS_CONFIG = {
@@ -100,13 +90,13 @@ export default function CalendarioPage() {
   
   const { data: conteudos, isLoading } = useConteudosProducao()
 
-  // Filtrar conteúdos da view pipeline_producao
+  // Filtrar conteúdos da view vw_agenda_publicacao_detalhada
   const conteudosFiltrados = useMemo(() => {
     if (!conteudos) return [];
     return conteudos.filter(c => {
-      if (!c.data_prevista) return false;
-      const matchStatus = filtroStatus === 'TODOS' || c.status === filtroStatus;
-      const matchCanal = filtroCanal === 'TODOS' || c.canal_nome === filtroCanal;
+      if (!c.datahora_publicacao_planejada) return false;
+      const matchStatus = filtroStatus === 'TODOS' || c.pipeline_status === filtroStatus;
+      const matchCanal = filtroCanal === 'TODOS' || c.canal === filtroCanal;
       const matchBusca = !busca || c.ideia_titulo?.toLowerCase().includes(busca.toLowerCase());
       return matchStatus && matchCanal && matchBusca;
     });
@@ -114,10 +104,10 @@ export default function CalendarioPage() {
 
   const eventos: EventoCalendario[] = useMemo(() => {
     return conteudosFiltrados.map(conteudo => ({
-      id: conteudo.id,
+      id: conteudo.pipeline_id,
       title: conteudo.ideia_titulo?.trim() || '',
-      start: new Date(conteudo.data_prevista!),
-      end: new Date(conteudo.data_prevista!),
+      start: new Date(conteudo.datahora_publicacao_planejada!),
+      end: new Date(conteudo.datahora_publicacao_planejada!),
       resource: conteudo,
     }));
   }, [conteudosFiltrados]);
@@ -127,11 +117,11 @@ export default function CalendarioPage() {
     if (!conteudos) return null;
     const total = conteudos.length;
     const porStatus = conteudos.reduce((acc, c) => {
-      acc[c.status] = (acc[c.status] || 0) + 1;
+      acc[c.pipeline_status] = (acc[c.pipeline_status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
     const porCanal = conteudos.reduce((acc, c) => {
-      const canal = c.canal_nome || 'Sem canal';
+      const canal = c.canal || 'Sem canal';
       acc[canal] = (acc[canal] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -143,15 +133,15 @@ export default function CalendarioPage() {
     if (!conteudos) return [];
     // Filtra apenas canais reais, sem duplicados e sem 'Sem canal'
     const canais = conteudos
-      .map(c => c.canal_nome)
+      .map(c => c.canal)
       .filter(nome => nome && nome !== 'Sem canal');
     return Array.from(new Set(canais));
   }, [conteudos]);
 
   const getEventoStyle: EventPropGetter<EventoCalendario> = useCallback((event) => {
-    const status = event.resource.status as keyof typeof STATUS_CONFIG
+    const status = event.resource.pipeline_status as keyof typeof STATUS_CONFIG
     const config = STATUS_CONFIG[status] || STATUS_CONFIG.AGUARDANDO_ROTEIRO
-    const prioridade = event.resource.prioridade || 5
+    const prioridade = event.resource.pipeline_prioridade || 5
     
     return {
       style: {
@@ -169,9 +159,9 @@ export default function CalendarioPage() {
   }, [])
   
   const CustomEvent = ({ event }: { event: EventoCalendario }) => {
-    const status = event.resource.status as keyof typeof STATUS_CONFIG
+    const status = event.resource.pipeline_status as keyof typeof STATUS_CONFIG
     const config = STATUS_CONFIG[status]
-    const prioridade = event.resource.prioridade || 5
+    const prioridade = event.resource.pipeline_prioridade || 5
     
     return (
       <div className="flex items-center gap-1 min-w-0">
@@ -457,19 +447,19 @@ export default function CalendarioPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-400">Alta (P1-P3):</span>
                   <span className="text-red-400 font-semibold">
-                    {conteudos?.filter(c => c.prioridade && c.prioridade <= 3).length || 0}
+                    {conteudos?.filter(c => c.pipeline_prioridade && c.pipeline_prioridade <= 3).length || 0}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-400">Média (P4-P6):</span>
                   <span className="text-yellow-400 font-semibold">
-                    {conteudos?.filter(c => c.prioridade && c.prioridade >= 4 && c.prioridade <= 6).length || 0}
+                    {conteudos?.filter(c => c.pipeline_prioridade && c.pipeline_prioridade >= 4 && c.pipeline_prioridade <= 6).length || 0}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-400">Baixa (P7-P10):</span>
                   <span className="text-zinc-400 font-semibold">
-                    {conteudos?.filter(c => c.prioridade && c.prioridade >= 7).length || 0}
+                    {conteudos?.filter(c => c.pipeline_prioridade && c.pipeline_prioridade >= 7).length || 0}
                   </span>
                 </div>
               </div>
@@ -486,10 +476,10 @@ export default function CalendarioPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-2xl">
-                    {STATUS_CONFIG[eventoSelecionado.resource.status as keyof typeof STATUS_CONFIG]?.icon}
+                    {STATUS_CONFIG[eventoSelecionado.resource.pipeline_status as keyof typeof STATUS_CONFIG]?.icon}
                   </span>
                   <h2 className="text-2xl font-bold text-white">
-                    {eventoSelecionado.resource.ideia?.titulo}
+                    {eventoSelecionado.resource.ideia_titulo}
                   </h2>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-zinc-400">
@@ -500,7 +490,7 @@ export default function CalendarioPage() {
                   {eventoSelecionado.resource.canal && (
                     <div className="flex items-center gap-1">
                       <Megaphone className="h-4 w-4" />
-                      {eventoSelecionado.resource.canal.nome}
+                      {eventoSelecionado.resource.canal}
                     </div>
                   )}
                 </div>
@@ -518,60 +508,51 @@ export default function CalendarioPage() {
                 <div className="bg-zinc-800/50 rounded-lg p-4">
                   <div className="text-xs text-zinc-500 mb-1">Status</div>
                   <div className="text-sm font-medium text-white">
-                    {STATUS_CONFIG[eventoSelecionado.resource.status as keyof typeof STATUS_CONFIG]?.label}
+                    {STATUS_CONFIG[eventoSelecionado.resource.pipeline_status as keyof typeof STATUS_CONFIG]?.label}
                   </div>
                 </div>
                 
                 <div className="bg-zinc-800/50 rounded-lg p-4">
                   <div className="text-xs text-zinc-500 mb-1">Prioridade</div>
                   <div className="flex items-center gap-2">
-                    <Flag className={`h-4 w-4 ${eventoSelecionado.resource.prioridade <= 3 ? 'text-red-400' : 'text-zinc-400'}`} />
+                    <Flag className={`h-4 w-4 ${eventoSelecionado.resource.pipeline_prioridade <= 3 ? 'text-red-400' : 'text-zinc-400'}`} />
                     <span className="text-sm font-medium text-white">
-                      P{eventoSelecionado.resource.prioridade || 5}
+                      P{eventoSelecionado.resource.pipeline_prioridade || 5}
                     </span>
                   </div>
                 </div>
               </div>
               
-              {eventoSelecionado.resource.ideia?.descricao && (
-                <div className="bg-zinc-800/50 rounded-lg p-4">
-                  <div className="text-xs text-zinc-500 mb-2">Descrição</div>
-                  <p className="text-sm text-zinc-300 leading-relaxed">
-                    {eventoSelecionado.resource.ideia.descricao}
-                  </p>
-                </div>
-              )}
-              
-              {eventoSelecionado.resource.roteiro && (
+              {eventoSelecionado.resource.tem_roteiro && (
                 <div className="bg-zinc-800/50 rounded-lg p-4">
                   <div className="text-xs text-zinc-500 mb-2">Roteiro</div>
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-violet-400" />
-                    <span className="text-sm text-white">{eventoSelecionado.resource.roteiro.titulo}</span>
+                    <span className="text-sm text-white">{eventoSelecionado.resource.roteiro_titulo}</span>
                   </div>
                 </div>
               )}
               
-              {eventoSelecionado.resource.responsavel && (
+              {eventoSelecionado.resource.pipeline_responsavel && (
                 <div className="bg-zinc-800/50 rounded-lg p-4">
                   <div className="text-xs text-zinc-500 mb-2">Responsável</div>
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-blue-400" />
-                    <span className="text-sm text-white">{eventoSelecionado.resource.responsavel}</span>
+                    <span className="text-sm text-white">{eventoSelecionado.resource.pipeline_responsavel}</span>
                   </div>
                 </div>
               )}
               
-              {eventoSelecionado.resource.observacoes && (
+              {eventoSelecionado.resource.pipeline_observacoes && (
                 <div className="bg-zinc-800/50 rounded-lg p-4">
                   <div className="text-xs text-zinc-500 mb-2">Observações</div>
-                  <p className="text-sm text-zinc-300">{eventoSelecionado.resource.observacoes}</p>
+                  <p className="text-sm text-zinc-300">{eventoSelecionado.resource.pipeline_observacoes}</p>
                 </div>
               )}
               
               <div className="flex gap-3 pt-4">
                 <Link
-                  href={`/roteiros/${eventoSelecionado.resource.id}`}
+                  href={`/roteiros/${eventoSelecionado.resource.pipeline_id}`}
                   className="flex-1 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium transition-colors text-center"
                 >
                   Ver Detalhes

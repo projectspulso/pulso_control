@@ -24,7 +24,7 @@ interface CardProps {
 
 function CardConteudo({ conteudo }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: conteudo.id,
+    id: conteudo.pipeline_id,
   })
 
   const style = {
@@ -42,39 +42,56 @@ function CardConteudo({ conteudo }: CardProps) {
       className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 cursor-move hover:border-zinc-700 transition-colors"
     >
       <h4 className="text-sm font-medium text-white mb-2 line-clamp-2">
-        {conteudo.ideia?.titulo || 'Sem título'}
+        {conteudo.ideia_titulo || 'Sem título'}
       </h4>
       
       <div className="space-y-1 text-xs text-zinc-400">
-        {conteudo.canal?.nome && (
+        {conteudo.canal && (
           <div className="flex items-center gap-1">
             <span className="text-zinc-500">📺</span>
-            <span>{conteudo.canal.nome}</span>
+            <span>{conteudo.canal}</span>
           </div>
         )}
         
-        {conteudo.data_prevista && (
+        {conteudo.serie && (
+          <div className="flex items-center gap-1">
+            <span className="text-zinc-500">📚</span>
+            <span>{conteudo.serie}</span>
+          </div>
+        )}
+        
+        {conteudo.datahora_publicacao_planejada && (
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
-            <span>{new Date(conteudo.data_prevista).toLocaleDateString('pt-BR')}</span>
+            <span>{new Date(conteudo.datahora_publicacao_planejada).toLocaleDateString('pt-BR')}</span>
           </div>
         )}
         
-        {conteudo.responsavel && (
+        {conteudo.pipeline_responsavel && (
           <div className="flex items-center gap-1">
             <User className="h-3 w-3" />
-            <span>{conteudo.responsavel}</span>
+            <span>{conteudo.pipeline_responsavel}</span>
           </div>
         )}
         
-        <div className="flex items-center gap-1 mt-2">
+        <div className="flex items-center gap-2 mt-2">
           <span className={`px-2 py-0.5 rounded text-xs ${
-            conteudo.prioridade >= 8 ? 'bg-red-600/20 text-red-400' :
-            conteudo.prioridade >= 5 ? 'bg-yellow-600/20 text-yellow-400' :
+            conteudo.pipeline_prioridade >= 8 ? 'bg-red-600/20 text-red-400' :
+            conteudo.pipeline_prioridade >= 5 ? 'bg-yellow-600/20 text-yellow-400' :
             'bg-zinc-700/20 text-zinc-400'
           }`}>
-            P{conteudo.prioridade}
+            P{conteudo.pipeline_prioridade}
           </span>
+          
+          {conteudo.tem_roteiro && (
+            <span className="px-2 py-0.5 rounded text-xs bg-blue-600/20 text-blue-400">📝</span>
+          )}
+          {conteudo.tem_audio && (
+            <span className="px-2 py-0.5 rounded text-xs bg-purple-600/20 text-purple-400">🎵</span>
+          )}
+          {conteudo.tem_video && (
+            <span className="px-2 py-0.5 rounded text-xs bg-green-600/20 text-green-400">🎬</span>
+          )}
         </div>
       </div>
     </div>
@@ -106,12 +123,12 @@ function ColunaKanban({ status, titulo, cor, conteudos }: ColunaProps) {
       </div>
 
       <SortableContext
-        items={conteudos.map(c => c.id)}
+        items={conteudos.map(c => c.pipeline_id)}
         strategy={verticalListSortingStrategy}
       >
         <div className="space-y-3 min-h-[200px]">
           {conteudos.map(conteudo => (
-            <CardConteudo key={conteudo.id} conteudo={conteudo} />
+            <CardConteudo key={conteudo.pipeline_id} conteudo={conteudo} />
           ))}
         </div>
       </SortableContext>
@@ -137,7 +154,7 @@ export default function ProducaoPage() {
   const handleDragStart = (event: DragStartEvent) => {
     const id = event.active.id as string
     setActiveId(id)
-    const conteudo = conteudos?.find(c => c.id === id)
+    const conteudo = conteudos?.find(c => c.pipeline_id === id)
     setActiveConteudo(conteudo)
   }
 
@@ -154,8 +171,8 @@ export default function ProducaoPage() {
     const novoStatus = over.id as StatusProducao
     
     // Só atualiza se mudou de coluna
-    const conteudo = conteudos?.find(c => c.id === conteudoId)
-    if (conteudo && conteudo.status !== novoStatus) {
+    const conteudo = conteudos?.find(c => c.pipeline_id === conteudoId)
+    if (conteudo && conteudo.pipeline_status !== novoStatus) {
       console.log('Atualizando status:', { conteudoId, novoStatus })
       atualizarStatus.mutate({ id: conteudoId, novoStatus })
     }
@@ -165,7 +182,7 @@ export default function ProducaoPage() {
   }
 
   const conteudoPorStatus = (status: StatusProducao) => {
-    return conteudos?.filter(c => c.status === status) || []
+    return conteudos?.filter(c => c.pipeline_status === status) || []
   }
 
   if (isLoading) {
@@ -226,7 +243,7 @@ export default function ProducaoPage() {
             {activeId && activeConteudo ? (
               <div className="bg-zinc-900 border-2 border-violet-500 rounded-lg p-4 opacity-90 rotate-3">
                 <h4 className="text-sm font-medium text-white mb-2">
-                  {activeConteudo.ideia?.titulo || 'Sem título'}
+                  {activeConteudo.ideia_titulo || 'Sem título'}
                 </h4>
                 <div className="text-xs text-zinc-400">
                   Arrastando...
