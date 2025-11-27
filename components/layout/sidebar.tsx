@@ -16,18 +16,20 @@ import {
   FolderOpen,
   Calendar,
   Send,
-  Plug
+  Plug,
+  Library
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Conteúdo', href: '/conteudo', icon: Library },
   { name: 'Ideias', href: '/ideias', icon: Lightbulb },
   { name: 'Roteiros', href: '/roteiros', icon: FileEdit },
   { name: 'Produção', href: '/producao', icon: Clapperboard },
   { name: 'Assets', href: '/assets', icon: FolderOpen },
   { name: 'Calendário', href: '/calendario', icon: Calendar },
-  { name: 'Organograma', href: '/organograma', icon: BarChart3 },
   { name: 'Publicar', href: '/publicar', icon: Send },
+  { name: 'Organograma', href: '/organograma', icon: BarChart3 },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Canais', href: '/canais', icon: Megaphone },
   { name: 'Workflows', href: '/workflows', icon: Workflow },
