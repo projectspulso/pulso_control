@@ -47,7 +47,8 @@ export default function IntegrationsPage() {
   ]
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">Integrações do Sistema</h1>
         <p className="text-zinc-400">Status e configuração de todas as integrações</p>
@@ -135,6 +136,7 @@ export default function IntegrationsPage() {
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   )

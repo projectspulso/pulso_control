@@ -28,9 +28,10 @@ export default function Home() {
   }, [])
 
   return (
-    <main className="p-8">
-      {/* Header */}
-      <header className="mb-8">
+    <main className="min-h-screen bg-zinc-950 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <header className="mb-8">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -109,6 +110,7 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <IdeiasLista />
         <WorkflowsLog />
+      </div>
       </div>
     </main>
   );

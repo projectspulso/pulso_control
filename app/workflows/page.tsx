@@ -35,7 +35,8 @@ export default function WorkflowsPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">Workflows</h1>
@@ -212,6 +213,7 @@ export default function WorkflowsPage() {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   )

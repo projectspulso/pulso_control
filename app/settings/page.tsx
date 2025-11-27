@@ -34,7 +34,8 @@ export default function SettingsPage() {
   const plataformasNaoConectadas = plataformas?.filter(p => !p.tem_credenciais) || []
 
   return (
-    <div className="p-8">
+    <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">Configurações</h1>
         <p className="text-zinc-400">Gerencie integrações e preferências</p>
@@ -206,6 +207,7 @@ export default function SettingsPage() {
             Em breve
           </span>
         </div>
+      </div>
       </div>
     </div>
   )

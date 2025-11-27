@@ -4,7 +4,8 @@ import { BarChart3, TrendingUp, Users, Eye } from 'lucide-react'
 
 export default function AnalyticsPage() {
   return (
-    <div className="p-8">
+    <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">Analytics</h1>
         <p className="text-zinc-400">Métricas e performance de conteúdo</p>
@@ -48,6 +49,7 @@ export default function AnalyticsPage() {
         <BarChart3 className="h-16 w-16 text-zinc-700 mx-auto mb-4" />
         <h3 className="text-xl font-bold text-white mb-2">Em breve</h3>
         <p className="text-zinc-500">Métricas e analytics em desenvolvimento</p>
+      </div>
       </div>
     </div>
   )
