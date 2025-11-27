@@ -49,26 +49,31 @@ export default function IntegrationsPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Integrações do Sistema</h1>
-        <p className="text-zinc-400">Status e configuração de todas as integrações</p>
-      </div>
+        <div className="mb-8 animate-fade-in">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse-glow" />
+            <h1 className="text-4xl font-black bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
+              🔌 Integrações do Sistema
+            </h1>
+          </div>
+          <p className="text-zinc-400">Status e configuração de todas as integrações</p>
+        </div>
 
-      {/* Status das Integrações */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {integrations.map((integration) => {
-          const Icon = integration.icon
-          const statusConfig = {
-            connected: { color: 'text-green-500', bg: 'bg-green-500/10', icon: CheckCircle2, label: 'Conectado' },
-            disconnected: { color: 'text-gray-500', bg: 'bg-gray-500/10', icon: AlertCircle, label: 'Desconectado' },
-            error: { color: 'text-red-500', bg: 'bg-red-500/10', icon: XCircle, label: 'Erro' },
-            loading: { color: 'text-blue-500', bg: 'bg-blue-500/10', icon: Loader2, label: 'Conectando...' }
-          }[integration.status]
+        {/* Status das Integrações */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {integrations.map((integration, idx) => {
+            const Icon = integration.icon
+            const statusConfig = {
+              connected: { color: 'text-green-500', bg: 'bg-green-500/10', icon: CheckCircle2, label: 'Conectado' },
+              disconnected: { color: 'text-gray-500', bg: 'bg-gray-500/10', icon: AlertCircle, label: 'Desconectado' },
+              error: { color: 'text-red-500', bg: 'bg-red-500/10', icon: XCircle, label: 'Erro' },
+              loading: { color: 'text-blue-500', bg: 'bg-blue-500/10', icon: Loader2, label: 'Conectando...' }
+            }[integration.status]
 
-          const StatusIcon = statusConfig.icon
+            const StatusIcon = statusConfig.icon
 
-          return (
-            <div key={integration.name} className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+            return (
+              <div key={integration.name} className="glass border border-zinc-800/50 rounded-xl p-6 hover:border-blue-500/30 transition-all animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className={`p-3 rounded-lg ${statusConfig.bg}`}>

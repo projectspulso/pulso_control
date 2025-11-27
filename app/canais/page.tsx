@@ -35,46 +35,55 @@ export default function CanaisPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Canais</h1>
-        <p className="text-zinc-400">Gerencie seus canais de conteúdo</p>
-      </div>
-
-      {/* Stats gerais */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+        {/* Header */}
+        <div className="mb-8 animate-fade-in">
           <div className="flex items-center gap-3 mb-2">
-            <Megaphone className="h-5 w-5 text-purple-500" />
-            <span className="text-sm text-zinc-400">Total de Canais</span>
+            <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse-glow" />
+            <h1 className="text-4xl font-black bg-gradient-to-r from-pink-400 via-rose-400 to-pink-400 bg-clip-text text-transparent">
+              📢 Canais
+            </h1>
           </div>
-          <p className="text-3xl font-bold text-white">{canais?.length || 0}</p>
-        </div>
-        
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <FileText className="h-5 w-5 text-blue-500" />
-            <span className="text-sm text-zinc-400">Total de Ideias</span>
-          </div>
-          <p className="text-3xl font-bold text-white">{ideias?.length || 0}</p>
+          <p className="text-zinc-400">Gerencie seus canais de conteúdo</p>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Video className="h-5 w-5 text-green-500" />
-            <span className="text-sm text-zinc-400">Conteúdos Ativos</span>
+        {/* Stats gerais */}
+        <div className="grid grid-cols-4 gap-4 mb-8">
+          <div className="glass border border-zinc-800/50 rounded-xl p-6 hover:border-purple-500/30 transition-all group relative overflow-hidden animate-fade-in">
+            <div className="absolute inset-0 bg-purple-600/10 blur-xl opacity-0 group-hover:opacity-100 transition-all duration-300" />
+            <div className="flex items-center gap-3 mb-2 relative z-10">
+              <Megaphone className="h-5 w-5 text-purple-400" />
+              <span className="text-sm text-zinc-400">Total de Canais</span>
+            </div>
+            <p className="text-3xl font-bold text-white relative z-10 tabular-nums">{canais?.length || 0}</p>
           </div>
-          <p className="text-3xl font-bold text-white">0</p>
-        </div>
+          
+          <div className="glass border border-zinc-800/50 rounded-xl p-6 hover:border-blue-500/30 transition-all group relative overflow-hidden animate-fade-in" style={{ animationDelay: "100ms" }}>
+            <div className="absolute inset-0 bg-blue-600/10 blur-xl opacity-0 group-hover:opacity-100 transition-all duration-300" />
+            <div className="flex items-center gap-3 mb-2 relative z-10">
+              <FileText className="h-5 w-5 text-blue-400" />
+              <span className="text-sm text-zinc-400">Total de Ideias</span>
+            </div>
+            <p className="text-3xl font-bold text-white relative z-10 tabular-nums">{ideias?.length || 0}</p>
+          </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <TrendingUp className="h-5 w-5 text-yellow-500" />
-            <span className="text-sm text-zinc-400">Crescimento</span>
+          <div className="glass border border-zinc-800/50 rounded-xl p-6 hover:border-green-500/30 transition-all group relative overflow-hidden animate-fade-in" style={{ animationDelay: "200ms" }}>
+            <div className="absolute inset-0 bg-green-600/10 blur-xl opacity-0 group-hover:opacity-100 transition-all duration-300" />
+            <div className="flex items-center gap-3 mb-2 relative z-10">
+              <Video className="h-5 w-5 text-green-400" />
+              <span className="text-sm text-zinc-400">Conteúdos Ativos</span>
+            </div>
+            <p className="text-3xl font-bold text-white relative z-10 tabular-nums">0</p>
           </div>
-          <p className="text-3xl font-bold text-white">+0%</p>
+
+          <div className="glass border border-zinc-800/50 rounded-xl p-6 hover:border-yellow-500/30 transition-all group relative overflow-hidden animate-fade-in" style={{ animationDelay: "300ms" }}>
+            <div className="absolute inset-0 bg-yellow-600/10 blur-xl opacity-0 group-hover:opacity-100 transition-all duration-300" />
+            <div className="flex items-center gap-3 mb-2 relative z-10">
+              <TrendingUp className="h-5 w-5 text-yellow-400" />
+              <span className="text-sm text-zinc-400">Crescimento</span>
+            </div>
+            <p className="text-3xl font-bold text-white relative z-10 tabular-nums">+0%</p>
+          </div>
         </div>
-      </div>
 
       {/* Lista de canais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

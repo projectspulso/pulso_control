@@ -37,26 +37,32 @@ export default function WorkflowsPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Workflows</h1>
-        <p className="text-zinc-400">Controle e monitore os workflows de automação</p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-5 gap-4 mb-8">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+        {/* Header */}
+        <div className="mb-8 animate-fade-in">
           <div className="flex items-center gap-3 mb-2">
-            <Workflow className="h-5 w-5 text-purple-500" />
-            <span className="text-sm text-zinc-400">Total Workflows</span>
+            <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse-glow" />
+            <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
+              ⚡ Workflows
+            </h1>
           </div>
-          <p className="text-3xl font-bold text-white">{workflows?.length || 0}</p>
+          <p className="text-zinc-400">Controle e monitore os workflows de automação</p>
         </div>
 
-        {Object.entries(STATUS_CONFIG).map(([status, config]) => {
-          const Icon = config.icon
-          return (
-            <div key={status} className={`${config.bgColor} border border-zinc-800 rounded-lg p-6`}>
+        {/* Stats */}
+        <div className="grid grid-cols-5 gap-4 mb-8">
+          <div className="glass border border-zinc-800/50 rounded-xl p-6 hover:border-purple-500/30 transition-all group relative overflow-hidden animate-fade-in">
+            <div className="absolute inset-0 bg-purple-600/10 blur-xl opacity-0 group-hover:opacity-100 transition-all duration-300" />
+            <div className="flex items-center gap-3 mb-2 relative z-10">
+              <Workflow className="h-5 w-5 text-purple-400" />
+              <span className="text-sm text-zinc-400">Total Workflows</span>
+            </div>
+            <p className="text-3xl font-bold text-white relative z-10 tabular-nums">{workflows?.length || 0}</p>
+          </div>
+
+          {Object.entries(STATUS_CONFIG).map(([status, config], idx) => {
+            const Icon = config.icon
+            return (
+              <div key={status} className={`glass ${config.bgColor} border border-zinc-800/50 rounded-xl p-6 hover:border-opacity-50 transition-all animate-fade-in`} style={{ animationDelay: `${(idx + 1) * 100}ms` }}>
               <div className="flex items-center gap-3 mb-2">
                 <Icon className={`h-5 w-5 ${config.color}`} />
                 <span className="text-sm text-zinc-400">{config.label}</span>

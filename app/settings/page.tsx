@@ -36,27 +36,32 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Configurações</h1>
-        <p className="text-zinc-400">Gerencie integrações e preferências</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Supabase */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Database className="h-6 w-6 text-purple-500" />
-            <h3 className="text-lg font-bold text-white">Supabase</h3>
+        <div className="mb-8 animate-fade-in">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-2 h-2 rounded-full bg-zinc-500 animate-pulse-glow" />
+            <h1 className="text-4xl font-black bg-gradient-to-r from-zinc-400 via-gray-400 to-zinc-400 bg-clip-text text-transparent">
+              ⚙️ Configurações
+            </h1>
           </div>
-          <p className="text-sm text-zinc-400 mb-4">Conexão com banco de dados</p>
-          <span className="inline-flex items-center gap-2 text-xs text-green-400 bg-green-500/10 px-3 py-1 rounded-full">
-            <span className="h-2 w-2 rounded-full bg-green-400"></span>
-            Conectado
-          </span>
+          <p className="text-zinc-400">Gerencie integrações e preferências</p>
         </div>
 
-        {/* N8N */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Supabase */}
+          <div className="glass border border-zinc-800/50 rounded-xl p-6 hover:border-purple-500/30 transition-all animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <Database className="h-6 w-6 text-purple-400" />
+              <h3 className="text-lg font-bold text-white">Supabase</h3>
+            </div>
+            <p className="text-sm text-zinc-400 mb-4">Conexão com banco de dados</p>
+            <span className="inline-flex items-center gap-2 text-xs text-green-400 bg-green-500/10 px-3 py-1 rounded-full">
+              <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse-glow"></span>
+              Conectado
+            </span>
+          </div>
+
+          {/* N8N */}
+          <div className="glass border border-zinc-800/50 rounded-xl p-6 hover:border-blue-500/30 transition-all animate-fade-in" style={{ animationDelay: "100ms" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Key className="h-6 w-6 text-blue-500" />
