@@ -39,13 +39,14 @@ function CardConteudo({ conteudo }: CardProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 cursor-move hover:border-zinc-700 transition-colors"
+      className="glass border border-zinc-800/50 rounded-xl p-4 cursor-move hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10 transition-all group relative overflow-hidden"
     >
-      <h4 className="text-sm font-medium text-white mb-2 line-clamp-2">
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-600/0 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <h4 className="text-sm font-medium text-white mb-2 line-clamp-2 relative z-10">
         {conteudo.ideia || 'Sem título'}
       </h4>
       
-      <div className="space-y-1 text-xs text-zinc-400">
+      <div className="space-y-1 text-xs text-zinc-400 relative z-10">
         {conteudo.canal && (
           <div className="flex items-center gap-1">
             <span className="text-zinc-500">📺</span>
@@ -105,11 +106,11 @@ function ColunaKanban({ status, titulo, cor, conteudos }: ColunaProps) {
   return (
     <div 
       ref={setNodeRef}
-      className={`bg-zinc-900/50 border ${isOver ? 'border-violet-500 bg-violet-500/10' : 'border-zinc-800'} rounded-lg p-4 transition-all`}
+      className={`glass border rounded-2xl p-4 transition-all ${isOver ? 'border-violet-500 bg-violet-500/10 shadow-xl shadow-violet-500/20' : 'border-zinc-800/50'}`}
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-white">{titulo}</h3>
-        <span className={`${cor} text-white text-xs px-2 py-1 rounded`}>
+        <span className={`${cor} text-white text-xs px-2.5 py-1 rounded-full font-bold`}>
           {conteudos.length}
         </span>
       </div>
@@ -180,7 +181,11 @@ export default function ProducaoPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
-        <div className="text-zinc-400">Carregando pipeline...</div>
+        <div className="max-w-7xl mx-auto">
+          <div className="glass rounded-2xl p-8 text-center">
+            <div className="text-zinc-400 animate-pulse">Carregando pipeline...</div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -188,25 +193,36 @@ export default function ProducaoPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-[1800px] mx-auto">
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-in">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-white">🎬 Pipeline de Produção</h1>
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse-glow" />
+              <h1 className="text-4xl font-black bg-gradient-to-r from-orange-400 via-red-400 to-orange-400 bg-clip-text text-transparent">
+                🎬 Pipeline de Produção
+              </h1>
+            </div>
             <Link
               href="/calendario"
-              className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center gap-2"
+              className="glass-hover px-5 py-3 text-white rounded-lg transition-all flex items-center gap-2 relative overflow-hidden group"
             >
-              <Calendar className="h-4 w-4" />
-              Ver Calendário
+              <div className="absolute inset-0 bg-gradient-to-r from-teal-600 to-blue-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+              <Calendar className="h-4 w-4 relative" />
+              <span className="relative">Ver Calendário</span>
             </Link>
           </div>
           
           <div className="grid grid-cols-6 gap-4">
-            {COLUNAS.map(coluna => {
+            {COLUNAS.map((coluna, idx) => {
               const count = conteudoPorStatus(coluna.id).length
               return (
-                <div key={coluna.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-                  <div className="text-sm text-zinc-400 mb-1">{coluna.titulo}</div>
-                  <div className="text-2xl font-bold text-white">{count}</div>
+                <div 
+                  key={coluna.id} 
+                  className="glass border border-zinc-800/50 rounded-xl p-4 hover:border-orange-500/30 transition-all group relative overflow-hidden"
+                  style={{ animationDelay: `${idx * 50}ms` }}
+                >
+                  <div className="absolute inset-0 bg-orange-600/10 blur-xl opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                  <div className="text-sm text-zinc-400 mb-1 relative z-10">{coluna.titulo}</div>
+                  <div className="text-2xl font-bold text-white relative z-10 tabular-nums">{count}</div>
                 </div>
               )
             })}
@@ -233,11 +249,11 @@ export default function ProducaoPage() {
 
           <DragOverlay>
             {activeId && activeConteudo ? (
-              <div className="bg-zinc-900 border-2 border-violet-500 rounded-lg p-4 opacity-90 rotate-3">
+              <div className="glass border-2 border-violet-500 rounded-xl p-4 opacity-90 rotate-3 shadow-2xl shadow-violet-500/50">
                 <h4 className="text-sm font-medium text-white mb-2">
                   {activeConteudo.ideia || 'Sem título'}
                 </h4>
-                <div className="text-xs text-zinc-400">
+                <div className="text-xs text-violet-400 font-medium">
                   Arrastando...
                 </div>
               </div>
@@ -245,12 +261,23 @@ export default function ProducaoPage() {
           </DragOverlay>
         </DndContext>
 
-        <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-          <h3 className="text-sm font-medium text-white mb-3">Como usar:</h3>
-          <ul className="text-sm text-zinc-400 space-y-1">
-            <li>• Arraste os cards entre as colunas para atualizar o status</li>
-            <li>• P8-10 = Prioridade Alta (vermelho) | P5-7 = Média (amarelo) | P1-4 = Baixa (cinza)</li>
-            <li>• Use o Calendário para visualizar datas de publicação</li>
+        <div className="mt-8 glass border border-zinc-800/50 rounded-2xl p-6 animate-fade-in" style={{ animationDelay: "300ms" }}>
+          <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+            <span className="text-orange-400">💡</span> Como usar:
+          </h3>
+          <ul className="text-sm text-zinc-400 space-y-2">
+            <li className="flex items-start gap-2">
+              <span className="text-violet-400 mt-0.5">•</span>
+              <span>Arraste os cards entre as colunas para atualizar o status</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-violet-400 mt-0.5">•</span>
+              <span>P8-10 = Prioridade Alta (vermelho) | P5-7 = Média (amarelo) | P1-4 = Baixa (cinza)</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-violet-400 mt-0.5">•</span>
+              <span>Use o Calendário para visualizar datas de publicação</span>
+            </li>
           </ul>
         </div>
       </div>
