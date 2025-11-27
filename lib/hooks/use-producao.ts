@@ -41,13 +41,13 @@ export interface ConteudoProducao {
   metadata: any
 }
 
-// Buscar todos os conteúdos em produção (para Kanban)
+// Buscar todos os conteúdos em produção (para Kanban) - usando view V2
 export function useConteudosProducao() {
   return useQuery({
     queryKey: ['conteudos-producao'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('vw_pipeline_kanban')
+        .from('vw_pulso_calendario_publicacao_v2')
         .select('*')
       
       if (error) {
@@ -60,13 +60,13 @@ export function useConteudosProducao() {
   })
 }
 
-// Buscar conteúdos por status (para Kanban)
+// Buscar conteúdos por status (para Kanban) - usando view V2
 export function useConteudosPorStatus(status: StatusProducao) {
   return useQuery({
     queryKey: ['conteudos-producao', status],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('vw_pipeline_kanban')
+        .from('vw_pulso_calendario_publicacao_v2')
         .select('*')
         .eq('pipeline_status', status)
       
@@ -76,13 +76,13 @@ export function useConteudosPorStatus(status: StatusProducao) {
   })
 }
 
-// Buscar conteúdos agendados (para calendário)
+// Buscar conteúdos agendados (para calendário) - usando view V2
 export function useConteudosAgendados(mesInicio: Date, mesFim: Date) {
   return useQuery({
     queryKey: ['conteudos-agendados', mesInicio.toISOString(), mesFim.toISOString()],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('vw_pipeline_calendario_publicacao')
+        .from('vw_pulso_calendario_publicacao_v2')
         .select('*')
         .gte('data_publicacao_planejada', mesInicio.toISOString())
         .lte('data_publicacao_planejada', mesFim.toISOString())
@@ -166,13 +166,13 @@ export function useCriarItemProducao() {
   })
 }
 
-// Estatísticas do pipeline
+// Estatísticas do pipeline - usando view V2
 export function useEstatisticasProducao() {
   return useQuery({
     queryKey: ['stats-producao'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('vw_pipeline_kanban')
+        .from('vw_pulso_calendario_publicacao_v2')
         .select('pipeline_status')
       
       if (error) throw error

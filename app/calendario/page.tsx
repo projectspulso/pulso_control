@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { Calendar as BigCalendar, dateFnsLocalizer, View, Event, EventPropGetter } from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay, addMonths, startOfMonth, endOfMonth, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { useConteudosProducao, type ConteudoProducao } from '@/lib/hooks/use-producao'
+import { useCalendario, type PipelineCalendario } from '@/lib/hooks/use-calendario'
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -38,7 +38,7 @@ interface EventoCalendario {
   title: string
   start: Date
   end: Date
-  resource: ConteudoProducao
+  resource: PipelineCalendario
 }
 
 const STATUS_CONFIG = {
@@ -88,9 +88,9 @@ export default function CalendarioPage() {
   const [filtroCanal, setFiltroCanal] = useState<string>('TODOS')
   const [busca, setBusca] = useState('')
   
-  const { data: conteudos, isLoading } = useConteudosProducao()
+  const { data: conteudos, isLoading } = useCalendario()
 
-  // Filtrar conteúdos da view vw_pipeline_calendario_publicacao
+  // Filtrar conteúdos
   const conteudosFiltrados = useMemo(() => {
     if (!conteudos) return [];
     return conteudos.filter(c => {
@@ -515,7 +515,7 @@ export default function CalendarioPage() {
                 <div className="bg-zinc-800/50 rounded-lg p-4">
                   <div className="text-xs text-zinc-500 mb-1">Prioridade</div>
                   <div className="flex items-center gap-2">
-                    <Flag className={`h-4 w-4 ${eventoSelecionado.resource.prioridade <= 3 ? 'text-red-400' : 'text-zinc-400'}`} />
+                    <Flag className={`h-4 w-4 ${(eventoSelecionado.resource.prioridade || 5) <= 3 ? 'text-red-400' : 'text-zinc-400'}`} />
                     <span className="text-sm font-medium text-white">
                       P{eventoSelecionado.resource.prioridade || 5}
                     </span>
@@ -523,17 +523,15 @@ export default function CalendarioPage() {
                 </div>
               </div>
               
-              {eventoSelecionado.resource.roteiro_status && (
+              {eventoSelecionado.resource.is_piloto && (
                 <div className="bg-zinc-800/50 rounded-lg p-4">
-                  <div className="text-xs text-zinc-500 mb-2">Status do Roteiro</div>
+                  <div className="text-xs text-zinc-500 mb-2">Piloto</div>
                   <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-violet-400" />
-                    <span className="text-sm text-white">{eventoSelecionado.resource.roteiro_status}</span>
+                    <span className="text-2xl">⭐</span>
+                    <span className="text-sm text-white">Conteúdo Piloto</span>
                   </div>
                 </div>
               )}
-              
-              {/* Campos removidos: pipeline_responsavel, pipeline_observacoes não estão na vw_pipeline_calendario_publicacao */}
               
               <div className="flex gap-3 pt-4">
                 <Link
