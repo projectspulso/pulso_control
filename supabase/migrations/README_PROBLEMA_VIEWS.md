@@ -37,15 +37,16 @@ SELECT COUNT(*) FROM public.vw_agenda_publicacao_detalhada;
 
 ```sql
 -- Verificar se anon/authenticated têm acesso
-SELECT 
-    grantee, 
-    privilege_type 
-FROM information_schema.role_table_grants 
-WHERE table_schema = 'public' 
+SELECT
+    grantee,
+    privilege_type
+FROM information_schema.role_table_grants
+WHERE table_schema = 'public'
   AND table_name = 'vw_agenda_publicacao_detalhada';
 ```
 
 Deve retornar:
+
 ```
 anon          | SELECT
 authenticated | SELECT
@@ -64,6 +65,7 @@ npm run dev
 ```
 
 Acesse:
+
 - http://localhost:3000/producao (Kanban)
 - http://localhost:3000/calendario
 
@@ -75,15 +77,16 @@ Se ainda não funcionar, execute:
 
 ```sql
 -- Arquivo: diagnostico_views.sql
-SELECT 
-    schemaname, 
-    viewname, 
+SELECT
+    schemaname,
+    viewname,
     viewowner
 FROM pg_views
 WHERE viewname = 'vw_agenda_publicacao_detalhada';
 ```
 
 Deve retornar **2 linhas**:
+
 ```
 pulso_content | vw_agenda_publicacao_detalhada | postgres
 public        | vw_agenda_publicacao_detalhada | postgres
@@ -94,6 +97,7 @@ public        | vw_agenda_publicacao_detalhada | postgres
 ## 📝 O Que Foi Feito
 
 A view `vw_agenda_publicacao_detalhada` unifica:
+
 - ✅ Canal e Série
 - ✅ Ideia (título, status, prioridade, tags)
 - ✅ Roteiro (última versão, status)
