@@ -28,7 +28,10 @@ export default function RoteirosPage() {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-zinc-400">Carregando roteiros...</div>
+          <div className="glass rounded-2xl p-8 text-center space-y-4">
+            <div className="skeleton h-8 w-32 mx-auto" />
+            <div className="skeleton h-4 w-48 mx-auto" />
+          </div>
         </div>
       </div>
     )
@@ -36,12 +39,15 @@ export default function RoteirosPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">📝 Roteiros</h1>
-            <p className="text-zinc-400">
+            <h1 className="text-4xl font-black bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-3">
+              📝 Roteiros
+            </h1>
+            <p className="text-zinc-400 mt-2 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
               {stats?.total || 0} roteiros gerados
             </p>
           </div>
@@ -49,21 +55,22 @@ export default function RoteirosPage() {
 
         {/* Stats Cards */}
         {stats && stats.por_status && Object.keys(stats.por_status).length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-            {Object.entries(stats.por_status).map(([status, count]) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
+            {Object.entries(stats.por_status).map(([status, count], idx) => (
               <div
                 key={status}
-                className="bg-zinc-900 border border-zinc-800 rounded-lg p-4"
+                className="glass glass-hover rounded-xl p-4 group cursor-pointer animate-fade-in"
+                style={{ animationDelay: `${(idx + 1) * 50}ms` }}
               >
-                <div className="text-2xl font-bold text-white mb-1">{count}</div>
-                <div className="text-xs text-zinc-400">{status}</div>
+                <div className="text-3xl font-black bg-gradient-to-br from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-1 tabular-nums">{count}</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">{status.replace('_', ' ')}</div>
               </div>
             ))}
           </div>
         )}
 
         {/* Filtros */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
+        <div className="glass rounded-2xl p-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Busca */}
             <div>
@@ -115,23 +122,26 @@ export default function RoteirosPage() {
 
         {/* Grid de Roteiros */}
         {roteirosFiltrados && roteirosFiltrados.length === 0 ? (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-12 text-center">
-            <p className="text-zinc-500 mb-4">Nenhum roteiro encontrado</p>
+          <div className="glass rounded-2xl p-12 text-center animate-fade-in" style={{ animationDelay: '300ms' }}>
+            <div className="text-6xl mb-4">📝</div>
+            <p className="text-zinc-400 mb-2 font-semibold">Nenhum roteiro encontrado</p>
             <p className="text-sm text-zinc-600">
               Roteiros são gerados automaticamente a partir de ideias aprovadas
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {roteirosFiltrados?.map((roteiro) => {
+            {roteirosFiltrados?.map((roteiro, idx) => {
               const canal = canais?.find(c => c.id === roteiro.canal_id)
               
               return (
                 <Link
                   key={roteiro.id}
                   href={`/roteiros/${roteiro.id}`}
-                  className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 hover:border-violet-500 transition-colors group"
+                  className="glass glass-hover rounded-2xl p-6 group cursor-pointer relative overflow-hidden animate-fade-in"
+                  style={{ animationDelay: `${300 + idx * 50}ms` }}
                 >
+                  <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-600/20 blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
                   <div className="flex items-start justify-between mb-4">
                     <StatusBadge status={roteiro.status} />
                     <span className="text-xs text-zinc-500">
