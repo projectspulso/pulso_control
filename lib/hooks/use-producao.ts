@@ -15,51 +15,40 @@ export interface ConteudoProducao {
   pipeline_id: string
   ideia_id: string
   roteiro_id: string | null
-  audio_id: string | null
-  video_id: string | null
   canal_id: string
   serie_id: string
   
-  // Status e prioridade
+  // Nomes/Títulos
+  canal: string
+  serie: string
+  ideia: string
+  
+  // Status
   pipeline_status: StatusProducao
-  pipeline_prioridade: number
   ideia_status: string
   roteiro_status: string | null
   
-  // Títulos
-  ideia_titulo: string
-  roteiro_titulo: string | null
-  canal: string
-  serie: string
-  
   // Flags
-  tem_roteiro: boolean
-  tem_audio: boolean
-  tem_video: boolean
+  is_piloto: boolean
   
   // Datas
   data_prevista: string | null
   data_publicacao_planejada: string | null
-  data_publicacao: string | null
-  datahora_publicacao_planejada: string | null
+  hora_publicacao: string | null
   
-  // Outros
-  pipeline_responsavel: string | null
-  pipeline_observacoes: string | null
-  ideia_tags: string[] | null
-  pipeline_metadata: any
+  // Prioridade e metadata
+  prioridade: number
+  metadata: any
 }
 
-// Buscar todos os conteúdos em produção
+// Buscar todos os conteúdos em produção (para Kanban)
 export function useConteudosProducao() {
   return useQuery({
     queryKey: ['conteudos-producao'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('vw_agenda_publicacao_detalhada')
+        .from('vw_pipeline_kanban')
         .select('*')
-        .order('pipeline_prioridade', { ascending: false })
-        .order('datahora_publicacao_planejada', { ascending: true })
       
       if (error) {
         console.error('Erro ao buscar pipeline:', error)
@@ -71,16 +60,15 @@ export function useConteudosProducao() {
   })
 }
 
-// Buscar conteúdos por status
+// Buscar conteúdos por status (para Kanban)
 export function useConteudosPorStatus(status: StatusProducao) {
   return useQuery({
     queryKey: ['conteudos-producao', status],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('vw_agenda_publicacao_detalhada')
+        .from('vw_pipeline_kanban')
         .select('*')
         .eq('pipeline_status', status)
-        .order('pipeline_prioridade', { ascending: false })
       
       if (error) throw error
       return data as ConteudoProducao[]
@@ -94,12 +82,10 @@ export function useConteudosAgendados(mesInicio: Date, mesFim: Date) {
     queryKey: ['conteudos-agendados', mesInicio.toISOString(), mesFim.toISOString()],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('vw_agenda_publicacao_detalhada')
+        .from('vw_pipeline_calendario_publicacao')
         .select('*')
-        .not('datahora_publicacao_planejada', 'is', null)
-        .gte('datahora_publicacao_planejada', mesInicio.toISOString())
-        .lte('datahora_publicacao_planejada', mesFim.toISOString())
-        .order('datahora_publicacao_planejada', { ascending: true })
+        .gte('data_publicacao_planejada', mesInicio.toISOString())
+        .lte('data_publicacao_planejada', mesFim.toISOString())
       
       if (error) throw error
       return data as ConteudoProducao[]
@@ -186,7 +172,7 @@ export function useEstatisticasProducao() {
     queryKey: ['stats-producao'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('vw_agenda_publicacao_detalhada')
+        .from('vw_pipeline_kanban')
         .select('pipeline_status')
       
       if (error) throw error

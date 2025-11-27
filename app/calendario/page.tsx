@@ -90,14 +90,14 @@ export default function CalendarioPage() {
   
   const { data: conteudos, isLoading } = useConteudosProducao()
 
-  // Filtrar conteúdos da view vw_agenda_publicacao_detalhada
+  // Filtrar conteúdos da view vw_pipeline_calendario_publicacao
   const conteudosFiltrados = useMemo(() => {
     if (!conteudos) return [];
     return conteudos.filter(c => {
-      if (!c.datahora_publicacao_planejada) return false;
+      if (!c.data_publicacao_planejada) return false;
       const matchStatus = filtroStatus === 'TODOS' || c.pipeline_status === filtroStatus;
       const matchCanal = filtroCanal === 'TODOS' || c.canal === filtroCanal;
-      const matchBusca = !busca || c.ideia_titulo?.toLowerCase().includes(busca.toLowerCase());
+      const matchBusca = !busca || c.ideia?.toLowerCase().includes(busca.toLowerCase());
       return matchStatus && matchCanal && matchBusca;
     });
   }, [conteudos, filtroStatus, filtroCanal, busca]);
@@ -105,9 +105,9 @@ export default function CalendarioPage() {
   const eventos: EventoCalendario[] = useMemo(() => {
     return conteudosFiltrados.map(conteudo => ({
       id: conteudo.pipeline_id,
-      title: conteudo.ideia_titulo?.trim() || '',
-      start: new Date(conteudo.datahora_publicacao_planejada!),
-      end: new Date(conteudo.datahora_publicacao_planejada!),
+      title: conteudo.ideia?.trim() || '',
+      start: new Date(conteudo.data_publicacao_planejada!),
+      end: new Date(conteudo.data_publicacao_planejada!),
       resource: conteudo,
     }));
   }, [conteudosFiltrados]);
@@ -141,7 +141,7 @@ export default function CalendarioPage() {
   const getEventoStyle: EventPropGetter<EventoCalendario> = useCallback((event) => {
     const status = event.resource.pipeline_status as keyof typeof STATUS_CONFIG
     const config = STATUS_CONFIG[status] || STATUS_CONFIG.AGUARDANDO_ROTEIRO
-    const prioridade = event.resource.pipeline_prioridade || 5
+    const prioridade = event.resource.prioridade || 5
     
     return {
       style: {
@@ -161,7 +161,7 @@ export default function CalendarioPage() {
   const CustomEvent = ({ event }: { event: EventoCalendario }) => {
     const status = event.resource.pipeline_status as keyof typeof STATUS_CONFIG
     const config = STATUS_CONFIG[status]
-    const prioridade = event.resource.pipeline_prioridade || 5
+    const prioridade = event.resource.prioridade || 5
     
     return (
       <div className="flex items-center gap-1 min-w-0">
@@ -447,19 +447,19 @@ export default function CalendarioPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-400">Alta (P1-P3):</span>
                   <span className="text-red-400 font-semibold">
-                    {conteudos?.filter(c => c.pipeline_prioridade && c.pipeline_prioridade <= 3).length || 0}
+                    {conteudos?.filter(c => c.prioridade && c.prioridade <= 3).length || 0}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-400">Média (P4-P6):</span>
                   <span className="text-yellow-400 font-semibold">
-                    {conteudos?.filter(c => c.pipeline_prioridade && c.pipeline_prioridade >= 4 && c.pipeline_prioridade <= 6).length || 0}
+                    {conteudos?.filter(c => c.prioridade && c.prioridade >= 4 && c.prioridade <= 6).length || 0}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-400">Baixa (P7-P10):</span>
                   <span className="text-zinc-400 font-semibold">
-                    {conteudos?.filter(c => c.pipeline_prioridade && c.pipeline_prioridade >= 7).length || 0}
+                    {conteudos?.filter(c => c.prioridade && c.prioridade >= 7).length || 0}
                   </span>
                 </div>
               </div>
@@ -479,7 +479,7 @@ export default function CalendarioPage() {
                     {STATUS_CONFIG[eventoSelecionado.resource.pipeline_status as keyof typeof STATUS_CONFIG]?.icon}
                   </span>
                   <h2 className="text-2xl font-bold text-white">
-                    {eventoSelecionado.resource.ideia_titulo}
+                    {eventoSelecionado.resource.ideia}
                   </h2>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-zinc-400">
@@ -515,40 +515,25 @@ export default function CalendarioPage() {
                 <div className="bg-zinc-800/50 rounded-lg p-4">
                   <div className="text-xs text-zinc-500 mb-1">Prioridade</div>
                   <div className="flex items-center gap-2">
-                    <Flag className={`h-4 w-4 ${eventoSelecionado.resource.pipeline_prioridade <= 3 ? 'text-red-400' : 'text-zinc-400'}`} />
+                    <Flag className={`h-4 w-4 ${eventoSelecionado.resource.prioridade <= 3 ? 'text-red-400' : 'text-zinc-400'}`} />
                     <span className="text-sm font-medium text-white">
-                      P{eventoSelecionado.resource.pipeline_prioridade || 5}
+                      P{eventoSelecionado.resource.prioridade || 5}
                     </span>
                   </div>
                 </div>
               </div>
               
-              {eventoSelecionado.resource.tem_roteiro && (
+              {eventoSelecionado.resource.roteiro_status && (
                 <div className="bg-zinc-800/50 rounded-lg p-4">
-                  <div className="text-xs text-zinc-500 mb-2">Roteiro</div>
+                  <div className="text-xs text-zinc-500 mb-2">Status do Roteiro</div>
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-violet-400" />
-                    <span className="text-sm text-white">{eventoSelecionado.resource.roteiro_titulo}</span>
+                    <span className="text-sm text-white">{eventoSelecionado.resource.roteiro_status}</span>
                   </div>
                 </div>
               )}
               
-              {eventoSelecionado.resource.pipeline_responsavel && (
-                <div className="bg-zinc-800/50 rounded-lg p-4">
-                  <div className="text-xs text-zinc-500 mb-2">Responsável</div>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-blue-400" />
-                    <span className="text-sm text-white">{eventoSelecionado.resource.pipeline_responsavel}</span>
-                  </div>
-                </div>
-              )}
-              
-              {eventoSelecionado.resource.pipeline_observacoes && (
-                <div className="bg-zinc-800/50 rounded-lg p-4">
-                  <div className="text-xs text-zinc-500 mb-2">Observações</div>
-                  <p className="text-sm text-zinc-300">{eventoSelecionado.resource.pipeline_observacoes}</p>
-                </div>
-              )}
+              {/* Campos removidos: pipeline_responsavel, pipeline_observacoes não estão na vw_pipeline_calendario_publicacao */}
               
               <div className="flex gap-3 pt-4">
                 <Link
