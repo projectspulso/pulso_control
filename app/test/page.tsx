@@ -51,8 +51,17 @@ export default function TestPage() {
   if (loading) {
     return (
       <div className="min-h-screen p-8 bg-zinc-950 text-white">
-        <h1 className="text-2xl font-bold mb-4">Testando Conexão Supabase...</h1>
-        <div className="animate-pulse">Carregando...</div>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse-glow" />
+            <h1 className="text-3xl font-black bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+              Testando Conexão Supabase...
+            </h1>
+          </div>
+          <div className="glass rounded-2xl p-8 text-center">
+            <div className="animate-pulse">Carregando...</div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -60,60 +69,79 @@ export default function TestPage() {
   if (error) {
     return (
       <div className="min-h-screen p-8 bg-zinc-950 text-white">
-        <h1 className="text-2xl font-bold mb-4 text-red-500">❌ Erro na Conexão</h1>
-        <pre className="bg-zinc-900 p-4 rounded text-red-400">{error}</pre>
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold mb-4 text-red-500">❌ Erro na Conexão</h1>
+          <pre className="glass rounded-2xl p-6 text-red-400 overflow-auto">{error}</pre>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen p-8 bg-zinc-950 text-white">
-      <h1 className="text-2xl font-bold mb-6">✅ Teste de Conexão Supabase</h1>
-      
-      <div className="space-y-6">
-        <div className="bg-zinc-900 p-6 rounded-lg">
-          <h2 className="text-xl font-bold text-green-400 mb-2">
-            Ideias: {data?.ideias_count}
-          </h2>
-          {data?.ideias_count === 0 && (
-            <p className="text-yellow-400">⚠️ Nenhuma ideia encontrada! Execute o SQL no Supabase.</p>
-          )}
-          {data?.ideias_count > 0 && (
-            <div className="mt-4">
-              <p className="text-sm text-zinc-400 mb-2">Primeiras 5 ideias:</p>
-              <pre className="bg-zinc-800 p-3 rounded text-xs overflow-auto max-h-64">
-                {JSON.stringify(data.ideias, null, 2)}
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse-glow" />
+          <h1 className="text-3xl font-black bg-gradient-to-r from-green-400 via-emerald-400 to-green-400 bg-clip-text text-transparent">
+            ✅ Teste de Conexão Supabase
+          </h1>
+        </div>
+        
+        <div className="space-y-6">
+          <div className="glass rounded-2xl p-6 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-green-600/20 blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-300" />
+            <div className="relative">
+              <h2 className="text-xl font-bold text-green-400 mb-2">
+                Ideias: {data?.ideias_count}
+              </h2>
+              {data?.ideias_count === 0 && (
+                <p className="text-yellow-400">⚠️ Nenhuma ideia encontrada! Execute o SQL no Supabase.</p>
+              )}
+              {data?.ideias_count > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm text-zinc-400 mb-2">Primeiras 5 ideias:</p>
+                  <pre className="glass rounded-lg p-3 text-xs overflow-auto max-h-64">
+                    {JSON.stringify(data.ideias, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="glass rounded-2xl p-6 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-blue-600/20 blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-300" />
+            <div className="relative">
+              <h2 className="text-xl font-bold text-blue-400 mb-2">
+                Canais: {data?.canais?.length || 0}
+              </h2>
+              <pre className="glass rounded-lg p-3 text-xs overflow-auto">
+                {JSON.stringify(data.canais, null, 2)}
               </pre>
             </div>
-          )}
+          </div>
+
+          <div className="glass rounded-2xl p-6 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-purple-600/20 blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-300" />
+            <div className="relative">
+              <h2 className="text-xl font-bold text-purple-400 mb-2">
+                Séries: {data?.series?.length || 0}
+              </h2>
+              <pre className="glass rounded-lg p-3 text-xs overflow-auto">
+                {JSON.stringify(data.series, null, 2)}
+              </pre>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-zinc-900 p-6 rounded-lg">
-          <h2 className="text-xl font-bold text-blue-400 mb-2">
-            Canais: {data?.canais?.length || 0}
-          </h2>
-          <pre className="bg-zinc-800 p-3 rounded text-xs overflow-auto">
-            {JSON.stringify(data.canais, null, 2)}
-          </pre>
+        <div className="mt-6">
+          <a 
+            href="/"
+            className="inline-flex items-center gap-2 glass-hover px-6 py-3 rounded-lg text-white relative overflow-hidden group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+            <span className="relative">← Voltar ao Dashboard</span>
+          </a>
         </div>
-
-        <div className="bg-zinc-900 p-6 rounded-lg">
-          <h2 className="text-xl font-bold text-purple-400 mb-2">
-            Séries: {data?.series?.length || 0}
-          </h2>
-          <pre className="bg-zinc-800 p-3 rounded text-xs overflow-auto">
-            {JSON.stringify(data.series, null, 2)}
-          </pre>
-        </div>
-      </div>
-
-      <div className="mt-6">
-        <a 
-          href="/"
-          className="inline-block bg-purple-500 hover:bg-purple-600 px-4 py-2 rounded text-white"
-        >
-          ← Voltar ao Dashboard
-        </a>
       </div>
     </div>
   )

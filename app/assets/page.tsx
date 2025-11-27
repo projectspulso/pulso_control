@@ -45,22 +45,27 @@ export default function AssetsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="flex items-center justify-between animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">📁 Biblioteca de Assets</h1>
-            <p className="text-zinc-400">Gerenciamento de áudios, vídeos, thumbnails e B-rolls</p>
+            <h1 className="text-4xl font-black bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent flex items-center gap-3">
+              📁 Biblioteca de Assets
+            </h1>
+            <p className="text-zinc-400 mt-2 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-pink-500 animate-pulse" />
+              Áudios, vídeos, thumbnails e B-rolls
+            </p>
           </div>
           
-          <button className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors">
-            <Upload className="h-4 w-4" />
+          <button className="group glass glass-hover rounded-xl px-6 py-3 font-semibold bg-gradient-to-r from-pink-600 to-purple-600 text-white border-pink-500/50 hover:shadow-lg hover:shadow-pink-500/20 transition-all flex items-center gap-2">
+            <Upload className="h-4 w-4 group-hover:scale-110 transition-transform" />
             Upload Asset
           </button>
         </div>
 
         {/* Filtros */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {tiposDisponiveis.map((tipo) => {
+        <div className="flex gap-2 overflow-x-auto pb-2 animate-fade-in" style={{ animationDelay: '100ms' }}>
+          {tiposDisponiveis.map((tipo, idx) => {
             const Icon = tipo.icon
             const isActive = tipoFiltro === tipo.valor
             
@@ -68,11 +73,12 @@ export default function AssetsPage() {
               <button
                 key={tipo.valor}
                 onClick={() => setTipoFiltro(tipo.valor)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all whitespace-nowrap animate-fade-in ${
                   isActive 
-                    ? 'bg-violet-600 text-white' 
-                    : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
+                    ? 'glass bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-lg shadow-pink-500/20' 
+                    : 'glass text-zinc-400 hover:text-white'
                 }`}
+                style={{ animationDelay: `${100 + idx * 50}ms` }}
               >
                 <Icon className="h-4 w-4" />
                 {tipo.label}
@@ -83,23 +89,27 @@ export default function AssetsPage() {
 
         {/* Grid de Assets */}
         {isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-zinc-400">Carregando assets...</p>
+          <div className="glass rounded-2xl p-12 text-center animate-fade-in" style={{ animationDelay: '200ms' }}>
+            <div className="skeleton h-8 w-32 mx-auto mb-4" />
+            <div className="skeleton h-4 w-48 mx-auto" />
           </div>
         ) : !assets || assets.length === 0 ? (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-12 text-center">
-            <p className="text-zinc-400 text-lg mb-2">Nenhum asset encontrado</p>
-            <p className="text-sm text-zinc-500">
+          <div className="glass rounded-2xl p-12 text-center animate-fade-in" style={{ animationDelay: '200ms' }}>
+            <div className="text-6xl mb-4">📁</div>
+            <p className="text-zinc-400 text-lg mb-2 font-semibold">Nenhum asset encontrado</p>
+            <p className="text-sm text-zinc-600">
               {tipoFiltro ? `Não há assets do tipo "${tipoFiltro}"` : 'Faça upload do seu primeiro asset'}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {assets.map((asset) => (
+            {assets.map((asset, idx) => (
               <div
                 key={asset.id}
-                className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden hover:border-zinc-700 transition-colors group"
+                className="glass glass-hover rounded-2xl overflow-hidden group relative animate-fade-in"
+                style={{ animationDelay: `${200 + idx * 30}ms` }}
               >
+                <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-pink-600/20 blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
                 {/* Preview */}
                 <div className="aspect-video bg-zinc-950 flex items-center justify-center">
                   {getIconeTipo(asset.tipo)}
@@ -168,8 +178,8 @@ export default function AssetsPage() {
 
         {/* Stats */}
         {assets && assets.length > 0 && (
-          <div className="mt-8 p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <div className="glass rounded-2xl p-6 animate-fade-in" style={{ animationDelay: '300ms' }}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
               <div>
                 <p className="text-2xl font-bold text-white">{assets.length}</p>
                 <p className="text-sm text-zinc-400">Total de Assets</p>

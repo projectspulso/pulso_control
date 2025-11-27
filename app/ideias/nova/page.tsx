@@ -69,23 +69,28 @@ export default function NovaIdeiaPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-in">
           <Link
             href="/ideias"
-            className="text-violet-400 hover:text-violet-300 text-sm mb-4 inline-block"
+            className="text-yellow-400 hover:text-yellow-300 text-sm mb-4 flex items-center gap-2 glass-hover px-4 py-2 rounded-lg w-fit"
           >
             ← Voltar para ideias
           </Link>
-          <h1 className="text-3xl font-bold text-white mb-2">💡 Nova Ideia</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse-glow" />
+            <h1 className="text-4xl font-black bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">
+              💡 Nova Ideia
+            </h1>
+          </div>
           <p className="text-zinc-400">
             Crie uma nova ideia de conteúdo para os canais PULSO
           </p>
         </div>
 
         {/* Form */}
-        <form className="space-y-6">
+        <form className="space-y-6 animate-fade-in" style={{ animationDelay: "100ms" }}>
           {/* Título */}
           <div>
             <label className="block text-sm font-medium text-zinc-300 mb-2">
@@ -97,7 +102,7 @@ export default function NovaIdeiaPage() {
               value={formData.titulo}
               onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
               placeholder="Ex: O Mistério do Triângulo das Bermudas"
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
+              className="w-full glass border border-zinc-800/50 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-all"
             />
           </div>
 
@@ -112,7 +117,7 @@ export default function NovaIdeiaPage() {
               onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
               placeholder="Descreva a ideia com detalhes. O que será abordado? Qual o gancho? Quais fatos interessantes?"
               rows={6}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 resize-none"
+              className="w-full glass border border-zinc-800/50 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 resize-none transition-all"
             />
             <p className="text-xs text-zinc-500 mt-1">
               Quanto mais detalhada, melhor será o roteiro gerado pela IA
@@ -131,7 +136,7 @@ export default function NovaIdeiaPage() {
                   setFormData({ ...formData, canal_id: e.target.value, serie_id: '' })
                   setCanalSelecionado(e.target.value)
                 }}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-violet-500"
+                className="w-full glass border border-zinc-800/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-all"
               >
                 <option value="">Selecione um canal</option>
                 {canais?.map(canal => (
@@ -150,7 +155,7 @@ export default function NovaIdeiaPage() {
                 value={formData.serie_id}
                 onChange={(e) => setFormData({ ...formData, serie_id: e.target.value })}
                 disabled={!canalSelecionado}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-violet-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full glass border border-zinc-800/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 <option value="">Selecione uma série</option>
                 {series?.map(serie => (
@@ -179,7 +184,7 @@ export default function NovaIdeiaPage() {
                 max="10"
                 value={formData.prioridade}
                 onChange={(e) => setFormData({ ...formData, prioridade: parseInt(e.target.value) })}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-violet-500"
+                className="w-full glass border border-zinc-800/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-all"
               />
               <p className="text-xs text-zinc-500 mt-1">
                 1 = baixa, 10 = urgente
@@ -193,7 +198,7 @@ export default function NovaIdeiaPage() {
               <select
                 value={formData.origem}
                 onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-violet-500"
+                className="w-full glass border border-zinc-800/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-all"
               >
                 <option value="MANUAL">Manual</option>
                 <option value="IA">IA/Automática</option>
@@ -220,12 +225,12 @@ export default function NovaIdeiaPage() {
                   }
                 }}
                 placeholder="Digite uma tag e pressione Enter"
-                className="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
+                className="flex-1 glass border border-zinc-800/50 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-all"
               />
               <button
                 type="button"
                 onClick={adicionarTag}
-                className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="glass-hover text-white px-6 py-2 rounded-lg transition-all"
               >
                 Adicionar
               </button>
@@ -235,7 +240,7 @@ export default function NovaIdeiaPage() {
                 {formData.tags.map(tag => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 bg-violet-600/20 text-violet-300 px-3 py-1 rounded-full text-sm"
+                    className="inline-flex items-center gap-1 glass text-yellow-300 px-3 py-1 rounded-full text-sm border border-yellow-500/30"
                   >
                     {tag}
                     <button
@@ -252,22 +257,24 @@ export default function NovaIdeiaPage() {
           </div>
 
           {/* Botões */}
-          <div className="flex gap-4 pt-6 border-t border-zinc-800">
+          <div className="flex gap-4 pt-6 border-t border-zinc-800/50">
             <button
               type="button"
               onClick={(e) => handleSubmit(e, 'RASCUNHO')}
               disabled={criarIdeia.isPending}
-              className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 glass-hover text-white px-6 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
             >
-              {criarIdeia.isPending ? 'Salvando...' : 'Salvar como Rascunho'}
+              <div className="absolute inset-0 bg-gradient-to-r from-zinc-600 to-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="relative">{criarIdeia.isPending ? 'Salvando...' : 'Salvar como Rascunho'}</span>
             </button>
             <button
               type="button"
               onClick={(e) => handleSubmit(e, 'APROVADA')}
               disabled={criarIdeia.isPending}
-              className="flex-1 bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 glass-hover text-white px-6 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
             >
-              {criarIdeia.isPending ? 'Salvando...' : 'Salvar e Aprovar'}
+              <div className="absolute inset-0 bg-gradient-to-r from-yellow-600 to-orange-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+              <span className="relative">{criarIdeia.isPending ? 'Salvando...' : 'Salvar e Aprovar'}</span>
             </button>
           </div>
         </form>

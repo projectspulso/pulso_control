@@ -40,30 +40,38 @@ export default function PublicarPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
-        <div className="text-zinc-400">Carregando conteúdos...</div>
+        <div className="max-w-7xl mx-auto">
+          <div className="glass rounded-2xl p-8 text-center space-y-4">
+            <div className="skeleton h-8 w-32 mx-auto" />
+            <div className="skeleton h-4 w-48 mx-auto" />
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">🚀 Publicar Conteúdo</h1>
-            <p className="text-zinc-400">
+            <h1 className="text-4xl font-black bg-gradient-to-r from-green-400 via-emerald-400 to-green-400 bg-clip-text text-transparent flex items-center gap-3">
+              🚀 Publicar Conteúdo
+            </h1>
+            <p className="text-zinc-400 mt-2 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
               {conteudos?.length || 0} conteúdos prontos para publicação
             </p>
           </div>
           
           {selecionados.size > 0 && (
-            <div className="flex gap-3">
-              <button className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center gap-2">
+            <div className="flex gap-3 animate-slide-in-right">
+              <button className="glass glass-hover rounded-xl px-6 py-3 font-semibold bg-gradient-to-r from-violet-600 to-purple-600 text-white border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/20 transition-all flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                Agendar {selecionados.size} {selecionados.size === 1 ? 'item' : 'itens'}
+                Agendar {selecionados.size}
               </button>
-              <button className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2">
+              <button className="glass glass-hover rounded-xl px-6 py-3 font-semibold bg-gradient-to-r from-green-600 to-emerald-600 text-white border-green-500/50 hover:shadow-lg hover:shadow-green-500/20 transition-all flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
                 Publicar Agora
               </button>
@@ -72,8 +80,9 @@ export default function PublicarPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
+        <div className="grid grid-cols-4 gap-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <div className="glass glass-hover rounded-2xl p-6 group relative overflow-hidden">
+            <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-green-600/20 blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
             <div className="flex items-center gap-3 mb-2">
               <CheckCircle2 className="h-5 w-5 text-green-500" />
               <span className="text-sm text-zinc-400">Prontos</span>

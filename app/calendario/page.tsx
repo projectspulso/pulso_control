@@ -185,7 +185,11 @@ export default function CalendarioPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
-        <div className="text-zinc-400">Carregando calendário...</div>
+        <div className="max-w-7xl mx-auto">
+          <div className="glass rounded-2xl p-8 text-center">
+            <div className="text-zinc-400 animate-pulse">Carregando calendário...</div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -194,35 +198,42 @@ export default function CalendarioPage() {
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-[1800px] mx-auto">
         {/* Header com controles completos */}
-        <div className="mb-6">
+        <div className="mb-6 animate-fade-in">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-1">📅 Calendário Editorial</h1>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse-glow" />
+                <h1 className="text-4xl font-black bg-gradient-to-r from-teal-400 via-blue-400 to-teal-400 bg-clip-text text-transparent">
+                  📅 Calendário Editorial
+                </h1>
+              </div>
               <p className="text-sm text-zinc-400">
                 Mostrando {conteudosFiltrados?.length || 0} de {estatisticas?.total || 0} conteúdos • {format(date, 'MMMM/yyyy', { locale: ptBR })}
               </p>
             </div>
             <Link
               href="/producao"
-              className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-violet-500/20"
+              className="glass-hover px-6 py-3 text-white rounded-lg transition-all flex items-center gap-2 relative overflow-hidden group"
             >
-              <Grid3x3 className="h-4 w-4" />
-              Ver Kanban
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-purple-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+              <Grid3x3 className="h-4 w-4 relative" />
+              <span className="relative">Ver Kanban</span>
             </Link>
           </div>
           
           {/* Painel de controle unificado */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xl space-y-4">
+          <div className="glass border border-zinc-800/50 rounded-2xl p-5 shadow-xl space-y-4">
             {/* Linha 1: Navegação e Visualizações */}
             <div className="flex items-center justify-between">
               {/* Navegação de datas */}
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => handleNavigate('TODAY')}
-                  className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-violet-500/20"
+                  className="glass-hover px-5 py-2 text-white rounded-lg text-sm font-medium transition-all relative overflow-hidden group"
                 >
-                  <Calendar className="h-4 w-4 inline mr-2" />
-                  Hoje
+                  <div className="absolute inset-0 bg-gradient-to-r from-teal-600 to-blue-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+                  <Calendar className="h-4 w-4 inline mr-2 relative" />
+                  <span className="relative">Hoje</span>
                 </button>
                 <div className="h-6 w-px bg-zinc-700"></div>
                 <div className="flex items-center gap-1">
