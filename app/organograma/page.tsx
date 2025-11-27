@@ -152,11 +152,13 @@ export default function OrganogramaPage() {
               seriesDataRef.current[canalId] = series;
             }
             
-            // Mock séries se não houver dados
-            const seriesToShow = series.length > 0 ? series : [
-              { id: `mock-s1-${canalId}`, nome: "Série A", canal_id: canalId },
-              { id: `mock-s2-${canalId}`, nome: "Série B", canal_id: canalId },
-            ];
+            // Mostrar apenas séries reais
+            const seriesToShow = series || [];
+            
+            if (seriesToShow.length === 0) {
+              console.log(`Canal ${canalId} não possui séries cadastradas`);
+              return;
+            }
             
             const nodePos = node.position();
             const serieRadius = 180;
@@ -229,9 +231,10 @@ export default function OrganogramaPage() {
           nodesToRemove.forEach(n => graph.removeNode(n.id));
           expandedNodesRef.current.delete(node.id);
         } else {
-          // Expandir: ideias e roteiros
-          const ideiasFiltered = ideias?.slice(0, 3) || [];
-          const roteirosFiltered = roteiros?.slice(0, 2) || [];
+          // Expandir: ideias e roteiros filtrados pela série
+          const serieId = nodeData.serieId;
+          const ideiasFiltered = ideias?.filter(i => i.serie_id === serieId).slice(0, 5) || [];
+          const roteirosFiltered = roteiros?.filter(r => r.serie_id === serieId).slice(0, 3) || [];
           
           const nodePos = node.position();
           const ideiaRadius = 150;
@@ -340,7 +343,10 @@ export default function OrganogramaPage() {
           nodesToRemove.forEach(n => graph.removeNode(n.id));
           expandedNodesRef.current.delete(node.id);
         } else {
-          const producaoFiltered = producao?.slice(0, 2) || [];
+          // Filtrar produção pela ideia ou roteiro
+          const entityId = nodeData.ideiaId || nodeData.roteiroId;
+          const entityType = nodeData.type === 'ideia' ? 'ideia_id' : 'roteiro_id';
+          const producaoFiltered = producao?.filter(p => p[entityType] === entityId).slice(0, 3) || [];
           const nodePos = node.position();
           
           producaoFiltered.forEach((item: any, idx: number) => {

@@ -42,7 +42,7 @@ function CardConteudo({ conteudo }: CardProps) {
       className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 cursor-move hover:border-zinc-700 transition-colors"
     >
       <h4 className="text-sm font-medium text-white mb-2 line-clamp-2">
-        {conteudo.ideia_titulo || 'Sem título'}
+        {conteudo.ideia || 'Sem título'}
       </h4>
       
       <div className="space-y-1 text-xs text-zinc-400">
@@ -60,37 +60,29 @@ function CardConteudo({ conteudo }: CardProps) {
           </div>
         )}
         
-        {conteudo.datahora_publicacao_planejada && (
+        {conteudo.data_publicacao_planejada && (
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
-            <span>{new Date(conteudo.datahora_publicacao_planejada).toLocaleDateString('pt-BR')}</span>
+            <span>{new Date(conteudo.data_publicacao_planejada).toLocaleDateString('pt-BR')}</span>
           </div>
         )}
         
-        {conteudo.pipeline_responsavel && (
-          <div className="flex items-center gap-1">
-            <User className="h-3 w-3" />
-            <span>{conteudo.pipeline_responsavel}</span>
-          </div>
-        )}
         
         <div className="flex items-center gap-2 mt-2">
           <span className={`px-2 py-0.5 rounded text-xs ${
-            conteudo.pipeline_prioridade >= 8 ? 'bg-red-600/20 text-red-400' :
-            conteudo.pipeline_prioridade >= 5 ? 'bg-yellow-600/20 text-yellow-400' :
+            conteudo.prioridade >= 8 ? 'bg-red-600/20 text-red-400' :
+            conteudo.prioridade >= 5 ? 'bg-yellow-600/20 text-yellow-400' :
             'bg-zinc-700/20 text-zinc-400'
           }`}>
-            P{conteudo.pipeline_prioridade}
+            P{conteudo.prioridade}
           </span>
           
-          {conteudo.tem_roteiro && (
-            <span className="px-2 py-0.5 rounded text-xs bg-blue-600/20 text-blue-400">📝</span>
+          {conteudo.roteiro_status && (
+            <span className="px-2 py-0.5 rounded text-xs bg-blue-600/20 text-blue-400">📝 {conteudo.roteiro_status}</span>
           )}
-          {conteudo.tem_audio && (
-            <span className="px-2 py-0.5 rounded text-xs bg-purple-600/20 text-purple-400">🎵</span>
-          )}
-          {conteudo.tem_video && (
-            <span className="px-2 py-0.5 rounded text-xs bg-green-600/20 text-green-400">🎬</span>
+          
+          {conteudo.is_piloto && (
+            <span className="px-2 py-0.5 rounded text-xs bg-purple-600/20 text-purple-400">⭐ Piloto</span>
           )}
         </div>
       </div>
@@ -243,7 +235,7 @@ export default function ProducaoPage() {
             {activeId && activeConteudo ? (
               <div className="bg-zinc-900 border-2 border-violet-500 rounded-lg p-4 opacity-90 rotate-3">
                 <h4 className="text-sm font-medium text-white mb-2">
-                  {activeConteudo.ideia_titulo || 'Sem título'}
+                  {activeConteudo.ideia || 'Sem título'}
                 </h4>
                 <div className="text-xs text-zinc-400">
                   Arrastando...
