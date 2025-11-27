@@ -108,8 +108,13 @@ export default function ConteudoPage() {
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">📚 Biblioteca de Conteúdo</h1>
+        <div className="mb-8 animate-fade-in">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse-glow" />
+            <h1 className="text-4xl font-black bg-gradient-to-r from-violet-400 via-purple-400 to-violet-400 bg-clip-text text-transparent">
+              📚 Biblioteca de Conteúdo
+            </h1>
+          </div>
           <p className="text-zinc-400">Visão geral de todo o conteúdo do sistema</p>
         </div>
 
