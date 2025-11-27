@@ -1,0 +1,97 @@
+create or replace view pulso_content.vw_pulso_pipeline_base as
+select -- PIPELINE
+    p.id as pipeline_id,
+    p.ideia_id,
+    p.roteiro_id,
+    p.audio_id,
+    p.video_id,
+    p.conteudo_variantes_id,
+    p.status as pipeline_status,
+    p.prioridade,
+    p.data_prevista,
+    p.data_publicacao,
+    p.data_publicacao_planejada,
+    (p.data_publicacao_planejada::time) as hora_publicacao,
+    p.data_lancamento,
+    p.responsavel,
+    p.observacoes,
+    p.metadata as pipeline_metadata,
+    p.created_at as pipeline_created_at,
+    p.updated_at as pipeline_updated_at,
+    -- IDEIA
+    i.titulo as ideia_titulo,
+    i.descricao as ideia_descricao,
+    i.origem as ideia_origem,
+    i.status as ideia_status,
+    i.prioridade as ideia_prioridade,
+    i.tags as ideia_tags,
+    i.linguagem as ideia_linguagem,
+    i.canal_id,
+    i.serie_id,
+    i.criado_por as ideia_criado_por,
+    i.metadata as ideia_metadata,
+    i.created_at as ideia_created_at,
+    i.updated_at as ideia_updated_at,
+    -- CANAL
+    c.nome as canal_nome,
+    c.slug as canal_slug,
+    c.descricao as canal_descricao,
+    c.idioma as canal_idioma,
+    c.status as canal_status,
+    c.metadata as canal_metadata,
+    c.created_at as canal_created_at,
+    c.updated_at as canal_updated_at,
+    -- SÉRIE
+    s.id as serie_id_real,
+    s.nome as serie_nome,
+    s.slug as serie_slug,
+    s.descricao as serie_descricao,
+    s.status as serie_status,
+    s.ordem_padrao as serie_ordem_padrao,
+    s.metadata as serie_metadata,
+    s.created_at as serie_created_at,
+    s.updated_at as serie_updated_at
+from pulso_content.pipeline_producao p
+    join pulso_content.ideias i on i.id = p.ideia_id
+    left join pulso_core.canais c on c.id = i.canal_id
+    left join pulso_core.series s on s.id = i.serie_id;
+create or replace view pulso_content.vw_pulso_pipeline_com_assets as
+select -- tudo da view base
+    b.*,
+    -- VARIANTE DE CONTEÚDO (conteudo_variantes)
+    cv.id as conteudo_variantes_id_real,
+    cv.conteudo_id,
+    cv.nome_variacao,
+    cv.plataforma_tipo,
+    cv.status as variante_status,
+    cv.titulo_publico,
+    cv.descricao_publica,
+    cv.legenda,
+    cv.hashtags,
+    cv.linguagem as variante_linguagem,
+    cv.ordem_exibicao,
+    cv.metadata as variante_metadata,
+    cv.created_at as variante_created_at,
+    cv.updated_at as variante_updated_at,
+    -- ASSETS
+    cva.asset_id,
+    cva.papel as asset_papel,
+    cva.ordem as asset_ordem,
+    a.tipo as asset_tipo,
+    a.nome as asset_nome,
+    a.descricao as asset_descricao,
+    a.caminho_storage,
+    a.provedor,
+    a.duracao_segundos,
+    a.largura_px,
+    a.altura_px,
+    a.tamanho_bytes,
+    a.hash_arquivo,
+    a.metadata as asset_metadata,
+    a.criado_por as asset_criado_por,
+    a.created_at as asset_created_at,
+    a.updated_at as asset_updated_at
+from pulso_content.vw_pulso_pipeline_base b
+    left join pulso_content.conteudo_variantes cv on cv.id = b.conteudo_variantes_id -- 👈 usando a coluna real da tabela pipeline_producao
+    left join pulso_assets.conteudo_variantes_assets cva on cva.conteudo_variantes_id = cv.id
+    left join pulso_assets.assets a on a.id = cva.asset_id;
