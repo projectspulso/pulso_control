@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { usePlataformasConectadas, useConfiguracoes, useAtualizarConfiguracao, useDesconectarPlataforma } from '@/lib/hooks/use-plataformas'
+import { ErrorState } from '@/components/ui/error-state'
 import { Settings as SettingsIcon, Database, Key, Bell, Save, Check, X, Loader2, ExternalLink } from 'lucide-react'
 
 export default function SettingsPage() {
-  const { data: plataformas, isLoading: loadingPlataformas } = usePlataformasConectadas()
+  const { data: plataformas, isLoading: loadingPlataformas, isError, refetch } = usePlataformasConectadas()
   const { data: configsN8n } = useConfiguracoes('n8n')
   const atualizarConfig = useAtualizarConfiguracao()
   const desconectar = useDesconectarPlataforma()
@@ -32,6 +33,20 @@ export default function SettingsPage() {
 
   const plataformasConectadas = plataformas?.filter(p => p.tem_credenciais) || []
   const plataformasNaoConectadas = plataformas?.filter(p => !p.tem_credenciais) || []
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-7xl mx-auto">
+          <ErrorState
+            title="Erro ao carregar configurações"
+            message="Não foi possível carregar as configurações do sistema. Tente novamente."
+            onRetry={() => refetch()}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 p-8">

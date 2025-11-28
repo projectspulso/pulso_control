@@ -4,13 +4,34 @@ import { useN8nWorkflows } from '@/lib/hooks/use-n8n'
 import { useWorkflowExecucoes } from '@/lib/hooks/use-workflows'
 import { useIdeias } from '@/lib/hooks/use-ideias'
 import { useRoteiros } from '@/lib/hooks/use-roteiros'
+import { ErrorState } from '@/components/ui/error-state'
 import { CheckCircle2, XCircle, Zap, Database, Lightbulb, FileText, Loader2, AlertCircle } from 'lucide-react'
 
 export default function IntegrationsPage() {
-  const { data: n8nWorkflows, isLoading: loadingN8n, error: n8nError } = useN8nWorkflows()
+  const { data: n8nWorkflows, isLoading: loadingN8n, error: n8nError, refetch: refetchN8n } = useN8nWorkflows()
   const { data: execucoes } = useWorkflowExecucoes()
-  const { data: ideias } = useIdeias()
-  const { data: roteiros } = useRoteiros()
+  const { data: ideias, isError: isIdeiasError, refetch: refetchIdeias } = useIdeias()
+  const { data: roteiros, isError: isRoteirosError, refetch: refetchRoteiros } = useRoteiros()
+
+  const handleRetry = () => {
+    refetchN8n()
+    refetchIdeias()
+    refetchRoteiros()
+  }
+
+  if (isIdeiasError || isRoteirosError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-7xl mx-auto">
+          <ErrorState
+            title="Erro ao carregar integrações"
+            message="Houve um problema ao carregar os dados das integrações. Verifique sua conexão."
+            onRetry={handleRetry}
+          />
+        </div>
+      </div>
+    )
+  }
 
   // Determinar status do n8n
   const n8nStatus: 'connected' | 'disconnected' | 'error' | 'loading' = n8nError 

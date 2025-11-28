@@ -6,6 +6,7 @@ import { useCanais } from "@/lib/hooks/use-core";
 import { useIdeias } from "@/lib/hooks/use-ideias";
 import { useRoteiros } from "@/lib/hooks/use-roteiros";
 import { useConteudosProducao } from "@/lib/hooks/use-producao";
+import { ErrorState } from "@/components/ui/error-state";
 import { supabase } from "@/lib/supabase/client";
 
 export default function OrganogramaPage() {
@@ -14,10 +15,24 @@ export default function OrganogramaPage() {
   const expandedNodesRef = useRef<Set<string>>(new Set());
   const seriesDataRef = useRef<Record<string, any[]>>({});
   
-  const { data: canais } = useCanais();
+  const { data: canais, isError, refetch } = useCanais();
   const { data: ideias } = useIdeias();
   const { data: roteiros } = useRoteiros();
   const { data: producao } = useConteudosProducao();
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="w-full h-[calc(100vh-4rem)] flex items-center justify-center">
+          <ErrorState
+            title="Erro ao carregar organograma"
+            message="Não foi possível carregar a estrutura de canais. Tente novamente."
+            onRetry={() => refetch()}
+          />
+        </div>
+      </div>
+    )
+  }
 
   useEffect(() => {
     if (!containerRef.current || !canais) return;

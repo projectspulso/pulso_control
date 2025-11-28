@@ -2,49 +2,52 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { ErrorState } from '@/components/ui/error-state'
 
 export default function TestPage() {
   const [data, setData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function testConnection() {
-      try {
-        // Teste 1: Contar ideias
-        const { data: ideias, error: ideiasError } = await supabase
-          .from('ideias')
-          .select('*', { count: 'exact' })
-        
-        if (ideiasError) throw ideiasError
+  const testConnection = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      // Teste 1: Contar ideias
+      const { data: ideias, error: ideiasError } = await supabase
+        .from('ideias')
+        .select('*', { count: 'exact' })
+      
+      if (ideiasError) throw ideiasError
 
-        // Teste 2: Buscar canais
-        const { data: canais, error: canaisError } = await supabase
-          .from('canais')
-          .select('*')
-        
-        if (canaisError) throw canaisError
+      // Teste 2: Buscar canais
+      const { data: canais, error: canaisError } = await supabase
+        .from('canais')
+        .select('*')
+      
+      if (canaisError) throw canaisError
 
-        // Teste 3: Buscar séries
-        const { data: series, error: seriesError } = await supabase
-          .from('series')
-          .select('*')
-        
-        if (seriesError) throw seriesError
+      // Teste 3: Buscar séries
+      const { data: series, error: seriesError } = await supabase
+        .from('series')
+        .select('*')
+      
+      if (seriesError) throw seriesError
 
-        setData({
-          ideias_count: ideias?.length || 0,
-          ideias: ideias?.slice(0, 5),
-          canais,
-          series
-        })
-      } catch (err: any) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
+      setData({
+        ideias_count: ideias?.length || 0,
+        ideias: ideias?.slice(0, 5),
+        canais,
+        series
+      })
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     testConnection()
   }, [])
 
@@ -70,8 +73,11 @@ export default function TestPage() {
     return (
       <div className="min-h-screen p-8 bg-zinc-950 text-white">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold mb-4 text-red-500">❌ Erro na Conexão</h1>
-          <pre className="glass rounded-2xl p-6 text-red-400 overflow-auto">{error}</pre>
+          <ErrorState
+            title="Erro na Conexão"
+            message={`Falha ao conectar com Supabase: ${error}`}
+            onRetry={testConnection}
+          />
         </div>
       </div>
     )

@@ -6,6 +6,7 @@ import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, P
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { ErrorState } from '@/components/ui/error-state'
 import { Calendar, Clock, User } from 'lucide-react'
 import Link from 'next/link'
 
@@ -130,7 +131,7 @@ function ColunaKanban({ status, titulo, cor, conteudos }: ColunaProps) {
 }
 
 export default function ProducaoPage() {
-  const { data: conteudos, isLoading } = useConteudosProducao()
+  const { data: conteudos, isLoading, isError, refetch } = useConteudosProducao()
   const { data: stats } = useEstatisticasProducao()
   const atualizarStatus = useAtualizarStatusProducao()
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -185,6 +186,20 @@ export default function ProducaoPage() {
           <div className="glass rounded-2xl p-8 text-center">
             <div className="text-zinc-400 animate-pulse">Carregando pipeline...</div>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-7xl mx-auto">
+          <ErrorState
+            title="Erro ao carregar pipeline"
+            message="Não foi possível carregar o pipeline de produção. Tente novamente."
+            onRetry={() => refetch()}
+          />
         </div>
       </div>
     )

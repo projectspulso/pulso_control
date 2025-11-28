@@ -3,10 +3,11 @@
 import { useAssetsPorTipo, useCriarAsset, useDeletarAsset } from '@/lib/hooks/use-assets'
 import { useState } from 'react'
 import { Upload, Trash2, Film, Music, Image, Layers } from 'lucide-react'
+import { ErrorState } from '@/components/ui/error-state'
 
 export default function AssetsPage() {
   const [tipoFiltro, setTipoFiltro] = useState<string>('')
-  const { data: assets, isLoading } = useAssetsPorTipo(tipoFiltro || undefined)
+  const { data: assets, isLoading, isError, refetch } = useAssetsPorTipo(tipoFiltro || undefined)
   const deletarAsset = useDeletarAsset()
 
   const tiposDisponiveis = [
@@ -93,6 +94,12 @@ export default function AssetsPage() {
             <div className="skeleton h-8 w-32 mx-auto mb-4" />
             <div className="skeleton h-4 w-48 mx-auto" />
           </div>
+        ) : isError ? (
+          <ErrorState 
+            title="Erro ao carregar assets" 
+            message="Não foi possível carregar a biblioteca de mídia. Tente novamente."
+            onRetry={() => refetch()}
+          />
         ) : !assets || assets.length === 0 ? (
           <div className="glass rounded-2xl p-12 text-center animate-fade-in" style={{ animationDelay: '200ms' }}>
             <div className="text-6xl mb-4">📁</div>

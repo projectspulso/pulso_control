@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation'
 import { useRoteiro, useAtualizarRoteiro, useDeletarRoteiro } from '@/lib/hooks/use-roteiros'
 import { useCanais } from '@/lib/hooks/use-core'
 import { useGerarAudio } from '@/lib/hooks/use-n8n'
+import { ErrorState } from '@/components/ui/error-state'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 
 export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
   const router = useRouter()
-  const { data: roteiro, isLoading } = useRoteiro(resolvedParams.id)
+  const { data: roteiro, isLoading, isError, refetch } = useRoteiro(resolvedParams.id)
   const { data: canais } = useCanais()
   
   const atualizarRoteiro = useAtualizarRoteiro()
@@ -104,6 +105,25 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
       <div className="min-h-screen bg-zinc-950 p-8">
         <div className="max-w-4xl mx-auto text-zinc-400">
           Carregando roteiro...
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-4xl mx-auto">
+          <ErrorState
+            title="Erro ao carregar roteiro"
+            message="Não foi possível carregar os detalhes do roteiro. Tente novamente."
+            onRetry={() => refetch()}
+          />
+          <div className="mt-4">
+            <Link href="/roteiros" className="text-violet-400 hover:text-violet-300">
+              ← Voltar para roteiros
+            </Link>
+          </div>
         </div>
       </div>
     )

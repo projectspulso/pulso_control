@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
+import { ErrorState } from '@/components/ui/error-state'
 
 const locales = { 'pt-BR': ptBR }
 
@@ -88,7 +89,7 @@ export default function CalendarioPage() {
   const [filtroCanal, setFiltroCanal] = useState<string>('TODOS')
   const [busca, setBusca] = useState('')
   
-  const { data: conteudos, isLoading } = useCalendario()
+  const { data: conteudos, isLoading, isError, refetch } = useCalendario()
 
   // Filtrar conteúdos
   const conteudosFiltrados = useMemo(() => {
@@ -189,6 +190,20 @@ export default function CalendarioPage() {
           <div className="glass rounded-2xl p-8 text-center">
             <div className="text-zinc-400 animate-pulse">Carregando calendário...</div>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-7xl mx-auto">
+          <ErrorState 
+            title="Erro ao carregar calendário" 
+            message="Não foi possível sincronizar os eventos. Verifique sua conexão."
+            onRetry={() => refetch()}
+          />
         </div>
       </div>
     )

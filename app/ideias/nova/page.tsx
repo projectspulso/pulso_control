@@ -4,11 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCanais, useSeriesPorCanal } from '@/lib/hooks/use-core'
 import { useCriarIdeia } from '@/lib/hooks/use-ideias'
+import { ErrorState } from '@/components/ui/error-state'
 import Link from 'next/link'
 
 export default function NovaIdeiaPage() {
   const router = useRouter()
-  const { data: canais } = useCanais()
+  const { data: canais, isError, refetch } = useCanais()
   const [canalSelecionado, setCanalSelecionado] = useState<string>('')
   const { data: series } = useSeriesPorCanal(canalSelecionado || null)
   
@@ -65,6 +66,20 @@ export default function NovaIdeiaPage() {
       ...formData,
       tags: formData.tags.filter(t => t !== tag)
     })
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-7xl mx-auto">
+          <ErrorState
+            title="Erro ao carregar dados"
+            message="Não foi possível carregar os canais necessários para criar uma nova ideia."
+            onRetry={() => refetch()}
+          />
+        </div>
+      </div>
+    )
   }
 
   return (

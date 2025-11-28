@@ -2,11 +2,12 @@
 
 import { useIdeias, useIdeiasStats } from '@/lib/hooks/use-ideias'
 import { useCanais } from '@/lib/hooks/use-core'
+import { ErrorState } from '@/components/ui/error-state'
 import Link from 'next/link'
 import { useState } from 'react'
 
 export default function IdeiasPage() {
-  const { data: ideias, isLoading } = useIdeias()
+  const { data: ideias, isLoading, isError, refetch } = useIdeias()
   const { data: stats } = useIdeiasStats()
   const { data: canais } = useCanais()
   
@@ -32,6 +33,20 @@ export default function IdeiasPage() {
             <div className="skeleton h-8 w-32 mx-auto mb-2" />
             <div className="skeleton h-4 w-48 mx-auto" />
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-7xl mx-auto">
+          <ErrorState 
+            title="Erro ao carregar ideias" 
+            message="Não foi possível conectar ao banco de dados. Verifique sua conexão e tente novamente."
+            onRetry={() => refetch()}
+          />
         </div>
       </div>
     )

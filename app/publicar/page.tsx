@@ -3,12 +3,13 @@
 import { useConteudosProntos } from '@/lib/hooks/use-calendario'
 import { useState } from 'react'
 import { Calendar, Clock, CheckCircle2, Sparkles, ExternalLink, Youtube, Instagram, Music2 } from 'lucide-react'
+import { ErrorState } from '@/components/ui/error-state'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Link from 'next/link'
 
 export default function PublicarPage() {
-  const { data: conteudos, isLoading } = useConteudosProntos()
+  const { data: conteudos, isLoading, isError, refetch } = useConteudosProntos()
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
   const toggleSelecao = (id: string) => {
@@ -45,6 +46,20 @@ export default function PublicarPage() {
             <div className="skeleton h-8 w-32 mx-auto" />
             <div className="skeleton h-4 w-48 mx-auto" />
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-7xl mx-auto">
+          <ErrorState
+            title="Erro ao carregar conteúdos"
+            message="Não foi possível carregar os conteúdos prontos para publicação. Tente novamente."
+            onRetry={() => refetch()}
+          />
         </div>
       </div>
     )

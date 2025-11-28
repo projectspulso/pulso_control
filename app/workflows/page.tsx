@@ -3,6 +3,7 @@
 import { useWorkflows, useWorkflowExecucoes } from '@/lib/hooks/use-workflows'
 import { useN8nWorkflows } from '@/lib/hooks/use-n8n'
 import { formatDateTime } from '@/lib/utils'
+import { ErrorState } from '@/components/ui/error-state'
 import { Workflow, Play, Pause, Settings, CheckCircle2, XCircle, Clock, Loader2, Zap } from 'lucide-react'
 
 const STATUS_CONFIG = {
@@ -13,7 +14,7 @@ const STATUS_CONFIG = {
 }
 
 export default function WorkflowsPage() {
-  const { data: workflows, isLoading: loadingWorkflows } = useWorkflows()
+  const { data: workflows, isLoading: loadingWorkflows, isError, refetch } = useWorkflows()
   const { data: execucoes, isLoading: loadingExecucoes } = useWorkflowExecucoes()
   const { data: n8nWorkflows, isLoading: loadingN8n } = useN8nWorkflows()
 
@@ -29,6 +30,20 @@ export default function WorkflowsPage() {
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-zinc-800 rounded w-1/4"></div>
           <div className="h-64 bg-zinc-800 rounded"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-7xl mx-auto">
+          <ErrorState
+            title="Erro ao carregar workflows"
+            message="Não foi possível carregar a lista de workflows. Tente novamente."
+            onRetry={() => refetch()}
+          />
         </div>
       </div>
     )

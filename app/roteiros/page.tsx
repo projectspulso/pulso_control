@@ -2,11 +2,12 @@
 
 import { useRoteiros, useRoteirosStats } from '@/lib/hooks/use-roteiros'
 import { useCanais } from '@/lib/hooks/use-core'
+import { ErrorState } from '@/components/ui/error-state'
 import Link from 'next/link'
 import { useState } from 'react'
 
 export default function RoteirosPage() {
-  const { data: roteiros, isLoading } = useRoteiros()
+  const { data: roteiros, isLoading, isError, refetch } = useRoteiros()
   const { data: stats } = useRoteirosStats()
   const { data: canais } = useCanais()
   
@@ -32,6 +33,20 @@ export default function RoteirosPage() {
             <div className="skeleton h-8 w-32 mx-auto" />
             <div className="skeleton h-4 w-48 mx-auto" />
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-7xl mx-auto">
+          <ErrorState
+            title="Erro ao carregar roteiros"
+            message="Não foi possível carregar a lista de roteiros. Tente novamente."
+            onRetry={() => refetch()}
+          />
         </div>
       </div>
     )

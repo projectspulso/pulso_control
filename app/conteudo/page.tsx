@@ -6,14 +6,22 @@ import { useConteudosProducao } from '@/lib/hooks/use-producao'
 import { useAssetsPorTipo } from '@/lib/hooks/use-assets'
 import { FileText, Video, Image as ImageIcon, Calendar, Lightbulb, FileEdit, TrendingUp, Layers } from 'lucide-react'
 import Link from 'next/link'
+import { ErrorState } from '@/components/ui/error-state'
 
 export default function ConteudoPage() {
-  const { data: ideias } = useIdeias()
-  const { data: roteiros } = useRoteiros()
-  const { data: pipeline } = useConteudosProducao()
+  const { data: ideias, isError: errorIdeias, refetch: refetchIdeias } = useIdeias()
+  const { data: roteiros, isError: errorRoteiros, refetch: refetchRoteiros } = useRoteiros()
+  const { data: pipeline, isError: errorPipeline, refetch: refetchPipeline } = useConteudosProducao()
   const { data: videos } = useAssetsPorTipo('video')
   const { data: imagens } = useAssetsPorTipo('imagem')
   const { data: audios } = useAssetsPorTipo('audio')
+
+  const isError = errorIdeias || errorRoteiros || errorPipeline
+  const refetchAll = () => {
+    refetchIdeias()
+    refetchRoteiros()
+    refetchPipeline()
+  }
 
   // Estatísticas
   const totalIdeias = ideias?.length || 0
@@ -117,6 +125,16 @@ export default function ConteudoPage() {
           </div>
           <p className="text-zinc-400">Visão geral de todo o conteúdo do sistema</p>
         </div>
+
+        {isError && (
+          <div className="mb-8">
+            <ErrorState 
+              title="Atenção: Alguns dados não carregaram" 
+              message="Houve um problema ao buscar parte das estatísticas. Os dados exibidos podem estar incompletos."
+              onRetry={refetchAll}
+            />
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

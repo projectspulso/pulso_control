@@ -4,9 +4,10 @@ import { useCanais } from '@/lib/hooks/use-core'
 import { useIdeias } from '@/lib/hooks/use-ideias'
 import Link from 'next/link'
 import { Megaphone, Plus, TrendingUp, FileText, Video } from 'lucide-react'
+import { ErrorState } from '@/components/ui/error-state'
 
 export default function CanaisPage() {
-  const { data: canais, isLoading: loadingCanais } = useCanais()
+  const { data: canais, isLoading: loadingCanais, isError, refetch } = useCanais()
   const { data: ideias } = useIdeias()
 
   if (loadingCanais) {
@@ -19,6 +20,20 @@ export default function CanaisPage() {
               <div key={i} className="h-48 bg-zinc-800 rounded"></div>
             ))}
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-7xl mx-auto">
+          <ErrorState 
+            title="Erro ao carregar canais" 
+            message="Não foi possível listar os canais. Tente novamente."
+            onRetry={() => refetch()}
+          />
         </div>
       </div>
     )

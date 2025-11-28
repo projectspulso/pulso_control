@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation'
 import { useIdeia, useAtualizarIdeia, useDeletarIdeia } from '@/lib/hooks/use-ideias'
 import { useCanais, useSeriesPorCanal } from '@/lib/hooks/use-core'
 import { useGerarRoteiro } from '@/lib/hooks/use-n8n'
+import { ErrorState } from '@/components/ui/error-state'
 import Link from 'next/link'
 
 export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
   const router = useRouter()
-  const { data: ideia, isLoading } = useIdeia(resolvedParams.id)
+  const { data: ideia, isLoading, isError, refetch } = useIdeia(resolvedParams.id)
   const { data: canais } = useCanais()
   const [canalSelecionado, setCanalSelecionado] = useState<string>('')
   const { data: series } = useSeriesPorCanal(canalSelecionado || ideia?.canal_id || null)
@@ -127,6 +128,25 @@ export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: st
       <div className="min-h-screen bg-zinc-950 p-8">
         <div className="max-w-4xl mx-auto text-zinc-400">
           Carregando ideia...
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-4xl mx-auto">
+          <ErrorState
+            title="Erro ao carregar ideia"
+            message="Não foi possível carregar os detalhes da ideia. Tente novamente."
+            onRetry={() => refetch()}
+          />
+          <div className="mt-4">
+            <Link href="/ideias" className="text-violet-400 hover:text-violet-300">
+              ← Voltar para ideias
+            </Link>
+          </div>
         </div>
       </div>
     )

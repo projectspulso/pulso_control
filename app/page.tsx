@@ -5,13 +5,14 @@ import { IdeiasLista } from "@/components/dashboard/ideias-lista";
 import { WorkflowsLog } from "@/components/dashboard/workflows-log";
 import { useCanais } from "@/lib/hooks/use-core";
 import { useIdeias } from "@/lib/hooks/use-ideias";
+import { ErrorState } from "@/components/ui/error-state";
 import { Megaphone, TrendingUp, Zap, Sparkles, ArrowUpRight, Activity } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
 export default function Home() {
-  const { data: canais } = useCanais()
-  const { data: ideias } = useIdeias()
+  const { data: canais, isError: isCanaisError, refetch: refetchCanais } = useCanais()
+  const { data: ideias, isError: isIdeiasError, refetch: refetchIdeias } = useIdeias()
   const [currentTime, setCurrentTime] = useState('')
   const [mounted, setMounted] = useState(false)
 
@@ -29,6 +30,23 @@ export default function Home() {
     const interval = setInterval(updateTime, 1000)
     return () => clearInterval(interval)
   }, [])
+
+  if (isCanaisError || isIdeiasError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8">
+        <div className="max-w-7xl mx-auto">
+          <ErrorState
+            title="Erro ao carregar dashboard"
+            message="Não foi possível carregar os dados do Centro de Comando. Verifique sua conexão."
+            onRetry={() => {
+              refetchCanais()
+              refetchIdeias()
+            }}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <main className="min-h-screen bg-zinc-950 p-8">
