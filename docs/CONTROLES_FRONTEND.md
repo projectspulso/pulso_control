@@ -9,14 +9,17 @@ Este documento descreve todos os controles frontend implementados para gerenciar
 ## 🔘 Botões de Aprovação
 
 ### ApproveIdeiaButton
+
 **Localização:** `/ideias/[id]` (quando status = RASCUNHO)
 
 **Função:**
+
 1. Atualiza `pulso_content.ideias.status` → `'APROVADA'`
 2. Dispara webhook `POST /webhook/ideia-aprovada` (WF01)
 3. Callback `onSuccess()` para atualizar UI
 
 **Props:**
+
 ```typescript
 {
   ideiaId: string
@@ -26,6 +29,7 @@ Este documento descreve todos os controles frontend implementados para gerenciar
 ```
 
 **Comportamento:**
+
 - Loading state com spinner
 - Alert de sucesso/erro
 - Cache invalidation automático (React Query)
@@ -33,14 +37,17 @@ Este documento descreve todos os controles frontend implementados para gerenciar
 ---
 
 ### ApproveRoteiroButton
+
 **Localização:** `/roteiros/[id]` (quando status = RASCUNHO)
 
 **Função:**
+
 1. Atualiza `pulso_content.roteiros.status` → `'APROVADO'`
 2. Dispara webhook `POST /webhook/roteiro-aprovado` (WF02)
 3. Callback `onSuccess()` para atualizar UI
 
 **Props:**
+
 ```typescript
 {
   roteiroId: string
@@ -50,6 +57,7 @@ Este documento descreve todos os controles frontend implementados para gerenciar
 ```
 
 **Comportamento:**
+
 - Loading state com spinner
 - Alert de sucesso/erro
 - Cache invalidation automático (React Query)
@@ -59,15 +67,19 @@ Este documento descreve todos os controles frontend implementados para gerenciar
 ## 📊 Monitor de Pipeline
 
 ### PipelineMonitor
+
 **Localização:** `/monitor` (página dedicada)
 
 **Função:**
+
 - Query em tempo real da view `pulso_content.pipeline_producao`
 - Auto-refresh a cada 10 segundos
 - Visualização de progresso: Ideia → Roteiro → Áudio → Vídeo
 
 **Features:**
+
 1. **Cards de Stats** (6 status):
+
    - AGUARDANDO_ROTEIRO
    - ROTEIRO_PRONTO
    - AUDIO_GERADO
@@ -76,6 +88,7 @@ Este documento descreve todos os controles frontend implementados para gerenciar
    - ERRO
 
 2. **Lista de Itens**:
+
    - 50 mais recentes
    - Ícones por status
    - Progresso visual (dots)
@@ -86,9 +99,10 @@ Este documento descreve todos os controles frontend implementados para gerenciar
    - Com contadores
 
 **Dependencies:**
+
 ```typescript
-import { supabase } from '@/lib/supabase/client'
-import { useQuery } from '@tanstack/react-query'
+import { supabase } from "@/lib/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 ```
 
 ---
@@ -96,26 +110,31 @@ import { useQuery } from '@tanstack/react-query'
 ## 📄 Página Monitor n8n
 
 ### /monitor/page.tsx
+
 **Navegação:** Sidebar → "Monitor n8n" (badge AI)
 
 **Seções:**
 
 1. **Header**
+
    - Título com ícone Zap
    - Indicador de atualização automática (green dot)
 
 2. **PipelineMonitor** (componente reutilizável)
+
    - Stats em tempo real
    - Auto-refresh 10s
 
 3. **Workflows Ativos** (grid 3 cols)
+
    - WF00: Gerar Ideias (CRON)
    - WF01: Gerar Roteiro (Webhook)
    - WF02: Gerar Áudio (Webhook)
    - WF03: Preparar Vídeo (CRON)
    - WF04: Publicar (CRON)
-   
+
    **Dados exibidos:**
+
    - Descrição do workflow
    - Tipo de trigger (CRON/Webhook)
    - Stats de execução (total, sucesso, erro)
@@ -135,21 +154,21 @@ import { useQuery } from '@tanstack/react-query'
 
 ### Webhooks Configurados
 
-| Workflow | Webhook Path | Método | Trigger |
-|----------|-------------|--------|---------|
-| WF00 | `/webhook/gerar-ideias` | POST | CRON 3h |
-| WF01 | `/webhook/ideia-aprovada` | POST | Manual (ApproveIdeiaButton) |
-| WF02 | `/webhook/roteiro-aprovado` | POST | Manual (ApproveRoteiroButton) |
-| WF03 | N/A | - | CRON 30min |
-| WF04 | `/webhook/agendar-publicacao` | POST | Manual (futuro) |
-| WF04 | `/webhook/publicar-agora` | POST | Manual (futuro) |
+| Workflow | Webhook Path                  | Método | Trigger                       |
+| -------- | ----------------------------- | ------ | ----------------------------- |
+| WF00     | `/webhook/gerar-ideias`       | POST   | CRON 3h                       |
+| WF01     | `/webhook/ideia-aprovada`     | POST   | Manual (ApproveIdeiaButton)   |
+| WF02     | `/webhook/roteiro-aprovado`   | POST   | Manual (ApproveRoteiroButton) |
+| WF03     | N/A                           | -      | CRON 30min                    |
+| WF04     | `/webhook/agendar-publicacao` | POST   | Manual (futuro)               |
+| WF04     | `/webhook/publicar-agora`     | POST   | Manual (futuro)               |
 
 ### API Client (lib/api/n8n.ts)
 
 ```typescript
 export const n8nClient = {
   baseURL: process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL,
-  
+
   workflows: {
     gerarIdeias(canalId, quantidade = 5)
     gerarRoteiro(ideiaId)
@@ -163,14 +182,15 @@ export const n8nClient = {
 ### React Query Hooks (lib/hooks/use-n8n.ts)
 
 ```typescript
-useGerarIdeias() // WF00
-useGerarRoteiro() // WF01
-useGerarAudio() // WF02
-useAgendarPublicacao() // WF04
-usePublicarAgora() // WF04
+useGerarIdeias(); // WF00
+useGerarRoteiro(); // WF01
+useGerarAudio(); // WF02
+useAgendarPublicacao(); // WF04
+usePublicarAgora(); // WF04
 ```
 
 **Features:**
+
 - Mutation com loading states
 - Auto cache invalidation
 - Error handling
@@ -181,9 +201,11 @@ usePublicarAgora() // WF04
 ## 📊 Views do Supabase
 
 ### pulso_content.pipeline_producao
+
 **Propósito:** Agregação de dados para o PipelineMonitor
 
 **Colunas:**
+
 - `ideia_id`, `ideia_titulo`, `ideia_status`
 - `canal_id`, `canal_nome`
 - `roteiro_id`, `roteiro_status`
@@ -194,14 +216,17 @@ usePublicarAgora() // WF04
 - `created_at`, `updated_at`
 
 **SQL:**
+
 ```sql
 -- Ver arquivo: supabase/views/pipeline_producao.sql
 ```
 
 ### pulso_content.logs_workflows
+
 **Propósito:** Histórico de execuções dos workflows n8n
 
 **Colunas:**
+
 - `id` (uuid)
 - `workflow_name` (text)
 - `status` (text: 'sucesso' | 'erro')
@@ -209,6 +234,7 @@ usePublicarAgora() // WF04
 - `created_at` (timestamp)
 
 **Índices:**
+
 - `idx_logs_created_at` (created_at DESC)
 - `idx_logs_workflow_status` (workflow_name, status)
 
@@ -217,6 +243,7 @@ usePublicarAgora() // WF04
 ## 🎯 Fluxo Completo
 
 ### 1️⃣ Geração de Ideias (Automático)
+
 ```
 CRON (3h diária)
   ↓
@@ -230,6 +257,7 @@ Aparecem em /ideias
 ```
 
 ### 2️⃣ Aprovação de Ideia (Manual)
+
 ```
 User acessa /ideias/[id]
   ↓
@@ -248,6 +276,7 @@ Aparece em /roteiros
 ```
 
 ### 3️⃣ Aprovação de Roteiro (Manual)
+
 ```
 User acessa /roteiros/[id]
   ↓
@@ -266,6 +295,7 @@ Status: FINALIZADO
 ```
 
 ### 4️⃣ Preparação de Vídeo (Automático)
+
 ```
 CRON (30min)
   ↓
@@ -281,6 +311,7 @@ Status: AGUARDANDO_EDICAO
 ```
 
 ### 5️⃣ Publicação (Automático)
+
 ```
 CRON (3x dia: 6h, 12h, 18h)
   ↓
@@ -303,13 +334,16 @@ Status: PENDENTE
 ## 🛠️ Troubleshooting
 
 ### Botão de aprovação não funciona
+
 1. **Verificar n8n URL:**
+
    ```bash
    echo $NEXT_PUBLIC_N8N_WEBHOOK_URL
    # Deve ser: https://n8n.your-domain.com
    ```
 
 2. **Verificar webhook ativo no n8n:**
+
    - WF01 deve estar ativo
    - Webhook path: `/webhook/ideia-aprovada`
 
@@ -318,12 +352,15 @@ Status: PENDENTE
    - Response status: 200 OK
 
 ### Pipeline Monitor vazio
+
 1. **Verificar view existe:**
+
    ```sql
    SELECT * FROM pulso_content.pipeline_producao LIMIT 1;
    ```
 
 2. **Verificar RLS:**
+
    - Desabilitar temporariamente: `ALTER TABLE pulso_content.pipeline_producao DISABLE ROW LEVEL SECURITY;`
 
 3. **Verificar query:**
@@ -331,7 +368,9 @@ Status: PENDENTE
    - Ver erro detalhado
 
 ### Logs não aparecem
+
 1. **Verificar tabela existe:**
+
    ```sql
    SELECT * FROM pulso_content.logs_workflows ORDER BY created_at DESC LIMIT 10;
    ```
@@ -354,6 +393,7 @@ Status: PENDENTE
 - [x] Documentação completa
 
 **Pendente:**
+
 - [ ] Criar view `pulso_content.pipeline_producao` no Supabase
 - [ ] Criar tabela `pulso_content.logs_workflows` no Supabase
 - [ ] Importar 5 workflows no n8n
@@ -366,13 +406,16 @@ Status: PENDENTE
 ## 🚀 Próximos Passos
 
 1. **Executar SQL no Supabase:**
+
    - `supabase/views/pipeline_producao.sql`
    - `supabase/migrations/create_logs_workflows.sql`
 
 2. **Importar workflows no n8n:**
+
    - Seguir `n8n-workflows/GUIA_IMPORTACAO_COMPLETO.md`
 
 3. **Testar fluxo:**
+
    - Aprovar 1 ideia → Verificar roteiro criado
    - Aprovar roteiro → Verificar áudio gerado
    - Aguardar CRON → Verificar vídeo/publicação
