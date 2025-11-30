@@ -3,7 +3,8 @@
 import { useParams } from 'next/navigation'
 import { useCanais } from '@/lib/hooks/use-core'
 import { useIdeias } from '@/lib/hooks/use-ideias'
-import { ArrowLeft, Plus, Filter } from 'lucide-react'
+import { useGerarIdeias } from '@/lib/hooks/use-n8n'
+import { ArrowLeft, Plus, Filter, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -22,6 +23,7 @@ export default function CanalPage() {
   const slug = params?.slug as string
   const { data: canais } = useCanais()
   const { data: allIdeias } = useIdeias()
+  const gerarIdeias = useGerarIdeias()
   const [statusFilter, setStatusFilter] = useState<string>('TODAS')
 
   const canal = canais?.find((c: any) => c.slug === slug)
@@ -36,6 +38,30 @@ export default function CanalPage() {
     acc[ideia.status] = (acc[ideia.status] || 0) + 1
     return acc
   }, {}) || {}
+
+  const handleGerarIdeias = async () => {
+    if (!canal) return
+    
+    const quantidade = prompt('Quantas ideias deseja gerar?', '10')
+    if (!quantidade) return
+
+    const qtd = parseInt(quantidade)
+    if (isNaN(qtd) || qtd < 1 || qtd > 50) {
+      alert('Digite um número entre 1 e 50')
+      return
+    }
+
+    try {
+      await gerarIdeias.mutateAsync({
+        canalId: canal.id,
+        quantidade: qtd
+      })
+      alert(`🤖 Gerando ${qtd} ideias para ${canal.nome}! Aguarde alguns minutos.`)
+    } catch (error) {
+      console.error('Erro ao gerar ideias:', error)
+      alert('Erro ao gerar ideias. Verifique se o n8n está configurado corretamente.')
+    }
+  }
 
   if (!canal) {
     return (
@@ -64,10 +90,20 @@ export default function CanalPage() {
               <p className="text-zinc-400">{canal.descricao}</p>
             )}
           </div>
-          <button className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors">
-            <Plus className="h-4 w-4" />
-            Nova Ideia
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={handleGerarIdeias}
+              disabled={gerarIdeias.isPending}
+              className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Sparkles className="h-4 w-4" />
+              {gerarIdeias.isPending ? 'Gerando...' : 'Gerar Ideias IA'}
+            </button>
+            <button className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors">
+              <Plus className="h-4 w-4" />
+              Nova Ideia
+            </button>
+          </div>
         </div>
       </div>
 

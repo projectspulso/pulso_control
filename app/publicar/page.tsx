@@ -1,6 +1,7 @@
 'use client'
 
 import { useConteudosProntos } from '@/lib/hooks/use-calendario'
+import { usePublicarAgora, useAgendarPublicacao } from '@/lib/hooks/use-n8n'
 import { useState } from 'react'
 import { Calendar, Clock, CheckCircle2, Sparkles, ExternalLink, Youtube, Instagram, Music2 } from 'lucide-react'
 import { ErrorState } from '@/components/ui/error-state'
@@ -10,7 +11,13 @@ import Link from 'next/link'
 
 export default function PublicarPage() {
   const { data: conteudos, isLoading, isError, refetch } = useConteudosProntos()
+  const publicarAgora = usePublicarAgora()
+  const agendarPublicacao = useAgendarPublicacao()
+  
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
+  const [mostrarModalAgendar, setMostrarModalAgendar] = useState(false)
+  const [dataAgendamento, setDataAgendamento] = useState('')
+  const [horaAgendamento, setHoraAgendamento] = useState('')
 
   const toggleSelecao = (id: string) => {
     const novos = new Set(selecionados)
@@ -27,6 +34,59 @@ export default function PublicarPage() {
       setSelecionados(new Set())
     } else {
       setSelecionados(new Set(conteudos?.map(c => c.pipeline_id) || []))
+    }
+  }
+
+  const handlePublicarAgora = async () => {
+    if (selecionados.size === 0) return
+    
+    if (!confirm(`Publicar ${selecionados.size} conteúdo(s) agora em todas as plataformas?`)) return
+
+    try {
+      await publicarAgora.mutateAsync({
+        pipelineIds: Array.from(selecionados),
+        plataformas: ['tiktok', 'youtube', 'instagram']
+      })
+      
+      alert(`✅ ${selecionados.size} conteúdo(s) enviados para publicação!`)
+      setSelecionados(new Set())
+    } catch (error) {
+      console.error('Erro ao publicar:', error)
+      alert('❌ Erro ao publicar conteúdos. Verifique o console.')
+    }
+  }
+
+  const handleAgendar = () => {
+    if (selecionados.size === 0) return
+    setMostrarModalAgendar(true)
+  }
+
+  const confirmarAgendamento = async () => {
+    if (!dataAgendamento || !horaAgendamento) {
+      alert('Preencha data e hora!')
+      return
+    }
+
+    const dataHora = `${dataAgendamento}T${horaAgendamento}:00`
+
+    try {
+      // Agendar cada um individualmente (ou você pode criar um endpoint para batch)
+      for (const pipelineId of Array.from(selecionados)) {
+        await agendarPublicacao.mutateAsync({
+          pipelineId,
+          dataHora,
+          plataformas: ['tiktok', 'youtube', 'instagram']
+        })
+      }
+      
+      alert(`✅ ${selecionados.size} conteúdo(s) agendados para ${format(new Date(dataHora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`)
+      setSelecionados(new Set())
+      setMostrarModalAgendar(false)
+      setDataAgendamento('')
+      setHoraAgendamento('')
+    } catch (error) {
+      console.error('Erro ao agendar:', error)
+      alert('❌ Erro ao agendar publicações. Verifique o console.')
     }
   }
 
@@ -82,13 +142,21 @@ export default function PublicarPage() {
           
           {selecionados.size > 0 && (
             <div className="flex gap-3 animate-slide-in-right">
-              <button className="glass glass-hover rounded-xl px-6 py-3 font-semibold bg-gradient-to-r from-violet-600 to-purple-600 text-white border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/20 transition-all flex items-center gap-2">
+              <button 
+                onClick={handleAgendar}
+                disabled={agendarPublicacao.isPending}
+                className="glass glass-hover rounded-xl px-6 py-3 font-semibold bg-linear-to-r from-violet-600 to-purple-600 text-white border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Calendar className="h-4 w-4" />
-                Agendar {selecionados.size}
+                {agendarPublicacao.isPending ? 'Agendando...' : `Agendar ${selecionados.size}`}
               </button>
-              <button className="glass glass-hover rounded-xl px-6 py-3 font-semibold bg-gradient-to-r from-green-600 to-emerald-600 text-white border-green-500/50 hover:shadow-lg hover:shadow-green-500/20 transition-all flex items-center gap-2">
+              <button 
+                onClick={handlePublicarAgora}
+                disabled={publicarAgora.isPending}
+                className="glass glass-hover rounded-xl px-6 py-3 font-semibold bg-linear-to-r from-green-600 to-emerald-600 text-white border-green-500/50 hover:shadow-lg hover:shadow-green-500/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Sparkles className="h-4 w-4" />
-                Publicar Agora
+                {publicarAgora.isPending ? 'Publicando...' : 'Publicar Agora'}
               </button>
             </div>
           )}
@@ -280,6 +348,65 @@ export default function PublicarPage() {
                   Os conteúdos agendados serão publicados automaticamente via n8n nos horários planejados.
                   Para publicar manualmente, selecione os itens e clique em "Publicar Agora".
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Agendamento */}
+        {mostrarModalAgendar && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-md w-full animate-fade-in">
+              <h3 className="text-xl font-bold text-white mb-4">
+                📅 Agendar Publicação
+              </h3>
+              
+              <p className="text-zinc-400 text-sm mb-6">
+                Agendando {selecionados.size} conteúdo(s) para publicação automática
+              </p>
+
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-2">Data</label>
+                  <input
+                    type="date"
+                    value={dataAgendamento}
+                    onChange={(e) => setDataAgendamento(e.target.value)}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-violet-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-2">Hora</label>
+                  <input
+                    type="time"
+                    value={horaAgendamento}
+                    onChange={(e) => setHoraAgendamento(e.target.value)}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-violet-500"
+                  />
+                </div>
+
+                <div className="bg-violet-600/10 border border-violet-600/20 rounded-lg p-3">
+                  <p className="text-xs text-violet-400">
+                    ℹ️ O n8n publicará automaticamente no horário agendado em todas as plataformas configuradas
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setMostrarModalAgendar(false)}
+                  className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarAgendamento}
+                  disabled={!dataAgendamento || !horaAgendamento || agendarPublicacao.isPending}
+                  className="flex-1 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {agendarPublicacao.isPending ? 'Agendando...' : 'Confirmar'}
+                </button>
               </div>
             </div>
           </div>

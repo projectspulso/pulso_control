@@ -86,6 +86,67 @@ export function usePublicarConteudo() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pipeline_producao'] })
       queryClient.invalidateQueries({ queryKey: ['workflow_execucoes'] })
+      queryClient.invalidateQueries({ queryKey: ['conteudos-prontos'] })
+      queryClient.invalidateQueries({ queryKey: ['calendario'] })
     }
   })
 }
+
+/**
+ * Hook para agendar publicação
+ */
+export function useAgendarPublicacao() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ pipelineId, dataHora, plataformas }: { 
+      pipelineId: string
+      dataHora: string
+      plataformas: string[] 
+    }) =>
+      n8nApi.workflows.agendarPublicacao(pipelineId, dataHora, plataformas),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pipeline_producao'] })
+      queryClient.invalidateQueries({ queryKey: ['calendario'] })
+      queryClient.invalidateQueries({ queryKey: ['conteudos-prontos'] })
+    }
+  })
+}
+
+/**
+ * Hook para publicar vários conteúdos agora
+ */
+export function usePublicarAgora() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ pipelineIds, plataformas }: { 
+      pipelineIds: string[]
+      plataformas: string[] 
+    }) =>
+      n8nApi.workflows.publicarAgora(pipelineIds, plataformas),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pipeline_producao'] })
+      queryClient.invalidateQueries({ queryKey: ['workflow_execucoes'] })
+      queryClient.invalidateQueries({ queryKey: ['conteudos-prontos'] })
+      queryClient.invalidateQueries({ queryKey: ['calendario'] })
+    }
+  })
+}
+
+/**
+ * Hook para gerar ideias automaticamente
+ */
+export function useGerarIdeias() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ canalId, quantidade }: { canalId: string; quantidade?: number }) =>
+      n8nApi.workflows.gerarIdeias(canalId, quantidade),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ideias'] })
+      queryClient.invalidateQueries({ queryKey: ['workflow_execucoes'] })
+    }
+  })
+}
+

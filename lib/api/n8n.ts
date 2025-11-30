@@ -157,6 +157,37 @@ export const n8nApi = {
         conteudo_id: conteudoId,
         plataforma
       })
+    },
+
+    /**
+     * Agenda publicação de conteúdo
+     */
+    async agendarPublicacao(pipelineId: string, dataHora: string, plataformas: string[]) {
+      return n8nApi.executeWorkflow('agendar-publicacao', {
+        pipeline_id: pipelineId,
+        data_hora_publicacao: dataHora,
+        plataformas
+      })
+    },
+
+    /**
+     * Publica múltiplos conteúdos imediatamente
+     */
+    async publicarAgora(pipelineIds: string[], plataformas: string[]) {
+      return n8nApi.executeWorkflow('publicar-agora', {
+        pipeline_ids: pipelineIds,
+        plataformas
+      })
+    },
+
+    /**
+     * Gera ideias automaticamente para um canal
+     */
+    async gerarIdeias(canalId: string, quantidade: number = 10) {
+      return n8nApi.executeWorkflow('gerar-ideias', {
+        canal_id: canalId,
+        quantidade
+      })
     }
   }
 }
