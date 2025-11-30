@@ -8,15 +8,16 @@ Execute no **SQL Editor** do Supabase:
 
 ```sql
 -- Verificar se view pipeline_producao existe no schema public
-SELECT COUNT(*) 
-FROM information_schema.views 
-WHERE table_schema = 'public' 
+SELECT COUNT(*)
+FROM information_schema.views
+WHERE table_schema = 'public'
   AND table_name = 'pipeline_producao';
 ```
 
 **Resultado esperado:** `count = 1` ✅
 
 Se retornar `0`, execute:
+
 ```sql
 -- Executar arquivo completo
 -- supabase/migrations/20241121_create_pipeline_producao.sql
@@ -42,31 +43,31 @@ CREATE TABLE IF NOT EXISTS pulso_content.logs_workflows (
 );
 
 -- Índices para performance
-CREATE INDEX IF NOT EXISTS idx_logs_workflows_created_at 
+CREATE INDEX IF NOT EXISTS idx_logs_workflows_created_at
     ON pulso_content.logs_workflows(created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_logs_workflows_workflow_name 
+CREATE INDEX IF NOT EXISTS idx_logs_workflows_workflow_name
     ON pulso_content.logs_workflows(workflow_name);
 
-CREATE INDEX IF NOT EXISTS idx_logs_workflows_status 
+CREATE INDEX IF NOT EXISTS idx_logs_workflows_status
     ON pulso_content.logs_workflows(status);
 
 -- Row Level Security
 ALTER TABLE pulso_content.logs_workflows ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Logs públicos leitura" 
-    ON pulso_content.logs_workflows 
-    FOR SELECT 
+CREATE POLICY "Logs públicos leitura"
+    ON pulso_content.logs_workflows
+    FOR SELECT
     USING (true);
 
-CREATE POLICY "Logs públicos escrita" 
-    ON pulso_content.logs_workflows 
-    FOR ALL 
+CREATE POLICY "Logs públicos escrita"
+    ON pulso_content.logs_workflows
+    FOR ALL
     USING (true);
 
 -- View pública para acesso via Supabase client
 CREATE OR REPLACE VIEW public.logs_workflows AS
-SELECT 
+SELECT
     id,
     workflow_name,
     status,
@@ -91,14 +92,14 @@ COMMENT ON VIEW public.logs_workflows IS 'View pública de logs de workflows par
 
 ```sql
 -- Verificar tabela
-SELECT table_schema, table_name 
-FROM information_schema.tables 
+SELECT table_schema, table_name
+FROM information_schema.tables
 WHERE table_name = 'logs_workflows';
 
 -- Verificar view pública
-SELECT COUNT(*) 
-FROM information_schema.views 
-WHERE table_schema = 'public' 
+SELECT COUNT(*)
+FROM information_schema.views
+WHERE table_schema = 'public'
   AND table_name = 'logs_workflows';
 
 -- Testar insert
@@ -135,7 +136,7 @@ Após executar os SQLs acima:
 ✅ `public.pipeline_producao` → Já existia  
 ✅ `public.logs_workflows` → Criada agora  
 ✅ Frontend → Pode consumir ambas as views  
-✅ n8n → Pode inserir logs via Postgres node  
+✅ n8n → Pode inserir logs via Postgres node
 
 ---
 
@@ -154,9 +155,10 @@ Certifique-se de estar executando como **postgres** ou **service_role**.
 ### Logs não aparecem no frontend
 
 Verifique RLS:
+
 ```sql
 -- Ver policies ativas
-SELECT * FROM pg_policies 
+SELECT * FROM pg_policies
 WHERE tablename = 'logs_workflows';
 ```
 
