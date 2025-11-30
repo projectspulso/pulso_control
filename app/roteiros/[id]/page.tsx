@@ -4,8 +4,8 @@ import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRoteiro, useAtualizarRoteiro, useDeletarRoteiro } from '@/lib/hooks/use-roteiros'
 import { useCanais } from '@/lib/hooks/use-core'
-import { useGerarAudio } from '@/lib/hooks/use-n8n'
 import { ErrorState } from '@/components/ui/error-state'
+import { ApproveRoteiroButton } from '@/components/ui/approve-buttons'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 
@@ -17,7 +17,6 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
   
   const atualizarRoteiro = useAtualizarRoteiro()
   const deletarRoteiro = useDeletarRoteiro()
-  const gerarAudio = useGerarAudio()
 
   const [editando, setEditando] = useState(false)
   const [conteudoEditado, setConteudoEditado] = useState('')
@@ -40,17 +39,6 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
     } catch (error) {
       console.error('Erro ao atualizar roteiro:', error)
       alert('Erro ao atualizar roteiro')
-    }
-  }
-
-  const handleAprovar = async () => {
-    try {
-      await atualizarRoteiro.mutateAsync({
-        id: resolvedParams.id,
-        updates: { status: 'APROVADO' as any }
-      })
-    } catch (error) {
-      console.error('Erro ao aprovar roteiro:', error)
     }
   }
 
@@ -82,21 +70,6 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
     } catch (error) {
       console.error('Erro ao deletar roteiro:', error)
       alert('Erro ao deletar roteiro')
-    }
-  }
-
-  const handleGerarAudio = async () => {
-    if (!roteiro) return
-    
-    try {
-      await gerarAudio.mutateAsync({
-        roteiroId: roteiro.id,
-        vozId: 'default',
-      })
-      alert('🎙️ Áudio sendo gerado! Aguarde alguns minutos.')
-    } catch (error) {
-      console.error('Erro ao gerar áudio:', error)
-      alert('Erro ao gerar áudio. Verifique a configuração do n8n.')
     }
   }
 
@@ -261,12 +234,10 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
                   <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
                     <h3 className="text-sm font-medium text-zinc-400 mb-4">Aprovação</h3>
                     <div className="space-y-2">
-                      <button
-                        onClick={handleAprovar}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
-                      >
-                        ✓ Aprovar Roteiro
-                      </button>
+                      <ApproveRoteiroButton
+                        roteiroId={roteiro.id}
+                        onSuccess={() => refetch()}
+                      />
                       <button
                         onClick={handleRejeitar}
                         className="w-full bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-sm transition-colors"
@@ -279,16 +250,9 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
 
                 {roteiro.status === 'APROVADO' && (
                   <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-                    <h3 className="text-sm font-medium text-zinc-400 mb-4">Próximos Passos</h3>
-                    <button
-                      onClick={handleGerarAudio}
-                      disabled={gerarAudio.isPending}
-                      className="w-full bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
-                    >
-                      {gerarAudio.isPending ? '⏳ Gerando...' : '🎙️ Gerar Áudio (TTS)'}
-                    </button>
-                    <p className="text-xs text-zinc-500 mt-2">
-                      Workflow 2 será executado para gerar o áudio deste roteiro
+                    <h3 className="text-sm font-medium text-zinc-400 mb-2">✅ Aprovado</h3>
+                    <p className="text-xs text-zinc-500">
+                      O workflow WF02 gerará automaticamente o áudio TTS deste roteiro.
                     </p>
                   </div>
                 )}

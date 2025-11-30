@@ -4,8 +4,8 @@ import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useIdeia, useAtualizarIdeia, useDeletarIdeia } from '@/lib/hooks/use-ideias'
 import { useCanais, useSeriesPorCanal } from '@/lib/hooks/use-core'
-import { useGerarRoteiro } from '@/lib/hooks/use-n8n'
 import { ErrorState } from '@/components/ui/error-state'
+import { ApproveIdeiaButton } from '@/components/ui/approve-buttons'
 import Link from 'next/link'
 
 export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
@@ -18,7 +18,6 @@ export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: st
   
   const atualizarIdeia = useAtualizarIdeia()
   const deletarIdeia = useDeletarIdeia()
-  const gerarRoteiro = useGerarRoteiro()
 
   const [editando, setEditando] = useState(false)
   const [formData, setFormData] = useState({
@@ -76,19 +75,6 @@ export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: st
     }
   }
 
-  const handleAprovar = async () => {
-    try {
-      await atualizarIdeia.mutateAsync({
-        id: resolvedParams.id,
-        updates: { status: 'APROVADA' as any }
-      })
-      alert('Ideia aprovada com sucesso!')
-    } catch (error) {
-      console.error('Erro ao aprovar ideia:', error)
-      alert(`Erro ao aprovar ideia: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
-    }
-  }
-
   const handleRejeitar = async () => {
     const motivo = prompt('Motivo da rejeição (opcional):')
     
@@ -105,21 +91,6 @@ export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: st
       })
     } catch (error) {
       console.error('Erro ao rejeitar ideia:', error)
-    }
-  }
-
-  const handleGerarRoteiro = async () => {
-    if (!ideia) return
-    
-    try {
-      await gerarRoteiro.mutateAsync({
-        ideiaId: ideia.id,
-        prompt: `Título: ${ideia.titulo}\nDescrição: ${ideia.descricao || ''}\nCanal: ${ideia.canal_id}\nLinguagem: ${ideia.linguagem || 'pt-BR'}`
-      })
-      alert('Roteiro sendo gerado! Acompanhe na aba Roteiros.')
-    } catch (error) {
-      console.error('Erro ao gerar roteiro:', error)
-      alert('Erro ao gerar roteiro. Verifique a configuração do n8n.')
     }
   }
 
@@ -319,21 +290,11 @@ export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: st
         ) : (
           <div className="flex gap-4">
             {ideia.status === 'RASCUNHO' && (
-              <button
-                onClick={handleAprovar}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-              >
-                ✓ Aprovar Ideia
-              </button>
-            )}
-            {ideia.status === 'APROVADA' && (
-              <button
-                onClick={handleGerarRoteiro}
-                disabled={gerarRoteiro.isPending}
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
-              >
-                {gerarRoteiro.isPending ? '⏳ Gerando...' : '✨ Gerar Roteiro (IA)'}
-              </button>
+              <ApproveIdeiaButton
+                ideiaId={ideia.id}
+                onSuccess={() => refetch()}
+                className="flex-1"
+              />
             )}
             {ideia.status !== 'REJEITADA' && ideia.status !== 'ARQUIVADA' && (
               <button

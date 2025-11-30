@@ -25,69 +25,47 @@ export function useN8nExecutions(workflowId: string) {
 }
 
 /**
- * Hook para gerar roteiro
+ * Hook para gerar roteiro (WF01 - Webhook)
  */
 export function useGerarRoteiro() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ ideiaId, prompt }: { ideiaId: string; prompt?: string }) =>
-      n8nApi.workflows.gerarRoteiro(ideiaId, prompt),
+    mutationFn: (ideiaId: string) => n8nApi.workflows.gerarRoteiro(ideiaId),
     onSuccess: () => {
-      // Invalida cache de roteiros e ideias
       queryClient.invalidateQueries({ queryKey: ['roteiros'] })
       queryClient.invalidateQueries({ queryKey: ['ideias'] })
-      queryClient.invalidateQueries({ queryKey: ['workflow_execucoes'] })
+      queryClient.invalidateQueries({ queryKey: ['pipeline'] })
     }
   })
 }
 
 /**
- * Hook para gerar áudio
+ * Hook para gerar áudio (WF02 - Webhook)
  */
 export function useGerarAudio() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ roteiroId, vozId }: { roteiroId: string; vozId?: string }) =>
-      n8nApi.workflows.gerarAudio(roteiroId, vozId),
+    mutationFn: (roteiroId: string) => n8nApi.workflows.gerarAudio(roteiroId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline_producao'] })
-      queryClient.invalidateQueries({ queryKey: ['workflow_execucoes'] })
+      queryClient.invalidateQueries({ queryKey: ['pipeline'] })
+      queryClient.invalidateQueries({ queryKey: ['roteiros'] })
     }
   })
 }
 
 /**
- * Hook para gerar vídeo
+ * Hook para gerar ideias (WF00 - Manual trigger)
  */
-export function useGerarVideo() {
+export function useGerarIdeias() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ audioId, template }: { audioId: string; template?: string }) =>
-      n8nApi.workflows.gerarVideo(audioId, template),
+    mutationFn: ({ canalId, quantidade }: { canalId: string; quantidade?: number }) =>
+      n8nApi.workflows.gerarIdeias(canalId, quantidade || 5),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline_producao'] })
-      queryClient.invalidateQueries({ queryKey: ['workflow_execucoes'] })
-    }
-  })
-}
-
-/**
- * Hook para publicar conteúdo
- */
-export function usePublicarConteudo() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: ({ conteudoId, plataforma }: { conteudoId: string; plataforma: string }) =>
-      n8nApi.workflows.publicarConteudo(conteudoId, plataforma),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline_producao'] })
-      queryClient.invalidateQueries({ queryKey: ['workflow_execucoes'] })
-      queryClient.invalidateQueries({ queryKey: ['conteudos-prontos'] })
-      queryClient.invalidateQueries({ queryKey: ['calendario'] })
+      queryClient.invalidateQueries({ queryKey: ['ideias'] })
     }
   })
 }

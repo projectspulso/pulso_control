@@ -6,7 +6,7 @@
 ✅ **WF01_Gerar_Roteiro.json** (14.6 KB)  
 ✅ **WF02_Gerar_Audio.json** (15.1 KB)  
 ✅ **WF03_Preparar_Video.json** (11.0 KB)  
-✅ **WF04_Publicar.json** (18.9 KB)  
+✅ **WF04_Publicar.json** (18.9 KB)
 
 **Total:** 74 KB de automação completa
 
@@ -50,6 +50,7 @@ WF04 (CRON 6h, 12h, 18h)
 Antes de importar, você DEVE ter estas 3 credenciais configuradas:
 
 #### ✅ Postgres supabase
+
 - **Nome exato:** `Postgres supabase`
 - **Type:** PostgreSQL
 - **Host:** `aws-0-sa-east-1.pooler.supabase.com`
@@ -60,12 +61,14 @@ Antes de importar, você DEVE ter estas 3 credenciais configuradas:
 - **SSL:** `require`
 
 #### ✅ Supabase Storage – Pulso
+
 - **Nome exato:** `Supabase Storage – Pulso`
 - **Type:** Supabase
 - **Host:** `https://nlcisbfdiokmipyihtuz.supabase.co`
 - **Service Role Key:** [sua chave service_role do Supabase]
 
 #### ✅ OpenAi pulso_control
+
 - **Nome exato:** `OpenAi pulso_control`
 - **Type:** OpenAI
 - **API Key:** [sua chave da OpenAI]
@@ -173,7 +176,7 @@ Importe nesta ordem exata:
 ```bash
 # 1. Todos os 5 workflows importados?
 [ ] WF00_Gerar_Ideias - ATIVO
-[ ] WF01_Gerar_Roteiro - ATIVO  
+[ ] WF01_Gerar_Roteiro - ATIVO
 [ ] WF02_Gerar_Audio - ATIVO
 [ ] WF03_Preparar_Video - ATIVO
 [ ] WF04_Publicar - ATIVO
@@ -202,6 +205,7 @@ Importe nesta ordem exata:
 ```
 
 **Verificar no banco:**
+
 ```sql
 SELECT id, titulo, status, metadata->>'potencial_viral' as viral
 FROM ideias
@@ -224,6 +228,7 @@ LIMIT 5;
 ```
 
 **Testar via cURL:**
+
 ```bash
 curl -X POST https://seu-n8n.com/webhook/ideia-aprovada \
   -H "Content-Type: application/json" \
@@ -244,6 +249,7 @@ curl -X POST https://seu-n8n.com/webhook/ideia-aprovada \
 ```
 
 **Testar via cURL:**
+
 ```bash
 curl -X POST https://seu-n8n.com/webhook/roteiro-aprovado \
   -H "Content-Type: application/json" \
@@ -261,6 +267,7 @@ curl -X POST https://seu-n8n.com/webhook/roteiro-aprovado \
 ```
 
 **Verificar:**
+
 ```sql
 SELECT id, status, metadata->'storyboard' as storyboard
 FROM pulso_content.videos
@@ -274,14 +281,14 @@ LIMIT 3;
 ### Teste 5: WF04 - Publicar (CRON)
 
 ```bash
-# Pré-requisito: 
+# Pré-requisito:
 # 1. Ter um vídeo com status = 'OK' no banco
 # 2. Aguardar próxima execução (6h, 12h ou 18h)
 # OU executar manualmente
 
 # Resultado esperado:
 # - 1 CONTEUDO criado
-# - 3 VARIANTES criadas (TikTok, YouTube, Instagram)  
+# - 3 VARIANTES criadas (TikTok, YouTube, Instagram)
 # - 3 POSTS com status PENDENTE
 ```
 
@@ -317,7 +324,7 @@ export const n8nWebhooks = {
 Todos os workflows salvam logs na tabela `pulso_content.logs_workflows`:
 
 ```sql
-SELECT 
+SELECT
   workflow_name,
   status,
   detalhes,
@@ -333,7 +340,7 @@ LIMIT 20;
 
 ```sql
 -- Custo total de geração de conteúdo
-SELECT 
+SELECT
   DATE(created_at) as data,
   COUNT(*) as total_execucoes,
   SUM((metadata->>'custo_geracao')::numeric) as custo_total
@@ -348,7 +355,9 @@ ORDER BY data DESC;
 ## 🚨 TROUBLESHOOTING
 
 ### Erro: "Credential not found"
+
 **Solução:** Certifique-se que os nomes das credenciais são EXATAMENTE:
+
 - `Postgres supabase`
 - `OpenAi pulso_control`
 - `Supabase Storage – Pulso`
@@ -356,7 +365,9 @@ ORDER BY data DESC;
 ---
 
 ### Erro: "relation does not exist"
+
 **Solução:** Execute os SQLs pendentes no Supabase:
+
 ```sql
 -- Criar view n8n_roteiro_completo
 -- Ver arquivo: supabase/views/n8n_roteiro_completo.sql
@@ -378,7 +389,9 @@ CREATE TABLE IF NOT EXISTS pulso_content.logs_workflows (
 ---
 
 ### Erro: "permission denied for table audios"
+
 **Solução:** Adicionar RLS policy:
+
 ```sql
 GRANT SELECT ON pulso_content.audios TO anon, authenticated;
 ```
@@ -403,12 +416,14 @@ GRANT SELECT ON pulso_content.audios TO anon, authenticated;
 ## 💰 CUSTOS ESTIMADOS
 
 ### Por Vídeo Completo:
+
 - **WF00:** $0.02 (ideia)
 - **WF01:** $0.003 (roteiro)
 - **WF02:** $0.0008 (áudio TTS)
 - **Total:** ~$0.024 por vídeo
 
 ### 100 Vídeos/Mês:
+
 - **Total:** ~$2.40/mês em IA
 - **ROI:** Economia de ~40 horas de trabalho manual
 
@@ -417,6 +432,7 @@ GRANT SELECT ON pulso_content.audios TO anon, authenticated;
 ## 📞 SUPORTE
 
 Se encontrar problemas:
+
 1. Verificar logs no n8n (Executions)
 2. Verificar logs no banco (`logs_workflows`)
 3. Checar credenciais estão configuradas

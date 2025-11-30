@@ -19,7 +19,8 @@ import {
   Send,
   Plug,
   Library,
-  Sparkles
+  Sparkles,
+  Activity
 } from 'lucide-react'
 
 const navigation = [
@@ -31,10 +32,11 @@ const navigation = [
   { name: 'Assets', href: '/assets', icon: FolderOpen, badge: null },
   { name: 'Calendário', href: '/calendario', icon: Calendar, badge: null },
   { name: 'Publicar', href: '/publicar', icon: Send, badge: null },
+  { name: 'Monitor n8n', href: '/monitor', icon: Activity, badge: 'ai' },
   { name: 'Organograma', href: '/organograma', icon: BarChart3, badge: null },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null },
   { name: 'Canais', href: '/canais', icon: Megaphone, badge: null },
-  { name: 'Workflows', href: '/workflows', icon: Workflow, badge: 'ai' },
+  { name: 'Workflows', href: '/workflows', icon: Workflow, badge: null },
   { name: 'Integrações', href: '/integracoes', icon: Plug, badge: null },
   { name: 'Configurações', href: '/settings', icon: Settings, badge: null },
 ]

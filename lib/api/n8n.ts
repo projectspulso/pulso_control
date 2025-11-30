@@ -120,47 +120,35 @@ export const n8nApi = {
    */
   workflows: {
     /**
-     * Gera roteiro a partir de uma ideia
+     * WF00 - Gera ideias automaticamente para um canal
      */
-    async gerarRoteiro(ideiaId: string, prompt?: string) {
-      return n8nApi.executeWorkflow('gerar-roteiro', {
-        ideia_id: ideiaId,
-        prompt_adicional: prompt
+    async gerarIdeias(canalId: string, quantidade: number = 5) {
+      return n8nApi.executeWorkflow('gerar-ideias', {
+        canal_id: canalId,
+        quantidade
       })
     },
 
     /**
-     * Gera áudio a partir de um roteiro
+     * WF01 - Gera roteiro a partir de uma ideia aprovada
      */
-    async gerarAudio(roteiroId: string, vozId?: string) {
-      return n8nApi.executeWorkflow('gerar-audio', {
-        roteiro_id: roteiroId,
-        voz_id: vozId || 'default'
+    async gerarRoteiro(ideiaId: string) {
+      return n8nApi.executeWorkflow('ideia-aprovada', {
+        ideia_id: ideiaId
       })
     },
 
     /**
-     * Gera vídeo a partir de áudio
+     * WF02 - Gera áudio TTS a partir de um roteiro aprovado
      */
-    async gerarVideo(audioId: string, template?: string) {
-      return n8nApi.executeWorkflow('gerar-video', {
-        audio_id: audioId,
-        template: template || 'default'
+    async gerarAudio(roteiroId: string) {
+      return n8nApi.executeWorkflow('roteiro-aprovado', {
+        roteiro_id: roteiroId
       })
     },
 
     /**
-     * Publica conteúdo em uma plataforma
-     */
-    async publicarConteudo(conteudoId: string, plataforma: string) {
-      return n8nApi.executeWorkflow('publicar-conteudo', {
-        conteudo_id: conteudoId,
-        plataforma
-      })
-    },
-
-    /**
-     * Agenda publicação de conteúdo
+     * WF04 - Agenda publicação de conteúdo
      */
     async agendarPublicacao(pipelineId: string, dataHora: string, plataformas: string[]) {
       return n8nApi.executeWorkflow('agendar-publicacao', {
@@ -171,22 +159,12 @@ export const n8nApi = {
     },
 
     /**
-     * Publica múltiplos conteúdos imediatamente
+     * WF04 - Publica múltiplos conteúdos imediatamente
      */
     async publicarAgora(pipelineIds: string[], plataformas: string[]) {
       return n8nApi.executeWorkflow('publicar-agora', {
         pipeline_ids: pipelineIds,
         plataformas
-      })
-    },
-
-    /**
-     * Gera ideias automaticamente para um canal
-     */
-    async gerarIdeias(canalId: string, quantidade: number = 10) {
-      return n8nApi.executeWorkflow('gerar-ideias', {
-        canal_id: canalId,
-        quantidade
       })
     }
   }
