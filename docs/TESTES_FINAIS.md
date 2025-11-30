@@ -17,27 +17,27 @@
 
 ### **Rotas Disponíveis:**
 
-| Rota | Tipo | Status |
-|------|------|--------|
-| `/` | Static | ✅ |
-| `/analytics` | Static | ✅ |
-| `/assets` | Static | ✅ |
-| `/calendario` | Static | ✅ |
-| `/canais` | Static | ✅ |
-| `/canais/[slug]` | Dynamic | ✅ |
-| `/conteudo` | Static | ✅ |
-| `/ideias` | Static | ✅ |
-| `/ideias/[id]` | Dynamic | ✅ |
-| `/ideias/nova` | Static | ✅ |
-| `/integracoes` | Static | ✅ |
-| `/organograma` | Static | ✅ |
-| `/producao` | Static | ✅ |
-| `/publicar` | Static | ✅ |
-| `/roteiros` | Static | ✅ |
-| `/roteiros/[id]` | Dynamic | ✅ |
-| `/settings` | Static | ✅ |
-| `/test` | Static | ✅ |
-| `/workflows` | Static | ✅ |
+| Rota             | Tipo    | Status |
+| ---------------- | ------- | ------ |
+| `/`              | Static  | ✅     |
+| `/analytics`     | Static  | ✅     |
+| `/assets`        | Static  | ✅     |
+| `/calendario`    | Static  | ✅     |
+| `/canais`        | Static  | ✅     |
+| `/canais/[slug]` | Dynamic | ✅     |
+| `/conteudo`      | Static  | ✅     |
+| `/ideias`        | Static  | ✅     |
+| `/ideias/[id]`   | Dynamic | ✅     |
+| `/ideias/nova`   | Static  | ✅     |
+| `/integracoes`   | Static  | ✅     |
+| `/organograma`   | Static  | ✅     |
+| `/producao`      | Static  | ✅     |
+| `/publicar`      | Static  | ✅     |
+| `/roteiros`      | Static  | ✅     |
+| `/roteiros/[id]` | Dynamic | ✅     |
+| `/settings`      | Static  | ✅     |
+| `/test`          | Static  | ✅     |
+| `/workflows`     | Static  | ✅     |
 
 ---
 
@@ -45,17 +45,18 @@
 
 ### **✅ Funcionando (5/7 - 71%)**
 
-| Recurso | Schema | Registros |
-|---------|--------|-----------|
-| Canais | public | 3 |
-| Ideias | public | 3 |
-| Roteiros | public | 3 |
-| Pipeline Produção | pulso_content | 3 |
-| View Calendário | public | 3 |
+| Recurso           | Schema        | Registros |
+| ----------------- | ------------- | --------- |
+| Canais            | public        | 3         |
+| Ideias            | public        | 3         |
+| Roteiros          | public        | 3         |
+| Pipeline Produção | pulso_content | 3         |
+| View Calendário   | public        | 3         |
 
 ### **⚠️ Pendente (2/7)**
 
 1. **`audios`** (pulso_content)
+
    - Erro: Permissão negada (RLS)
    - **Ação:** Configurar permissões no Supabase
 
@@ -68,29 +69,34 @@
 ## 📊 FUNCIONALIDADES IMPLEMENTADAS
 
 ### **WF00 - Gerar Ideias (IA)**
+
 - ✅ Hook: `useGerarIdeias()`
 - ✅ API: `n8nApi.workflows.gerarIdeias()`
 - ✅ UI: Botão em `/canais/[slug]`
 - ⏳ n8n: Webhook pendente
 
 ### **WF01 - Gerar Roteiro**
+
 - ✅ Hook: `useGerarRoteiro()`
 - ✅ API: `n8nApi.workflows.gerarRoteiro()`
 - ✅ UI: Botão em `/ideias/[id]`
 - ✅ n8n: Workflow existente
 
 ### **WF02 - Gerar Áudio (TTS)**
+
 - ✅ Hook: `useGerarAudio()`
 - ✅ API: `n8nApi.workflows.gerarAudio()`
 - ✅ UI: Botão em `/roteiros/[id]`
 - ✅ n8n: Workflow existente
 
 ### **WF03 - Gerar Vídeo**
+
 - ✅ Hook: `useGerarVideo()`
 - ✅ API: `n8nApi.workflows.gerarVideo()`
 - ⚠️ Fase 1: Manual (CapCut)
 
 ### **WF04 - Publicação**
+
 - ✅ Hook: `usePublicarAgora()`
 - ✅ Hook: `useAgendarPublicacao()`
 - ✅ API: Endpoints completos
@@ -102,6 +108,7 @@
 ## 🚀 CHECKLIST PARA PRODUÇÃO
 
 ### **Backend (n8n)**
+
 - [ ] Criar webhook `gerar-ideias`
 - [ ] Criar webhook `publicar-agora`
 - [ ] Criar webhook `agendar-publicacao`
@@ -109,11 +116,13 @@
 - [x] Webhook `gerar-audio` (existente)
 
 ### **Banco de Dados (Supabase)**
+
 - [ ] Executar `supabase/views/n8n_roteiro_completo.sql`
 - [ ] Configurar RLS na tabela `audios`
 - [ ] Configurar permissões para `anon` e `authenticated`
 
 ### **Variáveis de Ambiente**
+
 - [ ] `NEXT_PUBLIC_N8N_URL`
 - [ ] `NEXT_PUBLIC_N8N_API_KEY`
 - [x] `NEXT_PUBLIC_SUPABASE_URL`
@@ -147,6 +156,7 @@ GRANT SELECT ON public.n8n_roteiro_completo TO anon, authenticated;
 ### **2. Configurar n8n (15 min)**
 
 Criar 3 webhooks novos:
+
 - `/webhook/gerar-ideias`
 - `/webhook/publicar-agora`
 - `/webhook/agendar-publicacao`
@@ -166,14 +176,14 @@ Criar 3 webhooks novos:
 
 ## 🎯 MÉTRICAS DE QUALIDADE
 
-| Métrica | Resultado | Meta | Status |
-|---------|-----------|------|--------|
-| Build Success | ✅ Sim | Sim | ✅ |
-| TypeScript Errors | 0 | 0 | ✅ |
-| Conexões DB | 5/7 | 7/7 | ⚠️ 71% |
-| Rotas Compiladas | 19/19 | 19/19 | ✅ |
-| Hooks Implementados | 7/7 | 7/7 | ✅ |
-| Páginas Funcionais | 19/19 | 19/19 | ✅ |
+| Métrica             | Resultado | Meta  | Status |
+| ------------------- | --------- | ----- | ------ |
+| Build Success       | ✅ Sim    | Sim   | ✅     |
+| TypeScript Errors   | 0         | 0     | ✅     |
+| Conexões DB         | 5/7       | 7/7   | ⚠️ 71% |
+| Rotas Compiladas    | 19/19     | 19/19 | ✅     |
+| Hooks Implementados | 7/7       | 7/7   | ✅     |
+| Páginas Funcionais  | 19/19     | 19/19 | ✅     |
 
 ---
 
@@ -222,10 +232,12 @@ npm start
 ## 🐛 PROBLEMAS CONHECIDOS
 
 ### **1. Warning: baseline-browser-mapping**
+
 - **Impacto:** Nenhum (apenas warning)
 - **Solução:** `npm i baseline-browser-mapping@latest -D`
 
 ### **2. Tailwind: bg-gradient-to-r**
+
 - **Impacto:** Nenhum (apenas warning de linter)
 - **Solução:** Substituir por `bg-linear-to-r` (opcional)
 

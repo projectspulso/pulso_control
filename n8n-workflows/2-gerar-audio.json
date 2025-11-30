@@ -1,245 +1,347 @@
 {
-  "name": "PULSO - Gerar Audio",
+  "name": "WF02 - Gerar Áudio TTS (AUTOMÁTICO)",
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "gerar-audio",
-        "responseMode": "onReceived",
-        "options": {}
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
       },
-      "id": "a1a2a3a4-b5b6-c7c8-d9d0-e1e2e3e4e5e6",
-      "name": "Webhook",
-      "type": "n8n-nodes-base.webhook",
+      "id": "cron-trigger-001",
+      "name": "A Cada 5 Minutos (Backup)",
+      "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
-      "position": [240, 300],
-      "webhookId": "gerar-audio"
+      "position": [240, 200]
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT \n  r.*,\n  i.titulo as ideia_titulo,\n  i.canal_id\nFROM pulso_content.roteiros r\nLEFT JOIN pulso_content.ideias i ON r.ideia_id = i.id\nWHERE r.id = '{{ $json.body.roteiroId }}'"
+        "httpMethod": "POST",
+        "path": "pulso/roteiro-aprovado",
+        "options": {}
       },
-      "id": "b2b3b4b5-c6c7-d8d9-e0e1-f2f3f4f5f6f7",
-      "name": "Buscar Roteiro",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
+      "id": "webhook-trigger-001",
+      "name": "Webhook - Roteiro Aprovado",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 400],
+      "webhookId": "pulso-roteiro-aprovado"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "merge-triggers-001",
+      "name": "Unificar Gatilhos",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
       "position": [460, 300]
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
+        "operation": "executeQuery",
+        "query": "-- Buscar roteiros aprovados sem áudio TTS\n-- Se veio do webhook, processa só o roteiro_id específico\n-- Se veio do CRON, processa todos pendentes\n\nSELECT \n  r.id as roteiro_id,\n  r.ideia_id,\n  r.titulo,\n  r.conteudo_md,\n  r.duracao_estimado_segundos,\n  r.linguagem,\n  r.canal_id,\n  r.metadata,\n  r.status,\n  r.updated_at\nFROM pulso_content.roteiros r\nWHERE r.status = 'APROVADO'\n  AND r.categoria_metadata = 'PADRAO_COMPLETO'\n  AND (r.metadata->>'pronto_para_render')::boolean = true\n  AND NOT EXISTS (\n    SELECT 1 FROM pulso_content.audios a\n    WHERE a.roteiro_id = r.id \n      AND a.tipo = 'AUDIO_TTS'\n      AND a.status = 'OK'\n  )\n  -- Se veio roteiro_id do webhook, filtra por ele\n  AND (\n    CASE \n      WHEN '{{ $json.roteiro_id }}' != '' THEN r.id::text = '{{ $json.roteiro_id }}'\n      ELSE true\n    END\n  )\nORDER BY r.updated_at DESC\nLIMIT 10;"
+      },
+      "id": "buscar-roteiros-001",
+      "name": "Buscar Roteiros Pendentes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "name": "Postgres supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
             {
-              "id": "texto",
-              "name": "texto",
-              "value": "={{ $json.conteudo_md.replace(/[#*\\[\\]]/g, '').replace(/PAUSA/g, '...') }}",
-              "type": "string"
-            },
-            {
-              "id": "roteiro_id",
-              "name": "roteiro_id",
-              "value": "={{ $json.id }}",
-              "type": "string"
-            },
-            {
-              "id": "titulo",
-              "name": "titulo",
-              "value": "={{ $json.titulo }}",
-              "type": "string"
-            },
-            {
-              "id": "voz_id",
-              "name": "voz_id",
-              "value": "={{ $('Webhook').item.json.body.vozId || 'EXAVITQu4vr4xnSDxMaL' }}",
-              "type": "string"
+              "id": "condition1",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         },
         "options": {}
       },
-      "id": "c3c4c5c6-d7d8-e9e0-f1f2-g3g4g5g6g7g8",
-      "name": "Preparar Texto",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.3,
-      "position": [680, 300]
+      "id": "check-roteiros-001",
+      "name": "Tem Roteiros?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-batch-001",
+      "name": "Processar Um por Vez",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar texto para TTS\nconst item = $input.first().json;\n\n// Log do roteiro sendo processado\nconsole.log(`Processando roteiro: ${item.roteiro_id} - ${item.titulo}`);\n\n// Extrair conteúdo markdown\nlet texto = item.conteudo_md || '';\n\n// Remover headers markdown (# ## ###)\ntexto = texto.replace(/^#+\\s+/gm, '');\n\n// Remover asteriscos de negrito/itálico\ntexto = texto.replace(/\\*\\*(.+?)\\*\\*/g, '$1');\ntexto = texto.replace(/\\*(.+?)\\*/g, '$1');\n\n// Remover múltiplas quebras de linha\ntexto = texto.replace(/\\n{3,}/g, '\\n\\n');\n\n// Limpar espaços extras\ntexto = texto.trim();\n\n// Adicionar título no início com pausa natural\nconst textoFinal = `${item.titulo}.\\n\\n${texto}`;\n\n// Contar caracteres\nconst totalCaracteres = textoFinal.length;\n\n// Estimar duração (150 palavras/min ≈ 2.5 chars/seg)\nconst duracaoEstimada = Math.ceil(totalCaracteres / 2.5);\n\n// Detectar idioma para escolher voz\nconst linguagem = item.linguagem || 'pt-BR';\nlet voice = 'alloy'; // padrão\n\nif (linguagem.startsWith('pt')) {\n  voice = 'alloy'; // melhor para português\n} else if (linguagem.startsWith('en')) {\n  voice = 'nova'; // melhor para inglês\n} else if (linguagem.startsWith('es')) {\n  voice = 'shimmer'; // melhor para espanhol\n}\n\nreturn {\n  roteiro_id: item.roteiro_id,\n  ideia_id: item.ideia_id,\n  canal_id: item.canal_id,\n  titulo: item.titulo,\n  linguagem: linguagem,\n  texto_tts: textoFinal,\n  total_caracteres: totalCaracteres,\n  duracao_estimada: duracaoEstimada,\n  voz_selecionada: voice,\n  metadata_roteiro: item.metadata,\n  processado_em: new Date().toISOString()\n};"
+      },
+      "id": "preparar-texto-001",
+      "name": "Preparar Texto para TTS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 200]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.elevenlabs.io/v1/text-to-speech/{{ $json.voz_id }}",
+        "url": "https://api.openai.com/v1/audio/speech",
         "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "elevenLabsApi",
+        "nodeCredentialType": "openAiApi",
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "text",
-              "value": "={{ $json.texto }}"
-            },
-            {
-              "name": "model_id",
-              "value": "eleven_multilingual_v2"
-            }
-          ]
-        },
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"model\": \"tts-1\",\n  \"voice\": $json.voz_selecionada,\n  \"input\": $json.texto_tts,\n  \"speed\": 1.0\n} }}",
         "options": {
           "response": {
             "response": {
               "responseFormat": "file"
             }
-          }
+          },
+          "timeout": 60000
         }
       },
-      "id": "d4d5d6d7-e8e9-f0f1-g2g3-h4h5h6h7h8h9",
-      "name": "ElevenLabs TTS",
+      "id": "openai-tts-001",
+      "name": "OpenAI - Gerar Áudio TTS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 300]
+      "position": [1560, 200],
+      "credentials": {
+        "openAiApi": {
+          "name": "OpenAi pulso_control"
+        }
+      }
     },
     {
       "parameters": {
-        "operation": "upload",
-        "bucketName": "audios",
-        "fileName": "={{ $('Preparar Texto').item.json.roteiro_id }}_{{ Date.now() }}.mp3",
-        "fileData": "={{ $binary.data }}",
+        "method": "POST",
+        "url": "=https://nlcisbfdiokmipyihtuz.supabase.co/storage/v1/object/audios/{{ $('Preparar Texto para TTS').item.json.roteiro_id }}.mp3",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "binaryData",
         "options": {
-          "contentType": "audio/mpeg"
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          },
+          "timeout": 60000
         }
       },
-      "id": "e5e6e7e8-f9f0-g1g2-h3h4-i5i6i7i8i9i0",
-      "name": "Upload Supabase",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [1120, 300]
+      "id": "upload-storage-001",
+      "name": "Upload para Supabase Storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Supabase Storage – Pulso"
+        }
+      }
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO pulso_assets.audios (\n  roteiro_id,\n  titulo,\n  arquivo_url,\n  duracao_segundos,\n  voz_id,\n  qualidade\n) VALUES (\n  '{{ $('Preparar Texto').item.json.roteiro_id }}',\n  '{{ $('Preparar Texto').item.json.titulo }}',\n  '{{ $json.path }}',\n  0,\n  '{{ $('Preparar Texto').item.json.voz_id }}',\n  'ALTA'\n)\nRETURNING *"
+        "query": "=INSERT INTO pulso_content.audios (\n  ideia_id,\n  roteiro_id,\n  canal_id,\n  storage_path,\n  public_url,\n  duracao_segundos,\n  linguagem,\n  formato,\n  tipo,\n  status,\n  metadata\n) VALUES (\n  '{{ $('Preparar Texto para TTS').item.json.ideia_id }}',\n  '{{ $('Preparar Texto para TTS').item.json.roteiro_id }}',\n  {{ $('Preparar Texto para TTS').item.json.canal_id ? \"'\" + $('Preparar Texto para TTS').item.json.canal_id + \"'\" : \"NULL\" }},\n  'audios/{{ $('Preparar Texto para TTS').item.json.roteiro_id }}.mp3',\n  'https://nlcisbfdiokmipyihtuz.supabase.co/storage/v1/object/public/audios/{{ $('Preparar Texto para TTS').item.json.roteiro_id }}.mp3',\n  {{ $('Preparar Texto para TTS').item.json.duracao_estimada }},\n  '{{ $('Preparar Texto para TTS').item.json.linguagem }}',\n  'audio/mpeg',\n  'AUDIO_TTS',\n  'OK',\n  jsonb_build_object(\n    'provedor', 'openai',\n    'modelo', 'tts-1',\n    'voice', '{{ $('Preparar Texto para TTS').item.json.voz_selecionada }}',\n    'speed', 1.0,\n    'caracteres', {{ $('Preparar Texto para TTS').item.json.total_caracteres }},\n    'gerado_em', '{{ $('Preparar Texto para TTS').item.json.processado_em }}',\n    'n8n_execution_id', '{{ $execution.id }}',\n    'workflow_version', '2.0_automatizado'\n  )\n)\nON CONFLICT (ideia_id, roteiro_id) \nDO UPDATE SET\n  public_url = EXCLUDED.public_url,\n  status = EXCLUDED.status,\n  duracao_segundos = EXCLUDED.duracao_segundos,\n  metadata = pulso_content.audios.metadata || EXCLUDED.metadata,\n  updated_at = now()\nRETURNING id, public_url, duracao_segundos;"
       },
-      "id": "f6f7f8f9-g0g1-h2h3-i4i5-j6j7j8j9j0j1",
-      "name": "Salvar Audio",
+      "id": "registrar-audio-001",
+      "name": "Registrar Áudio no Banco",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1340, 300]
+      "position": [2000, 200],
+      "credentials": {
+        "postgres": {
+          "name": "Postgres supabase"
+        }
+      }
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE pulso_content.roteiros \nSET \n  audio_id = '{{ $('Salvar Audio').item.json.id }}',\n  status = 'COM_AUDIO'\nWHERE id = '{{ $('Preparar Texto').item.json.roteiro_id }}'"
+        "query": "=-- Marcar roteiro como processado\nUPDATE pulso_content.roteiros\nSET metadata = metadata || jsonb_build_object(\n  'audio_tts_gerado', true,\n  'audio_tts_gerado_em', now()::text,\n  'audio_id', '{{ $('Registrar Áudio no Banco').item.json.id }}'\n)\nWHERE id = '{{ $('Preparar Texto para TTS').item.json.roteiro_id }}'\nRETURNING id, titulo, metadata->>'audio_tts_gerado' as processado;"
       },
-      "id": "g7g8g9g0-h1h2-i3i4-j5j6-k7k8k9k0k1k2",
-      "name": "Atualizar Roteiro",
+      "id": "atualizar-roteiro-001",
+      "name": "Atualizar Status Roteiro",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1560, 300]
+      "position": [2220, 200],
+      "credentials": {
+        "postgres": {
+          "name": "Postgres supabase"
+        }
+      }
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO pulso_content.workflow_execucoes (\n  workflow_id,\n  entidade_tipo,\n  entidade_id,\n  status,\n  mensagem,\n  inicio_em\n)\nSELECT \n  w.id,\n  'audio',\n  '{{ $('Salvar Audio').item.json.id }}',\n  'SUCESSO',\n  'Áudio gerado com sucesso',\n  NOW()\nFROM pulso_content.workflows w\nWHERE w.slug = 'gerar-audio'\nLIMIT 1"
+        "jsCode": "const preparar = $('Preparar Texto para TTS').item.json;\nconst registro = $('Registrar Áudio no Banco').item.json;\nconst atualizado = $input.first().json;\n\nconst log = {\n  status: 'SUCCESS',\n  tipo: 'AUDIO_TTS_GERADO',\n  mensagem: `✅ Áudio TTS gerado com sucesso!`,\n  dados: {\n    roteiro_id: preparar.roteiro_id,\n    titulo: preparar.titulo,\n    audio_id: registro.id,\n    public_url: registro.public_url,\n    duracao_segundos: registro.duracao_segundos,\n    caracteres_processados: preparar.total_caracteres,\n    voz_utilizada: preparar.voz_selecionada,\n    linguagem: preparar.linguagem\n  },\n  timestamp: new Date().toISOString(),\n  execution_id: $execution.id\n};\n\nconsole.log('✅ ÁUDIO GERADO:', JSON.stringify(log, null, 2));\n\nreturn log;"
       },
-      "id": "h8h9h0h1-i2i3-j4j5-k6k7-l8l9l0l1l2l3",
-      "name": "Log Execução",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
-      "position": [1780, 300]
+      "id": "log-sucesso-001",
+      "name": "Log de Sucesso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 200]
     },
     {
       "parameters": {
-        "options": {}
+        "jsCode": "const log = {\n  status: 'NO_ROTEIROS',\n  tipo: 'NENHUM_PENDENTE',\n  mensagem: '⚠️ Nenhum roteiro pendente encontrado.',\n  info: 'Não há roteiros aprovados sem áudio TTS no momento.',\n  timestamp: new Date().toISOString(),\n  execution_id: $execution.id\n};\n\nconsole.log('⚠️ SEM ROTEIROS:', JSON.stringify(log, null, 2));\n\nreturn log;"
       },
-      "id": "i9i0i1i2-j3j4-k5k6-l7l8-m9m0m1m2m3m4",
-      "name": "Responder",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [2000, 300]
+      "id": "sem-roteiros-001",
+      "name": "Sem Roteiros Pendentes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 400]
     }
   ],
   "connections": {
-    "Webhook": {
+    "A Cada 5 Minutos (Backup)": {
       "main": [
         [
           {
-            "node": "Buscar Roteiro",
+            "node": "Unificar Gatilhos",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Buscar Roteiro": {
+    "Webhook - Roteiro Aprovado": {
       "main": [
         [
           {
-            "node": "Preparar Texto",
+            "node": "Unificar Gatilhos",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Unificar Gatilhos": {
+      "main": [
+        [
+          {
+            "node": "Buscar Roteiros Pendentes",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Preparar Texto": {
+    "Buscar Roteiros Pendentes": {
       "main": [
         [
           {
-            "node": "ElevenLabs TTS",
+            "node": "Tem Roteiros?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ElevenLabs TTS": {
+    "Tem Roteiros?": {
       "main": [
         [
           {
-            "node": "Upload Supabase",
+            "node": "Processar Um por Vez",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem Roteiros Pendentes",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Upload Supabase": {
+    "Processar Um por Vez": {
       "main": [
         [
           {
-            "node": "Salvar Audio",
+            "node": "Preparar Texto para TTS",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Salvar Audio": {
+    "Preparar Texto para TTS": {
       "main": [
         [
           {
-            "node": "Atualizar Roteiro",
+            "node": "OpenAI - Gerar Áudio TTS",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Atualizar Roteiro": {
+    "OpenAI - Gerar Áudio TTS": {
       "main": [
         [
           {
-            "node": "Log Execução",
+            "node": "Upload para Supabase Storage",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Log Execução": {
+    "Upload para Supabase Storage": {
       "main": [
         [
           {
-            "node": "Responder",
+            "node": "Registrar Áudio no Banco",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Áudio no Banco": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Status Roteiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Status Roteiro": {
+      "main": [
+        [
+          {
+            "node": "Log de Sucesso",
             "type": "main",
             "index": 0
           }
@@ -247,8 +349,21 @@
       ]
     }
   },
+  "pinData": {},
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
   },
-  "tags": []
+  "staticData": null,
+  "tags": [
+    {
+      "id": "pulso-automacao",
+      "name": "PULSO Automação"
+    }
+  ],
+  "triggerCount": 2,
+  "updatedAt": "2024-11-29T00:00:00.000Z",
+  "versionId": "2"
 }

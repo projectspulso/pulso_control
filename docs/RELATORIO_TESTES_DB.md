@@ -7,24 +7,26 @@
 
 ## ✅ CONEXÕES FUNCIONANDO (5/7)
 
-| Tabela/View | Schema | Status |
-|-------------|--------|--------|
-| `canais` | public | ✅ OK (3 registros) |
-| `ideias` | public | ✅ OK (3 registros) |
-| `roteiros` | public | ✅ OK (3 registros) |
-| `pipeline_producao` | pulso_content | ✅ OK (3 registros) |
-| `vw_pulso_calendario_publicacao_v2` | public | ✅ OK (3 registros) |
+| Tabela/View                         | Schema        | Status              |
+| ----------------------------------- | ------------- | ------------------- |
+| `canais`                            | public        | ✅ OK (3 registros) |
+| `ideias`                            | public        | ✅ OK (3 registros) |
+| `roteiros`                          | public        | ✅ OK (3 registros) |
+| `pipeline_producao`                 | pulso_content | ✅ OK (3 registros) |
+| `vw_pulso_calendario_publicacao_v2` | public        | ✅ OK (3 registros) |
 
 ---
 
 ## ⚠️ PROBLEMAS ENCONTRADOS (2/7)
 
 ### 1. `audios` (pulso_content)
+
 **Erro:** `permission denied for table audios`
 
 **Causa:** Tabela existe mas não tem permissão de acesso via API (RLS)
 
 **Solução:**
+
 ```sql
 -- Executar no Supabase SQL Editor:
 GRANT SELECT ON pulso_content.audios TO anon, authenticated;
@@ -39,11 +41,13 @@ FOR SELECT USING (true);
 ---
 
 ### 2. `n8n_roteiro_completo` (pulso_content)
+
 **Erro:** `Could not find the table 'public.n8n_roteiro_completo' in the schema cache`
 
 **Causa:** View não foi criada no banco ainda
 
 **Solução:**
+
 ```sql
 -- Executar no Supabase SQL Editor:
 -- (Copiar conteúdo de: supabase/views/n8n_roteiro_completo.sql)
@@ -95,6 +99,7 @@ GRANT SELECT ON public.n8n_roteiro_completo TO anon, authenticated;
 ## 🎯 CONCLUSÃO
 
 O banco está **quase 100% funcional**. Os problemas são apenas de:
+
 1. **Permissões** (RLS na tabela audios)
 2. **View não criada** (n8n_roteiro_completo)
 
@@ -105,6 +110,7 @@ Ambos são **fáceis de resolver** executando os SQLs acima no Supabase SQL Edit
 ## 📝 PRÓXIMO PASSO
 
 Execute os SQLs acima e depois rode:
+
 ```bash
 npm run build
 ```
