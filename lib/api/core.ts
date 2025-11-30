@@ -3,7 +3,6 @@ import { supabase } from '../supabase/client'
 export const canaisApi = {
   async getAll() {
     const { data, error } = await supabase
-      .schema('pulso_core')
       .from('canais')
       .select('*')
       .order('created_at', { ascending: false })
@@ -14,7 +13,6 @@ export const canaisApi = {
 
   async getById(id: string) {
     const { data, error } = await supabase
-      .schema('pulso_core')
       .from('canais')
       .select('*')
       .eq('id', id)
@@ -28,7 +26,6 @@ export const canaisApi = {
 export const seriesApi = {
   async getAll() {
     const { data, error } = await supabase
-      .schema('pulso_core')
       .from('series')
       .select('*')
       .order('ordem_padrao', { ascending: true })
@@ -39,7 +36,6 @@ export const seriesApi = {
 
   async getByCanal(canalId: string) {
     const { data, error } = await supabase
-      .schema('pulso_core')
       .from('series')
       .select('*')
       .eq('canal_id', canalId)
@@ -53,7 +49,6 @@ export const seriesApi = {
 export const plataformasApi = {
   async getAll() {
     const { data, error } = await supabase
-      .schema('pulso_core')
       .from('plataformas')
       .select('*')
       .eq('ativo', true)
@@ -67,7 +62,6 @@ export const plataformasApi = {
 export const tagsApi = {
   async getAll() {
     const { data, error } = await supabase
-      .schema('pulso_core')
       .from('tags')
       .select('*')
       .order('nome')
