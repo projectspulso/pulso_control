@@ -1,0 +1,470 @@
+{
+  "name": "WF04 - Publicar Conteúdo",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6,12,18 * * *"
+            }
+          ]
+        }
+      },
+      "id": "00000000-0000-0000-0004-000000000001",
+      "name": "CRON 3x ao Dia (6h, 12h, 18h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Buscar vídeos prontos para publicar\nSELECT DISTINCT ON (p.id)\n  p.id as pipeline_id,\n  p.ideia_id,\n  p.roteiro_id,\n  p.audio_id,\n  p.video_id,\n  p.canal_id,\n  p.status as pipeline_status,\n  p.prioridade,\n  v.id as video_id,\n  v.public_url as video_url,\n  v.duracao_segundos,\n  v.metadata as video_metadata,\n  r.titulo,\n  r.conteudo_md,\n  r.metadata as roteiro_metadata,\n  i.descricao,\n  i.tags,\n  i.serie_id,\n  c.nome as canal_nome,\n  c.slug as canal_slug,\n  pp.datahora_publicacao_planejada,\n  pp.horario_preferencial\nFROM pulso_content.pipeline_producao p\nJOIN pulso_content.videos v ON v.id = p.video_id\nJOIN roteiros r ON r.id = p.roteiro_id\nJOIN ideias i ON i.id = p.ideia_id\nJOIN canais c ON c.id = p.canal_id\nLEFT JOIN pulso_content.plano_publicacao pp ON pp.canal_id = p.canal_id AND pp.ativo = true\nWHERE p.status = 'PRONTO_PUBLICACAO'\n  AND v.status = 'OK'\n  AND pp.datahora_publicacao_planejada <= NOW()\n  AND NOT EXISTS (\n    SELECT 1 FROM pulso_content.conteudos ct \n    WHERE ct.roteiro_id = p.roteiro_id\n  )\nORDER BY p.id, p.prioridade DESC, pp.datahora_publicacao_planejada ASC\nLIMIT 5;",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0004-000000000002",
+      "name": "Buscar Vídeos Prontos",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [460, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check001",
+              "leftValue": "={{ $json.pipeline_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0004-000000000003",
+      "name": "Tem Vídeos para Publicar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=-- Criar CONTEUDO principal\nINSERT INTO pulso_content.conteudos (\n  canal_id,\n  serie_id,\n  roteiro_id,\n  titulo_interno,\n  sinopse,\n  status,\n  linguagem,\n  tags,\n  metadata\n) VALUES (\n  '{{ $json.canal_id }}',\n  {{ $json.serie_id ? `'${$json.serie_id}'` : 'NULL' }},\n  '{{ $json.roteiro_id }}',\n  '{{ $json.titulo }}',\n  '{{ $json.descricao }}',\n  'PRONTO',\n  'pt-BR',\n  ARRAY[{{ $json.tags ? $json.tags.map(t => `'${t}'`).join(',') : '' }}],\n  jsonb_build_object(\n    'video_id', '{{ $json.video_id }}',\n    'video_url', '{{ $json.video_url }}',\n    'duracao_segundos', {{ $json.duracao_segundos }},\n    'gerado_automaticamente', true,\n    'criado_em', NOW()::text\n  )\n) RETURNING id, titulo_interno, status;",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0004-000000000004",
+      "name": "Criar Conteúdo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [900, 200],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ctx001",
+              "name": "conteudo_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "ctx002",
+              "name": "titulo",
+              "value": "={{ $('Buscar Vídeos Prontos').item.json.titulo }}",
+              "type": "string"
+            },
+            {
+              "id": "ctx003",
+              "name": "descricao",
+              "value": "={{ $('Buscar Vídeos Prontos').item.json.descricao }}",
+              "type": "string"
+            },
+            {
+              "id": "ctx004",
+              "name": "tags",
+              "value": "={{ $('Buscar Vídeos Prontos').item.json.tags }}",
+              "type": "array"
+            },
+            {
+              "id": "ctx005",
+              "name": "video_url",
+              "value": "={{ $('Buscar Vídeos Prontos').item.json.video_url }}",
+              "type": "string"
+            },
+            {
+              "id": "ctx006",
+              "name": "video_id",
+              "value": "={{ $('Buscar Vídeos Prontos').item.json.video_id }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "00000000-0000-0000-0004-000000000005",
+      "name": "Contexto para Variantes",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const titulo = $input.item.json.titulo;\nconst descricao = $input.item.json.descricao;\nconst tags = $input.item.json.tags || [];\n\n// Configurações por plataforma\nconst plataformas = [\n  {\n    nome: 'tiktok',\n    tipo: 'TIKTOK',\n    titulo_max: 100,\n    descricao_max: 2200,\n    hashtags_recomendadas: 5,\n    formato_legenda: 'curta_impactante'\n  },\n  {\n    nome: 'youtube',\n    tipo: 'YOUTUBE_SHORT',\n    titulo_max: 100,\n    descricao_max: 5000,\n    hashtags_recomendadas: 15,\n    formato_legenda: 'seo_otimizada'\n  },\n  {\n    nome: 'instagram',\n    tipo: 'INSTAGRAM_REEL',\n    titulo_max: 100,\n    descricao_max: 2200,\n    hashtags_recomendadas: 10,\n    formato_legenda: 'media_engajamento'\n  }\n];\n\n// Função para gerar legenda por plataforma\nfunction gerarLegenda(plataforma, titulo, descricao, tags) {\n  let legenda = '';\n  \n  if (plataforma.tipo === 'TIKTOK') {\n    // TikTok: Curta e impactante\n    legenda = `${titulo}\\n\\n${descricao.substring(0, 150)}... 🔥\\n\\n`;\n    legenda += tags.slice(0, 5).map(t => `#${t}`).join(' ');\n  } else if (plataforma.tipo === 'YOUTUBE_SHORT') {\n    // YouTube: SEO otimizada\n    legenda = `${titulo}\\n\\n${descricao}\\n\\n---\\n\\n`;\n    legenda += '🔔 Inscreva-se para mais conteúdo incrível!\\n';\n    legenda += '📱 Siga no TikTok e Instagram: @pulso\\n\\n';\n    legenda += tags.slice(0, 15).map(t => `#${t}`).join(' ');\n  } else if (plataforma.tipo === 'INSTAGRAM_REEL') {\n    // Instagram: Média com emojis\n    legenda = `${titulo} ✨\\n\\n${descricao}\\n\\n`;\n    legenda += '💬 Comenta o que achou!\\n';\n    legenda += '📲 Compartilha com os amigos\\n\\n';\n    legenda += tags.slice(0, 10).map(t => `#${t}`).join(' ');\n  }\n  \n  return legenda.substring(0, plataforma.descricao_max);\n}\n\n// Gerar variantes para cada plataforma\nconst variantes = plataformas.map(plat => ({\n  conteudo_id: $input.item.json.conteudo_id,\n  nome_variacao: `${plat.nome}_v1`,\n  plataforma_tipo: plat.tipo,\n  titulo_publico: titulo.substring(0, plat.titulo_max),\n  descricao_publica: descricao.substring(0, plat.descricao_max),\n  legenda: gerarLegenda(plat, titulo, descricao, tags),\n  hashtags: tags.slice(0, plat.hashtags_recomendadas),\n  video_url: $input.item.json.video_url,\n  video_id: $input.item.json.video_id\n}));\n\nreturn variantes.map(v => ({ json: v }));"
+      },
+      "id": "00000000-0000-0000-0004-000000000006",
+      "name": "Gerar Variantes (TikTok, YouTube, Instagram)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO pulso_content.conteudo_variantes (\n  conteudo_id,\n  nome_variacao,\n  plataforma_tipo,\n  status,\n  titulo_publico,\n  descricao_publica,\n  legenda,\n  hashtags,\n  linguagem,\n  metadata\n) VALUES (\n  '{{ $json.conteudo_id }}',\n  '{{ $json.nome_variacao }}',\n  '{{ $json.plataforma_tipo }}',\n  'PRONTO',\n  '{{ $json.titulo_publico.replace(/'/g, \"''\") }}',\n  '{{ $json.descricao_publica.replace(/'/g, \"''\") }}',\n  '{{ $json.legenda.replace(/'/g, \"''\") }}',\n  ARRAY[{{ $json.hashtags.map(t => `'${t}'`).join(',') }}],\n  'pt-BR',\n  jsonb_build_object(\n    'video_id', '{{ $json.video_id }}',\n    'video_url', '{{ $json.video_url }}',\n    'gerado_automaticamente', true,\n    'criado_em', NOW()::text\n  )\n) RETURNING id, nome_variacao, plataforma_tipo, status;",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0004-000000000007",
+      "name": "Salvar Variante",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1560, 200],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=-- Buscar credenciais da plataforma (canal_plataforma)\nSELECT \n  cp.id as canal_plataforma_id,\n  cp.plataforma_tipo,\n  cp.ativo,\n  cp.credenciais_config\nFROM pulso_core.canais_plataformas cp\nWHERE cp.canal_id = '{{ $('Buscar Vídeos Prontos').item.json.canal_id }}'\n  AND cp.plataforma_tipo = '{{ $json.plataforma_tipo }}'\n  AND cp.ativo = true\nLIMIT 1;",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0004-000000000008",
+      "name": "Buscar Credenciais Plataforma",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1780, 200],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=-- FASE 1: Registrar publicação como PENDENTE (você publica manualmente)\nINSERT INTO pulso_distribution.posts (\n  conteudo_variantes_id,\n  canal_plataforma_id,\n  status,\n  titulo_publicado,\n  descricao_publicada,\n  legenda_publicada,\n  url_publicacao,\n  data_agendada,\n  metadata\n) VALUES (\n  '{{ $('Salvar Variante').item.json.id }}',\n  {{ $json.canal_plataforma_id ? `'${$json.canal_plataforma_id}'` : 'NULL' }},\n  'PENDENTE',\n  '{{ $('Gerar Variantes (TikTok, YouTube, Instagram)').item.json.titulo_publico }}',\n  '{{ $('Gerar Variantes (TikTok, YouTube, Instagram)').item.json.descricao_publica }}',\n  '{{ $('Gerar Variantes (TikTok, YouTube, Instagram)').item.json.legenda }}',\n  'pendente_publicacao_manual',\n  NOW(),\n  jsonb_build_object(\n    'plataforma', '{{ $('Salvar Variante').item.json.plataforma_tipo }}',\n    'video_url', '{{ $('Gerar Variantes (TikTok, YouTube, Instagram)').item.json.video_url }}',\n    'publicacao_automatica', false,\n    'aguardando_publicacao_manual', true,\n    'criado_em', NOW()::text\n  )\n) RETURNING id, status;",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0004-000000000009",
+      "name": "Registrar Publicação (Manual)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [2000, 200],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0004-000000000010",
+      "name": "Aguardar Todas Variantes",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [2220, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=-- Atualizar pipeline para PUBLICADO\nUPDATE pulso_content.pipeline_producao\nSET \n  status = 'PUBLICADO',\n  data_publicacao = NOW()\nWHERE id = '{{ $('Buscar Vídeos Prontos').item.json.pipeline_id }}'\nRETURNING id, status, data_publicacao;",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0004-000000000011",
+      "name": "Atualizar Pipeline",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [2440, 200],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "log001",
+              "name": "pipeline_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "log002",
+              "name": "status_final",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "log003",
+              "name": "data_publicacao",
+              "value": "={{ $json.data_publicacao }}",
+              "type": "string"
+            },
+            {
+              "id": "log004",
+              "name": "conteudo_id",
+              "value": "={{ $('Contexto para Variantes').item.json.conteudo_id }}",
+              "type": "string"
+            },
+            {
+              "id": "log005",
+              "name": "total_variantes",
+              "value": "3",
+              "type": "number"
+            },
+            {
+              "id": "log006",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "00000000-0000-0000-0004-000000000012",
+      "name": "Log Final",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2660, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO pulso_content.logs_workflows (\n  workflow_name,\n  execution_id,\n  status,\n  pipeline_id,\n  detalhes,\n  created_at\n) VALUES (\n  'WF04_Publicar',\n  '{{ $workflow.id }}_{{ $execution.id }}',\n  'sucesso',\n  '{{ $json.pipeline_id }}',\n  jsonb_build_object(\n    'conteudo_id', '{{ $json.conteudo_id }}',\n    'status_final', '{{ $json.status_final }}',\n    'total_variantes', {{ $json.total_variantes }},\n    'data_publicacao', '{{ $json.data_publicacao }}',\n    'timestamp', '{{ $json.timestamp }}'\n  ),\n  NOW()\n);",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0004-000000000013",
+      "name": "Registrar Log Workflow",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [2880, 200],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres supabase"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "00000000-0000-0000-0004-000000000014",
+      "name": "Fim - Sem Vídeos",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1.0,
+      "position": [900, 400]
+    }
+  ],
+  "connections": {
+    "CRON 3x ao Dia (6h, 12h, 18h)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Vídeos Prontos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vídeos Prontos": {
+      "main": [
+        [
+          {
+            "node": "Tem Vídeos para Publicar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Vídeos para Publicar?": {
+      "main": [
+        [
+          {
+            "node": "Criar Conteúdo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fim - Sem Vídeos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Conteúdo": {
+      "main": [
+        [
+          {
+            "node": "Contexto para Variantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto para Variantes": {
+      "main": [
+        [
+          {
+            "node": "Gerar Variantes (TikTok, YouTube, Instagram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Variantes (TikTok, YouTube, Instagram)": {
+      "main": [
+        [
+          {
+            "node": "Salvar Variante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Variante": {
+      "main": [
+        [
+          {
+            "node": "Buscar Credenciais Plataforma",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Credenciais Plataforma": {
+      "main": [
+        [
+          {
+            "node": "Registrar Publicação (Manual)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Publicação (Manual)": {
+      "main": [
+        [
+          {
+            "node": "Aguardar Todas Variantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aguardar Todas Variantes": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Pipeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Pipeline": {
+      "main": [
+        [
+          {
+            "node": "Log Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Final": {
+      "main": [
+        [
+          {
+            "node": "Registrar Log Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "id": "1",
+      "name": "PULSO"
+    },
+    {
+      "id": "2",
+      "name": "Automação"
+    }
+  ],
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "nlcisbfdiokmipyihtuz"
+  },
+  "id": "WF04",
+  "versionId": "1.0.0"
+}

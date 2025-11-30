@@ -1,0 +1,324 @@
+{
+  "name": "WF00 - Gerar Ideias AI",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * *"
+            }
+          ]
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000001",
+      "name": "CRON Diário 3h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Selecionar canal do dia (rotação semanal)\nSELECT \n  c.id as canal_id,\n  c.nome as canal_nome,\n  c.slug,\n  c.linguagem_padrao,\n  c.metadata,\n  s.id as serie_id,\n  s.nome as serie_nome,\n  pp.intervalo_dias,\n  pp.horario_preferencial,\n  (\n    SELECT COUNT(*) \n    FROM ideias \n    WHERE canal_id = c.id \n      AND created_at > NOW() - INTERVAL '7 days'\n  ) as ideias_ultima_semana\nFROM canais c\nJOIN series s ON s.canal_id = c.id AND s.principal = true\nJOIN pulso_content.plano_publicacao pp ON pp.canal_id = c.id AND pp.ativo = true\nWHERE c.ativo = true\n  AND EXTRACT(DOW FROM NOW()) = MOD(c.ordem_prioridade::integer, 7)\nLIMIT 1;",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0000-000000000002",
+      "name": "Buscar Canal do Dia",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [460, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign001",
+              "name": "canal_id",
+              "value": "={{ $json.canal_id }}",
+              "type": "string"
+            },
+            {
+              "id": "assign002",
+              "name": "canal_nome",
+              "value": "={{ $json.canal_nome }}",
+              "type": "string"
+            },
+            {
+              "id": "assign003",
+              "name": "serie_id",
+              "value": "={{ $json.serie_id }}",
+              "type": "string"
+            },
+            {
+              "id": "assign004",
+              "name": "linguagem",
+              "value": "={{ $json.linguagem_padrao }}",
+              "type": "string"
+            },
+            {
+              "id": "assign005",
+              "name": "tipo_canal",
+              "value": "={{ $json.metadata.tipo }}",
+              "type": "string"
+            },
+            {
+              "id": "assign006",
+              "name": "tom_voz",
+              "value": "={{ $json.metadata.tom_voz }}",
+              "type": "string"
+            },
+            {
+              "id": "assign007",
+              "name": "ideias_recentes",
+              "value": "={{ $json.ideias_ultima_semana }}",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000003",
+      "name": "Preparar Contexto",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "content": "=Você é um especialista em criação de conteúdo viral para redes sociais brasileiras.\n\n**CANAL:** {{ $('Preparar Contexto').item.json.canal_nome }}\n**TIPO:** {{ $('Preparar Contexto').item.json.tipo_canal }}\n**TOM:** {{ $('Preparar Contexto').item.json.tom_voz }}\n**PÚBLICO:** Brasileiros 18-35 anos\n**PLATAFORMAS:** TikTok, YouTube Shorts, Instagram Reels\n**DURAÇÃO:** 40-60 segundos\n\n**DIRETRIZES ESPECÍFICAS:**\n\n{% if $('Preparar Contexto').item.json.canal_nome == 'Pulso Dark PT' %}\n- Conteúdo sombrio, misterioso e perturbador\n- Histórias reais de crimes, fenômenos paranormais, experimentos macabros\n- Gancho impactante nos primeiros 3 segundos\n- Tom narrativo sério e envolvente\n{% elif $('Preparar Contexto').item.json.canal_nome == 'PULSO Estudos & Produtividade' %}\n- Técnicas comprovadas de estudo e produtividade\n- Baseado em ciência e pesquisas acadêmicas\n- Dicas práticas e aplicáveis imediatamente\n- Tom motivacional mas realista\n{% elif $('Preparar Contexto').item.json.canal_nome == 'PULSO Motivacional' %}\n- Histórias inspiradoras de superação\n- Frases impactantes de grandes pensadores\n- Lições de vida aplicáveis ao dia a dia\n- Tom energético e positivo\n{% elif $('Preparar Contexto').item.json.canal_nome == 'PULSO Casos Reais & Bizarros' %}\n- Casos documentados e verificáveis\n- Acontecimentos surpreendentes e inusitados\n- Revelação gradual com clímax no final\n- Tom jornalístico mas envolvente\n{% elif $('Preparar Contexto').item.json.canal_nome == 'PULSO Psicologia & Comportamento' %}\n- Conceitos psicológicos explicados de forma simples\n- Experimentos famosos e estudos de comportamento\n- Aplicação prática no cotidiano\n- Tom educativo e acessível\n{% elif $('Preparar Contexto').item.json.canal_nome == 'PULSO Mistérios & História' %}\n- Eventos históricos pouco conhecidos\n- Mistérios não resolvidos e teorias\n- Contextualização histórica precisa\n- Tom narrativo e investigativo\n{% elif $('Preparar Contexto').item.json.canal_nome == 'PULSO Games Nostalgia' %}\n- Jogos clássicos dos anos 90-2000\n- Curiosidades e Easter eggs\n- Histórias de desenvolvimento\n- Tom nostálgico e apaixonado\n{% endif %}\n\n**PESQUISA DE MERCADO:**\n- Data: {{ $now.format('dd/MM/yyyy') }}\n- Trending topics Brasil: [insira 3-5 tópicos em alta]\n- Sazonalidade: [eventos/datas próximas relevantes]\n\n**TAREFA:**\nGere exatamente 5 ideias de vídeo virais seguindo este formato JSON:\n\n```json\n[\n  {\n    \"titulo\": \"Título chamativo com max 60 caracteres\",\n    \"descricao\": \"Sinopse completa do vídeo em 2-3 linhas, explicando o que será abordado\",\n    \"gancho\": \"Primeira frase que prende atenção nos primeiros 3 segundos - deve ser impactante\",\n    \"tags\": [\"tag1\", \"tag2\", \"tag3\"],\n    \"duracao_estimada\": \"45s\",\n    \"potencial_viral\": 8,\n    \"fontes_referencia\": [\"fonte1\", \"fonte2\"],\n    \"justificativa\": \"Por que este conteúdo tem potencial viral\"\n  }\n]\n```\n\n**REQUISITOS:**\n1. Títulos devem ser clickbait mas honestos\n2. Ganchos devem criar curiosidade imediata\n3. Tags relevantes para busca no TikTok/YouTube\n4. Potencial viral de 1-10 (mínimo 7)\n5. Todas as ideias devem ser factualmente verificáveis\n6. Evitar tópicos sensíveis ou polêmicos demais\n7. Foco em storytelling envolvente\n\nResponda APENAS com o array JSON, sem texto adicional."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.8,
+          "maxTokens": 2000
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000004",
+      "name": "GPT-4o - Gerar Ideias",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.5,
+      "position": [900, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENAI_CREDENTIAL_ID",
+          "name": "OpenAi pulso_control"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json.message?.content || $input.item.json.response;\n\nif (!response) {\n  throw new Error('Resposta da OpenAI vazia');\n}\n\n// Extrair JSON da resposta (remover markdown se houver)\nlet jsonString = response.trim();\nif (jsonString.startsWith('```json')) {\n  jsonString = jsonString.replace(/```json\\n?/g, '').replace(/```\\n?/g, '');\n}\n\ntry {\n  const ideias = JSON.parse(jsonString);\n  \n  if (!Array.isArray(ideias) || ideias.length === 0) {\n    throw new Error('Resposta não é um array válido de ideias');\n  }\n  \n  // Validar cada ideia\n  ideias.forEach((ideia, index) => {\n    if (!ideia.titulo || !ideia.descricao || !ideia.gancho) {\n      throw new Error(`Ideia ${index + 1} está incompleta`);\n    }\n  });\n  \n  return ideias.map(ideia => ({\n    json: {\n      ...ideia,\n      canal_id: $('Preparar Contexto').item.json.canal_id,\n      serie_id: $('Preparar Contexto').item.json.serie_id,\n      linguagem: $('Preparar Contexto').item.json.linguagem\n    }\n  }));\n  \n} catch (error) {\n  throw new Error(`Erro ao processar JSON da OpenAI: ${error.message}\\n\\nResposta recebida: ${jsonString.substring(0, 500)}`);\n}"
+      },
+      "id": "00000000-0000-0000-0000-000000000005",
+      "name": "Processar JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO ideias (\n  canal_id,\n  serie_id,\n  titulo,\n  descricao,\n  status,\n  tags,\n  linguagem,\n  metadata\n) VALUES (\n  '{{ $json.canal_id }}',\n  '{{ $json.serie_id }}',\n  '{{ $json.titulo }}',\n  '{{ $json.descricao }}',\n  'RASCUNHO',\n  ARRAY[{{ $json.tags.map(t => `'${t}'`).join(',') }}],\n  '{{ $json.linguagem }}',\n  jsonb_build_object(\n    'gancho_sugerido', '{{ $json.gancho }}',\n    'duracao_estimada', '{{ $json.duracao_estimada }}',\n    'potencial_viral', {{ $json.potencial_viral }},\n    'fontes_referencia', '{{ JSON.stringify($json.fontes_referencia) }}'::jsonb,\n    'justificativa', '{{ $json.justificativa }}',\n    'gerado_por_ia', true,\n    'modelo_ia', 'gpt-4o',\n    'gerado_em', NOW()::text\n  )\n) RETURNING id, titulo, status;",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0000-000000000006",
+      "name": "Salvar Ideias",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1340, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "summary001",
+              "name": "canal_processado",
+              "value": "={{ $('Preparar Contexto').item.json.canal_nome }}",
+              "type": "string"
+            },
+            {
+              "id": "summary002",
+              "name": "total_ideias_geradas",
+              "value": "={{ $runIndex + 1 }}",
+              "type": "number"
+            },
+            {
+              "id": "summary003",
+              "name": "ideia_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "summary004",
+              "name": "ideia_titulo",
+              "value": "={{ $json.titulo }}",
+              "type": "string"
+            },
+            {
+              "id": "summary005",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "summary006",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000007",
+      "name": "Log Sucesso",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO pulso_content.logs_workflows (\n  workflow_name,\n  execution_id,\n  status,\n  canal_id,\n  detalhes,\n  created_at\n) VALUES (\n  'WF00_Gerar_Ideias',\n  '{{ $workflow.id }}_{{ $execution.id }}',\n  'sucesso',\n  '{{ $('Preparar Contexto').item.json.canal_id }}',\n  jsonb_build_object(\n    'canal_nome', '{{ $json.canal_processado }}',\n    'total_ideias', {{ $json.total_ideias_geradas }},\n    'timestamp', '{{ $json.timestamp }}'\n  ),\n  NOW()\n);",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0000-000000000008",
+      "name": "Registrar Log",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1780, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres supabase"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "CRON Diário 3h": {
+      "main": [
+        [
+          {
+            "node": "Buscar Canal do Dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Canal do Dia": {
+      "main": [
+        [
+          {
+            "node": "Preparar Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Contexto": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o - Gerar Ideias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o - Gerar Ideias": {
+      "main": [
+        [
+          {
+            "node": "Processar JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar JSON": {
+      "main": [
+        [
+          {
+            "node": "Salvar Ideias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Ideias": {
+      "main": [
+        [
+          {
+            "node": "Log Sucesso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Sucesso": {
+      "main": [
+        [
+          {
+            "node": "Registrar Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-11-30T00:00:00.000Z",
+      "updatedAt": "2025-11-30T00:00:00.000Z",
+      "id": "1",
+      "name": "PULSO"
+    },
+    {
+      "createdAt": "2025-11-30T00:00:00.000Z",
+      "updatedAt": "2025-11-30T00:00:00.000Z",
+      "id": "2",
+      "name": "Automação"
+    }
+  ],
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "nlcisbfdiokmipyihtuz"
+  },
+  "id": "WF00",
+  "versionId": "1.0.0"
+}
