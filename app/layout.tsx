@@ -17,8 +17,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="dark">
-      <body className={`${inter.className} antialiased bg-black text-white`}>
+    <html lang="pt-BR" className="dark" suppressHydrationWarning>
+      <body className={`${inter.className} antialiased bg-black text-white`} suppressHydrationWarning>
         <Providers>
           <div className="flex h-screen overflow-hidden">
             <Sidebar />
