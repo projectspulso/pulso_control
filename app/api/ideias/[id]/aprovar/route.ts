@@ -3,9 +3,10 @@ import { supabase } from '@/lib/supabase/client'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     
     // 1. Atualizar status da ideia para APROVADA
     const { data: ideia, error: updateError } = await supabase
@@ -14,7 +15,7 @@ export async function POST(
         status: 'APROVADA',
         aprovada_em: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
     
@@ -26,7 +27,7 @@ export async function POST(
       )
     }
 
-    console.log(`✅ Ideia ${params.id} aprovada com sucesso`)
+    console.log(`✅ Ideia ${id} aprovada com sucesso`)
 
     // 2. Chamar webhook do n8n (WF01 - Gerar Roteiro)
     const webhookUrl = process.env.N8N_WEBHOOK_APROVAR_IDEIA
@@ -50,7 +51,7 @@ export async function POST(
           'x-webhook-secret': process.env.WEBHOOK_SECRET || ''
         },
         body: JSON.stringify({
-          ideia_id: params.id,
+          ideia_id: id,
           trigger: 'app-aprovacao',
           timestamp: new Date().toISOString()
         })
