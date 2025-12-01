@@ -12,8 +12,7 @@ export async function POST(
     const { data: ideia, error: updateError } = await supabase
       .from('ideias')
       .update({ 
-        status: 'APROVADA',
-        aprovada_em: new Date().toISOString()
+        status: 'APROVADA'
       })
       .eq('id', id)
       .select()
