@@ -86,7 +86,7 @@ export function DashboardStats() {
             <div className="relative z-10 space-y-4">
               <div className="flex items-start justify-between">
                 <div className={`p-3 rounded-xl ${stat.iconBg} border ${stat.iconBorder} group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon className={`h-6 w-6 bg-gradient-to-br ${stat.gradient} bg-clip-text text-transparent`} style={{ WebkitTextFillColor: 'transparent', backgroundClip: 'text' }} />
+                  <Icon className={`h-6 w-6 bg-linear-to-br ${stat.gradient} bg-clip-text text-transparent`} style={{ WebkitTextFillColor: 'transparent', backgroundClip: 'text' }} />
                 </div>
                 <TrendingUp className="h-4 w-4 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
@@ -95,7 +95,7 @@ export function DashboardStats() {
                 <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mb-2">
                   {stat.label}
                 </p>
-                <h3 className={`text-4xl font-black bg-gradient-to-br ${stat.gradient} bg-clip-text text-transparent tabular-nums mb-2`}>
+                <h3 className={`text-4xl font-black bg-linear-to-br ${stat.gradient} bg-clip-text text-transparent tabular-nums mb-2`}>
                   {stat.value}
                 </h3>
                 <p className="text-xs text-zinc-600 font-medium flex items-center gap-1">
@@ -106,7 +106,7 @@ export function DashboardStats() {
             </div>
 
             {/* Bottom gradient line */}
-            <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${stat.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+            <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-linear-to-r ${stat.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
           </div>
         )
       })}

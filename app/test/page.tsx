@@ -57,7 +57,7 @@ export default function TestPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse-glow" />
-            <h1 className="text-3xl font-black bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-black bg-linear-to-r from-cyan-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
               Testando Conexão Supabase...
             </h1>
           </div>
@@ -88,7 +88,7 @@ export default function TestPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse-glow" />
-          <h1 className="text-3xl font-black bg-gradient-to-r from-green-400 via-emerald-400 to-green-400 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-black bg-linear-to-r from-green-400 via-emerald-400 to-green-400 bg-clip-text text-transparent">
             ✅ Teste de Conexão Supabase
           </h1>
         </div>
@@ -144,7 +144,7 @@ export default function TestPage() {
             href="/"
             className="inline-flex items-center gap-2 glass-hover px-6 py-3 rounded-lg text-white relative overflow-hidden group"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+            <div className="absolute inset-0 bg-linear-to-r from-purple-600 to-pink-600 opacity-100 group-hover:opacity-80 transition-opacity" />
             <span className="relative">← Voltar ao Dashboard</span>
           </a>
         </div>

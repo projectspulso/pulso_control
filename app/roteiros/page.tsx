@@ -58,7 +58,7 @@ export default function RoteirosPage() {
         {/* Header */}
         <div className="flex items-center justify-between animate-fade-in">
           <div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-3">
+            <h1 className="text-4xl font-black bg-linear-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-3">
               📝 Roteiros
             </h1>
             <p className="text-zinc-400 mt-2 flex items-center gap-2">
@@ -77,7 +77,7 @@ export default function RoteirosPage() {
                 className="glass glass-hover rounded-xl p-4 group cursor-pointer animate-fade-in"
                 style={{ animationDelay: `${(idx + 1) * 50}ms` }}
               >
-                <div className="text-3xl font-black bg-gradient-to-br from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-1 tabular-nums">{count}</div>
+                <div className="text-3xl font-black bg-linear-to-br from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-1 tabular-nums">{count}</div>
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">{status.replace('_', ' ')}</div>
               </div>
             ))}

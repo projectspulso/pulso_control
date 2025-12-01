@@ -7,6 +7,7 @@
 Acesse: `https://pulsoprojects.app.n8n.cloud`
 
 **✅ Verificar:**
+
 - [ ] Login funciona
 - [ ] Dashboard carrega
 - [ ] Menu "Workflows" está acessível
@@ -24,6 +25,7 @@ No n8n, vá em **Workflows** e verifique:
 - [ ] **WF04_Publicar** - Toggle VERDE (Ativo)
 
 **Se algum estiver vermelho (inativo):**
+
 1. Clique no workflow
 2. Clique no toggle no canto superior direito
 3. Deve ficar VERDE
@@ -35,11 +37,13 @@ No n8n, vá em **Workflows** e verifique:
 No n8n, vá em **Settings** → **Credentials**
 
 **✅ Deve ter 3 credenciais:**
+
 - [ ] `Postgres supabase` (PostgreSQL)
 - [ ] `OpenAi pulso_control` (OpenAI)
 - [ ] `Supabase Storage – Pulso` (Supabase)
 
 **Se faltar alguma:**
+
 - Criar seguindo o guia `GUIA_IMPORTACAO_COMPLETO.md`
 
 ---
@@ -49,11 +53,13 @@ No n8n, vá em **Settings** → **Credentials**
 No n8n, vá em **Executions**
 
 **✅ Verificar:**
+
 - [ ] Há pelo menos 1 execução listada
 - [ ] Status da última execução: **Success** (verde)
 - [ ] Se houver erro (vermelho), clicar e ver detalhes
 
 **Execuções esperadas:**
+
 - **WF00**: 1x por dia às 3h (automático)
 - **WF03**: A cada 30 minutos (automático)
 - **WF04**: 3x por dia (6h, 12h, 18h) - automático
@@ -74,10 +80,12 @@ LIMIT 5;
 ```
 
 **✅ Resultado esperado:**
+
 - Pelo menos 1 linha com dados
 - Status = `sucesso`
 
 **Se retornar 0 linhas:**
+
 - Workflows ainda não executaram
 - Aguarde ou execute manualmente no n8n
 
@@ -97,6 +105,7 @@ No app **PULSO Control** (`http://localhost:3000`):
 6. [ ] **Deve aparecer um roteiro novo** com o título da ideia
 
 **Se não aparecer:**
+
 - Verificar console do navegador (F12)
 - Verificar execuções no n8n
 - Verificar logs_workflows no Supabase
@@ -119,6 +128,7 @@ LIMIT 1;
 ```
 
 **✅ Deve retornar 1 linha com:**
+
 - URL do áudio no Supabase Storage
 - Duração em segundos
 
@@ -129,12 +139,14 @@ LIMIT 1;
 No app, vá em `/monitor`:
 
 **✅ Verificar:**
+
 - [ ] Página carrega sem erros
 - [ ] Mostra estatísticas dos 5 workflows
 - [ ] Lista de logs está populada
 - [ ] Cards de status mostram números
 
 **Se aparecer erro 500:**
+
 - Verificar se `logs_workflows` foi criada no Supabase
 - Executar SQL: `docs/SQL_EXECUTAR_SUPABASE.md`
 
@@ -147,6 +159,7 @@ Se **TODOS** os itens acima estiverem ✅:
 ### ✅ **WORKFLOWS 100% FUNCIONANDO!**
 
 Você pode:
+
 - Aprovar ideias e gerar roteiros automaticamente
 - Aprovar roteiros e gerar áudios TTS
 - Ver logs em tempo real no `/monitor`
@@ -160,19 +173,23 @@ Você pode:
 ### Troubleshooting Rápido
 
 **Erro 1: "Webhook não responde"**
+
 ```bash
 # Verificar se n8n está online
 curl https://pulsoprojects.app.n8n.cloud/healthz
 ```
 
 **Erro 2: "Credenciais inválidas"**
+
 - Recriar credenciais no n8n
 - Seguir exatamente os nomes do guia
 
 **Erro 3: "Tabela não existe"**
+
 - Executar SQLs em `docs/SQL_EXECUTAR_SUPABASE.md`
 
 **Erro 4: "OpenAI API error"**
+
 - Verificar se chave OpenAI está válida no `.env`
 - Verificar saldo da conta OpenAI
 
@@ -193,6 +210,7 @@ SELECT
 ```
 
 **✅ Métricas saudáveis:**
+
 - `ideias_ia` > 0
 - `roteiros_ia` > 0
 - `audios_gerados` > 0
@@ -210,6 +228,7 @@ SELECT
 6. Publicar nos canais
 
 **Produção estimada:**
+
 - 5 ideias/dia automáticas
 - 2-3 roteiros/dia (você aprova)
 - 2-3 áudios/dia (TTS automático)

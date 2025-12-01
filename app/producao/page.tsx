@@ -42,7 +42,7 @@ function CardConteudo({ conteudo }: CardProps) {
       {...listeners}
       className="glass border border-zinc-800/50 rounded-xl p-4 cursor-move hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10 transition-all group relative overflow-hidden"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-600/0 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute inset-0 bg-linear-to-br from-violet-600/0 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
       <h4 className="text-sm font-medium text-white mb-2 line-clamp-2 relative z-10">
         {conteudo.ideia || 'Sem título'}
       </h4>
@@ -212,7 +212,7 @@ export default function ProducaoPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse-glow" />
-              <h1 className="text-4xl font-black bg-gradient-to-r from-orange-400 via-red-400 to-orange-400 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-black bg-linear-to-r from-orange-400 via-red-400 to-orange-400 bg-clip-text text-transparent">
                 🎬 Pipeline de Produção
               </h1>
             </div>
@@ -220,7 +220,7 @@ export default function ProducaoPage() {
               href="/calendario"
               className="glass-hover px-5 py-3 text-white rounded-lg transition-all flex items-center gap-2 relative overflow-hidden group"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-teal-600 to-blue-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+              <div className="absolute inset-0 bg-linear-to-r from-teal-600 to-blue-600 opacity-100 group-hover:opacity-80 transition-opacity" />
               <Calendar className="h-4 w-4 relative" />
               <span className="relative">Ver Calendário</span>
             </Link>

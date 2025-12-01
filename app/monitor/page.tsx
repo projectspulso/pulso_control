@@ -6,6 +6,7 @@ import { Zap, CheckCircle2, XCircle, Clock, Activity, TrendingUp } from 'lucide-
 import { formatDateTime } from '@/lib/utils'
 import { useGerarIdeias } from '@/lib/hooks/use-n8n'
 import PipelineMonitor from '@/components/pipeline-monitor'
+import { WorkflowQueueMonitor } from '@/components/workflow-queue-monitor'
 
 interface WorkflowLog {
   id: string
@@ -96,7 +97,7 @@ export default function MonitorPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 via-violet-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-3">
+            <h1 className="text-4xl font-black bg-linear-to-r from-purple-400 via-violet-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-3">
               <Zap className="h-10 w-10 text-purple-500" />
               Monitor de Workflows
             </h1>
@@ -245,6 +246,9 @@ export default function MonitorPage() {
             )}
           </div>
         </div>
+
+        {/* Workflow Queue Monitor */}
+        <WorkflowQueueMonitor />
       </div>
     </div>
   )

@@ -1,0 +1,391 @@
+{
+  "name": "WF99 - Retry & Recovery",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "A cada 5 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM pulso_automation.workflow_queue WHERE status IN ('pending', 'failed') AND retry_count < max_retries AND (next_retry_at IS NULL OR next_retry_at <= NOW()) ORDER BY next_retry_at ASC NULLS FIRST LIMIT 10"
+      },
+      "id": "supabase-get-pending",
+      "name": "Buscar Workflows Pendentes",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [470, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "{{SUPABASE_CREDENTIAL_ID}}",
+          "name": "Supabase - PULSO"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.length }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "if-has-pending",
+      "name": "Tem workflows pendentes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {},
+      "id": "split-items",
+      "name": "Split Into Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [910, 200]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_queue",
+        "filterType": "manual",
+        "matchBy": "id",
+        "updateFields": {
+          "status": "processing",
+          "updated_at": "={{ $now.toISO() }}"
+        }
+      },
+      "id": "supabase-update-processing",
+      "name": "Marcar como Processing",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1130, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "{{SUPABASE_CREDENTIAL_ID}}",
+          "name": "Supabase - PULSO"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.workflow_id }}",
+              "operation": "equals",
+              "value2": "WF00"
+            }
+          ]
+        }
+      },
+      "id": "switch-workflow",
+      "name": "Qual workflow?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1350, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.N8N_WEBHOOK_BASE_URL}}/webhook/wf00-gerar-ideias",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "canal_id",
+              "value": "={{ $json.payload.canal_id }}"
+            },
+            {
+              "name": "quantidade",
+              "value": "={{ $json.payload.quantidade || 5 }}"
+            },
+            {
+              "name": "queue_id",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-wf00",
+      "name": "Executar WF00",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1570, 100]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.N8N_WEBHOOK_BASE_URL}}/webhook/wf01-gerar-roteiro",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "ideia_id",
+              "value": "={{ $json.payload.ideia_id }}"
+            },
+            {
+              "name": "queue_id",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-wf01",
+      "name": "Executar WF01",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1570, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.N8N_WEBHOOK_BASE_URL}}/webhook/wf02-gerar-audio",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "roteiro_id",
+              "value": "={{ $json.payload.roteiro_id }}"
+            },
+            {
+              "name": "queue_id",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-wf02",
+      "name": "Executar WF02",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1570, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_queue",
+        "filterType": "manual",
+        "matchBy": "id",
+        "updateFields": {
+          "status": "completed",
+          "completed_at": "={{ $now.toISO() }}",
+          "updated_at": "={{ $now.toISO() }}"
+        }
+      },
+      "id": "supabase-mark-completed",
+      "name": "Marcar como Concluído",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1790, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "{{SUPABASE_CREDENTIAL_ID}}",
+          "name": "Supabase - PULSO"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_queue",
+        "filterType": "manual",
+        "matchBy": "id",
+        "updateFields": {
+          "status": "failed",
+          "error_message": "={{ $json.error }}",
+          "retry_count": "={{ $json.retry_count + 1 }}",
+          "next_retry_at": "={{ $now.plus({minutes: 5}).toISO() }}",
+          "updated_at": "={{ $now.toISO() }}"
+        }
+      },
+      "id": "supabase-mark-failed",
+      "name": "Marcar como Falhou (com retry)",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1790, 400],
+      "credentials": {
+        "supabaseApi": {
+          "id": "{{SUPABASE_CREDENTIAL_ID}}",
+          "name": "Supabase - PULSO"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "logs_workflows",
+        "dataFields": {
+          "workflow_name": "WF99 - Retry & Recovery",
+          "status": "sucesso",
+          "detalhes": "={{ { items_processados: $json.length, timestamp: $now.toISO() } }}"
+        }
+      },
+      "id": "supabase-log-success",
+      "name": "Log Sucesso",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2010, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "{{SUPABASE_CREDENTIAL_ID}}",
+          "name": "Supabase - PULSO"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "schedule-trigger": {
+      "main": [
+        [
+          {
+            "node": "supabase-get-pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "supabase-get-pending": {
+      "main": [
+        [
+          {
+            "node": "if-has-pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if-has-pending": {
+      "main": [
+        [
+          {
+            "node": "split-items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split-items": {
+      "main": [
+        [
+          {
+            "node": "supabase-update-processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "supabase-update-processing": {
+      "main": [
+        [
+          {
+            "node": "switch-workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "switch-workflow": {
+      "main": [
+        [
+          {
+            "node": "trigger-wf00",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "trigger-wf01",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "trigger-wf02",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "trigger-wf00": {
+      "main": [
+        [
+          {
+            "node": "supabase-mark-completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "trigger-wf01": {
+      "main": [
+        [
+          {
+            "node": "supabase-mark-completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "trigger-wf02": {
+      "main": [
+        [
+          {
+            "node": "supabase-mark-completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "supabase-mark-completed": {
+      "main": [
+        [
+          {
+            "node": "supabase-log-success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-11-30T00:00:00.000Z",
+  "versionId": "1"
+}

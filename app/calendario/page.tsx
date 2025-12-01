@@ -218,7 +218,7 @@ export default function CalendarioPage() {
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse-glow" />
-                <h1 className="text-4xl font-black bg-gradient-to-r from-teal-400 via-blue-400 to-teal-400 bg-clip-text text-transparent">
+                <h1 className="text-4xl font-black bg-linear-to-r from-teal-400 via-blue-400 to-teal-400 bg-clip-text text-transparent">
                   📅 Calendário Editorial
                 </h1>
               </div>
@@ -230,7 +230,7 @@ export default function CalendarioPage() {
               href="/producao"
               className="glass-hover px-6 py-3 text-white rounded-lg transition-all flex items-center gap-2 relative overflow-hidden group"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-purple-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+              <div className="absolute inset-0 bg-linear-to-r from-violet-600 to-purple-600 opacity-100 group-hover:opacity-80 transition-opacity" />
               <Grid3x3 className="h-4 w-4 relative" />
               <span className="relative">Ver Kanban</span>
             </Link>
@@ -246,7 +246,7 @@ export default function CalendarioPage() {
                   onClick={() => handleNavigate('TODAY')}
                   className="glass-hover px-5 py-2 text-white rounded-lg text-sm font-medium transition-all relative overflow-hidden group"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-teal-600 to-blue-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+                  <div className="absolute inset-0 bg-linear-to-r from-teal-600 to-blue-600 opacity-100 group-hover:opacity-80 transition-opacity" />
                   <Calendar className="h-4 w-4 inline mr-2 relative" />
                   <span className="relative">Hoje</span>
                 </button>

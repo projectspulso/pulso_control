@@ -54,7 +54,7 @@ export default function SettingsPage() {
         <div className="mb-8 animate-fade-in">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-2 h-2 rounded-full bg-zinc-500 animate-pulse-glow" />
-            <h1 className="text-4xl font-black bg-gradient-to-r from-zinc-400 via-gray-400 to-zinc-400 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-black bg-linear-to-r from-zinc-400 via-gray-400 to-zinc-400 bg-clip-text text-transparent">
               ⚙️ Configurações
             </h1>
           </div>

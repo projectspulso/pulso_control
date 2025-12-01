@@ -54,7 +54,7 @@ export default function CanaisPage() {
         <div className="mb-8 animate-fade-in">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse-glow" />
-            <h1 className="text-4xl font-black bg-gradient-to-r from-pink-400 via-rose-400 to-pink-400 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-black bg-linear-to-r from-pink-400 via-rose-400 to-pink-400 bg-clip-text text-transparent">
               📢 Canais
             </h1>
           </div>

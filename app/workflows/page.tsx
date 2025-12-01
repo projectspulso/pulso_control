@@ -56,7 +56,7 @@ export default function WorkflowsPage() {
         <div className="mb-8 animate-fade-in">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse-glow" />
-            <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-black bg-linear-to-r from-purple-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
               ⚡ Workflows
             </h1>
           </div>

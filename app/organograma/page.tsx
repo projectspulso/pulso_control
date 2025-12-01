@@ -461,7 +461,7 @@ export default function OrganogramaPage() {
       <div className="px-8 pt-8 pb-4 border-b border-zinc-800/50 glass">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse-glow" />
-          <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-black bg-linear-to-r from-purple-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
             Organograma Pulso
           </h1>
         </div>

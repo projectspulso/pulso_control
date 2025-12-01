@@ -8,12 +8,13 @@ import { supabase } from '@/lib/supabase/client'
 interface ApproveIdeiaButtonProps {
   ideiaId: string
   onSuccess?: () => void
+  className?: string
 }
 
 /**
  * Botão para aprovar ideia e disparar WF01 (Gerar Roteiro)
  */
-export function ApproveIdeiaButton({ ideiaId, onSuccess }: ApproveIdeiaButtonProps) {
+export function ApproveIdeiaButton({ ideiaId, onSuccess, className }: ApproveIdeiaButtonProps) {
   const [isApproving, setIsApproving] = useState(false)
   const gerarRoteiro = useGerarRoteiro()
 
@@ -45,7 +46,7 @@ export function ApproveIdeiaButton({ ideiaId, onSuccess }: ApproveIdeiaButtonPro
     <button
       onClick={handleApprove}
       disabled={isApproving || gerarRoteiro.isPending}
-      className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-green-900 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all group"
+      className={`flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-green-900 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all group ${className || ''}`}
     >
       {(isApproving || gerarRoteiro.isPending) ? (
         <>

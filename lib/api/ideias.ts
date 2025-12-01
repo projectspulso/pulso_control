@@ -9,7 +9,6 @@ export const ideiasApi = {
   // Listar todas as ideias com joins
   async getAll() {
     const { data, error } = await supabase
-      .schema('pulso_content')
       .from('ideias')
       .select('*')
       .order('created_at', { ascending: false })
@@ -21,7 +20,6 @@ export const ideiasApi = {
   // Buscar por ID
   async getById(id: string) {
     const { data, error } = await supabase
-      .schema('pulso_content')
       .from('ideias')
       .select('*')
       .eq('id', id)
@@ -34,7 +32,6 @@ export const ideiasApi = {
   // Listar por status
   async getByStatus(status: Ideia['status']) {
     const { data, error } = await supabase
-      .schema('pulso_content')
       .from('ideias')
       .select('*')
       .eq('status', status)
@@ -47,7 +44,6 @@ export const ideiasApi = {
   // Criar nova ideia
   async create(ideia: IdeiaInsert) {
     const { data, error } = await supabase
-      .schema('pulso_content')
       .from('ideias')
       .insert(ideia)
       .select()
@@ -60,7 +56,6 @@ export const ideiasApi = {
   // Atualizar ideia
   async update(id: string, updates: IdeiaUpdate) {
     const { data, error } = await supabase
-      .schema('pulso_content')
       .from('ideias')
       .update(updates)
       .eq('id', id)
@@ -77,7 +72,6 @@ export const ideiasApi = {
   // Deletar ideia
   async delete(id: string) {
     const { error } = await supabase
-      .schema('pulso_content')
       .from('ideias')
       .delete()
       .eq('id', id)
@@ -88,7 +82,6 @@ export const ideiasApi = {
   // Stats das ideias
   async getStats() {
     const { data, error } = await supabase
-      .schema('pulso_content')
       .from('ideias')
       .select('status')
     

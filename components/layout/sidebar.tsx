@@ -47,11 +47,11 @@ export function Sidebar() {
   return (
     <div className="flex h-screen w-64 flex-col bg-zinc-950/90 backdrop-blur-xl border-r border-zinc-800/50 relative overflow-hidden">
       {/* Background Gradient Effect */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-600/5 via-transparent to-pink-600/5 pointer-events-none" />
+      <div className="absolute inset-0 bg-linear-to-b from-purple-600/5 via-transparent to-pink-600/5 pointer-events-none" />
       
       {/* Logo Section */}
       <div className="relative flex h-20 items-center gap-3 border-b border-zinc-800/50 px-6 backdrop-blur-sm">
-        <div className="relative h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-0.5 animate-pulse-glow">
+        <div className="relative h-10 w-10 rounded-xl bg-linear-to-br from-purple-500 to-pink-500 p-0.5 animate-pulse-glow">
           <div className="h-full w-full rounded-[10px] bg-zinc-950 flex items-center justify-center overflow-hidden">
             <Image 
               src="/pulso/logo.png" 
@@ -64,7 +64,7 @@ export function Sidebar() {
           </div>
         </div>
         <div className="flex flex-col">
-          <span className="text-lg font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+          <span className="text-lg font-bold bg-linear-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
             PULSO
           </span>
           <span className="text-[10px] text-zinc-500 font-medium tracking-wider uppercase">
@@ -87,7 +87,7 @@ export function Sidebar() {
                 group flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium
                 transition-all duration-300 relative overflow-hidden
                 ${isActive 
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20' 
+                  ? 'bg-linear-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20' 
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
                 }
               `}
@@ -97,7 +97,7 @@ export function Sidebar() {
             >
               {/* Hover glow effect */}
               {!isActive && (
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/0 via-purple-600/5 to-pink-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 bg-linear-to-r from-purple-600/0 via-purple-600/5 to-pink-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               )}
               
               <div className="flex items-center gap-3 relative z-10">
@@ -136,7 +136,7 @@ export function Sidebar() {
         <div className="glass glass-hover rounded-xl p-3 cursor-pointer group">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-yellow-500 p-0.5">
+              <div className="h-10 w-10 rounded-xl bg-linear-to-br from-purple-500 via-pink-500 to-yellow-500 p-0.5">
                 <div className="h-full w-full rounded-[11px] bg-zinc-950 flex items-center justify-center overflow-hidden">
                   <Image 
                     src="/pulso/mascote.png" 

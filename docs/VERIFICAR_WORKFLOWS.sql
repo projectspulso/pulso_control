@@ -44,7 +44,7 @@ ORDER BY quantidade DESC;
 SELECT COUNT(*) as total_audios,
     SUM(duracao_segundos) as total_segundos,
     AVG(duracao_segundos) as media_segundos
-FROM audios;
+FROM pulso_assets.audios;
 -- 6. Últimas 5 execuções do pipeline
 SELECT p.id,
     p.status,

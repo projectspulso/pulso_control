@@ -3,6 +3,7 @@
 import { DashboardStats } from "@/components/dashboard/stats";
 import { IdeiasLista } from "@/components/dashboard/ideias-lista";
 import { WorkflowsLog } from "@/components/dashboard/workflows-log";
+import { RealtimeUpdates } from "@/components/realtime-updates";
 import { useCanais } from "@/lib/hooks/use-core";
 import { useIdeias } from "@/lib/hooks/use-ideias";
 import { ErrorState } from "@/components/ui/error-state";
@@ -53,7 +54,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header with gradient and glow */}
         <header className="relative animate-fade-in">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 via-pink-600/10 to-yellow-600/10 blur-3xl -z-10" />
+          <div className="absolute inset-0 bg-linear-to-r from-purple-600/10 via-pink-600/10 to-yellow-600/10 blur-3xl -z-10" />
           
           <div className="flex items-center justify-between">
             <div className="space-y-2">
@@ -62,7 +63,7 @@ export default function Home() {
                   <Zap className="h-10 w-10 text-purple-500 animate-pulse-glow" />
                   <Sparkles className="h-4 w-4 text-yellow-400 absolute -top-1 -right-1 animate-float" />
                 </div>
-                <h1 className="text-5xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-yellow-400 bg-clip-text text-transparent animate-slide-in-left">
+                <h1 className="text-5xl font-black bg-linear-to-r from-purple-400 via-pink-400 to-yellow-400 bg-clip-text text-transparent animate-slide-in-left">
                   Centro de Comando
                 </h1>
               </div>
@@ -74,7 +75,7 @@ export default function Home() {
             
             <div className="glass rounded-2xl px-6 py-4 text-right space-y-1 animate-slide-in-right">
               <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Sistema Online</p>
-              <p className="text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent tabular-nums">
+              <p className="text-2xl font-bold bg-linear-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent tabular-nums">
                 {mounted ? currentTime : '--:--:--'}
               </p>
             </div>
@@ -88,7 +89,7 @@ export default function Home() {
             className="group glass glass-hover rounded-2xl p-6 relative overflow-hidden animate-fade-in"
             style={{ animationDelay: '200ms' }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-linear-to-br from-purple-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-purple-600/20 blur-2xl group-hover:bg-purple-600/30 transition-all duration-500" />
             
             <div className="relative z-10 space-y-4">
@@ -113,7 +114,7 @@ export default function Home() {
             className="group glass glass-hover rounded-2xl p-6 relative overflow-hidden animate-fade-in"
             style={{ animationDelay: '300ms' }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-linear-to-br from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-600/20 blur-2xl group-hover:bg-blue-600/30 transition-all duration-500" />
             
             <div className="relative z-10 space-y-4">
@@ -138,7 +139,7 @@ export default function Home() {
             className="group glass glass-hover rounded-2xl p-6 relative overflow-hidden animate-fade-in"
             style={{ animationDelay: '400ms' }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-green-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-linear-to-br from-green-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-green-600/20 blur-2xl group-hover:bg-green-600/30 transition-all duration-500" />
             
             <div className="relative z-10 space-y-4">
@@ -191,6 +192,9 @@ export default function Home() {
           <IdeiasLista />
           <WorkflowsLog />
         </div>
+
+        {/* Realtime Updates Component */}
+        <RealtimeUpdates />
       </div>
     </main>
   );

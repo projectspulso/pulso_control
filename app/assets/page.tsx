@@ -49,7 +49,7 @@ export default function AssetsPage() {
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex items-center justify-between animate-fade-in">
           <div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent flex items-center gap-3">
+            <h1 className="text-4xl font-black bg-linear-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent flex items-center gap-3">
               📁 Biblioteca de Assets
             </h1>
             <p className="text-zinc-400 mt-2 flex items-center gap-2">
@@ -58,7 +58,7 @@ export default function AssetsPage() {
             </p>
           </div>
           
-          <button className="group glass glass-hover rounded-xl px-6 py-3 font-semibold bg-gradient-to-r from-pink-600 to-purple-600 text-white border-pink-500/50 hover:shadow-lg hover:shadow-pink-500/20 transition-all flex items-center gap-2">
+          <button className="group glass glass-hover rounded-xl px-6 py-3 font-semibold bg-linear-to-r from-pink-600 to-purple-600 text-white border-pink-500/50 hover:shadow-lg hover:shadow-pink-500/20 transition-all flex items-center gap-2">
             <Upload className="h-4 w-4 group-hover:scale-110 transition-transform" />
             Upload Asset
           </button>
@@ -76,7 +76,7 @@ export default function AssetsPage() {
                 onClick={() => setTipoFiltro(tipo.valor)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all whitespace-nowrap animate-fade-in ${
                   isActive 
-                    ? 'glass bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-lg shadow-pink-500/20' 
+                    ? 'glass bg-linear-to-r from-pink-600 to-purple-600 text-white shadow-lg shadow-pink-500/20' 
                     : 'glass text-zinc-400 hover:text-white'
                 }`}
                 style={{ animationDelay: `${100 + idx * 50}ms` }}

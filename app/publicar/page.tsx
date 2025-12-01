@@ -131,7 +131,7 @@ export default function PublicarPage() {
         {/* Header */}
         <div className="flex items-center justify-between animate-fade-in">
           <div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-green-400 via-emerald-400 to-green-400 bg-clip-text text-transparent flex items-center gap-3">
+            <h1 className="text-4xl font-black bg-linear-to-r from-green-400 via-emerald-400 to-green-400 bg-clip-text text-transparent flex items-center gap-3">
               🚀 Publicar Conteúdo
             </h1>
             <p className="text-zinc-400 mt-2 flex items-center gap-2">

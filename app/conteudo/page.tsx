@@ -119,7 +119,7 @@ export default function ConteudoPage() {
         <div className="mb-8 animate-fade-in">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse-glow" />
-            <h1 className="text-4xl font-black bg-gradient-to-r from-violet-400 via-purple-400 to-violet-400 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-black bg-linear-to-r from-violet-400 via-purple-400 to-violet-400 bg-clip-text text-transparent">
               📚 Biblioteca de Conteúdo
             </h1>
           </div>
@@ -242,7 +242,7 @@ export default function ConteudoPage() {
         <div className="grid grid-cols-3 gap-4">
           <Link
             href="/ideias/nova"
-            className="bg-gradient-to-br from-purple-600/20 to-purple-600/5 border border-purple-600/30 rounded-lg p-6 hover:border-purple-600/50 transition-all group"
+            className="bg-linear-to-br from-purple-600/20 to-purple-600/5 border border-purple-600/30 rounded-lg p-6 hover:border-purple-600/50 transition-all group"
           >
             <Lightbulb className="h-8 w-8 text-purple-400 mb-3 group-hover:scale-110 transition-transform" />
             <h3 className="text-lg font-bold text-white mb-1">Nova Ideia</h3>
@@ -251,7 +251,7 @@ export default function ConteudoPage() {
 
           <Link
             href="/producao"
-            className="bg-gradient-to-br from-blue-600/20 to-blue-600/5 border border-blue-600/30 rounded-lg p-6 hover:border-blue-600/50 transition-all group"
+            className="bg-linear-to-br from-blue-600/20 to-blue-600/5 border border-blue-600/30 rounded-lg p-6 hover:border-blue-600/50 transition-all group"
           >
             <TrendingUp className="h-8 w-8 text-blue-400 mb-3 group-hover:scale-110 transition-transform" />
             <h3 className="text-lg font-bold text-white mb-1">Pipeline</h3>
@@ -260,7 +260,7 @@ export default function ConteudoPage() {
 
           <Link
             href="/calendario"
-            className="bg-gradient-to-br from-green-600/20 to-green-600/5 border border-green-600/30 rounded-lg p-6 hover:border-green-600/50 transition-all group"
+            className="bg-linear-to-br from-green-600/20 to-green-600/5 border border-green-600/30 rounded-lg p-6 hover:border-green-600/50 transition-all group"
           >
             <Calendar className="h-8 w-8 text-green-400 mb-3 group-hover:scale-110 transition-transform" />
             <h3 className="text-lg font-bold text-white mb-1">Calendário</h3>

@@ -58,7 +58,7 @@ export default function IdeiasPage() {
         {/* Header */}
         <div className="flex items-center justify-between animate-fade-in">
           <div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent flex items-center gap-3">
+            <h1 className="text-4xl font-black bg-linear-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent flex items-center gap-3">
               💡 Ideias
             </h1>
             <p className="text-zinc-400 mt-2 flex items-center gap-2">
@@ -69,7 +69,7 @@ export default function IdeiasPage() {
           
           <Link
             href="/ideias/nova"
-            className="group glass glass-hover rounded-xl px-6 py-3 font-semibold bg-gradient-to-r from-violet-600 to-purple-600 text-white border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/20 transition-all"
+            className="group glass glass-hover rounded-xl px-6 py-3 font-semibold bg-linear-to-r from-violet-600 to-purple-600 text-white border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/20 transition-all"
           >
             <span className="flex items-center gap-2">
               <span className="text-xl group-hover:scale-110 transition-transform">+</span>
@@ -87,7 +87,7 @@ export default function IdeiasPage() {
                 className="glass glass-hover rounded-xl p-4 group cursor-pointer animate-fade-in"
                 style={{ animationDelay: `${(idx + 1) * 50}ms` }}
               >
-                <div className="text-3xl font-black bg-gradient-to-br from-purple-400 to-pink-400 bg-clip-text text-transparent mb-1 tabular-nums">{count}</div>
+                <div className="text-3xl font-black bg-linear-to-br from-purple-400 to-pink-400 bg-clip-text text-transparent mb-1 tabular-nums">{count}</div>
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">{status.replace('_', ' ')}</div>
               </div>
             ))}

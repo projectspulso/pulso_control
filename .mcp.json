@@ -1,5 +1,14 @@
 {
   "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "supergateway",
+        "--streamableHttp",
+        "https://mcp.supabase.com/mcp?project_ref=nlcisbfdiokmipyihtuz"
+      ]
+    },
     "n8n-mcp": {
       "command": "npx",
       "args": [

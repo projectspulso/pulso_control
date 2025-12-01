@@ -58,7 +58,7 @@ export function useGerarAudio() {
 /**
  * Hook para gerar ideias (WF00 - Manual trigger)
  */
-export function useGerarIdeias() {
+export function useGerarIdeiasManual() {
   const queryClient = useQueryClient()
 
   return useMutation({
