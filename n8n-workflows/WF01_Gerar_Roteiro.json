@@ -22,9 +22,22 @@
               "name": "ideia_id",
               "value": "={{ $json.body.ideia_id }}",
               "type": "string"
+            },
+            {
+              "id": "validate002",
+              "name": "execution_id",
+              "value": "={{ $workflow.id + '_' + $execution.id }}",
+              "type": "string"
+            },
+            {
+              "id": "validate003",
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
             }
           ]
-        }
+        },
+        "options": {}
       },
       "id": "00000000-0000-0000-0001-000000000002",
       "name": "Validar Payload",
@@ -34,15 +47,55 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "=SELECT \n  i.id as ideia_id,\n  i.canal_id,\n  i.serie_id,\n  i.titulo,\n  i.descricao,\n  i.tags,\n  i.linguagem,\n  i.metadata,\n  c.nome as canal_nome,\n  c.slug as canal_slug,\n  c.metadata as canal_metadata,\n  s.nome as serie_nome,\n  p.id as pipeline_id,\n  p.status as pipeline_status\nFROM ideias i\nJOIN canais c ON c.id = i.canal_id\nLEFT JOIN series s ON s.id = i.serie_id\nLEFT JOIN pulso_content.pipeline_producao p ON p.ideia_id = i.id\nWHERE i.id = '{{ $json.ideia_id }}'\n  AND i.status = 'APROVADA';",
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check001",
+              "leftValue": "={{ $json.ideia_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "check002",
+              "leftValue": "={{ $json.ideia_id }}",
+              "rightValue": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
         "options": {}
       },
       "id": "00000000-0000-0000-0001-000000000003",
+      "name": "Validar UUID",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  i.id as ideia_id,\n  i.canal_id,\n  i.serie_id,\n  i.titulo,\n  i.descricao,\n  i.tags,\n  i.linguagem,\n  i.metadata,\n  i.status as ideia_status,\n  c.nome as canal_nome,\n  c.slug as canal_slug,\n  c.metadata as canal_metadata,\n  s.nome as serie_nome,\n  p.id as pipeline_id,\n  p.status as pipeline_status,\n  -- Verificar se já existe roteiro\n  (SELECT COUNT(*) FROM pulso_content.roteiros WHERE ideia_id = i.id) as roteiros_existentes\nFROM pulso_content.ideias i\nJOIN pulso_core.canais c ON c.id = i.canal_id\nLEFT JOIN pulso_content.series s ON s.id = i.serie_id\nLEFT JOIN pulso_content.pipeline_producao p ON p.ideia_id = i.id\nWHERE i.id = $1::uuid\n  AND i.status = 'APROVADA';",
+        "options": {
+          "queryParams": "={{ { \"1\": $json.ideia_id } }}"
+        }
+      },
+      "id": "00000000-0000-0000-0001-000000000004",
       "name": "Buscar Ideia Completa",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [680, 300],
+      "position": [900, 200],
       "credentials": {
         "postgres": {
           "id": "POSTGRES_CREDENTIAL_ID",
@@ -73,11 +126,11 @@
         },
         "options": {}
       },
-      "id": "00000000-0000-0000-0001-000000000004",
+      "id": "00000000-0000-0000-0001-000000000005",
       "name": "Ideia Existe?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [1120, 200]
     },
     {
       "parameters": {
@@ -91,54 +144,97 @@
             },
             {
               "id": "context002",
+              "name": "canal_id",
+              "value": "={{ $json.canal_id }}",
+              "type": "string"
+            },
+            {
+              "id": "context003",
+              "name": "serie_id",
+              "value": "={{ $json.serie_id || null }}",
+              "type": "string"
+            },
+            {
+              "id": "context004",
               "name": "canal_nome",
               "value": "={{ $json.canal_nome }}",
               "type": "string"
             },
             {
-              "id": "context003",
+              "id": "context005",
+              "name": "canal_slug",
+              "value": "={{ $json.canal_slug }}",
+              "type": "string"
+            },
+            {
+              "id": "context006",
               "name": "titulo",
               "value": "={{ $json.titulo }}",
               "type": "string"
             },
             {
-              "id": "context004",
+              "id": "context007",
               "name": "descricao",
               "value": "={{ $json.descricao }}",
               "type": "string"
             },
             {
-              "id": "context005",
-              "name": "gancho_sugerido",
-              "value": "={{ $json.metadata.gancho_sugerido }}",
-              "type": "string"
-            },
-            {
-              "id": "context006",
-              "name": "tom_voz",
-              "value": "={{ $json.canal_metadata.tom_voz || 'narrativo' }}",
-              "type": "string"
-            },
-            {
-              "id": "context007",
-              "name": "duracao_alvo",
-              "value": "={{ $json.metadata.duracao_estimada || '50s' }}",
-              "type": "string"
-            },
-            {
               "id": "context008",
+              "name": "gancho_sugerido",
+              "value": "={{ $json.metadata?.gancho_sugerido || 'Crie um gancho impactante que pare o scroll' }}",
+              "type": "string"
+            },
+            {
+              "id": "context009",
+              "name": "tom_voz",
+              "value": "={{ $json.canal_metadata?.tom_voz || 'narrativo e envolvente' }}",
+              "type": "string"
+            },
+            {
+              "id": "context010",
+              "name": "duracao_alvo",
+              "value": "={{ $json.metadata?.duracao_estimada || '50s' }}",
+              "type": "string"
+            },
+            {
+              "id": "context011",
               "name": "linguagem",
-              "value": "={{ $json.linguagem }}",
+              "value": "={{ $json.linguagem || 'pt-BR' }}",
+              "type": "string"
+            },
+            {
+              "id": "context012",
+              "name": "contexto_serie",
+              "value": "={{ $json.serie_nome ? 'Episódio da série: ' + $json.serie_nome : 'Episódio avulso' }}",
+              "type": "string"
+            },
+            {
+              "id": "context013",
+              "name": "tags",
+              "value": "={{ $json.tags ? $json.tags.join(', ') : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "context014",
+              "name": "roteiros_existentes",
+              "value": "={{ $json.roteiros_existentes }}",
+              "type": "number"
+            },
+            {
+              "id": "context015",
+              "name": "execution_id",
+              "value": "={{ $('Validar Payload').item.json.execution_id }}",
               "type": "string"
             }
           ]
-        }
+        },
+        "options": {}
       },
-      "id": "00000000-0000-0000-0001-000000000005",
+      "id": "00000000-0000-0000-0001-000000000006",
       "name": "Preparar Contexto Roteiro",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1120, 200]
+      "position": [1340, 100]
     },
     {
       "parameters": {
@@ -146,20 +242,21 @@
         "messages": {
           "values": [
             {
-              "content": "=Você é um roteirista profissional especializado em vídeos curtos virais.\n\n**BRIEFING:**\nCanal: {{ $json.canal_nome }}\nTítulo: {{ $json.titulo }}\nDescrição: {{ $json.descricao }}\nGancho sugerido: {{ $json.gancho_sugerido }}\nTom de voz: {{ $json.tom_voz }}\nDuração alvo: {{ $json.duracao_alvo }}\nIdioma: {{ $json.linguagem }}\n\n**TAREFA:**\nCrie um roteiro completo para vídeo curto (50 segundos) seguindo esta estrutura:\n\n# [TÍTULO PÚBLICO CHAMATIVO]\n\n## GANCHO (0-5 segundos)\n[Primeira frase impactante que para o scroll. Deve criar curiosidade ou choque imediato]\n\n## DESENVOLVIMENTO (5-40 segundos)\n[Narrativa principal com storytelling envolvente. Apresente fatos, contexto, build-up progressivo]\n\n### FATOS CHAVE:\n- Ponto 1: [informação relevante]\n- Ponto 2: [contexto importante]\n- Ponto 3: [detalhe surpreendente]\n\n## CLÍMAX (40-50 segundos)\n[Revelação surpreendente, momento \"uau\", plot twist ou conclusão impactante]\n\n## CTA (50-55 segundos)\n[Call to action natural: \"Segue o Pulso para mais\", \"Compartilha se achou incrível\", etc]\n\n---\n\n**METADADOS:**\n- **Hashtags:** #tag1 #tag2 #tag3 #tag4 #tag5\n- **Duração estimada:** Xs\n- **Tom:** [emocional/informativo/misterioso/etc]\n- **Plataforma ideal:** TikTok/YouTube Shorts/Instagram Reels\n\n---\n\n**DIRETRIZES:**\n1. Linguagem clara e direta (nível médio de escolaridade)\n2. Frases curtas e impactantes\n3. Evitar jargões técnicos desnecessários\n4. Criar tensão narrativa progressiva\n5. Terminar com gancho para engajamento\n6. Total de palavras: 110-130 (aprox. 50 segundos de narração)\n7. Factualmente preciso e verificável\n\nResponda APENAS com o roteiro em markdown, seguindo exatamente a estrutura acima."
+              "content": "=Você é um roteirista profissional especializado em vídeos curtos virais para redes sociais.\n\n**BRIEFING DO CONTEÚDO:**\n🎬 Canal: {{ $json.canal_nome }} (@{{ $json.canal_slug }})\n📌 Título da Ideia: {{ $json.titulo }}\n📝 Descrição: {{ $json.descricao }}\n💡 Gancho Sugerido: {{ $json.gancho_sugerido }}\n🎭 Tom de Voz: {{ $json.tom_voz }}\n⏱️ Duração Alvo: {{ $json.duracao_alvo }}\n🌍 Idioma: {{ $json.linguagem }}\n📚 Contexto: {{ $json.contexto_serie }}\n🏷️ Tags: {{ $json.tags || 'N/A' }}\n\n---\n\n**TAREFA:**\nCrie um roteiro COMPLETO e PRONTO PARA GRAVAR seguindo EXATAMENTE esta estrutura:\n\n# [TÍTULO PÚBLICO SUPER CHAMATIVO]\n\n## 🎣 GANCHO (0-5 segundos)\n[Primeira frase que PARA o scroll. Use técnicas:\n- Pergunta intrigante\n- Fato chocante\n- Promessa de revelação\n- Contraste inesperado]\n\n**Exemplo:** \"Você sabia que 90% das pessoas fazem isso errado?\"\n\n---\n\n## 📖 DESENVOLVIMENTO (5-40 segundos)\n[Narrativa principal com storytelling progressivo. Use estrutura de 3 atos]\n\n### ATO 1 - Contexto (5-15s):\n[Estabeleça o cenário. Apresente o problema/situação]\n\n### ATO 2 - Complicação (15-30s):\n[Build-up de tensão. Adicione camadas de complexidade]\n\n**FATOS CHAVE:**\n- 📊 Dado/Estatística relevante\n- 🔬 Evidência científica ou histórica\n- 💡 Insight surpreendente\n- 🎯 Implicação prática\n\n### ATO 3 - Resolução (30-40s):\n[Transição para o clímax. Prepare o terreno para a revelação]\n\n---\n\n## 🎆 CLÍMAX (40-50 segundos)\n[MOMENTO \"UAU\"! Use uma dessas técnicas:\n- Plot twist surpreendente\n- Revelação contra-intuitiva\n- Conexão inesperada\n- Conclusão impactante]\n\n**Este deve ser o momento mais memorável do vídeo!**\n\n---\n\n## 📢 CTA - Call to Action (50-55 segundos)\n[Engajamento natural. Escolha UMA opção:\n- \"Segue o {{ $json.canal_nome }} para mais conteúdos assim!\"\n- \"Comenta aqui o que você achou disso!\"\n- \"Compartilha com quem precisa ver isso!\"\n- \"Salva esse vídeo para assistir de novo!\"]\n\n---\n\n**METADADOS DO ROTEIRO:**\n- **Hashtags:** #tag1 #tag2 #tag3 #tag4 #tag5 (específicas e relevantes)\n- **Duração estimada:** Xs (calculada)\n- **Tom predominante:** [emocional/educativo/misterioso/inspirador/etc]\n- **Plataforma ideal:** [TikTok/YouTube Shorts/Instagram Reels]\n- **Momento ideal:** [manhã/tarde/noite/qualquer]\n- **Público-alvo:** [demográfico específico]\n\n---\n\n**DIRETRIZES OBRIGATÓRIAS:**\n\n✅ **FAZER:**\n1. Linguagem clara e acessível (8ª série)\n2. Frases curtas (máx. 15 palavras)\n3. Usar transições suaves entre ideias\n4. Criar tensão narrativa progressiva\n5. Total: 110-130 palavras (~50 segundos)\n6. Factualmente preciso e verificável\n7. Usar números e dados específicos\n8. Incluir elementos visuais sugeridos [entre colchetes]\n9. Marcar pausas dramáticas com \"...\"\n10. Variar ritmo narrativo para manter atenção\n\n❌ **EVITAR:**\n1. Jargões técnicos desnecessários\n2. Explicações longas e confusas\n3. Múltiplos conceitos por frase\n4. Linguagem muito formal ou acadêmica\n5. Citações sem contexto\n6. Comparações muito complexas\n7. Assumir conhecimento prévio\n\n---\n\n**FORMATO DE SAÍDA:**\nResponda APENAS com o roteiro em markdown limpo, seguindo EXATAMENTE a estrutura acima.\nNÃO adicione comentários ou explicações fora da estrutura.\nO roteiro deve estar PRONTO para ser enviado ao narrador."
             }
           ]
         },
         "options": {
-          "temperature": 0.7,
-          "maxTokens": 1500
+          "temperature": 0.75,
+          "maxTokens": 2000,
+          "topP": 1
         }
       },
-      "id": "00000000-0000-0000-0001-000000000006",
+      "id": "00000000-0000-0000-0001-000000000007",
       "name": "GPT-4o - Gerar Roteiro",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.5,
-      "position": [1340, 200],
+      "position": [1560, 100],
       "credentials": {
         "openAiApi": {
           "id": "OPENAI_CREDENTIAL_ID",
@@ -169,25 +266,47 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.item.json.message?.content || $input.item.json.response;\n\nif (!response) {\n  throw new Error('Resposta da OpenAI vazia');\n}\n\n// Extrair metadados do roteiro\nconst hashtagsMatch = response.match(/\\*\\*Hashtags:\\*\\*\\s*([^\\n]+)/);\nconst duracaoMatch = response.match(/\\*\\*Duração estimada:\\*\\*\\s*([^\\n]+)/);\nconst tomMatch = response.match(/\\*\\*Tom:\\*\\*\\s*([^\\n]+)/);\nconst plataformaMatch = response.match(/\\*\\*Plataforma ideal:\\*\\*\\s*([^\\n]+)/);\n\n// Extrair título (primeira linha com #)\nconst tituloMatch = response.match(/^#\\s+(.+)$/m);\nconst tituloPub = tituloMatch ? tituloMatch[1].trim() : $('Preparar Contexto Roteiro').item.json.titulo;\n\n// Calcular duração estimada em segundos (baseado em palavras)\nconst palavras = response.split(/\\s+/).length;\nconst duracaoSegundos = Math.round((palavras / 2.5)); // ~150 palavras/minuto\n\nconst hashtags = hashtagsMatch \n  ? hashtagsMatch[1].split(/[\\s,]+/).filter(h => h.startsWith('#')).map(h => h.replace('#', ''))\n  : [];\n\nreturn {\n  json: {\n    roteiro_markdown: response,\n    titulo_publico: tituloPub,\n    hashtags: hashtags,\n    duracao_segundos: duracaoSegundos,\n    tom_narrativo: tomMatch ? tomMatch[1].trim() : 'narrativo',\n    plataforma_foco: plataformaMatch ? plataformaMatch[1].trim() : 'tiktok',\n    // Contexto herdado\n    ideia_id: $('Preparar Contexto Roteiro').item.json.ideia_id,\n    canal_id: $('Buscar Ideia Completa').item.json.canal_id,\n    serie_id: $('Buscar Ideia Completa').item.json.serie_id,\n    linguagem: $('Preparar Contexto Roteiro').item.json.linguagem\n  }\n};"
+        "jsCode": "// Extrair resposta da OpenAI\nconst response = $input.item.json.message?.content || $input.item.json.response || '';\n\nif (!response || response.trim().length < 100) {\n  throw new Error('Resposta da OpenAI está vazia ou muito curta');\n}\n\n// Função para extrair seção do markdown\nfunction extractSection(text, sectionName) {\n  const regex = new RegExp(`##\\\\s*[🎣📖🎆📢]*\\\\s*${sectionName}[\\\\s\\\\S]*?(?=##|$)`, 'i');\n  const match = text.match(regex);\n  return match ? match[0].replace(/##[^\\n]+\\n/, '').trim() : '';\n}\n\n// Extrair seções principais\nconst gancho = extractSection(response, 'GANCHO');\nconst desenvolvimento = extractSection(response, 'DESENVOLVIMENTO');\nconst climax = extractSection(response, 'CLÍMAX|CLIMAX');\nconst cta = extractSection(response, 'CTA|Call to Action');\n\n// Extrair metadados\nconst hashtagsMatch = response.match(/\\*\\*Hashtags:\\*\\*\\s*([^\\n]+)/);\nconst duracaoMatch = response.match(/\\*\\*Duração estimada:\\*\\*\\s*([^\\n]+)/);\nconst tomMatch = response.match(/\\*\\*Tom predominante:\\*\\*\\s*([^\\n]+)/);\nconst plataformaMatch = response.match(/\\*\\*Plataforma ideal:\\*\\*\\s*([^\\n]+)/);\nconst momentoMatch = response.match(/\\*\\*Momento ideal:\\*\\*\\s*([^\\n]+)/);\nconst publicoMatch = response.match(/\\*\\*Público-alvo:\\*\\*\\s*([^\\n]+)/);\n\n// Extrair título (primeira linha com #)\nconst tituloMatch = response.match(/^#\\s+(.+)$/m);\nconst tituloPub = tituloMatch ? tituloMatch[1].replace(/[🎬📌💡🔥✨]/g, '').trim() : $('Preparar Contexto Roteiro').item.json.titulo;\n\n// Processar hashtags\nconst hashtagsRaw = hashtagsMatch ? hashtagsMatch[1] : '';\nconst hashtags = hashtagsRaw\n  .split(/[\\s,]+/)\n  .filter(h => h.startsWith('#'))\n  .map(h => h.replace('#', '').toLowerCase())\n  .slice(0, 10); // Máximo 10 hashtags\n\n// Calcular métricas do roteiro\nconst palavrasTotal = response.split(/\\s+/).length;\nconst palavrasNarracao = (gancho + ' ' + desenvolvimento + ' ' + climax + ' ' + cta).split(/\\s+/).length;\nconst duracaoSegundos = Math.round(palavrasNarracao / 2.5); // ~150 palavras/minuto\n\n// Extrair elementos visuais sugeridos\nconst elementosVisuais = [...response.matchAll(/\\[([^\\]]+)\\]/g)].map(m => m[1]);\n\n// Calcular scores de qualidade\nconst temGancho = gancho.length > 50;\nconst temDesenvolvimento = desenvolvimento.length > 200;\nconst temClimax = climax.length > 50;\nconst temCTA = cta.length > 20;\nconst qualityScore = [temGancho, temDesenvolvimento, temClimax, temCTA].filter(Boolean).length * 25;\n\n// Contexto herdado\nconst contexto = $('Preparar Contexto Roteiro').item.json;\n\nreturn {\n  json: {\n    // Roteiro completo\n    roteiro_markdown: response,\n    titulo_publico: tituloPub,\n    \n    // Seções estruturadas\n    secoes: {\n      gancho: gancho,\n      desenvolvimento: desenvolvimento,\n      climax: climax,\n      cta: cta\n    },\n    \n    // Metadados extraídos\n    hashtags: hashtags,\n    tom_narrativo: tomMatch ? tomMatch[1].trim() : 'narrativo',\n    plataforma_foco: plataformaMatch ? plataformaMatch[1].trim().toLowerCase() : 'tiktok',\n    momento_ideal: momentoMatch ? momentoMatch[1].trim() : 'qualquer',\n    publico_alvo: publicoMatch ? publicoMatch[1].trim() : 'geral',\n    \n    // Métricas\n    duracao_segundos: duracaoSegundos,\n    palavras_total: palavrasTotal,\n    palavras_narracao: palavrasNarracao,\n    elementos_visuais: elementosVisuais,\n    quality_score: qualityScore,\n    \n    // Validações\n    validacoes: {\n      tem_gancho: temGancho,\n      tem_desenvolvimento: temDesenvolvimento,\n      tem_climax: temClimax,\n      tem_cta: temCTA,\n      duracao_ok: duracaoSegundos >= 40 && duracaoSegundos <= 65,\n      palavras_ok: palavrasNarracao >= 110 && palavrasNarracao <= 150\n    },\n    \n    // Contexto da ideia\n    ideia_id: contexto.ideia_id,\n    canal_id: contexto.canal_id,\n    serie_id: contexto.serie_id,\n    linguagem: contexto.linguagem,\n    execution_id: contexto.execution_id,\n    \n    // Metadados de geração\n    gerado_em: new Date().toISOString(),\n    modelo_ai: 'gpt-4o',\n    temperatura: 0.75,\n    max_tokens: 2000\n  }\n};"
       },
-      "id": "00000000-0000-0000-0001-000000000007",
+      "id": "00000000-0000-0000-0001-000000000008",
       "name": "Processar Roteiro",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 200]
+      "position": [1780, 100]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO roteiros (\n  ideia_id,\n  canal_id,\n  serie_id,\n  titulo,\n  conteudo_md,\n  duracao_estimado_segundos,\n  status,\n  linguagem,\n  categoria_metadata,\n  metadata\n) VALUES (\n  '{{ $json.ideia_id }}',\n  '{{ $json.canal_id }}',\n  {{ $json.serie_id ? `'${$json.serie_id}'` : 'NULL' }},\n  '{{ $json.titulo_publico }}',\n  '{{ $json.roteiro_markdown.replace(/'/g, \"''\") }}',\n  {{ $json.duracao_segundos }},\n  'RASCUNHO',\n  '{{ $json.linguagem }}',\n  'PADRAO_COMPLETO',\n  jsonb_build_object(\n    'ai_modelo', 'gpt-4o',\n    'prompt_version', '2.0',\n    'hashtags_sugeridas', '{{ JSON.stringify($json.hashtags) }}'::jsonb,\n    'tom_narrativo', '{{ $json.tom_narrativo }}',\n    'plataforma_foco', '{{ $json.plataforma_foco }}',\n    'palavras_total', {{ $json.roteiro_markdown.split(/\\s+/).length }},\n    'custo_geracao', 0.003,\n    'gerado_em', NOW()::text\n  )\n) RETURNING id, titulo, status, duracao_estimado_segundos;",
-        "options": {}
+        "query": "INSERT INTO pulso_content.roteiros (\n  ideia_id,\n  canal_id,\n  serie_id,\n  titulo,\n  conteudo_md,\n  duracao_estimado_segundos,\n  status,\n  linguagem,\n  categoria_metadata,\n  metadata\n) VALUES (\n  $1::uuid,\n  $2::uuid,\n  $3::uuid,\n  $4,\n  $5,\n  $6,\n  'RASCUNHO',\n  $7,\n  'PADRAO_COMPLETO',\n  jsonb_build_object(\n    'ai_modelo', $8,\n    'ai_temperatura', $9,\n    'ai_max_tokens', $10,\n    'prompt_version', '3.0',\n    'execution_id', $11,\n    'hashtags_sugeridas', $12::jsonb,\n    'tom_narrativo', $13,\n    'plataforma_foco', $14,\n    'momento_ideal', $15,\n    'publico_alvo', $16,\n    'palavras_total', $17,\n    'palavras_narracao', $18,\n    'elementos_visuais', $19::jsonb,\n    'quality_score', $20,\n    'validacoes', $21::jsonb,\n    'secoes', $22::jsonb,\n    'custo_estimado_usd', 0.004,\n    'gerado_em', $23\n  )\n) RETURNING \n  id, \n  titulo, \n  status, \n  duracao_estimado_segundos,\n  created_at,\n  metadata;",
+        "options": {
+          "queryParams": "={{ {\n  \"1\": $json.ideia_id,\n  \"2\": $json.canal_id,\n  \"3\": $json.serie_id,\n  \"4\": $json.titulo_publico,\n  \"5\": $json.roteiro_markdown,\n  \"6\": $json.duracao_segundos,\n  \"7\": $json.linguagem,\n  \"8\": $json.modelo_ai,\n  \"9\": $json.temperatura,\n  \"10\": $json.max_tokens,\n  \"11\": $json.execution_id,\n  \"12\": JSON.stringify($json.hashtags),\n  \"13\": $json.tom_narrativo,\n  \"14\": $json.plataforma_foco,\n  \"15\": $json.momento_ideal,\n  \"16\": $json.publico_alvo,\n  \"17\": $json.palavras_total,\n  \"18\": $json.palavras_narracao,\n  \"19\": JSON.stringify($json.elementos_visuais),\n  \"20\": $json.quality_score,\n  \"21\": JSON.stringify($json.validacoes),\n  \"22\": JSON.stringify($json.secoes),\n  \"23\": $json.gerado_em\n} }}"
+        }
       },
-      "id": "00000000-0000-0000-0001-000000000008",
+      "id": "00000000-0000-0000-0001-000000000009",
       "name": "Salvar Roteiro",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1780, 200],
+      "position": [2000, 100],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO pulso_content.logs_workflows (\n  workflow_name,\n  status,\n  detalhes,\n  tempo_execucao_ms,\n  created_at\n) VALUES (\n  'WF01_Gerar_Roteiro',\n  'sucesso',\n  jsonb_build_object(\n    'execution_id', $1,\n    'ideia_id', $2::uuid,\n    'roteiro_id', $3::uuid,\n    'titulo', $4,\n    'duracao_segundos', $5,\n    'palavras_narracao', $6,\n    'quality_score', $7,\n    'modelo_ai', $8,\n    'timestamp', NOW()::text\n  ),\n  $9,\n  NOW()\n);",
+        "options": {
+          "queryParams": "={{ {\n  \"1\": $('Processar Roteiro').item.json.execution_id,\n  \"2\": $('Processar Roteiro').item.json.ideia_id,\n  \"3\": $json.id,\n  \"4\": $json.titulo,\n  \"5\": $json.duracao_estimado_segundos,\n  \"6\": $('Processar Roteiro').item.json.palavras_narracao,\n  \"7\": $('Processar Roteiro').item.json.quality_score,\n  \"8\": $('Processar Roteiro').item.json.modelo_ai,\n  \"9\": $execution.executionTime || 0\n} }}"
+        }
+      },
+      "id": "00000000-0000-0000-0001-000000000010",
+      "name": "Log Sucesso",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [2220, 100],
       "credentials": {
         "postgres": {
           "id": "POSTGRES_CREDENTIAL_ID",
@@ -198,39 +317,54 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { \"success\": true, \"roteiro_id\": $json.id, \"titulo\": $json.titulo, \"status\": $json.status, \"duracao\": $json.duracao_estimado_segundos + 's' } }}",
+        "responseBody": "={{ {\n  \"success\": true,\n  \"message\": \"Roteiro gerado com sucesso!\",\n  \"data\": {\n    \"roteiro\": {\n      \"id\": $json.id,\n      \"titulo\": $json.titulo,\n      \"status\": $json.status,\n      \"duracao_segundos\": $json.duracao_estimado_segundos,\n      \"created_at\": $json.created_at\n    },\n    \"metricas\": {\n      \"palavras_narracao\": $('Processar Roteiro').item.json.palavras_narracao,\n      \"quality_score\": $('Processar Roteiro').item.json.quality_score,\n      \"hashtags_count\": $('Processar Roteiro').item.json.hashtags.length\n    },\n    \"validacoes\": $('Processar Roteiro').item.json.validacoes,\n    \"metadados\": {\n      \"plataforma_foco\": $('Processar Roteiro').item.json.plataforma_foco,\n      \"tom_narrativo\": $('Processar Roteiro').item.json.tom_narrativo,\n      \"momento_ideal\": $('Processar Roteiro').item.json.momento_ideal\n    }\n  },\n  \"workflow\": {\n    \"execution_id\": $('Processar Roteiro').item.json.execution_id,\n    \"tempo_execucao_ms\": $execution.executionTime || 0,\n    \"modelo_usado\": $('Processar Roteiro').item.json.modelo_ai\n  }\n} }}",
         "options": {}
       },
-      "id": "00000000-0000-0000-0001-000000000009",
+      "id": "00000000-0000-0000-0001-000000000011",
       "name": "Resposta Sucesso",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [2000, 200]
+      "position": [2440, 100]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { \"success\": false, \"error\": \"Ideia não encontrada ou não aprovada\", \"ideia_id\": $('Validar Payload').item.json.ideia_id } }}",
+        "responseBody": "={{ {\n  \"success\": false,\n  \"error\": {\n    \"code\": \"INVALID_UUID\",\n    \"message\": \"ID da ideia inválido ou não informado\",\n    \"details\": \"O ideia_id deve ser um UUID válido\"\n  },\n  \"received\": {\n    \"ideia_id\": $('Validar Payload').item.json.ideia_id\n  },\n  \"workflow\": {\n    \"execution_id\": $('Validar Payload').item.json.execution_id\n  }\n} }}",
+        "responseCode": 400,
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0001-000000000012",
+      "name": "Erro - UUID Inválido",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"success\": false,\n  \"error\": {\n    \"code\": \"IDEIA_NOT_FOUND\",\n    \"message\": \"Ideia não encontrada ou não está aprovada\",\n    \"details\": \"Verifique se o ID está correto e se a ideia foi aprovada\"\n  },\n  \"received\": {\n    \"ideia_id\": $('Validar Payload').item.json.ideia_id\n  },\n  \"workflow\": {\n    \"execution_id\": $('Validar Payload').item.json.execution_id\n  }\n} }}",
         "responseCode": 404,
         "options": {}
       },
-      "id": "00000000-0000-0000-0001-000000000010",
+      "id": "00000000-0000-0000-0001-000000000013",
       "name": "Erro - Ideia Não Encontrada",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1120, 400]
+      "position": [1340, 300]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO pulso_content.logs_workflows (\n  workflow_name,\n  execution_id,\n  status,\n  ideia_id,\n  detalhes,\n  created_at\n) VALUES (\n  'WF01_Gerar_Roteiro',\n  '{{ $workflow.id }}_{{ $execution.id }}',\n  'sucesso',\n  '{{ $('Preparar Contexto Roteiro').item.json.ideia_id }}',\n  jsonb_build_object(\n    'roteiro_id', '{{ $json.id }}',\n    'titulo', '{{ $json.titulo }}',\n    'duracao_segundos', {{ $json.duracao_estimado_segundos }},\n    'timestamp', NOW()::text\n  ),\n  NOW()\n);",
-        "options": {}
+        "query": "INSERT INTO pulso_content.logs_workflows (\n  workflow_name,\n  status,\n  erro_mensagem,\n  detalhes,\n  tempo_execucao_ms,\n  created_at\n) VALUES (\n  'WF01_Gerar_Roteiro',\n  'erro',\n  $1,\n  jsonb_build_object(\n    'execution_id', $2,\n    'ideia_id', $3,\n    'erro_tipo', $4,\n    'timestamp', NOW()::text\n  ),\n  $5,\n  NOW()\n);",
+        "options": {
+          "queryParams": "={{ {\n  \"1\": $json.error?.message || 'Ideia não encontrada',\n  \"2\": $('Validar Payload').item.json.execution_id,\n  \"3\": $('Validar Payload').item.json.ideia_id || 'unknown',\n  \"4\": $json.error?.code || 'IDEIA_NOT_FOUND',\n  \"5\": $execution.executionTime || 0\n} }}"
+        }
       },
-      "id": "00000000-0000-0000-0001-000000000011",
-      "name": "Log Sucesso",
+      "id": "00000000-0000-0000-0001-000000000014",
+      "name": "Log Erro",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [2220, 200],
+      "position": [1340, 500],
       "credentials": {
         "postgres": {
           "id": "POSTGRES_CREDENTIAL_ID",
@@ -255,7 +389,25 @@
       "main": [
         [
           {
+            "node": "Validar UUID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar UUID": {
+      "main": [
+        [
+          {
             "node": "Buscar Ideia Completa",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro - UUID Inválido",
             "type": "main",
             "index": 0
           }
@@ -285,6 +437,11 @@
         [
           {
             "node": "Erro - Ideia Não Encontrada",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Erro",
             "type": "main",
             "index": 0
           }
@@ -328,12 +485,18 @@
       "main": [
         [
           {
-            "node": "Resposta Sucesso",
+            "node": "Log Sucesso",
             "type": "main",
             "index": 0
-          },
+          }
+        ]
+      ]
+    },
+    "Log Sucesso": {
+      "main": [
+        [
           {
-            "node": "Log Sucesso",
+            "node": "Resposta Sucesso",
             "type": "main",
             "index": 0
           }
@@ -356,6 +519,10 @@
     {
       "id": "2",
       "name": "Automação"
+    },
+    {
+      "id": "3",
+      "name": "Roteiro"
     }
   ],
   "pinData": {},
@@ -364,5 +531,5 @@
     "instanceId": "nlcisbfdiokmipyihtuz"
   },
   "id": "WF01",
-  "versionId": "1.0.0"
+  "versionId": "2.0.0"
 }

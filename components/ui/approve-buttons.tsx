@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { CheckCircle2, Loader2, Sparkles, Volume2 } from 'lucide-react'
-import { useGerarRoteiro, useGerarAudio } from '@/lib/hooks/use-n8n'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
 
 interface ApproveIdeiaButtonProps {
@@ -16,22 +16,30 @@ interface ApproveIdeiaButtonProps {
  */
 export function ApproveIdeiaButton({ ideiaId, onSuccess, className }: ApproveIdeiaButtonProps) {
   const [isApproving, setIsApproving] = useState(false)
-  const gerarRoteiro = useGerarRoteiro()
+  const queryClient = useQueryClient()
 
   const handleApprove = async () => {
     setIsApproving(true)
     
     try {
-      // 1. Atualizar status da ideia para APROVADA
-      const { error: updateError } = await supabase
-        .from('ideias')
-        .update({ status: 'APROVADA' })
-        .eq('id', ideiaId)
-      
-      if (updateError) throw updateError
+      // Chamar API route que faz tudo: atualizar status + webhook n8n
+      const response = await fetch(`/api/ideias/${ideiaId}/aprovar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
 
-      // 2. Disparar WF01 - Gerar Roteiro (webhook)
-      await gerarRoteiro.mutateAsync(ideiaId)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao aprovar ideia')
+      }
+
+      // Invalidar queries para atualizar UI
+      queryClient.invalidateQueries({ queryKey: ['ideias'] })
+      queryClient.invalidateQueries({ queryKey: ['roteiros'] })
+      queryClient.invalidateQueries({ queryKey: ['pipeline'] })
 
       onSuccess?.()
     } catch (error) {
@@ -45,10 +53,10 @@ export function ApproveIdeiaButton({ ideiaId, onSuccess, className }: ApproveIde
   return (
     <button
       onClick={handleApprove}
-      disabled={isApproving || gerarRoteiro.isPending}
+      disabled={isApproving}
       className={`flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-green-900 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all group ${className || ''}`}
     >
-      {(isApproving || gerarRoteiro.isPending) ? (
+      {isApproving ? (
         <>
           <Loader2 className="h-4 w-4 animate-spin" />
           Gerando roteiro...
