@@ -1,9 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Check, Loader2, AlertCircle } from 'lucide-react'
-import { toast } from 'sonner'
+import { Check, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface AprovarIdeiaButtonProps {
@@ -24,7 +22,7 @@ export function AprovarIdeiaButton({
 
   async function handleAprovar() {
     if (ideiaStatus === 'APROVADA') {
-      toast.info('Esta ideia já foi aprovada')
+      alert('Esta ideia já foi aprovada')
       return
     }
 
@@ -44,7 +42,7 @@ export function AprovarIdeiaButton({
 
       if (!response.ok) {
         console.error('❌ Erro ao aprovar:', data)
-        toast.error(data.error || 'Erro ao aprovar ideia')
+        alert(data.error || 'Erro ao aprovar ideia')
         return
       }
 
@@ -52,24 +50,15 @@ export function AprovarIdeiaButton({
 
       // Sucesso na aprovação
       if (data.success) {
-        toast.success(`✅ "${titulo}" aprovada!`)
+        alert(`✅ "${titulo}" aprovada!`)
 
         // Verificar status do workflow
         if (data.workflow?.status === 'triggered') {
-          toast.success('🤖 Roteiro sendo gerado pelo n8n...', {
-            description: 'Você será notificado quando estiver pronto',
-            duration: 5000
-          })
+          console.log('🤖 Roteiro sendo gerado pelo n8n...')
         } else if (data.workflow?.status === 'error') {
-          toast.warning('⚠️ Ideia aprovada, mas workflow falhou', {
-            description: 'Você pode gerar o roteiro manualmente',
-            duration: 5000
-          })
+          console.warn('⚠️ Ideia aprovada, mas workflow falhou')
         } else if (data.workflow?.status === 'skipped') {
-          toast.info('ℹ️ Webhook não configurado', {
-            description: 'Gere o roteiro manualmente',
-            duration: 5000
-          })
+          console.info('ℹ️ Webhook não configurado')
         }
 
         // Callback de sucesso
@@ -83,7 +72,7 @@ export function AprovarIdeiaButton({
 
     } catch (error) {
       console.error('💥 Erro ao aprovar ideia:', error)
-      toast.error('Erro ao conectar com servidor')
+      alert('Erro ao conectar com servidor')
     } finally {
       setIsApproving(false)
     }
@@ -92,12 +81,14 @@ export function AprovarIdeiaButton({
   const isAprovada = ideiaStatus === 'APROVADA'
 
   return (
-    <Button
+    <button
       onClick={handleAprovar}
       disabled={isApproving || isAprovada}
-      variant={isAprovada ? 'outline' : 'default'}
-      size="lg"
-      className={isAprovada ? 'bg-green-900/20 text-green-400 border-green-600' : ''}
+      className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+        isAprovada 
+          ? 'bg-green-900/20 text-green-400 border-2 border-green-600' 
+          : 'bg-violet-600 hover:bg-violet-700 text-white'
+      } disabled:opacity-50 disabled:cursor-not-allowed`}
     >
       {isApproving ? (
         <>
@@ -115,6 +106,6 @@ export function AprovarIdeiaButton({
           Aprovar e Gerar Roteiro
         </>
       )}
-    </Button>
+    </button>
   )
 }
