@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase/client'
+import { supabaseServer } from '@/lib/supabase/server'
 
 export async function POST(
   request: NextRequest,
@@ -9,11 +9,11 @@ export async function POST(
     const { id } = await params
     
     // 1. Atualizar status da ideia para APROVADA
-    const { data: ideia, error: updateError } = await supabase
+    // Usando cast para contornar problema de types com views
+    const client = supabaseServer as any
+    const { data: ideia, error: updateError } = await client
       .from('ideias')
-      .update({ 
-        status: 'APROVADA'
-      })
+      .update({ status: 'APROVADA' })
       .eq('id', id)
       .select()
       .single()

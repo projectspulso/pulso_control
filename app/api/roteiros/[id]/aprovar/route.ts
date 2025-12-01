@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase/client'
+import { supabaseServer } from '@/lib/supabase/server'
 
 export async function POST(
   request: Request,
@@ -9,7 +9,9 @@ export async function POST(
     const { id } = await params
 
     // 1. Atualizar status do roteiro para APROVADO
-    const { data: roteiro, error: updateError } = await supabase
+    // Usando cast para contornar problema de types com views
+    const client = supabaseServer as any
+    const { data: roteiro, error: updateError } = await client
       .from('roteiros')
       .update({ 
         status: 'APROVADO',
