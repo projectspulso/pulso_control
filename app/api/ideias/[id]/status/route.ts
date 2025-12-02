@@ -43,11 +43,11 @@ export async function PATCH(
       }
     })
     
-    // Atualizar status na view public.ideias
-    const client = supabase as any
-    const { data: ideia, error: updateError } = await client
+    // Atualizar status na tabela pulso_content.ideias
+    const { data: ideia, error: updateError } = await supabase
+      .schema('pulso_content')
       .from('ideias')
-      .update({ status })
+      .update({ status } as any)
       .eq('id', id)
       .select()
       .single()

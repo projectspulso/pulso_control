@@ -42,9 +42,8 @@ export async function POST(
     console.log('✅ Cliente Supabase criado, tentando atualizar...')
     
     // 1. Atualizar status da ideia para APROVADA
-    // Usando cast para contornar problema de types com views
-    const client = supabase as any
-    const { data: ideia, error: updateError } = await client
+    const { data: ideia, error: updateError } = await (supabase
+      .schema('pulso_content') as any)
       .from('ideias')
       .update({ status: 'APROVADA' })
       .eq('id', id)

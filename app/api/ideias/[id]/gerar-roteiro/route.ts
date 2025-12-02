@@ -36,8 +36,8 @@ export async function POST(
     })
     
     // 1. Verificar se ideia existe e está aprovada
-    const client = supabase as any
-    const { data: ideia, error: fetchError } = await client
+    const { data: ideia, error: fetchError } = await (supabase
+      .schema('pulso_content') as any)
       .from('ideias')
       .select('id, status, titulo')
       .eq('id', id)
@@ -58,7 +58,8 @@ export async function POST(
     }
     
     // 2. Verificar se já existe roteiro para esta ideia
-    const { data: roteiros, error: roteiroCheckError } = await client
+    const { data: roteiros, error: roteiroCheckError } = await (supabase
+      .schema('pulso_content') as any)
       .from('roteiros')
       .select('id')
       .eq('ideia_id', id)
