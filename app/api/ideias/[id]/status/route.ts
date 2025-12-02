@@ -43,9 +43,10 @@ export async function PATCH(
       }
     })
     
-    // Atualizar status na tabela pulso_content.ideias
+    console.log('🔧 Atualizando status via view public.ideias')
+    
+    // Atualizar status via view public.ideias (mesma que o frontend usa)
     const { data: ideia, error: updateError } = await supabase
-      .schema('pulso_content')
       .from('ideias')
       .update({ status } as any)
       .eq('id', id)

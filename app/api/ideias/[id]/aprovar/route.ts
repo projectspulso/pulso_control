@@ -40,10 +40,12 @@ export async function POST(
     })
     
     console.log('✅ Cliente Supabase criado, tentando atualizar...')
+    console.log('🔧 Usando view public.ideias (mesma que o frontend)')
     
-    // 1. Atualizar status da ideia para APROVADA
-    const { data: ideia, error: updateError } = await (supabase
-      .schema('pulso_content') as any)
+    // 1. Atualizar status da ideia para APROVADA (via view public.ideias)
+    // Cast para any para contornar limitação de tipos com views
+    const supabaseAny = supabase as any
+    const { data: ideia, error: updateError } = await supabaseAny
       .from('ideias')
       .update({ status: 'APROVADA' })
       .eq('id', id)

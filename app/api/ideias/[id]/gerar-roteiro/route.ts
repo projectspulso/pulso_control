@@ -35,13 +35,12 @@ export async function POST(
       }
     })
     
-    // 1. Verificar se ideia existe e está aprovada
-    const { data: ideia, error: fetchError } = await (supabase
-      .schema('pulso_content') as any)
+    // 1. Verificar se ideia existe e está aprovada (usando view public.ideias)
+    const { data: ideia, error: fetchError } = await supabase
       .from('ideias')
       .select('id, status, titulo')
       .eq('id', id)
-      .single()
+      .single() as any
     
     if (fetchError || !ideia) {
       return NextResponse.json(
@@ -57,13 +56,12 @@ export async function POST(
       )
     }
     
-    // 2. Verificar se já existe roteiro para esta ideia
-    const { data: roteiros, error: roteiroCheckError } = await (supabase
-      .schema('pulso_content') as any)
+    // 2. Verificar se já existe roteiro para esta ideia (usando view public.roteiros)
+    const { data: roteiros, error: roteiroCheckError } = await supabase
       .from('roteiros')
       .select('id')
       .eq('ideia_id', id)
-      .limit(1)
+      .limit(1) as any
     
     if (roteiros && roteiros.length > 0) {
       return NextResponse.json(
