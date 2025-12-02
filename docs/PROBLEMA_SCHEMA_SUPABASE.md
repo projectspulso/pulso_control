@@ -35,6 +35,7 @@ O erro `permission denied for schema pulso_content` ocorre porque:
 ## ❌ Problema Atual
 
 A view `public.ideias` provavelmente:
+
 - **Existe** (senão o frontend não funcionaria)
 - **Tem SELECT habilitado** (leitura funciona)
 - **NÃO tem UPDATE habilitado** (erro 42501)
@@ -42,26 +43,28 @@ A view `public.ideias` provavelmente:
 ## ✅ Solução
 
 ### Opção 1: Habilitar UPDATE na View (Recomendado)
+
 ```sql
 -- No Supabase SQL Editor
 GRANT UPDATE ON public.ideias TO authenticated;
 GRANT UPDATE ON public.ideias TO service_role;
 
 -- Verificar permissões atuais
-SELECT grantee, privilege_type 
-FROM information_schema.role_table_grants 
-WHERE table_schema = 'public' 
+SELECT grantee, privilege_type
+FROM information_schema.role_table_grants
+WHERE table_schema = 'public'
   AND table_name = 'ideias';
 ```
 
 ### Opção 2: Criar INSTEAD OF Trigger
+
 ```sql
 -- Se a view não suporta UPDATE direto
 CREATE OR REPLACE FUNCTION public.update_ideia()
 RETURNS TRIGGER AS $$
 BEGIN
   UPDATE pulso_content.ideias
-  SET 
+  SET
     status = NEW.status,
     titulo = NEW.titulo,
     descricao = NEW.descricao,
@@ -79,31 +82,34 @@ EXECUTE FUNCTION public.update_ideia();
 ```
 
 ### Opção 3: Usar Direct Table Access no Backend
+
 ```typescript
 // Apenas no backend (API routes) acessar tabela direta
 const { data, error } = await supabase
-  .schema('pulso_content')
-  .from('ideias')
+  .schema("pulso_content")
+  .from("ideias")
   .update({ status })
-  .eq('id', id)
+  .eq("id", id);
 ```
 
 ## 🧪 Como Verificar
 
 ### 1. Verificar se View Existe
+
 ```sql
-SELECT 
-  schemaname, 
-  viewname, 
-  definition 
-FROM pg_views 
-WHERE schemaname = 'public' 
+SELECT
+  schemaname,
+  viewname,
+  definition
+FROM pg_views
+WHERE schemaname = 'public'
   AND viewname = 'ideias';
 ```
 
 ### 2. Verificar Permissões da View
+
 ```sql
-SELECT 
+SELECT
   grantee,
   privilege_type,
   is_grantable
@@ -113,9 +119,10 @@ WHERE table_schema = 'public'
 ```
 
 ### 3. Verificar se Update Funciona
+
 ```sql
 -- Testar update direto no SQL Editor
-UPDATE public.ideias 
+UPDATE public.ideias
 SET status = 'APROVADA'
 WHERE id = '2b226a1e-0f4f-4208-bfaf-0e41e95db6d6';
 
