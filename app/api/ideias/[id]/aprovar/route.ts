@@ -13,13 +13,18 @@ export async function POST(
     console.log(`📝 ID da ideia: ${id}`)
     
     // Criar cliente Supabase aqui, dentro da função
+    // IMPORTANTE: Usar SERVICE_ROLE_KEY para ter permissão total
     const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY // Usar apenas SERVICE_ROLE_KEY
+    
+    console.log('🔑 Verificando credenciais...')
+    console.log('   URL:', !!supabaseUrl)
+    console.log('   SERVICE_ROLE_KEY:', !!supabaseKey)
     
     if (!supabaseUrl || !supabaseKey) {
       console.error('❌ Variáveis de ambiente faltando!')
       console.error('SUPABASE_URL:', !!supabaseUrl)
-      console.error('SUPABASE_KEY:', !!supabaseKey)
+      console.error('SUPABASE_SERVICE_ROLE_KEY:', !!supabaseKey)
       return NextResponse.json(
         { error: 'Configuração do servidor incompleta' },
         { status: 500 }
