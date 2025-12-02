@@ -19,9 +19,9 @@
 ### Estrutura Atual do Fluxo:
 
 ```
-[Webhook Ideia Aprovada] 
+[Webhook Ideia Aprovada]
     ↓
-[Validar Payload] 
+[Validar Payload]
     ↓
 [Validar UUID] ──┬──→ [Buscar Ideia Completa]
                  │
@@ -58,8 +58,9 @@
 ### 🐛 Problema Identificado:
 
 Existem **3 nós "Respond to Webhook"**:
+
 1. ✅ `Resposta Sucesso` (linha 553) - **CONECTADO** após "Log Sucesso"
-2. ❌ `Erro - UUID Inválido` (linha 564) - **NÃO CONECTADO** 
+2. ❌ `Erro - UUID Inválido` (linha 564) - **NÃO CONECTADO**
 3. ❌ `Erro - Ideia Não Encontrada` (linha 576) - **NÃO CONECTADO**
 
 Os nós de erro retornam JSON mas **não disparam o webhook response**.
@@ -72,20 +73,21 @@ Os nós de erro retornam JSON mas **não disparam o webhook response**.
 
 ```typescript
 const webhookResponse = await fetch(webhookUrl, {
-  method: 'POST',
+  method: "POST",
   headers: {
-    'Content-Type': 'application/json',
-    'x-webhook-secret': process.env.WEBHOOK_SECRET || ''
+    "Content-Type": "application/json",
+    "x-webhook-secret": process.env.WEBHOOK_SECRET || "",
   },
   body: JSON.stringify({
     ideia_id: id,
-    trigger: 'manual-gerar-roteiro',
-    timestamp: new Date().toISOString()
-  })
-})
+    trigger: "manual-gerar-roteiro",
+    timestamp: new Date().toISOString(),
+  }),
+});
 ```
 
 **Estrutura Enviada:** ✅ **Opção A**
+
 ```json
 {
   "ideia_id": "2b226a1e-0f4f-4208-bfaf-0e41e95db6d6",
@@ -110,50 +112,50 @@ O webhook aceita **qualquer uma das 3 estruturas**, então o payload está corre
 ### `components/ui/approve-buttons.tsx` - Função `handleGenerate`:
 
 ```typescript
-export function GerarRoteiroButton({ 
-  ideiaId, 
-  ideiaStatus, 
-  hasRoteiro, 
-  onSuccess, 
-  className 
+export function GerarRoteiroButton({
+  ideiaId,
+  ideiaStatus,
+  hasRoteiro,
+  onSuccess,
+  className,
 }: GerarRoteiroButtonProps) {
-  const [isGenerating, setIsGenerating] = useState(false)
-  const queryClient = useQueryClient()
+  const [isGenerating, setIsGenerating] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleGenerate = async () => {
-    setIsGenerating(true)
-    
+    setIsGenerating(true);
+
     try {
       const response = await fetch(`/api/ideias/${ideiaId}/gerar-roteiro`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
-        }
-      })
+          "Content-Type": "application/json",
+        },
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao gerar roteiro')
+        throw new Error(data.error || "Erro ao gerar roteiro");
       }
 
-      queryClient.invalidateQueries({ queryKey: ['ideias'] })
-      queryClient.invalidateQueries({ queryKey: ['roteiros'] })
-      queryClient.invalidateQueries({ queryKey: ['pipeline'] })
+      queryClient.invalidateQueries({ queryKey: ["ideias"] });
+      queryClient.invalidateQueries({ queryKey: ["roteiros"] });
+      queryClient.invalidateQueries({ queryKey: ["pipeline"] });
 
-      alert(`✅ Roteiro gerado com sucesso! ID: ${data.roteiro_id || 'N/A'}`)
-      onSuccess?.()
+      alert(`✅ Roteiro gerado com sucesso! ID: ${data.roteiro_id || "N/A"}`);
+      onSuccess?.();
     } catch (error) {
-      console.error('Erro ao gerar roteiro:', error)
-      alert('Erro ao gerar roteiro. Tente novamente.')
+      console.error("Erro ao gerar roteiro:", error);
+      alert("Erro ao gerar roteiro. Tente novamente.");
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }
+  };
 
   // Não mostrar se ideia não está aprovada ou já tem roteiro
-  if (ideiaStatus !== 'APROVADA' || hasRoteiro) {
-    return null
+  if (ideiaStatus !== "APROVADA" || hasRoteiro) {
+    return null;
   }
 
   return (
@@ -177,7 +179,7 @@ export function GerarRoteiroButton({
         </span>
       )}
     </button>
-  )
+  );
 }
 ```
 
@@ -188,9 +190,9 @@ export function GerarRoteiroButton({
 ### `app/api/ideias/[id]/gerar-roteiro/route.ts`:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import type { Database } from '@/lib/supabase/database.types'
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/database.types";
 
 /**
  * POST /api/ideias/[id]/gerar-roteiro
@@ -201,140 +203,156 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log('🎬 Iniciando geração de roteiro...')
-    
-    const { id } = await params
-    console.log(`📝 ID da ideia: ${id}`)
-    
+    console.log("🎬 Iniciando geração de roteiro...");
+
+    const { id } = await params;
+    console.log(`📝 ID da ideia: ${id}`);
+
     // Criar cliente Supabase com SERVICE_ROLE_KEY
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    
+    const supabaseUrl =
+      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
     if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json(
-        { error: 'Configuração do servidor incompleta' },
+        { error: "Configuração do servidor incompleta" },
         { status: 500 }
-      )
+      );
     }
-    
+
     const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
-        detectSessionInUrl: false
-      }
-    })
-    
+        detectSessionInUrl: false,
+      },
+    });
+
     // 1. Verificar se ideia existe e está aprovada (usando view public.ideias)
-    const { data: ideia, error: fetchError } = await supabase
-      .from('ideias')
-      .select('id, status, titulo')
-      .eq('id', id)
-      .single() as any
-    
+    const { data: ideia, error: fetchError } = (await supabase
+      .from("ideias")
+      .select("id, status, titulo")
+      .eq("id", id)
+      .single()) as any;
+
     if (fetchError || !ideia) {
       return NextResponse.json(
-        { error: 'Ideia não encontrada' },
+        { error: "Ideia não encontrada" },
         { status: 404 }
-      )
+      );
     }
-    
-    if (ideia.status !== 'APROVADA') {
+
+    if (ideia.status !== "APROVADA") {
       return NextResponse.json(
-        { error: 'Ideia precisa estar aprovada antes de gerar roteiro' },
+        { error: "Ideia precisa estar aprovada antes de gerar roteiro" },
         { status: 400 }
-      )
+      );
     }
-    
+
     // 2. Verificar se já existe roteiro para esta ideia (usando view public.roteiros)
-    const { data: roteiros, error: roteiroCheckError } = await supabase
-      .from('roteiros')
-      .select('id')
-      .eq('ideia_id', id)
-      .limit(1) as any
-    
+    const { data: roteiros, error: roteiroCheckError } = (await supabase
+      .from("roteiros")
+      .select("id")
+      .eq("ideia_id", id)
+      .limit(1)) as any;
+
     if (roteiros && roteiros.length > 0) {
       return NextResponse.json(
-        { error: 'Já existe um roteiro para esta ideia', roteiro_id: roteiros[0].id },
+        {
+          error: "Já existe um roteiro para esta ideia",
+          roteiro_id: roteiros[0].id,
+        },
         { status: 400 }
-      )
+      );
     }
 
-    console.log(`✅ Ideia ${id} válida para geração de roteiro`)
+    console.log(`✅ Ideia ${id} válida para geração de roteiro`);
 
     // 3. Chamar webhook do n8n (WF01 - Gerar Roteiro)
-    const webhookUrl = process.env.N8N_WEBHOOK_APROVAR_IDEIA
-    
+    const webhookUrl = process.env.N8N_WEBHOOK_APROVAR_IDEIA;
+
     if (!webhookUrl) {
-      console.warn('⚠️ Webhook URL não configurada')
-      return NextResponse.json({
-        success: false,
-        error: 'Webhook WF01 não configurado'
-      }, { status: 500 })
+      console.warn("⚠️ Webhook URL não configurada");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Webhook WF01 não configurado",
+        },
+        { status: 500 }
+      );
     }
 
     try {
-      console.log(`📞 Chamando webhook WF01: ${webhookUrl}`)
-      
+      console.log(`📞 Chamando webhook WF01: ${webhookUrl}`);
+
       const webhookResponse = await fetch(webhookUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'x-webhook-secret': process.env.WEBHOOK_SECRET || ''
+          "Content-Type": "application/json",
+          "x-webhook-secret": process.env.WEBHOOK_SECRET || "",
         },
         body: JSON.stringify({
           ideia_id: id,
-          trigger: 'manual-gerar-roteiro',
-          timestamp: new Date().toISOString()
-        })
-      })
+          trigger: "manual-gerar-roteiro",
+          timestamp: new Date().toISOString(),
+        }),
+      });
 
       if (!webhookResponse.ok) {
-        const errorText = await webhookResponse.text()
-        console.error(`❌ Webhook falhou: ${webhookResponse.status} - ${errorText}`)
-        
-        return NextResponse.json({
-          success: false,
-          error: `Webhook retornou ${webhookResponse.status}`,
-          details: errorText
-        }, { status: 500 })
+        const errorText = await webhookResponse.text();
+        console.error(
+          `❌ Webhook falhou: ${webhookResponse.status} - ${errorText}`
+        );
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Webhook retornou ${webhookResponse.status}`,
+            details: errorText,
+          },
+          { status: 500 }
+        );
       }
 
-      const workflowResult = await webhookResponse.json()
-      console.log('✅ Workflow WF01 disparado com sucesso:', workflowResult)
+      const workflowResult = await webhookResponse.json();
+      console.log("✅ Workflow WF01 disparado com sucesso:", workflowResult);
 
       return NextResponse.json({
         success: true,
-        message: 'Roteiro sendo gerado...',
+        message: "Roteiro sendo gerado...",
         ideia: {
           id: ideia.id,
-          titulo: ideia.titulo
+          titulo: ideia.titulo,
         },
         workflow: {
-          status: 'triggered',
-          data: workflowResult
+          status: "triggered",
+          data: workflowResult,
         },
-        roteiro_id: workflowResult?.data?.roteiro?.id || null
-      })
-
+        roteiro_id: workflowResult?.data?.roteiro?.id || null,
+      });
     } catch (webhookError) {
-      console.error('💥 Erro ao chamar webhook:', webhookError)
-      return NextResponse.json({
-        success: false,
-        error: 'Falha ao disparar workflow',
-        details: webhookError instanceof Error ? webhookError.message : 'Erro desconhecido'
-      }, { status: 500 })
+      console.error("💥 Erro ao chamar webhook:", webhookError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Falha ao disparar workflow",
+          details:
+            webhookError instanceof Error
+              ? webhookError.message
+              : "Erro desconhecido",
+        },
+        { status: 500 }
+      );
     }
-
   } catch (error) {
-    console.error('💥 Erro ao processar geração de roteiro:', error)
+    console.error("💥 Erro ao processar geração de roteiro:", error);
     return NextResponse.json(
-      { 
-        error: 'Erro ao processar geração de roteiro',
-        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      {
+        error: "Erro ao processar geração de roteiro",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
       },
       { status: 500 }
-    )
+    );
   }
 }
 ```
@@ -369,6 +387,7 @@ Content-Type: application/json
 ### Opção 1: Remover Nós Não Usados ✨ (Recomendado)
 
 No n8n, **deletar** os nós:
+
 - `Erro - UUID Inválido` (linha 564)
 - `Erro - Ideia Não Encontrada` (linha 576)
 
@@ -393,7 +412,7 @@ No nó "Webhook Ideia Aprovada", mudar:
 ```json
 {
   "parameters": {
-    "responseMode": "onReceived"  // ← em vez de "lastNode"
+    "responseMode": "onReceived" // ← em vez de "lastNode"
   }
 }
 ```
@@ -412,6 +431,7 @@ curl -X POST http://localhost:3000/api/ideias/2b226a1e-0f4f-4208-bfaf-0e41e95db6
 ```
 
 **Resultado esperado:**
+
 ```json
 {
   "success": true,
@@ -427,6 +447,7 @@ curl -X POST http://localhost:3000/api/ideias/2b226a1e-0f4f-4208-bfaf-0e41e95db6
 ### 1️⃣ Estrutura de Payload Enviada:
 
 ✅ **Opção A** (simples e direta):
+
 ```json
 {
   "ideia_id": "uuid-aqui",
