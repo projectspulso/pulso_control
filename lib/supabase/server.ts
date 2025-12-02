@@ -6,8 +6,15 @@ import { Database } from './database.types'
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
+console.log('🔧 Inicializando Supabase Server Client...')
+console.log(`   URL: ${supabaseUrl ? '✅ configurada' : '❌ FALTANDO'}`)
+console.log(`   KEY: ${supabaseKey ? '✅ configurada' : '❌ FALTANDO'}`)
+
 if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables')
+  const errorMsg = 'Missing Supabase environment variables'
+  console.error(`❌ ${errorMsg}`)
+  console.error('Variáveis disponíveis:', Object.keys(process.env).filter(k => k.includes('SUPABASE')))
+  throw new Error(errorMsg)
 }
 
 export const supabaseServer = createClient<Database>(supabaseUrl, supabaseKey, {
@@ -17,3 +24,5 @@ export const supabaseServer = createClient<Database>(supabaseUrl, supabaseKey, {
     detectSessionInUrl: false
   }
 })
+
+console.log('✅ Supabase Server Client criado com sucesso')

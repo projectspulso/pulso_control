@@ -6,7 +6,21 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('🚀 Iniciando aprovação de ideia...')
+    
     const { id } = await params
+    console.log(`📝 ID da ideia: ${id}`)
+    
+    // Verificar se supabaseServer foi criado corretamente
+    if (!supabaseServer) {
+      console.error('❌ supabaseServer não foi inicializado!')
+      return NextResponse.json(
+        { error: 'Erro de configuração do servidor' },
+        { status: 500 }
+      )
+    }
+    
+    console.log('✅ Cliente Supabase OK, tentando atualizar...')
     
     // 1. Atualizar status da ideia para APROVADA
     // Usando cast para contornar problema de types com views
@@ -19,7 +33,8 @@ export async function POST(
       .single()
     
     if (updateError) {
-      console.error('Erro ao aprovar ideia:', updateError)
+      console.error('❌ Erro ao aprovar ideia:', updateError)
+      console.error('❌ Detalhes do erro:', JSON.stringify(updateError, null, 2))
       return NextResponse.json(
         { error: 'Erro ao aprovar ideia', details: updateError.message },
         { status: 500 }
