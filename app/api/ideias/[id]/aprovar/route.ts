@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseServer } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/supabase/database.types'
 
 export async function POST(
   request: NextRequest,
@@ -11,20 +12,33 @@ export async function POST(
     const { id } = await params
     console.log(`📝 ID da ideia: ${id}`)
     
-    // Verificar se supabaseServer foi criado corretamente
-    if (!supabaseServer) {
-      console.error('❌ supabaseServer não foi inicializado!')
+    // Criar cliente Supabase aqui, dentro da função
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ Variáveis de ambiente faltando!')
+      console.error('SUPABASE_URL:', !!supabaseUrl)
+      console.error('SUPABASE_KEY:', !!supabaseKey)
       return NextResponse.json(
-        { error: 'Erro de configuração do servidor' },
+        { error: 'Configuração do servidor incompleta' },
         { status: 500 }
       )
     }
     
-    console.log('✅ Cliente Supabase OK, tentando atualizar...')
+    const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    })
+    
+    console.log('✅ Cliente Supabase criado, tentando atualizar...')
     
     // 1. Atualizar status da ideia para APROVADA
     // Usando cast para contornar problema de types com views
-    const client = supabaseServer as any
+    const client = supabase as any
     const { data: ideia, error: updateError } = await client
       .from('ideias')
       .update({ status: 'APROVADA' })

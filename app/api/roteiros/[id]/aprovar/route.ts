@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { supabaseServer } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/supabase/database.types'
 
 export async function POST(
   request: Request,
@@ -8,9 +9,28 @@ export async function POST(
   try {
     const { id } = await params
 
+    // Criar cliente Supabase aqui, dentro da função
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json(
+        { error: 'Configuração do servidor incompleta' },
+        { status: 500 }
+      )
+    }
+    
+    const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    })
+
     // 1. Atualizar status do roteiro para APROVADO
     // Usando cast para contornar problema de types com views
-    const client = supabaseServer as any
+    const client = supabase as any
     const { data: roteiro, error: updateError } = await client
       .from('roteiros')
       .update({ 
@@ -20,16 +40,14 @@ export async function POST(
       .eq('id', id)
       .select()
       .single()
-
+    
     if (updateError) {
       console.error('Erro ao atualizar roteiro:', updateError)
       return NextResponse.json(
         { error: 'Erro ao atualizar status do roteiro' },
         { status: 500 }
       )
-    }
-
-    // 2. Disparar webhook WF02 - Gerar Áudio
+    }    // 2. Disparar webhook WF02 - Gerar Áudio
     const webhookUrl = process.env.N8N_WEBHOOK_APROVAR_ROTEIRO
     const webhookSecret = process.env.WEBHOOK_SECRET
 
