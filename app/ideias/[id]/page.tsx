@@ -4,8 +4,9 @@ import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useIdeia, useAtualizarIdeia, useDeletarIdeia } from '@/lib/hooks/use-ideias'
 import { useCanais, useSeriesPorCanal } from '@/lib/hooks/use-core'
+import { useRoteirosPorIdeia } from '@/lib/hooks/use-roteiros'
 import { ErrorState } from '@/components/ui/error-state'
-import { ApproveIdeiaButton } from '@/components/ui/approve-buttons'
+import { ApproveIdeiaButton, GerarRoteiroButton } from '@/components/ui/approve-buttons'
 import Link from 'next/link'
 
 export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
@@ -13,6 +14,7 @@ export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: st
   const router = useRouter()
   const { data: ideia, isLoading, isError, refetch } = useIdeia(resolvedParams.id)
   const { data: canais } = useCanais()
+  const { data: roteiros } = useRoteirosPorIdeia(resolvedParams.id)
   const [canalSelecionado, setCanalSelecionado] = useState<string>('')
   const { data: series } = useSeriesPorCanal(canalSelecionado || ideia?.canal_id || null)
   
@@ -137,6 +139,8 @@ export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: st
   }
 
   const canal = canais?.find(c => c.id === ideia.canal_id)
+  const roteirosRelacionados = roteiros || []
+  const hasRoteiro = roteirosRelacionados.length > 0
 
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
@@ -292,6 +296,7 @@ export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: st
             {ideia.status === 'RASCUNHO' && (
               <ApproveIdeiaButton
                 ideiaId={ideia.id}
+                currentStatus={ideia.status}
                 onSuccess={() => refetch()}
                 className="flex-1"
               />
@@ -303,6 +308,47 @@ export default function IdeiaDetalhesPage({ params }: { params: Promise<{ id: st
               >
                 ✗ Rejeitar Ideia
               </button>
+            )}
+          </div>
+        )}
+
+        {/* Seção de Roteiros */}
+        {ideia.status === 'APROVADA' && (
+          <div className="mt-6 bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">📄 Roteiros</h3>
+            
+            {!hasRoteiro ? (
+              <div className="space-y-4">
+                <p className="text-zinc-400 text-sm">
+                  Nenhum roteiro gerado ainda. Clique no botão abaixo para gerar automaticamente via IA.
+                </p>
+                <GerarRoteiroButton
+                  ideiaId={ideia.id}
+                  ideiaStatus={ideia.status}
+                  hasRoteiro={hasRoteiro}
+                  onSuccess={() => refetch()}
+                />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {roteirosRelacionados.map((roteiro) => (
+                  <Link
+                    key={roteiro.id}
+                    href={`/roteiros/${roteiro.id}`}
+                    className="block bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg p-4 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="text-white font-medium">{roteiro.titulo}</h4>
+                        <p className="text-zinc-400 text-sm mt-1">
+                          Criado em {new Date(roteiro.created_at).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <StatusBadge status={roteiro.status} />
+                    </div>
+                  </Link>
+                ))}
+              </div>
             )}
           </div>
         )}
