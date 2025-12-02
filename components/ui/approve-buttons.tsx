@@ -1,19 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, Loader2, Sparkles, Volume2 } from 'lucide-react'
+import { CheckCircle2, Loader2, Sparkles, Volume2, FileText } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
 interface ApproveIdeiaButtonProps {
   ideiaId: string
+  currentStatus: string
   onSuccess?: () => void
   className?: string
 }
 
 /**
- * Botão para aprovar ideia e disparar WF01 (Gerar Roteiro)
+ * Botão para APENAS aprovar ideia (sem gerar roteiro)
  */
-export function ApproveIdeiaButton({ ideiaId, onSuccess, className }: ApproveIdeiaButtonProps) {
+export function ApproveIdeiaButton({ ideiaId, currentStatus, onSuccess, className }: ApproveIdeiaButtonProps) {
   const [isApproving, setIsApproving] = useState(false)
   const queryClient = useQueryClient()
 
@@ -21,12 +22,12 @@ export function ApproveIdeiaButton({ ideiaId, onSuccess, className }: ApproveIde
     setIsApproving(true)
     
     try {
-      // Chamar API route que faz tudo: atualizar status + webhook n8n
-      const response = await fetch(`/api/ideias/${ideiaId}/aprovar`, {
-        method: 'POST',
+      const response = await fetch(`/api/ideias/${ideiaId}/status`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ status: 'APROVADA' })
       })
 
       const data = await response.json()
@@ -35,9 +36,7 @@ export function ApproveIdeiaButton({ ideiaId, onSuccess, className }: ApproveIde
         throw new Error(data.error || 'Erro ao aprovar ideia')
       }
 
-      // Invalidar queries para atualizar UI
       queryClient.invalidateQueries({ queryKey: ['ideias'] })
-      queryClient.invalidateQueries({ queryKey: ['roteiros'] })
       queryClient.invalidateQueries({ queryKey: ['pipeline'] })
 
       onSuccess?.()
@@ -49,6 +48,11 @@ export function ApproveIdeiaButton({ ideiaId, onSuccess, className }: ApproveIde
     }
   }
 
+  // Não mostrar se já aprovada
+  if (currentStatus === 'APROVADA') {
+    return null
+  }
+
   return (
     <button
       onClick={handleApprove}
@@ -58,13 +62,94 @@ export function ApproveIdeiaButton({ ideiaId, onSuccess, className }: ApproveIde
       {isApproving ? (
         <>
           <Loader2 className="h-4 w-4 animate-spin" />
-          Gerando roteiro...
+          Aprovando...
         </>
       ) : (
         <>
           <CheckCircle2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
-          Aprovar & Gerar Roteiro
-          <Sparkles className="h-3 w-3 opacity-70" />
+          Aprovar Ideia
+        </>
+      )}
+    </button>
+  )
+}
+
+interface GerarRoteiroButtonProps {
+  ideiaId: string
+  ideiaStatus: string
+  hasRoteiro: boolean
+  onSuccess?: () => void
+  className?: string
+}
+
+/**
+ * Botão para gerar roteiro via WF01
+ * Só aparece se ideia estiver aprovada e NÃO tiver roteiro ainda
+ */
+export function GerarRoteiroButton({ 
+  ideiaId, 
+  ideiaStatus, 
+  hasRoteiro, 
+  onSuccess, 
+  className 
+}: GerarRoteiroButtonProps) {
+  const [isGenerating, setIsGenerating] = useState(false)
+  const queryClient = useQueryClient()
+
+  const handleGenerate = async () => {
+    setIsGenerating(true)
+    
+    try {
+      const response = await fetch(`/api/ideias/${ideiaId}/gerar-roteiro`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao gerar roteiro')
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['ideias'] })
+      queryClient.invalidateQueries({ queryKey: ['roteiros'] })
+      queryClient.invalidateQueries({ queryKey: ['pipeline'] })
+
+      alert(`✅ Roteiro gerado com sucesso! ID: ${data.roteiro_id || 'N/A'}`)
+      onSuccess?.()
+    } catch (error) {
+      console.error('Erro ao gerar roteiro:', error)
+      alert('Erro ao gerar roteiro. Tente novamente.')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  // Não mostrar se:
+  // 1. Ideia não está aprovada
+  // 2. Já tem roteiro criado
+  if (ideiaStatus !== 'APROVADA' || hasRoteiro) {
+    return null
+  }
+
+  return (
+    <button
+      onClick={handleGenerate}
+      disabled={isGenerating}
+      className={`flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all group ${className || ''}`}
+    >
+      {isGenerating ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Gerando roteiro...
+        </>
+      ) : (
+        <>
+          <Sparkles className="h-4 w-4 group-hover:scale-110 transition-transform" />
+          Gerar Roteiro (IA)
+          <FileText className="h-3 w-3 opacity-70" />
         </>
       )}
     </button>
@@ -87,7 +172,6 @@ export function ApproveRoteiroButton({ roteiroId, onSuccess }: ApproveRoteiroBut
     setIsApproving(true)
     
     try {
-      // Chamar API route que faz tudo: atualizar status + webhook n8n
       const response = await fetch(`/api/roteiros/${roteiroId}/aprovar`, {
         method: 'POST',
         headers: {
@@ -101,7 +185,6 @@ export function ApproveRoteiroButton({ roteiroId, onSuccess }: ApproveRoteiroBut
         throw new Error(data.error || 'Erro ao aprovar roteiro')
       }
 
-      // Invalidar queries para atualizar UI
       queryClient.invalidateQueries({ queryKey: ['roteiros'] })
       queryClient.invalidateQueries({ queryKey: ['audios'] })
       queryClient.invalidateQueries({ queryKey: ['pipeline'] })
