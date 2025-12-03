@@ -1,5 +1,5 @@
 {
-  "name": "WF02 - Gerar Áudio TTS (CRON Polling)",
+  "name": "WF02 - Gerar Áudio TTS (CRON Polling - HTTP Request)",
   "nodes": [
     {
       "parameters": {
@@ -246,20 +246,25 @@
     },
     {
       "parameters": {
-        "resource": "audio",
-        "operation": "create",
-        "model": "={{ $json.modelo }}",
-        "input": "={{ $json.texto_tts }}",
-        "voice": "={{ $json.voice }}",
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/speech",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: $json.modelo,\n  input: $json.texto_tts,\n  voice: $json.voice,\n  speed: $json.speed,\n  response_format: 'mp3'\n}) }}",
         "options": {
-          "speed": "={{ $json.speed }}",
-          "response_format": "mp3"
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
         }
       },
       "id": "openai-tts",
-      "name": "OpenAI TTS",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.5,
+      "name": "OpenAI TTS (HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [2220, 200],
       "credentials": {
         "openAiApi": {
@@ -283,26 +288,44 @@
     },
     {
       "parameters": {
-        "operation": "upload",
-        "bucketName": "audios",
-        "fileName": "={{ $json.storage_path }}",
-        "binaryData": true,
+        "method": "POST",
+        "url": "=https://nlcisbfdiokmipyihtuz.supabase.co/storage/v1/object/{{ $json.storage_path }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.supabaseServiceKey }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "audio/mpeg"
+            },
+            {
+              "name": "x-upsert",
+              "value": "true"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000"
+            }
+          ]
+        },
+        "sendBinaryData": true,
+        "binaryPropertyName": "data",
         "options": {
-          "contentType": "audio/mpeg",
-          "cacheControl": "public, max-age=31536000"
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
         }
       },
       "id": "upload-storage",
-      "name": "Upload Supabase Storage",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1.0,
-      "position": [2660, 200],
-      "credentials": {
-        "supabaseApi": {
-          "id": "SUPABASE_CREDENTIAL_ID",
-          "name": "Supabase Storage – Pulso"
-        }
-      }
+      "name": "Upload Supabase Storage (HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2660, 200]
     },
     {
       "parameters": {
@@ -502,252 +525,76 @@
   ],
   "connections": {
     "A cada 10 minutos": {
-      "main": [
-        [
-          {
-            "node": "Buscar Roteiros sem Áudio",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Buscar Roteiros sem Áudio", "type": "main", "index": 0}]]
     },
     "Buscar Roteiros sem Áudio": {
-      "main": [
-        [
-          {
-            "node": "Tem Roteiros?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Tem Roteiros?", "type": "main", "index": 0}]]
     },
     "Tem Roteiros?": {
       "main": [
-        [
-          {
-            "node": "Loop - Processar Roteiros",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Log - Nenhum Roteiro",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Loop - Processar Roteiros", "type": "main", "index": 0}],
+        [{"node": "Log - Nenhum Roteiro", "type": "main", "index": 0}]
       ]
     },
     "Loop - Processar Roteiros": {
       "main": [
-        [
-          {
-            "node": "Limpar Markdown para TTS",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Agregar Resultados",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Limpar Markdown para TTS", "type": "main", "index": 0}],
+        [{"node": "Agregar Resultados", "type": "main", "index": 0}]
       ]
     },
     "Limpar Markdown para TTS": {
-      "main": [
-        [
-          {
-            "node": "Selecionar Voz por Idioma",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Selecionar Voz por Idioma", "type": "main", "index": 0}]]
     },
     "Selecionar Voz por Idioma": {
-      "main": [
-        [
-          {
-            "node": "Precisa Split?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Precisa Split?", "type": "main", "index": 0}]]
     },
     "Precisa Split?": {
       "main": [
-        [
-          {
-            "node": "Split em Chunks",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Preparar TTS Único",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Split em Chunks", "type": "main", "index": 0}],
+        [{"node": "Preparar TTS Único", "type": "main", "index": 0}]
       ]
     },
     "Preparar TTS Único": {
-      "main": [
-        [
-          {
-            "node": "OpenAI TTS",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "OpenAI TTS (HTTP)", "type": "main", "index": 0}]]
     },
     "Split em Chunks": {
-      "main": [
-        [
-          {
-            "node": "Preparar Chunk",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Preparar Chunk", "type": "main", "index": 0}]]
     },
     "Preparar Chunk": {
-      "main": [
-        [
-          {
-            "node": "OpenAI TTS",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "OpenAI TTS (HTTP)", "type": "main", "index": 0}]]
     },
-    "OpenAI TTS": {
-      "main": [
-        [
-          {
-            "node": "Preparar Upload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "OpenAI TTS (HTTP)": {
+      "main": [[{"node": "Preparar Upload", "type": "main", "index": 0}]]
     },
     "Preparar Upload": {
-      "main": [
-        [
-          {
-            "node": "Upload Supabase Storage",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Upload Supabase Storage (HTTP)", "type": "main", "index": 0}]]
     },
-    "Upload Supabase Storage": {
-      "main": [
-        [
-          {
-            "node": "Precisa Merge?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Upload Supabase Storage (HTTP)": {
+      "main": [[{"node": "Precisa Merge?", "type": "main", "index": 0}]]
     },
     "Precisa Merge?": {
       "main": [
-        [
-          {
-            "node": "Log - Requer Merge",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Preparar Metadata Áudio",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Log - Requer Merge", "type": "main", "index": 0}],
+        [{"node": "Preparar Metadata Áudio", "type": "main", "index": 0}]
       ]
     },
     "Log - Requer Merge": {
-      "main": [
-        [
-          {
-            "node": "Preparar Metadata Áudio",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Preparar Metadata Áudio", "type": "main", "index": 0}]]
     },
     "Preparar Metadata Áudio": {
-      "main": [
-        [
-          {
-            "node": "Inserir Áudio no DB",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Inserir Áudio no DB", "type": "main", "index": 0}]]
     },
     "Inserir Áudio no DB": {
-      "main": [
-        [
-          {
-            "node": "Log Sucesso Individual",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Log Sucesso Individual", "type": "main", "index": 0}]]
     },
     "Log Sucesso Individual": {
-      "main": [
-        [
-          {
-            "node": "Preparar Resultado",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Preparar Resultado", "type": "main", "index": 0}]]
     },
     "Preparar Resultado": {
-      "main": [
-        [
-          {
-            "node": "Loop - Processar Roteiros",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Loop - Processar Roteiros", "type": "main", "index": 0}]]
     },
     "Agregar Resultados": {
-      "main": [
-        [
-          {
-            "node": "Resultado Final",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Resultado Final", "type": "main", "index": 0}]]
     }
   },
   "settings": {
@@ -758,18 +605,9 @@
   },
   "staticData": null,
   "tags": [
-    {
-      "id": "1",
-      "name": "PULSO"
-    },
-    {
-      "id": "2",
-      "name": "Automação"
-    },
-    {
-      "id": "3",
-      "name": "Audio"
-    }
+    {"id": "1", "name": "PULSO"},
+    {"id": "2", "name": "Automação"},
+    {"id": "3", "name": "Audio"}
   ],
   "pinData": {},
   "meta": {

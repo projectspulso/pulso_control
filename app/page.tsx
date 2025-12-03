@@ -1,6 +1,7 @@
 'use client'
 
 import { DashboardStats } from "@/components/dashboard/stats";
+import { DashboardOverview } from "@/components/dashboard/overview";
 import { IdeiasLista } from "@/components/dashboard/ideias-lista";
 import { WorkflowsLog } from "@/components/dashboard/workflows-log";
 import { RealtimeUpdates } from "@/components/realtime-updates";
@@ -184,7 +185,7 @@ export default function Home() {
 
         {/* Stats Cards */}
         <section className="animate-fade-in" style={{ animationDelay: '600ms' }}>
-          <DashboardStats />
+          <DashboardOverview />
         </section>
 
         {/* Main Content Grid */}
