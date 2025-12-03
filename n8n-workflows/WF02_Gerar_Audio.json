@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "cron-trigger",
+      "id": "beba8ba7-ca98-4707-b1ab-c1a625e0054a",
       "name": "A cada 10 minutos",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -21,18 +21,18 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "-- Buscar roteiros aprovados que ainda não têm áudio gerado\nSELECT \n  r.id as roteiro_id,\n  r.ideia_id,\n  r.canal_id,\n  r.serie_id,\n  r.titulo,\n  r.conteudo_md,\n  r.duracao_estimado_segundos,\n  r.linguagem,\n  r.metadata,\n  i.titulo as ideia_titulo,\n  c.nome as canal_nome,\n  c.slug as canal_slug,\n  c.linguagem as canal_linguagem,\n  p.id as pipeline_id,\n  p.status as pipeline_status\nFROM pulso_content.roteiros r\nINNER JOIN pulso_content.ideias i ON i.id = r.ideia_id\nINNER JOIN pulso_core.canais c ON c.id = r.canal_id\nLEFT JOIN pulso_content.pipeline_producao p ON p.ideia_id = r.ideia_id\nLEFT JOIN pulso_content.audios a ON a.roteiro_id = r.id\nWHERE r.status = 'APROVADO'\n  AND a.id IS NULL  -- Ainda não tem áudio\n  AND r.conteudo_md IS NOT NULL\n  AND LENGTH(r.conteudo_md) > 50\nORDER BY r.created_at ASC\nLIMIT 5;  -- Processar até 5 por vez",
+        "query": "-- Buscar roteiros aprovados que ainda não têm áudio gerado\nSELECT \n  r.id as roteiro_id,\n  r.ideia_id,\n  r.canal_id,\n  i.serie_id,\n  r.titulo,\n  r.conteudo_md,\n  r.duracao_estimado_segundos,\n  r.linguagem,\n  r.metadata,\n  i.titulo as ideia_titulo,\n  c.nome as canal_nome,\n  c.slug as canal_slug,\n  c.idioma as canal_linguagem,\n  p.id as pipeline_id,\n  p.status as pipeline_status\nFROM pulso_content.roteiros r\nINNER JOIN pulso_content.ideias i ON i.id = r.ideia_id\nINNER JOIN pulso_core.canais c ON c.id = r.canal_id\nLEFT JOIN pulso_content.pipeline_producao p ON p.ideia_id = r.ideia_id\nLEFT JOIN pulso_content.audios a ON a.roteiro_id = r.id\nWHERE r.status = 'APROVADO'\n  AND a.id IS NULL\n  AND r.conteudo_md IS NOT NULL\n  AND LENGTH(r.conteudo_md) > 50\nORDER BY r.created_at ASC\nLIMIT 5;",
         "options": {}
       },
-      "id": "buscar-roteiros",
+      "id": "5befd06b-bb2c-4872-8ac1-75ca77a0ca7f",
       "name": "Buscar Roteiros sem Áudio",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [460, 300],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Postgres supabase"
+          "id": "ziXq3E6EiLFU31DX",
+          "name": "Postgres Supabase NOVO"
         }
       }
     },
@@ -59,7 +59,7 @@
         },
         "options": {}
       },
-      "id": "check-roteiros",
+      "id": "b55f3dc1-e6aa-49cc-8bec-e25598406d4f",
       "name": "Tem Roteiros?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -85,7 +85,7 @@
         },
         "options": {}
       },
-      "id": "sem-roteiros",
+      "id": "33252490-c5b1-4147-92a0-c301b6bc97b6",
       "name": "Log - Nenhum Roteiro",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -95,7 +95,7 @@
       "parameters": {
         "options": {}
       },
-      "id": "loop-roteiros",
+      "id": "a532c575-1a82-40f0-887f-f7f097a30cd7",
       "name": "Loop - Processar Roteiros",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
@@ -105,7 +105,7 @@
       "parameters": {
         "jsCode": "// ==================================================\n// LIMPEZA DE MARKDOWN PARA TTS\n// ==================================================\n\nconst item = $input.item.json;\nconst markdown = item.conteudo_md;\n\nif (!markdown || markdown.trim().length < 50) {\n  throw new Error(`Roteiro ${item.roteiro_id}: conteúdo muito curto ou vazio`);\n}\n\n// ========== LIMPEZA DO MARKDOWN ==========\nlet textoLimpo = markdown\n  // Remover metadados YAML/frontmatter (--- ... ---)\n  .replace(/^---[\\s\\S]*?---/m, '')\n  // Remover títulos markdown (# ## ###)\n  .replace(/^#{1,6}\\s+/gm, '')\n  // Remover bold/italic markdown\n  .replace(/\\*\\*(.+?)\\*\\*/g, '$1')\n  .replace(/\\*(.+?)\\*/g, '$1')\n  .replace(/__(.+?)__/g, '$1')\n  .replace(/_(.+?)_/g, '$1')\n  // Remover links [texto](url) -> manter só texto\n  .replace(/\\[(.+?)\\]\\(.+?\\)/g, '$1')\n  // Remover imagens ![alt](url)\n  .replace(/!\\[.*?\\]\\(.+?\\)/g, '')\n  // Remover listas markdown (-, *, +)\n  .replace(/^[-*+]\\s+/gm, '')\n  // Remover listas numeradas\n  .replace(/^\\d+\\.\\s+/gm, '')\n  // Remover código inline `code`\n  .replace(/`(.+?)`/g, '$1')\n  // Remover blocos de código ```code```\n  .replace(/```[\\s\\S]*?```/g, '')\n  // Remover blockquotes\n  .replace(/^>\\s+/gm, '')\n  // Remover linhas horizontais\n  .replace(/^[-*_]{3,}$/gm, '')\n  // Remover múltiplas quebras de linha\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\n// ========== NORMALIZAÇÃO PARA PRONÚNCIA ==========\ntextoLimpo = textoLimpo\n  // Números e unidades\n  .replace(/\\b([0-9]+)\\s*%/g, '$1 por cento')\n  .replace(/\\b([0-9]+)\\s*km\\b/gi, '$1 quilômetros')\n  .replace(/\\b([0-9]+)\\s*m\\b(?!\\w)/gi, '$1 metros')  // Evitar 'minutos'\n  .replace(/\\b([0-9]+)\\s*kg\\b/gi, '$1 quilogramas')\n  .replace(/\\b([0-9]+)\\s*h\\b(?!\\w)/gi, '$1 horas')\n  .replace(/\\$\\s*([0-9,.]+)/g, '$1 dólares')\n  .replace(/R\\$\\s*([0-9,.]+)/g, '$1 reais')\n  // Abreviações comuns\n  .replace(/\\bDr\\./gi, 'Doutor')\n  .replace(/\\bDra\\./gi, 'Doutora')\n  .replace(/\\bSr\\./gi, 'Senhor')\n  .replace(/\\bSra\\./gi, 'Senhora')\n  .replace(/\\bProf\\./gi, 'Professor')\n  .replace(/\\bEUA\\b/g, 'Estados Unidos')\n  .replace(/\\bONU\\b/g, 'ONU')  // Manter sigla\n  .replace(/\\bNASA\\b/g, 'NASA')\n  // URLs e emails (remover)\n  .replace(/https?:\\/\\/\\S+/g, '')\n  .replace(/\\S+@\\S+\\.\\S+/g, '')\n  // Limpar espaços extras\n  .replace(/\\s+/g, ' ')\n  .trim();\n\n// ========== VALIDAÇÃO DE TAMANHO ==========\nconst totalCaracteres = textoLimpo.length;\nconst maxCaracteresTTS = 4000;  // Limite seguro OpenAI TTS\nconst precisaSplit = totalCaracteres > maxCaracteresTTS;\n\nlet chunks = [];\nif (precisaSplit) {\n  // Dividir em chunks por parágrafos\n  const paragrafos = textoLimpo.split(/\\n\\n+/);\n  let chunkAtual = '';\n  \n  for (const p of paragrafos) {\n    if ((chunkAtual + p).length > maxCaracteresTTS) {\n      if (chunkAtual) chunks.push(chunkAtual.trim());\n      chunkAtual = p;\n    } else {\n      chunkAtual += (chunkAtual ? '\\n\\n' : '') + p;\n    }\n  }\n  if (chunkAtual) chunks.push(chunkAtual.trim());\n} else {\n  chunks = [textoLimpo];\n}\n\n// ========== CUSTO ESTIMADO ==========\n// OpenAI TTS-1-HD: $15.00 / 1M caracteres\nconst custoEstimado = (totalCaracteres / 1000000) * 15;\n\n// ========== OUTPUT ==========\nreturn {\n  json: {\n    // IDs e referências\n    roteiro_id: item.roteiro_id,\n    ideia_id: item.ideia_id,\n    canal_id: item.canal_id,\n    serie_id: item.serie_id,\n    pipeline_id: item.pipeline_id,\n    \n    // Textos\n    titulo: item.titulo,\n    texto_original: markdown,\n    texto_tts: textoLimpo,\n    chunks: chunks,\n    total_chunks: chunks.length,\n    \n    // Métricas\n    total_caracteres: totalCaracteres,\n    custo_estimado_usd: parseFloat(custoEstimado.toFixed(4)),\n    precisa_split: precisaSplit,\n    \n    // Metadata do roteiro\n    linguagem: item.linguagem || item.canal_linguagem || 'pt-BR',\n    duracao_estimada_segundos: item.duracao_estimado_segundos || 60,\n    \n    // Contexto\n    canal_nome: item.canal_nome,\n    canal_slug: item.canal_slug,\n    ideia_titulo: item.ideia_titulo\n  }\n};"
       },
-      "id": "limpar-markdown",
+      "id": "09675827-aade-4e29-a29f-2be21e684b55",
       "name": "Limpar Markdown para TTS",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -115,7 +115,7 @@
       "parameters": {
         "jsCode": "// ==================================================\n// SELEÇÃO DE VOZ BASEADA NO IDIOMA\n// ==================================================\n\nconst item = $input.item.json;\nconst linguagem = (item.linguagem || 'pt-BR').toLowerCase();\n\n// ========== MAPEAMENTO DE VOZES POR IDIOMA ==========\n// Vozes OpenAI: alloy, echo, fable, onyx, nova, shimmer\nconst vozMapa = {\n  // Português\n  'pt-br': { voice: 'alloy', speed: 1.0 },\n  'pt-pt': { voice: 'alloy', speed: 0.95 },\n  'pt': { voice: 'alloy', speed: 1.0 },\n  \n  // Inglês\n  'en-us': { voice: 'nova', speed: 1.0 },\n  'en-gb': { voice: 'shimmer', speed: 0.95 },\n  'en': { voice: 'nova', speed: 1.0 },\n  \n  // Espanhol\n  'es-es': { voice: 'fable', speed: 1.0 },\n  'es-mx': { voice: 'onyx', speed: 1.0 },\n  'es': { voice: 'fable', speed: 1.0 },\n  \n  // Francês\n  'fr-fr': { voice: 'echo', speed: 0.95 },\n  'fr': { voice: 'echo', speed: 0.95 },\n  \n  // Alemão\n  'de-de': { voice: 'onyx', speed: 0.95 },\n  'de': { voice: 'onyx', speed: 0.95 },\n  \n  // Italiano\n  'it-it': { voice: 'fable', speed: 1.0 },\n  'it': { voice: 'fable', speed: 1.0 },\n  \n  // Mandarim\n  'zh-cn': { voice: 'nova', speed: 0.9 },\n  'zh-tw': { voice: 'shimmer', speed: 0.9 },\n  'zh': { voice: 'nova', speed: 0.9 },\n  \n  // Japonês\n  'ja-jp': { voice: 'echo', speed: 0.9 },\n  'ja': { voice: 'echo', speed: 0.9 },\n  \n  // Coreano\n  'ko-kr': { voice: 'nova', speed: 0.95 },\n  'ko': { voice: 'nova', speed: 0.95 }\n};\n\n// Buscar configuração ou usar padrão\nconst config = vozMapa[linguagem] || { voice: 'alloy', speed: 1.0 };\n\n// ========== CONFIGURAÇÃO DO TTS ==========\nconst modelo = 'tts-1-hd';  // Melhor qualidade\nconst formato = 'mp3';       // Formato padrão\n\n// ========== PREPARAR CHUNKS PARA PROCESSAMENTO ==========\nconst chunks = item.chunks || [item.texto_tts];\nconst totalChunks = chunks.length;\n\n// Preparar array de jobs (um por chunk)\nconst jobs = chunks.map((texto, index) => ({\n  chunk_index: index + 1,\n  total_chunks: totalChunks,\n  texto: texto,\n  caracteres: texto.length,\n  voice: config.voice,\n  speed: config.speed,\n  modelo: modelo,\n  formato: formato\n}));\n\n// ========== OUTPUT ==========\nreturn {\n  json: {\n    // Dados do roteiro (passar adiante)\n    roteiro_id: item.roteiro_id,\n    ideia_id: item.ideia_id,\n    canal_id: item.canal_id,\n    serie_id: item.serie_id,\n    pipeline_id: item.pipeline_id,\n    titulo: item.titulo,\n    linguagem: item.linguagem,\n    duracao_estimada_segundos: item.duracao_estimada_segundos,\n    total_caracteres: item.total_caracteres,\n    custo_estimado_usd: item.custo_estimado_usd,\n    \n    // Configuração TTS\n    voice: config.voice,\n    speed: config.speed,\n    modelo: modelo,\n    formato: formato,\n    \n    // Chunks para processar\n    total_chunks: totalChunks,\n    precisa_merge: totalChunks > 1,\n    jobs: jobs,\n    \n    // Contexto\n    canal_nome: item.canal_nome,\n    canal_slug: item.canal_slug\n  }\n};"
       },
-      "id": "selecionar-voz",
+      "id": "2c74abf7-65f5-4d61-a797-0654416fdf7b",
       "name": "Selecionar Voz por Idioma",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -144,11 +144,65 @@
         },
         "options": {}
       },
-      "id": "check-split",
+      "id": "781ee321-4cfd-4bb2-9e88-1b057ce6f137",
       "name": "Precisa Split?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "82bcf68a-1a8b-488c-aded-a6972390780c",
+      "name": "Loop Chunks",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1780, 100]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "chunk-texto",
+              "name": "texto_tts",
+              "value": "={{ $json.jobs[$itemIndex].texto }}",
+              "type": "string"
+            },
+            {
+              "id": "chunk-voice",
+              "name": "voice",
+              "value": "={{ $json.jobs[$itemIndex].voice }}",
+              "type": "string"
+            },
+            {
+              "id": "chunk-speed",
+              "name": "speed",
+              "value": "={{ $json.jobs[$itemIndex].speed }}",
+              "type": "number"
+            },
+            {
+              "id": "chunk-modelo",
+              "name": "modelo",
+              "value": "={{ $json.jobs[$itemIndex].modelo }}",
+              "type": "string"
+            },
+            {
+              "id": "chunk-index",
+              "name": "chunk_index",
+              "value": "={{ $json.jobs[$itemIndex].chunk_index }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "63e66c17-bfef-4430-afa8-6e3ac70b463d",
+      "name": "Preparar Chunk",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2000, 100]
     },
     {
       "parameters": {
@@ -182,67 +236,11 @@
         },
         "options": {}
       },
-      "id": "prep-single",
+      "id": "47bd84a6-ecd3-44b5-a66c-a9bcab6129fc",
       "name": "Preparar TTS Único",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1780, 100]
-    },
-    {
-      "parameters": {
-        "fieldToSplitOut": "jobs",
-        "options": {}
-      },
-      "id": "split-chunks",
-      "name": "Split em Chunks",
-      "type": "n8n-nodes-base.itemLists",
-      "typeVersion": 3.4,
-      "position": [1780, 300],
-      "executeOnce": false
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "chunk-texto",
-              "name": "texto_tts",
-              "value": "={{ $json.jobs.texto }}",
-              "type": "string"
-            },
-            {
-              "id": "chunk-voice",
-              "name": "voice",
-              "value": "={{ $json.jobs.voice }}",
-              "type": "string"
-            },
-            {
-              "id": "chunk-speed",
-              "name": "speed",
-              "value": "={{ $json.jobs.speed }}",
-              "type": "number"
-            },
-            {
-              "id": "chunk-modelo",
-              "name": "modelo",
-              "value": "={{ $json.jobs.modelo }}",
-              "type": "string"
-            },
-            {
-              "id": "chunk-index",
-              "name": "chunk_index",
-              "value": "={{ $json.jobs.chunk_index }}",
-              "type": "number"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "prep-chunk",
-      "name": "Preparar Chunk",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [2000, 300]
+      "position": [1780, 300]
     },
     {
       "parameters": {
@@ -261,26 +259,26 @@
           }
         }
       },
-      "id": "openai-tts",
+      "id": "7a3a8e94-99a2-4e17-8d2d-255416f43066",
       "name": "OpenAI TTS (HTTP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [2220, 200],
-      "credentials": {
-        "openAiApi": {
-          "id": "OPENAI_CREDENTIAL_ID",
-          "name": "OpenAi pulso_control"
-        }
-      },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 2000
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "openAiApi": {
+          "id": "kIHPoJY4nCrV5601",
+          "name": "OpenAi account"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "// ==================================================\n// PREPARAR UPLOAD PARA SUPABASE STORAGE\n// ==================================================\n\nconst item = $input.item.json;\nconst binary = $input.item.binary;\n\nif (!binary || !binary.data) {\n  throw new Error('Áudio não foi gerado pela OpenAI');\n}\n\n// ========== DEFINIR NOME E PATH ==========\nconst roteiroId = item.roteiro_id || $('Limpar Markdown para TTS').item.json.roteiro_id;\nconst chunkIndex = item.chunk_index;\nconst isChunked = chunkIndex !== undefined;\n\n// Nome do arquivo\nconst filename = isChunked \n  ? `${roteiroId}_chunk${chunkIndex}.mp3`\n  : `${roteiroId}.mp3`;\n\n// Path no storage (organizado por roteiro)\nconst storagePath = `audios/${roteiroId}/${filename}`;\n\n// ========== METADATA DO ARQUIVO ==========\nconst metadata = {\n  roteiro_id: roteiroId,\n  content_type: 'audio/mpeg',\n  cache_control: 'public, max-age=31536000',\n  is_chunk: isChunked,\n  chunk_index: chunkIndex || 1,\n  generated_at: new Date().toISOString()\n};\n\n// ========== OUTPUT ==========\nreturn {\n  json: {\n    roteiro_id: roteiroId,\n    filename: filename,\n    storage_path: storagePath,\n    metadata: metadata,\n    is_chunk: isChunked,\n    chunk_index: chunkIndex || 1\n  },\n  binary: {\n    data: binary.data\n  }\n};"
+        "jsCode": "// ==================================================\n// PREPARAR UPLOAD PARA SUPABASE STORAGE\n// ==================================================\n\nconst item = $input.item.json;\nconst binary = $input.item.binary;\n\nif (!binary || !binary.data) {\n  throw new Error('Áudio não foi gerado pela OpenAI');\n}\n\n// ========== DEFINIR NOME E PATH ==========\nconst roteiroId = item.roteiro_id || $('Limpar Markdown para TTS').item.json.roteiro_id;\nconst chunkIndex = item.chunk_index;\nconst isChunked = chunkIndex !== undefined;\n\n// Nome do arquivo\nconst filename = isChunked \n  ? `${roteiroId}_chunk${chunkIndex}.mp3`\n  : `${roteiroId}.mp3`;\n\n// Path no storage (organizado por roteiro)\nconst storagePath = `audios/${filename}`;\n\n// ========== METADATA DO ARQUIVO ==========\nconst metadata = {\n  roteiro_id: roteiroId,\n  content_type: 'audio/mpeg',\n  cache_control: 'public, max-age=31536000',\n  is_chunk: isChunked,\n  chunk_index: chunkIndex || 1,\n  generated_at: new Date().toISOString()\n};\n\n// ========== OUTPUT ==========\nreturn {\n  json: {\n    roteiro_id: roteiroId,\n    filename: filename,\n    storage_path: storagePath,\n    metadata: metadata,\n    is_chunk: isChunked,\n    chunk_index: chunkIndex || 1\n  },\n  binary: {\n    data: binary.data\n  }\n};"
       },
-      "id": "prep-upload",
+      "id": "3db09abf-d3ae-4ede-a435-8ec0f628bae1",
       "name": "Preparar Upload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -295,7 +293,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $credentials.supabaseServiceKey }}"
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sY2lzYmZkaW9rbWlweWlodHV6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMTcwNDc1MCwiZXhwIjoyMDQ3MjgwNzUwfQ.j9o8hKU6KZVRXQkLgZ7gDYm6MMMgYmRJQ1u2OGnBkKo"
             },
             {
               "name": "Content-Type",
@@ -321,7 +319,7 @@
           }
         }
       },
-      "id": "upload-storage",
+      "id": "c6d8ce14-3c15-4e46-8406-f1efeab8c79a",
       "name": "Upload Supabase Storage (HTTP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -350,7 +348,7 @@
         },
         "options": {}
       },
-      "id": "check-merge",
+      "id": "6a781cbc-0881-4e01-8bc7-afc42ecd4c58",
       "name": "Precisa Merge?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -376,7 +374,7 @@
         },
         "options": {}
       },
-      "id": "log-merge",
+      "id": "6dcfabbb-1a08-41d1-99e3-4daf6dead396",
       "name": "Log - Requer Merge",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -386,7 +384,7 @@
       "parameters": {
         "jsCode": "// ==================================================\n// PREPARAR METADATA FINAL DO ÁUDIO\n// ==================================================\n\nconst roteiroData = $('Limpar Markdown para TTS').item.json;\nconst vozData = $('Selecionar Voz por Idioma').item.json;\nconst uploadData = $input.item.json;\n\n// ========== URL PÚBLICA DO STORAGE ==========\nconst projectId = 'nlcisbfdiokmipyihtuz';\nconst storagePath = uploadData.storage_path || uploadData.path;\nconst publicUrl = `https://${projectId}.supabase.co/storage/v1/object/public/${storagePath}`;\n\n// ========== CALCULAR DURAÇÃO REAL ==========\n// Aproximação: OpenAI TTS ~150 caracteres/segundo (velocidade 1.0)\nconst caracteresTotal = roteiroData.total_caracteres;\nconst velocidade = vozData.speed || 1.0;\nconst duracaoEstimadaSegundos = Math.ceil((caracteresTotal / 150) / velocidade);\n\n// ========== METADATA COMPLETA ==========\nconst metadata = {\n  // Geração\n  provedor: 'openai',\n  modelo: vozData.modelo,\n  voice: vozData.voice,\n  speed: vozData.speed,\n  \n  // Métricas\n  caracteres: caracteresTotal,\n  custo_usd: roteiroData.custo_estimado_usd,\n  duracao_estimada_segundos: duracaoEstimadaSegundos,\n  \n  // Chunks (se aplicável)\n  total_chunks: vozData.total_chunks || 1,\n  precisa_merge: vozData.precisa_merge || false,\n  \n  // Timestamps\n  gerado_em: new Date().toISOString(),\n  workflow_execution_id: $execution.id\n};\n\n// ========== OUTPUT ==========\nreturn {\n  json: {\n    // IDs\n    roteiro_id: roteiroData.roteiro_id,\n    ideia_id: roteiroData.ideia_id,\n    canal_id: roteiroData.canal_id,\n    serie_id: roteiroData.serie_id,\n    \n    // Storage\n    storage_path: storagePath,\n    public_url: publicUrl,\n    \n    // Audio data\n    duracao_segundos: duracaoEstimadaSegundos,\n    linguagem: roteiroData.linguagem,\n    formato: 'audio/mpeg',\n    tipo: 'AUDIO_TTS',\n    status: vozData.precisa_merge ? 'AGUARDANDO_MERGE' : 'OK',\n    \n    // Metadata\n    metadata: metadata,\n    \n    // Contexto\n    titulo: roteiroData.titulo,\n    canal_nome: roteiroData.canal_nome\n  }\n};"
       },
-      "id": "prep-metadata",
+      "id": "c2f7457c-b7f6-4bdf-841b-b184e4908217",
       "name": "Preparar Metadata Áudio",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -395,36 +393,36 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "-- Inserir registro do áudio gerado\nINSERT INTO pulso_content.audios (\n  ideia_id,\n  roteiro_id,\n  canal_id,\n  serie_id,\n  storage_path,\n  public_url,\n  duracao_segundos,\n  linguagem,\n  formato,\n  tipo,\n  status,\n  metadata\n) VALUES (\n  '{{ $json.ideia_id }}',\n  '{{ $json.roteiro_id }}',\n  '{{ $json.canal_id }}',\n  {{ $json.serie_id ? \"'\" + $json.serie_id + \"'\" : 'NULL' }},\n  '{{ $json.storage_path }}',\n  '{{ $json.public_url }}',\n  {{ $json.duracao_segundos }},\n  '{{ $json.linguagem }}',\n  '{{ $json.formato }}',\n  '{{ $json.tipo }}',\n  '{{ $json.status }}',\n  '{{ JSON.stringify($json.metadata) }}'::jsonb\n)\nRETURNING \n  id,\n  roteiro_id,\n  public_url,\n  duracao_segundos,\n  status,\n  created_at;",
+        "query": "-- Inserir registro do áudio gerado\nINSERT INTO pulso_content.audios (\n  ideia_id,\n  roteiro_id,\n  canal_id,\n  storage_path,\n  public_url,\n  duracao_segundos,\n  linguagem,\n  formato,\n  tipo,\n  status,\n  metadata\n) VALUES (\n  '{{ $json.ideia_id }}',\n  '{{ $json.roteiro_id }}',\n  '{{ $json.canal_id }}',\n  '{{ $json.storage_path }}',\n  '{{ $json.public_url }}',\n  {{ $json.duracao_segundos }},\n  '{{ $json.linguagem }}',\n  '{{ $json.formato }}',\n  '{{ $json.tipo }}',\n  '{{ $json.status }}',\n  '{{ JSON.stringify($json.metadata) }}'::jsonb\n)\nRETURNING \n  id,\n  roteiro_id,\n  public_url,\n  duracao_segundos,\n  status,\n  created_at;",
         "options": {}
       },
-      "id": "insert-audio",
+      "id": "975dfd78-5f29-42f5-a158-4aaa053cce2b",
       "name": "Inserir Áudio no DB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [3320, 300],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Postgres supabase"
+          "id": "ziXq3E6EiLFU31DX",
+          "name": "Postgres Supabase NOVO"
         }
       }
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "-- Registrar sucesso no log\nINSERT INTO pulso_content.logs_workflows (\n  workflow_name,\n  execution_id,\n  status,\n  ideia_id,\n  roteiro_id,\n  detalhes\n) VALUES (\n  'WF02_Gerar_Audio_TTS',\n  '{{ $workflow.id }}_{{ $execution.id }}',\n  'sucesso',\n  '{{ $json.ideia_id }}',\n  '{{ $json.roteiro_id }}',\n  jsonb_build_object(\n    'audio_id', '{{ $json.id }}',\n    'public_url', '{{ $json.public_url }}',\n    'duracao_segundos', {{ $json.duracao_segundos }},\n    'status', '{{ $json.status }}',\n    'timestamp', '{{ $json.created_at }}'\n  )\n);",
+        "query": "-- Registrar sucesso no log\nINSERT INTO pulso_content.logs_workflows (\n  workflow_name,\n  status,\n  detalhes\n) VALUES (\n  'WF02_Gerar_Audio_TTS',\n  'sucesso',\n  jsonb_build_object(\n    'execution_id', '{{ $workflow.id }}_{{ $execution.id }}',\n    'audio_id', '{{ $json.id }}',\n    'ideia_id', '{{ $json.ideia_id }}',\n    'roteiro_id', '{{ $json.roteiro_id }}',\n    'public_url', '{{ $json.public_url }}',\n    'duracao_segundos', {{ $json.duracao_segundos }},\n    'status_audio', '{{ $json.status }}',\n    'timestamp', '{{ $json.created_at }}'\n  )\n);",
         "options": {}
       },
-      "id": "log-sucesso",
+      "id": "d7680a12-d372-44db-bcec-983ff1f24cb9",
       "name": "Log Sucesso Individual",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [3540, 300],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Postgres supabase"
+          "id": "ziXq3E6EiLFU31DX",
+          "name": "Postgres Supabase NOVO"
         }
       }
     },
@@ -466,7 +464,7 @@
         },
         "options": {}
       },
-      "id": "prep-resultado",
+      "id": "88c61b7a-16a4-4ee6-9951-65b56f312e4b",
       "name": "Preparar Resultado",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -478,7 +476,7 @@
         "destinationFieldName": "audios_gerados",
         "options": {}
       },
-      "id": "agregar-resultados",
+      "id": "2b2f3af6-ae5e-48c4-a6d4-f0c715463f8f",
       "name": "Agregar Resultados",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
@@ -516,7 +514,7 @@
         },
         "options": {}
       },
-      "id": "resultado-final",
+      "id": "aff1726f-0292-4c25-9fbb-721726fbd36a",
       "name": "Resultado Final",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -550,17 +548,20 @@
     },
     "Precisa Split?": {
       "main": [
-        [{"node": "Split em Chunks", "type": "main", "index": 0}],
+        [{"node": "Loop Chunks", "type": "main", "index": 0}],
         [{"node": "Preparar TTS Único", "type": "main", "index": 0}]
       ]
     },
-    "Preparar TTS Único": {
-      "main": [[{"node": "OpenAI TTS (HTTP)", "type": "main", "index": 0}]]
-    },
-    "Split em Chunks": {
-      "main": [[{"node": "Preparar Chunk", "type": "main", "index": 0}]]
+    "Loop Chunks": {
+      "main": [
+        [{"node": "Preparar Chunk", "type": "main", "index": 0}],
+        [{"node": "Precisa Merge?", "type": "main", "index": 0}]
+      ]
     },
     "Preparar Chunk": {
+      "main": [[{"node": "OpenAI TTS (HTTP)", "type": "main", "index": 0}]]
+    },
+    "Preparar TTS Único": {
       "main": [[{"node": "OpenAI TTS (HTTP)", "type": "main", "index": 0}]]
     },
     "OpenAI TTS (HTTP)": {
@@ -570,7 +571,7 @@
       "main": [[{"node": "Upload Supabase Storage (HTTP)", "type": "main", "index": 0}]]
     },
     "Upload Supabase Storage (HTTP)": {
-      "main": [[{"node": "Precisa Merge?", "type": "main", "index": 0}]]
+      "main": [[{"node": "Loop Chunks", "type": "main", "index": 0}]]
     },
     "Precisa Merge?": {
       "main": [
@@ -597,23 +598,22 @@
       "main": [[{"node": "Resultado Final", "type": "main", "index": 0}]]
     }
   },
+  "pinData": {},
+  "active": false,
   "settings": {
     "executionOrder": "v1",
     "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner",
-    "errorWorkflow": ""
+    "callerPolicy": "workflowsFromSameOwner"
   },
-  "staticData": null,
-  "tags": [
-    {"id": "1", "name": "PULSO"},
-    {"id": "2", "name": "Automação"},
-    {"id": "3", "name": "Audio"}
-  ],
-  "pinData": {},
+  "versionId": "1.0.0",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "nlcisbfdiokmipyihtuz"
+    "instanceId": "1c07f1eb90393b2121c4e2d78af1ae5997f57da70bbfa23f5e98d20637e2a2f6"
   },
-  "id": "WF02",
-  "versionId": "2.0.0"
+  "id": "WF02_FINAL",
+  "tags": [
+    {"id": "MFytbRYpluf20w5V", "name": "PULSO"},
+    {"id": "1oYaJvQyf1LhoYQ3", "name": "Automação"},
+    {"id": "voZKlFfz1Fmjxnht", "name": "Audio"}
+  ]
 }

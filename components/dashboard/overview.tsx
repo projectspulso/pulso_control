@@ -57,9 +57,9 @@ export function DashboardOverview() {
           iconBorder: 'border-blue-500/20'
         },
         {
-          label: 'Roteiros',
+          label: 'Total de Roteiros',
           value: roteirosStats?.total || 0,
-          detail: `${roteirosStats?.por_status?.APROVADO || 0} aprovados, ${roteirosStats?.por_status?.EM_REVISAO || 0} em revisão`,
+          detail: `${roteirosStats?.por_status?.APROVADO || 0} aprovados, ${roteirosStats?.por_status?.RASCUNHO || 0} rascunhos, ${roteirosStats?.por_status?.EM_REVISAO || 0} em revisão`,
           icon: CheckCircle2,
           gradient: 'from-purple-500 to-pink-500',
           bgGlow: 'bg-purple-500/20',

@@ -7,6 +7,7 @@ import { WorkflowsLog } from "@/components/dashboard/workflows-log";
 import { RealtimeUpdates } from "@/components/realtime-updates";
 import { useCanais } from "@/lib/hooks/use-core";
 import { useIdeias } from "@/lib/hooks/use-ideias";
+import { useRoteiros } from "@/lib/hooks/use-roteiros";
 import { ErrorState } from "@/components/ui/error-state";
 import { Megaphone, TrendingUp, Zap, Sparkles, ArrowUpRight, Activity } from "lucide-react";
 import Link from "next/link";
@@ -15,6 +16,7 @@ import { useState, useEffect } from "react";
 export default function Home() {
   const { data: canais, isError: isCanaisError, refetch: refetchCanais } = useCanais()
   const { data: ideias, isError: isIdeiasError, refetch: refetchIdeias } = useIdeias()
+  const { data: roteiros, isError: isRoteirosError, refetch: refetchRoteiros } = useRoteiros()
   const [currentTime, setCurrentTime] = useState('')
   const [mounted, setMounted] = useState(false)
 
@@ -33,7 +35,7 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
-  if (isCanaisError || isIdeiasError) {
+  if (isCanaisError || isIdeiasError || isRoteirosError) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
         <div className="max-w-7xl mx-auto">
@@ -43,6 +45,7 @@ export default function Home() {
             onRetry={() => {
               refetchCanais()
               refetchIdeias()
+              refetchRoteiros()
             }}
           />
         </div>
@@ -152,9 +155,9 @@ export default function Home() {
               </div>
               
               <div>
-                <p className="text-sm text-zinc-500 font-medium mb-1">Roteiros</p>
+                <p className="text-sm text-zinc-500 font-medium mb-1">Roteiros Total</p>
                 <p className="text-4xl font-black text-white group-hover:text-green-400 transition-colors duration-300 tabular-nums">
-                  {ideias?.filter((i: any) => i.status === 'EM_PRODUCAO').length || 0}
+                  {roteiros?.length || 0}
                 </p>
               </div>
             </div>
@@ -168,13 +171,10 @@ export default function Home() {
                 <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
                   <TrendingUp className="h-6 w-6 text-yellow-400" />
                 </div>
-                <div className="px-2 py-1 rounded-full bg-green-500/10 border border-green-500/20">
-                  <span className="text-xs font-bold text-green-400">+12%</span>
-                </div>
               </div>
               
               <div>
-                <p className="text-sm text-zinc-500 font-medium mb-1">Aprovadas</p>
+                <p className="text-sm text-zinc-500 font-medium mb-1">Ideias Aprovadas</p>
                 <p className="text-4xl font-black text-white tabular-nums">
                   {ideias?.filter((i: any) => i.status === 'APROVADA').length || 0}
                 </p>
