@@ -99,7 +99,7 @@ export function useAssetsPorTipo(tipo?: string) {
     queryKey: ['assets', tipo],
     queryFn: async () => {
       let query = supabase
-        .from('assets')
+        .from('assets') // Schema public é o padrão
         .select('*')
         .order('created_at', { ascending: false })
       
