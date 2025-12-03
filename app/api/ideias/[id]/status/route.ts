@@ -48,7 +48,7 @@ export async function PATCH(
     // Atualizar status via view public.ideias (mesma que o frontend usa)
     const { data: ideia, error: updateError } = await supabase
       .from('ideias')
-      .update({ status })
+      .update({ status } as never)
       .eq('id', id)
       .select()
       .single()
