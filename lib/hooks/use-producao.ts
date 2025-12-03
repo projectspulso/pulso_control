@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tantml:parameter>
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as producaoAPI from '@/lib/api/producao'
 
 // Estados do pipeline de produção
