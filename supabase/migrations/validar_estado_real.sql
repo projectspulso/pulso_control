@@ -17,7 +17,8 @@ SELECT '1. IDEIAS' as secao,
 FROM pulso_content.ideias
 GROUP BY status
 ORDER BY COUNT(*) DESC;
--- Esperado: 
+| secao | status | total | descricao | | --------- | -------- | ----- | ---------------------------- |
+| 1.IDEIAS | APROVADA | 119 | Ideias aprovadas manualmente | | 1.IDEIAS | RASCUNHO | 10 | Ideias em rascunho | -- Esperado: 
 -- APROVADA: 119
 -- RASCUNHO: 10
 -- Total: 129
@@ -34,7 +35,8 @@ SELECT '2. ROTEIROS' as secao,
 FROM pulso_content.roteiros
 GROUP BY status
 ORDER BY COUNT(*) DESC;
--- Esperado CORRETO:
+| secao | status | total | descricao | | ----------- | -------- | ----- | ---------------------------------------------- |
+| 2.ROTEIROS | RASCUNHO | 119 | Todos devem estar aqui (nenhum aprovado ainda) | -- Esperado CORRETO:
 -- RASCUNHO: 119
 -- Total: 119
 -- 3. AUDIOS - Estado Esperado
@@ -45,7 +47,8 @@ SELECT '3. AUDIOS' as secao,
         ELSE 'VERIFICAR - Há áudios no banco'
     END as status
 FROM pulso_content.audios;
--- Esperado:
+| secao | total | status | | --------- | ----- | ----------------------------------- |
+| 3.AUDIOS | 0 | CORRETO - Nenhum áudio gerado ainda | -- Esperado:
 -- Total: 0
 -- 4. PIPELINE - Estado Esperado
 SELECT '4. PIPELINE' as secao,
@@ -61,7 +64,8 @@ SELECT '4. PIPELINE' as secao,
 FROM pulso_content.pipeline_producao
 GROUP BY status
 ORDER BY COUNT(*) DESC;
--- Esperado (APÓS LIMPEZA):
+| secao | status | total | descricao | | ----------- | ------------------ | ----- | ---------------------------- |
+| 4.PIPELINE | ROTEIRO_PRONTO | 57 | Tem roteiro mas não aprovado | | 4.PIPELINE | AGUARDANDO_ROTEIRO | 25 | Ideias sem roteiro | -- Esperado (APÓS LIMPEZA):
 -- AGUARDANDO_ROTEIRO: 25
 -- ROTEIRO_PRONTO: 57
 -- Total: 82
@@ -75,7 +79,8 @@ SELECT '5. CONSISTENCIA' as secao,
     END as resultado
 FROM pulso_content.pipeline_producao
 WHERE audio_id IS NOT NULL;
--- 6. RESUMO FINAL
+| secao | verificacao | total | resultado | | --------------- | ----------------------------------------- | ----- | ------------------------------- |
+| 5.CONSISTENCIA | Itens no pipeline com audio_id preenchido | 0 | OK - Nenhum tem áudio (correto) | -- 6. RESUMO FINAL
 SELECT '6. RESUMO FINAL' as secao,
     (
         SELECT COUNT(*)
@@ -105,7 +110,8 @@ SELECT '6. RESUMO FINAL' as secao,
         SELECT COUNT(*)
         FROM pulso_content.pipeline_producao
     ) as total_pipeline;
--- ESTADO REAL ESPERADO:
+| secao | ideias_aprovadas | ideias_rascunho | roteiros_rascunho | roteiros_aprovados_deve_ser_zero | audios_deve_ser_zero | total_pipeline | | --------------- | ---------------- | --------------- | ----------------- | -------------------------------- | -------------------- | -------------- |
+| 6.RESUMO FINAL | 119 | 10 | 119 | 0 | 0 | 82 | -- ESTADO REAL ESPERADO:
 -- ideias_aprovadas: 119
 -- ideias_rascunho: 10
 -- roteiros_rascunho: 119
@@ -131,3 +137,6 @@ SELECT '7. VALIDACAO CRITICA' as titulo,
         ) = 0 THEN 'SUCESSO - Banco sem dados mock, apenas dados reais'
         ELSE 'FALHA - Ainda há dados mock ou inconsistências'
     END as resultado;
+| titulo | resultado | | -------------------- | -------------------------------------------------- |
+| 7.VALIDACAO CRITICA | SUCESSO - Banco sem dados mock,
+apenas dados reais |
