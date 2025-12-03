@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import { useRoteiro, useAtualizarRoteiro, useDeletarRoteiro } from '@/lib/hooks/use-roteiros'
 import { useCanais } from '@/lib/hooks/use-core'
 import { ErrorState } from '@/components/ui/error-state'
-import { ApproveRoteiroButton } from '@/components/ui/approve-buttons'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
@@ -249,7 +249,7 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
             {/* Roteiro Completo */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
               <h2 className="text-lg font-semibold text-white mb-4">
-                {editando ? '✏️ Editando Roteiro' : '📄 Roteiro Completo (Markdown)'}
+                {editando ? '✏️ Editando Roteiro' : '📄 Roteiro Completo'}
               </h2>
               
               {editando ? (
@@ -261,8 +261,26 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
                   placeholder="Conteúdo do roteiro em Markdown..."
                 />
               ) : (
-                <div className="prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown>
+                <div className="prose prose-invert prose-sm max-w-none
+                  prose-headings:text-white prose-headings:font-semibold
+                  prose-h1:text-2xl prose-h1:mb-4 prose-h1:border-b prose-h1:border-zinc-700 prose-h1:pb-2
+                  prose-h2:text-xl prose-h2:mb-3 prose-h2:mt-6
+                  prose-h3:text-lg prose-h3:mb-2 prose-h3:mt-4
+                  prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:mb-4
+                  prose-strong:text-white prose-strong:font-semibold
+                  prose-em:text-zinc-300 prose-em:italic
+                  prose-ul:list-disc prose-ul:ml-6 prose-ul:text-zinc-300
+                  prose-ol:list-decimal prose-ol:ml-6 prose-ol:text-zinc-300
+                  prose-li:mb-1
+                  prose-blockquote:border-l-4 prose-blockquote:border-violet-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-zinc-400
+                  prose-code:text-violet-400 prose-code:bg-zinc-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
+                  prose-pre:bg-zinc-800 prose-pre:border prose-pre:border-zinc-700 prose-pre:rounded-lg prose-pre:p-4
+                  prose-a:text-violet-400 prose-a:no-underline hover:prose-a:text-violet-300 hover:prose-a:underline
+                  prose-hr:border-zinc-700 prose-hr:my-6
+                  prose-table:border prose-table:border-zinc-700
+                  prose-th:border prose-th:border-zinc-700 prose-th:bg-zinc-800 prose-th:p-2
+                  prose-td:border prose-td:border-zinc-700 prose-td:p-2">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {roteiro.conteudo_md || '*Sem conteúdo*'}
                   </ReactMarkdown>
                 </div>
@@ -296,34 +314,71 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
                 </div>
               </div>
             ) : (
-              <>
-                {roteiro.status !== 'APROVADO' && roteiro.status !== 'EM_PRODUCAO' && (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-                    <h3 className="text-sm font-medium text-zinc-400 mb-4">Aprovação</h3>
-                    <div className="space-y-2">
-                      <ApproveRoteiroButton
-                        roteiroId={roteiro.id}
-                        onSuccess={() => refetch()}
-                      />
-                      <button
-                        onClick={handleRejeitar}
-                        className="w-full bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-sm transition-colors"
-                      >
-                        ✗ Rejeitar Roteiro
-                      </button>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+                <h3 className="text-sm font-medium text-zinc-400 mb-4">Aprovação</h3>
+                
+                {roteiro.status === 'APROVADO' ? (
+                  <div className="space-y-3">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">✅</span>
+                        <div>
+                          <div className="text-green-400 font-medium text-sm mb-1">Roteiro Aprovado</div>
+                          <p className="text-xs text-zinc-400">
+                            O workflow WF02 gerará automaticamente o áudio TTS deste roteiro a cada 10 minutos.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleRejeitar}
+                      className="w-full bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-sm transition-colors"
+                    >
+                      ✗ Reverter Aprovação
+                    </button>
+                  </div>
+                ) : roteiro.status === 'REJEITADO' ? (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">❌</span>
+                      <div>
+                        <div className="text-red-400 font-medium text-sm mb-1">Roteiro Rejeitado</div>
+                        {roteiro.metadata?.motivo_rejeicao && (
+                          <p className="text-xs text-zinc-400 mt-1">
+                            Motivo: {roteiro.metadata.motivo_rejeicao}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
-
-                {roteiro.status === 'APROVADO' && (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-                    <h3 className="text-sm font-medium text-zinc-400 mb-2">✅ Aprovado</h3>
-                    <p className="text-xs text-zinc-500">
-                      O workflow WF02 gerará automaticamente o áudio TTS deste roteiro.
-                    </p>
+                ) : (
+                  <div className="space-y-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await atualizarRoteiro.mutateAsync({
+                            id: resolvedParams.id,
+                            updates: { status: 'APROVADO' } as any
+                          })
+                          refetch()
+                        } catch (error) {
+                          console.error('Erro ao aprovar roteiro:', error)
+                        }
+                      }}
+                      disabled={atualizarRoteiro.isPending}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50 font-medium"
+                    >
+                      {atualizarRoteiro.isPending ? '⏳ Aprovando...' : '✓ Aprovar Roteiro'}
+                    </button>
+                    <button
+                      onClick={handleRejeitar}
+                      className="w-full bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-sm transition-colors"
+                    >
+                      ✗ Rejeitar Roteiro
+                    </button>
                   </div>
                 )}
-              </>
+              </div>
             )}
 
             {/* Metadados */}
