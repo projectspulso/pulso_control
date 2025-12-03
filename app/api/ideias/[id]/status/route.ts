@@ -46,7 +46,6 @@ export async function PATCH(
     console.log('🔧 Atualizando status via view public.ideias')
     
     // Atualizar status via view public.ideias (mesma que o frontend usa)
-    // @ts-expect-error - View permite update mas TypeScript não reconhece a tipagem
     const { data: ideia, error: updateError } = await supabase
       .from('ideias')
       .update({ status })
