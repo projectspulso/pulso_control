@@ -46,6 +46,7 @@ export async function PATCH(
     console.log('🔧 Atualizando status via view public.ideias')
     
     // Atualizar status via view public.ideias (mesma que o frontend usa)
+    // @ts-ignore - View permite update mas TypeScript não reconhece
     const { data: ideia, error: updateError } = await supabase
       .from('ideias')
       .update({ status })
