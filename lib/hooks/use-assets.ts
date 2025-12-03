@@ -106,7 +106,7 @@ export function useAssetsPorTipo(tipo?: string) {
           .from('audios')
           .select(`
             id,
-            storage_path as caminho_storage,
+            storage_path,
             duracao_segundos,
             linguagem,
             tipo,
@@ -127,7 +127,7 @@ export function useAssetsPorTipo(tipo?: string) {
           tipo: 'audio' as const,
           nome: audio.roteiros?.[0]?.titulo || `Audio ${audio.id.slice(0, 8)}`,
           descricao: `Status: ${audio.status}`,
-          caminho_storage: audio.caminho_storage,
+          caminho_storage: audio.storage_path,
           provedor: audio.metadata?.provedor || 'openai',
           duracao_segundos: audio.duracao_segundos,
           tamanho_bytes: undefined,

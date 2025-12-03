@@ -186,28 +186,22 @@ export default function AssetsPage() {
         {/* Stats */}
         {assets && assets.length > 0 && (
           <div className="glass rounded-2xl p-6 animate-fade-in" style={{ animationDelay: '300ms' }}>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-center">
               <div>
                 <p className="text-2xl font-bold text-white">{assets.length}</p>
-                <p className="text-sm text-zinc-400">Total de Assets</p>
+                <p className="text-sm text-zinc-400">Total de Áudios</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-white">
-                  {formatarTamanho(assets.reduce((sum, a) => sum + (a.tamanho_bytes || 0), 0))}
+                  {Math.round(assets.reduce((sum, a) => sum + (a.duracao_segundos || 0), 0))}s
                 </p>
-                <p className="text-sm text-zinc-400">Tamanho Total</p>
+                <p className="text-sm text-zinc-400">Duração Total</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-white">
-                  {assets.filter(a => a.tipo === 'video' || a.tipo === 'broll').length}
+                  {new Set(assets.map(a => a.metadata?.voice || 'alloy')).size}
                 </p>
-                <p className="text-sm text-zinc-400">Vídeos</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-white">
-                  {assets.filter(a => a.tipo === 'audio').length}
-                </p>
-                <p className="text-sm text-zinc-400">Áudios</p>
+                <p className="text-sm text-zinc-400">Vozes Diferentes</p>
               </div>
             </div>
           </div>
