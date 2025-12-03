@@ -9,6 +9,7 @@ O sistema PULSO funciona de forma **100% automatizada via n8n workflows**. Não 
 ## 🔄 Pipeline Completo
 
 ### 1️⃣ **Criação de Ideia** (Manual no App)
+
 - **Onde:** `/ideias` → Botão "Nova Ideia"
 - **Quem:** Usuário no dashboard
 - **O que:** Preencher formulário com:
@@ -24,6 +25,7 @@ O sistema PULSO funciona de forma **100% automatizada via n8n workflows**. Não 
 ---
 
 ### 2️⃣ **Aprovação de Ideia** (Manual no App)
+
 - **Onde:** `/ideias/[id]` → Botão "Aprovar Ideia"
 - **O que acontece:**
   - Status: `RASCUNHO` → `APROVADA`
@@ -34,6 +36,7 @@ O sistema PULSO funciona de forma **100% automatizada via n8n workflows**. Não 
 ---
 
 ### 3️⃣ **WF01 - Gerar Roteiro** (Automático - Webhook)
+
 - **Trigger:** Webhook `POST /webhook/wf01-gerar-roteiro`
 - **Parâmetros:** `ideia_id`
 - **Processo:**
@@ -54,6 +57,7 @@ O sistema PULSO funciona de forma **100% automatizada via n8n workflows**. Não 
 ---
 
 ### 4️⃣ **Aprovação de Roteiro** (Manual no App)
+
 - **Onde:** `/roteiros/[id]` → Botão "Aprovar"
 - **O que acontece:**
   - Status: `RASCUNHO` → `APROVADO`
@@ -64,6 +68,7 @@ O sistema PULSO funciona de forma **100% automatizada via n8n workflows**. Não 
 ---
 
 ### 5️⃣ **WF02 - Gerar Áudio TTS** (Automático - CRON 10min)
+
 - **Trigger:** Schedule (a cada 10 minutos)
 - **Query de Busca:**
   ```sql
@@ -74,27 +79,32 @@ O sistema PULSO funciona de forma **100% automatizada via n8n workflows**. Não 
   LIMIT 5
   ```
 - **Processo:**
+
   1. **Preparação:**
+
      - Limpa markdown (remove headers, bold, links, etc.)
      - Identifica idioma/voz (`pt-BR` → `alloy`, `en-US` → `nova`)
      - Chunking se > 4000 caracteres
-  
+
   2. **Geração (Loop em Chunks):**
+
      - OpenAI TTS-1-HD API
      - Modelo: `tts-1-hd`
      - Voice: configurável por idioma
      - Speed: 1.0
      - Format: MP3
-  
+
   3. **Storage:**
+
      - Upload para Supabase Storage: `audios/{roteiro_id}.mp3`
      - Gera URL pública
-  
+
   4. **Banco de Dados:**
+
      - INSERT em `pulso_content.audios`
      - UPDATE pipeline: `ROTEIRO_PRONTO` → `AUDIO_PRONTO`
      - UPDATE `pipeline.audio_id`
-  
+
   5. **Metadata salva:**
      ```json
      {
@@ -119,13 +129,14 @@ O sistema PULSO funciona de forma **100% automatizada via n8n workflows**. Não 
 ---
 
 ### 6️⃣ **Visualização de Assets** (Manual no App)
+
 - **Onde:** `/assets`
 - **O que mostra:**
   - Grid de todos os assets (áudios, vídeos, imagens)
   - Filtros por tipo
   - Estatísticas
 - **Dados de:** Views `public.assets` e `vw_pulso_pipeline_com_assets`
-- **Ações:** 
+- **Ações:**
   - ✅ Visualizar
   - ✅ Ouvir/Download
   - ❌ Upload (desabilitado - assets vêm do n8n)
@@ -136,6 +147,7 @@ O sistema PULSO funciona de forma **100% automatizada via n8n workflows**. Não 
 ## 📁 Estrutura de Dados
 
 ### Tabela: `pulso_content.audios`
+
 ```sql
 id                UUID PRIMARY KEY
 roteiro_id        UUID → pulso_content.roteiros
@@ -154,6 +166,7 @@ updated_at        TIMESTAMPTZ
 ```
 
 ### Tabela: `pulso_content.pipeline_producao`
+
 ```sql
 id                  UUID PRIMARY KEY
 ideia_id            UUID → pulso_content.ideias
@@ -169,6 +182,7 @@ updated_at          TIMESTAMPTZ
 ```
 
 ### View: `public.assets`
+
 ```sql
 -- Aponta para pulso_assets.assets
 -- Mostra todos os assets do sistema
@@ -181,6 +195,7 @@ FROM pulso_assets.assets
 ## 🎛️ Configuração de Workflows (n8n)
 
 ### WF01 - Gerar Roteiro
+
 - **Tipo:** Webhook (manual trigger)
 - **URL:** `POST {N8N_URL}/webhook/wf01-gerar-roteiro`
 - **Payload:** `{ "ideia_id": "uuid" }`
@@ -189,6 +204,7 @@ FROM pulso_assets.assets
   - OpenAI GPT-4
 
 ### WF02 - Gerar Áudio
+
 - **Tipo:** Schedule (CRON)
 - **Frequência:** A cada 10 minutos
 - **Query:** Busca roteiros APROVADO sem áudio
@@ -198,6 +214,7 @@ FROM pulso_assets.assets
   - OpenAI TTS
 
 ### WF03 - Preparar Vídeo (Futuro)
+
 - **Tipo:** CRON
 - **Trigger:** Detecta áudios OK sem vídeo
 - **Processo:** Gera storyboard e metadados para montagem
@@ -207,13 +224,15 @@ FROM pulso_assets.assets
 ## 🔍 Monitoramento
 
 ### Dashboard Principal (`/`)
+
 - Total de ideias, roteiros, áudios
 - Status de workflows
 - Erros recentes
 
 ### Logs de Workflows (`pulso_content.logs_workflows`)
+
 ```sql
-SELECT 
+SELECT
   workflow_id,
   status,
   duracao_ms,
@@ -224,6 +243,7 @@ ORDER BY started_at DESC
 ```
 
 ### Health Check
+
 - WF01: Ideias aprovadas sem roteiro > 10 → ALERTA
 - WF02: Roteiros aprovados sem áudio > 5 → ALERTA
 - Storage: Uso > 80% → ALERTA
@@ -233,12 +253,14 @@ ORDER BY started_at DESC
 ## 🚨 Troubleshooting
 
 ### Roteiro não foi gerado após aprovar ideia
+
 1. Verificar se webhook WF01 está ativo
 2. Checar logs em `logs_workflows` para erros
 3. Verificar credenciais OpenAI
 4. Re-executar manualmente: `POST /webhook/wf01-gerar-roteiro`
 
 ### Áudio não foi gerado após aprovar roteiro
+
 1. WF02 roda a cada 10min - aguardar
 2. Verificar status do roteiro: deve ser `APROVADO`
 3. Verificar se já existe áudio: `SELECT * FROM audios WHERE roteiro_id = 'uuid'`
@@ -247,6 +269,7 @@ ORDER BY started_at DESC
 6. Verificar quota da API OpenAI
 
 ### Áudio com status AGUARDANDO_MERGE
+
 - Roteiro muito longo, foi dividido em chunks
 - WF02.1 (Merge Audio) ainda não implementado
 - Solução temporária: Aceitar chunks individuais ou regenerar roteiro mais curto
@@ -271,6 +294,7 @@ ORDER BY started_at DESC
 ## 🎯 Status Atual do Sistema
 
 ### ✅ Funcionalidades Implementadas
+
 - CRUD completo de ideias
 - Aprovação de ideias
 - WF01 - Geração de roteiros via GPT-4
@@ -283,6 +307,7 @@ ORDER BY started_at DESC
 - Pipeline de produção kanban
 
 ### ⏳ Próximas Implementações
+
 - WF02.1 - Merge de chunks de áudio
 - WF03 - Geração de vídeos
 - WF04 - Publicação automática
@@ -293,12 +318,14 @@ ORDER BY started_at DESC
 ### 🔧 Configurações Necessárias
 
 #### Supabase Storage
+
 ```bash
 # Bucket: audios (public)
 gsutil cors set cors.json gs://pulso-audios
 ```
 
 #### n8n Environment Variables
+
 ```env
 DATABASE_URL=postgresql://...
 SUPABASE_URL=https://nlcisbfdiokmipyihtuz.supabase.co

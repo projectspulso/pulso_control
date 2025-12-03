@@ -58,7 +58,7 @@ export interface AssetComVariante {
   asset_updated_at?: string
 }
 
-// Interface para asset simples (tabela assets)
+// Interface para asset simples (estendida com public_url)
 export interface Asset {
   id: string
   tipo: 'audio' | 'video' | 'imagem' | 'thumbnail' | 'broll'
@@ -75,6 +75,7 @@ export interface Asset {
   criado_por?: string
   created_at: string
   updated_at: string
+  public_url?: string // URL pública do Supabase Storage
 }
 
 // Hook para buscar pipeline com assets
@@ -93,24 +94,56 @@ export function usePipelineComAssets() {
   })
 }
 
-// Hook para buscar assets por tipo
+// Hook para buscar assets por tipo (CORRIGIDO - usa audios reais)
 export function useAssetsPorTipo(tipo?: string) {
   return useQuery({
     queryKey: ['assets', tipo],
     queryFn: async () => {
-      let query = supabase
-        .from('assets') // Schema public é o padrão
-        .select('*')
-        .order('created_at', { ascending: false })
-      
-      if (tipo) {
-        query = query.eq('tipo', tipo)
+      // Por enquanto, só temos áudios - buscar da tabela audios
+      if (!tipo || tipo === 'audio') {
+        const { data, error } = await supabase
+          .schema('pulso_content')
+          .from('audios')
+          .select(`
+            id,
+            storage_path as caminho_storage,
+            duracao_segundos,
+            linguagem,
+            tipo,
+            status,
+            metadata,
+            created_at,
+            updated_at,
+            public_url,
+            roteiros(titulo)
+          `)
+          .order('created_at', { ascending: false })
+        
+        if (error) throw error
+        
+        // Mapear para formato Asset
+        return (data || []).map(audio => ({
+          id: audio.id,
+          tipo: 'audio' as const,
+          nome: audio.roteiros?.[0]?.titulo || `Audio ${audio.id.slice(0, 8)}`,
+          descricao: `Status: ${audio.status}`,
+          caminho_storage: audio.caminho_storage,
+          provedor: audio.metadata?.provedor || 'openai',
+          duracao_segundos: audio.duracao_segundos,
+          tamanho_bytes: undefined,
+          largura_px: undefined,
+          altura_px: undefined,
+          hash_arquivo: undefined,
+          metadata: audio.metadata,
+          criado_por: undefined,
+          created_at: audio.created_at,
+          updated_at: audio.updated_at,
+          public_url: audio.public_url
+        }))
       }
       
-      const { data, error } = await query
-      
-      if (error) throw error
-      return data as Asset[]
+      // Para outros tipos (vídeo, imagem, etc), retornar vazio por enquanto
+      return []
     },
   })
 }

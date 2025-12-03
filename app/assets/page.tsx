@@ -128,9 +128,9 @@ export default function AssetsPage() {
                     <h3 className="text-white font-medium line-clamp-1 flex-1">
                       {asset.nome}
                     </h3>
-                    {asset.caminho_storage && (
+                    {(asset.public_url || asset.caminho_storage) && (
                       <a
-                        href={`https://nlcisbfdiokmipyihtuz.supabase.co/storage/v1/object/public/${asset.caminho_storage}`}
+                        href={asset.public_url || `https://nlcisbfdiokmipyihtuz.supabase.co/storage/v1/object/public/${asset.caminho_storage}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="opacity-0 group-hover:opacity-100 text-blue-400 hover:text-blue-300 transition-opacity"
