@@ -4,6 +4,7 @@ import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRoteiro, useAtualizarRoteiro, useDeletarRoteiro } from '@/lib/hooks/use-roteiros'
 import { useCanais } from '@/lib/hooks/use-core'
+import { useAudioDoRoteiro } from '@/lib/hooks/use-assets'
 import { ErrorState } from '@/components/ui/error-state'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
@@ -14,6 +15,7 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
   const router = useRouter()
   const { data: roteiro, isLoading, isError, refetch } = useRoteiro(resolvedParams.id)
   const { data: canais } = useCanais()
+  const { data: audio } = useAudioDoRoteiro(resolvedParams.id)
   
   const atualizarRoteiro = useAtualizarRoteiro()
   const deletarRoteiro = useDeletarRoteiro()
@@ -170,6 +172,58 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
                   </Link>
                 )}
               </div>
+
+              {/* Status de Áudio */}
+              {audio ? (
+                <div className="mt-4 glass rounded-xl p-4 border border-green-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <span className="text-xl">🎵</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-green-400">Áudio Gerado</p>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          audio.status === 'OK' 
+                            ? 'bg-green-500/20 text-green-400' 
+                            : audio.status === 'AGUARDANDO_MERGE'
+                            ? 'bg-yellow-500/20 text-yellow-400'
+                            : 'bg-zinc-700 text-zinc-400'
+                        }`}>
+                          {audio.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        {audio.duracao_segundos}s • {audio.linguagem}
+                      </p>
+                    </div>
+                    {audio.public_url && (
+                      <a
+                        href={audio.public_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="glass glass-hover rounded-lg px-4 py-2 text-sm text-blue-400 hover:text-blue-300 transition-all"
+                      >
+                        🎧 Ouvir
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ) : roteiro.status === 'APROVADO' ? (
+                <div className="mt-4 glass rounded-xl p-4 border border-yellow-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                      <span className="text-xl">⏳</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-yellow-400">Aguardando Geração de Áudio</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        WF02 verificará a cada 10 minutos
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="flex gap-2">

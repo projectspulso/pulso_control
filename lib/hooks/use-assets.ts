@@ -133,98 +133,65 @@ export function useAssetsDeVariante(varianteId: string) {
   })
 }
 
-// Hook para criar novo asset
-export function useCriarAsset() {
-  const queryClient = useQueryClient()
-  
-  return useMutation({
-    mutationFn: async (novoAsset: Partial<Asset>) => {
+// ============================================
+// NOTA: Assets são gerenciados via n8n workflows
+// Os hooks abaixo são READ-ONLY para visualização
+// ============================================
+
+// Hook para buscar audios gerados (tabela pulso_content.audios)
+export function useAudiosGerados() {
+  return useQuery({
+    queryKey: ['audios-gerados'],
+    queryFn: async () => {
       const { data, error } = await supabase
-        .from('assets')
-        .insert(novoAsset)
-        .select()
-        .single()
+        .schema('pulso_content')
+        .from('audios')
+        .select(`
+          id,
+          roteiro_id,
+          canal_id,
+          storage_path,
+          public_url,
+          duracao_segundos,
+          linguagem,
+          formato,
+          tipo,
+          status,
+          metadata,
+          created_at,
+          roteiros(
+            titulo,
+            ideia_id,
+            ideias(
+              titulo
+            )
+          )
+        `)
+        .order('created_at', { ascending: false })
       
       if (error) throw error
       return data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assets'] })
-      queryClient.invalidateQueries({ queryKey: ['pipeline-com-assets'] })
-    },
   })
 }
 
-// Hook para vincular asset a variante
-export function useVincularAssetVariante() {
-  const queryClient = useQueryClient()
-  
-  return useMutation({
-    mutationFn: async (vinculo: { 
-      conteudo_variantes_id: string
-      asset_id: string
-      papel?: string
-      ordem?: number
-    }) => {
+// Hook para buscar áudio específico de um roteiro
+export function useAudioDoRoteiro(roteiroId?: string) {
+  return useQuery({
+    queryKey: ['audio-roteiro', roteiroId],
+    queryFn: async () => {
+      if (!roteiroId) return null
+      
       const { data, error } = await supabase
-        .from('conteudo_variantes_assets')
-        .insert(vinculo)
-        .select()
+        .schema('pulso_content')
+        .from('audios')
+        .select('*')
+        .eq('roteiro_id', roteiroId)
         .single()
       
-      if (error) throw error
+      if (error && error.code !== 'PGRST116') throw error // PGRST116 = not found
       return data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline-com-assets'] })
-      queryClient.invalidateQueries({ queryKey: ['assets-variante'] })
-    },
-  })
-}
-
-// Hook para remover vinculo asset-variante
-export function useRemoverAssetVariante() {
-  const queryClient = useQueryClient()
-  
-  return useMutation({
-    mutationFn: async ({ 
-      varianteId, 
-      assetId 
-    }: { 
-      varianteId: string
-      assetId: string 
-    }) => {
-      const { error } = await supabase
-        .from('conteudo_variantes_assets')
-        .delete()
-        .eq('conteudo_variantes_id', varianteId)
-        .eq('asset_id', assetId)
-      
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline-com-assets'] })
-      queryClient.invalidateQueries({ queryKey: ['assets-variante'] })
-    },
-  })
-}
-
-// Hook para deletar asset
-export function useDeletarAsset() {
-  const queryClient = useQueryClient()
-  
-  return useMutation({
-    mutationFn: async (assetId: string) => {
-      const { error } = await supabase
-        .from('assets')
-        .delete()
-        .eq('id', assetId)
-      
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assets'] })
-      queryClient.invalidateQueries({ queryKey: ['pipeline-com-assets'] })
-    },
+    enabled: !!roteiroId,
   })
 }

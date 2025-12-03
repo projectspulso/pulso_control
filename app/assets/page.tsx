@@ -1,14 +1,14 @@
 'use client'
 
-import { useAssetsPorTipo, useCriarAsset, useDeletarAsset } from '@/lib/hooks/use-assets'
+import { useAssetsPorTipo, useAudiosGerados } from '@/lib/hooks/use-assets'
 import { useState } from 'react'
-import { Upload, Trash2, Film, Music, Image, Layers } from 'lucide-react'
+import { Film, Music, Image, Layers, ExternalLink } from 'lucide-react'
 import { ErrorState } from '@/components/ui/error-state'
 
 export default function AssetsPage() {
   const [tipoFiltro, setTipoFiltro] = useState<string>('')
   const { data: assets, isLoading, isError, refetch } = useAssetsPorTipo(tipoFiltro || undefined)
-  const deletarAsset = useDeletarAsset()
+  const { data: audiosGerados } = useAudiosGerados()
 
   const tiposDisponiveis = [
     { valor: '', label: 'Todos', icon: Layers, color: 'zinc' },
@@ -58,10 +58,10 @@ export default function AssetsPage() {
             </p>
           </div>
           
-          <button className="group glass glass-hover rounded-xl px-6 py-3 font-semibold bg-linear-to-r from-pink-600 to-purple-600 text-white border-pink-500/50 hover:shadow-lg hover:shadow-pink-500/20 transition-all flex items-center gap-2">
-            <Upload className="h-4 w-4 group-hover:scale-110 transition-transform" />
-            Upload Asset
-          </button>
+          <div className="glass rounded-xl px-6 py-3 text-sm text-zinc-400 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+            Assets gerados via n8n workflows
+          </div>
         </div>
 
         {/* Filtros */}
@@ -128,16 +128,16 @@ export default function AssetsPage() {
                     <h3 className="text-white font-medium line-clamp-1 flex-1">
                       {asset.nome}
                     </h3>
-                    <button
-                      onClick={() => {
-                        if (confirm('Deletar este asset?')) {
-                          deletarAsset.mutate(asset.id)
-                        }
-                      }}
-                      className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {asset.caminho_storage && (
+                      <a
+                        href={`https://nlcisbfdiokmipyihtuz.supabase.co/storage/v1/object/public/${asset.caminho_storage}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="opacity-0 group-hover:opacity-100 text-blue-400 hover:text-blue-300 transition-opacity"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    )}
                   </div>
 
                   {asset.descricao && (
