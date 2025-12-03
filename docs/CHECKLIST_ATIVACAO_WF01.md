@@ -3,6 +3,7 @@
 ## 🎯 Status Atual
 
 ### Workflow Corrigido:
+
 - ✅ 2 nós "Respond to Webhook" (sucesso + erro)
 - ✅ Fluxo de erro conectado (Log Erro → Resposta Erro)
 - ✅ Fluxo de sucesso conectado (Log Sucesso → Resposta Sucesso)
@@ -31,6 +32,7 @@
 ### 2. Configurar Credenciais
 
 #### 2.1 Postgres (Supabase)
+
 - ✅ Nome esperado: `Postgres supabase`
 - ✅ ID: `q19Ps5vylbEtdVtd`
 - Verificar configuração:
@@ -42,12 +44,14 @@
   - SSL: Habilitado
 
 #### 2.2 OpenAI API
+
 - ✅ Nome esperado: `OpenAi pulso_control`
 - ✅ ID: `UiqqtKTHr3xQlkcs`
 - Verificar:
   - API Key: `sk-proj-...`
 
 #### 2.3 Webhook Auth
+
 - ✅ Nome esperado: `Supabase Storage – Pulso`
 - ✅ ID: `jzqp2EgiwYn5wpcc`
 - Header: `x-webhook-secret`
@@ -75,6 +79,7 @@ curl -X POST http://localhost:3000/api/ideias/2b226a1e-0f4f-4208-bfaf-0e41e95db6
 ```
 
 **Resposta esperada (200 OK):**
+
 ```json
 {
   "success": true,
@@ -123,6 +128,7 @@ curl -X POST http://localhost:3000/api/ideias/abc123/gerar-roteiro
 ```
 
 **Resposta esperada (400 Bad Request):**
+
 ```json
 {
   "success": false,
@@ -149,6 +155,7 @@ curl -X POST http://localhost:3000/api/ideias/00000000-0000-0000-0000-0000000000
 ```
 
 **Resposta esperada (404 Not Found):**
+
 ```json
 {
   "success": false,
@@ -172,7 +179,7 @@ curl -X POST http://localhost:3000/api/ideias/00000000-0000-0000-0000-0000000000
 
 ```sql
 -- Ver últimas 5 execuções do workflow
-SELECT 
+SELECT
   workflow_name,
   status,
   detalhes->>'ideia_id' as ideia_id,
@@ -198,7 +205,7 @@ LIMIT 5;
 
 ```sql
 -- Ver roteiro criado
-SELECT 
+SELECT
   id,
   titulo,
   status,
@@ -233,11 +240,13 @@ LIMIT 1;
 **Sintoma:** `curl` trava e não retorna
 
 **Causas possíveis:**
+
 1. ❌ Workflow não está ativado no n8n
 2. ❌ Nó "Respond to Webhook" não está conectado
 3. ❌ Erro no GPT-4o (quota excedida, API key inválida)
 
 **Solução:**
+
 1. Verificar se workflow está "Active" (verde)
 2. Verificar execuções no n8n → Logs
 3. Verificar saldo da OpenAI API
@@ -246,14 +255,19 @@ LIMIT 1;
 
 ### Problema: Erro 500 "Unused Respond to Webhook"
 
-**Sintoma:** 
+**Sintoma:**
+
 ```json
-{"error": "Webhook retornou 500", "details": "Unused Respond to Webhook node..."}
+{
+  "error": "Webhook retornou 500",
+  "details": "Unused Respond to Webhook node..."
+}
 ```
 
 **Causa:** Nós "Respond to Webhook" não conectados
 
 **Solução:**
+
 1. ✅ **JÁ CORRIGIDO** no arquivo JSON atual
 2. Reimportar workflow no n8n
 
@@ -262,13 +276,15 @@ LIMIT 1;
 ### Problema: Erro "permission denied"
 
 **Sintoma:**
+
 ```json
-{"error": "permission denied for schema pulso_content"}
+{ "error": "permission denied for schema pulso_content" }
 ```
 
 **Causa:** Permissões do Supabase
 
 **Solução:**
+
 ```sql
 -- JÁ EXECUTADO ANTERIORMENTE
 GRANT UPDATE ON pulso_content.ideias TO service_role;
@@ -284,8 +300,9 @@ GRANT UPDATE ON pulso_content.roteiros TO service_role;
 **Causa:** Cache do React Query não invalidado
 
 **Solução:** No componente `GerarRoteiroButton`, verificar:
+
 ```typescript
-queryClient.invalidateQueries({ queryKey: ['roteiros'] })
+queryClient.invalidateQueries({ queryKey: ["roteiros"] });
 ```
 
 ---
@@ -296,7 +313,7 @@ Antes de testar, certifique-se:
 
 - [ ] Workflow importado no n8n
 - [ ] Credenciais Postgres configuradas
-- [ ] Credenciais OpenAI configuradas  
+- [ ] Credenciais OpenAI configuradas
 - [ ] Credencial Webhook Auth configurada
 - [ ] Workflow **ATIVADO** (botão verde)
 - [ ] URL do webhook correta no `.env`: `N8N_WEBHOOK_APROVAR_IDEIA`
