@@ -1,4 +1,4 @@
--- =====================================================
+t -- =====================================================
 -- ESTRUTURA COMPLETA: ASSETS, FEEDBACK E PERSONAGENS
 -- =====================================================
 -- Este arquivo adiciona as tabelas que faltam para:
