@@ -33,7 +33,11 @@ ALTER COLUMN url
 SET NOT NULL;
 END IF;
 END $$;
-RAISE NOTICE '✅ Colunas de audios adicionadas';
+
+DO $$ BEGIN
+    RAISE NOTICE '✅ Colunas de audios adicionadas';
+END $$;
+
 -- =========================================================================
 -- VIDEOS: Adicionar colunas faltantes  
 -- =========================================================================
