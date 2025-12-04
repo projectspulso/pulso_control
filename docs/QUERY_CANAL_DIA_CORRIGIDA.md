@@ -7,12 +7,14 @@ A query tinha vários erros baseados em suposições incorretas sobre a estrutur
 ### ❌ Erros Identificados
 
 1. **Coluna inexistente**: `c.idioma as linguagem_padrao`
+
    - ✅ **Correção**: Coluna existe! Nome correto: `idioma`
 
 2. **Schema não especificado**: `FROM pulso_core.canais`
+
    - ✅ **Correção**: Schema correto é `pulso_core` (confirmado)
 
-3. **Rotação complexa com ROW_NUMBER**: 
+3. **Rotação complexa com ROW_NUMBER**:
    ```sql
    AND EXTRACT(DOW FROM NOW())::integer = MOD((ROW_NUMBER() OVER (...))::integer - 1, 7)
    ```
@@ -40,6 +42,7 @@ CREATE TABLE pulso_core.canais (
 ```
 
 **Exemplo de registro**:
+
 ```json
 {
   "id": "c89417ab-ceb0-4a07-9eaf-9293219330e8",
@@ -84,27 +87,28 @@ Criei **4 versões** diferentes, cada uma com um propósito específico:
 **Quando usar**: Rotação básica sem considerar balanceamento de carga
 
 ```sql
-SELECT 
+SELECT
   c.id as canal_id,
   c.nome as canal_nome,
   c.slug,
   c.idioma as linguagem_padrao,
   c.metadata,
   (
-    SELECT COUNT(*) 
-    FROM pulso_content.ideias 
-    WHERE canal_id = c.id 
+    SELECT COUNT(*)
+    FROM pulso_content.ideias
+    WHERE canal_id = c.id
       AND created_at > NOW() - INTERVAL '7 days'
   ) as ideias_ultima_semana
 FROM pulso_core.canais c
 WHERE c.status = 'ATIVO'
-ORDER BY 
+ORDER BY
   (EXTRACT(DOW FROM NOW())::integer + (c.metadata->>'ordem_prioridade')::integer) % 7,
   c.created_at
 LIMIT 1;
 ```
 
 **Como funciona**:
+
 - Domingo (0) + ordem_prioridade (0-N) % 7
 - Seleciona sempre o mesmo canal no mesmo dia da semana
 - Desempata por data de criação do canal
@@ -117,7 +121,7 @@ LIMIT 1;
 
 ```sql
 WITH canais_ativos AS (
-  SELECT 
+  SELECT
     c.id,
     c.nome,
     c.slug,
@@ -125,13 +129,13 @@ WITH canais_ativos AS (
     c.metadata,
     c.created_at,
     COALESCE((c.metadata->>'ordem_prioridade')::integer, 0) as ordem_prioridade,
-    (SELECT COUNT(*) FROM pulso_content.ideias 
+    (SELECT COUNT(*) FROM pulso_content.ideias
      WHERE canal_id = c.id AND created_at > NOW() - INTERVAL '7 days') as ideias_ultima_semana,
     (SELECT COUNT(*) FROM pulso_content.ideias WHERE canal_id = c.id) as total_ideias
   FROM pulso_core.canais c
   WHERE c.status = 'ATIVO'
 )
-SELECT 
+SELECT
   id as canal_id,
   nome as canal_nome,
   slug,
@@ -140,7 +144,7 @@ SELECT
   ideias_ultima_semana,
   total_ideias
 FROM canais_ativos
-ORDER BY 
+ORDER BY
   ideias_ultima_semana ASC,  -- 1. Menos ideias na semana
   (EXTRACT(DOW FROM NOW())::integer + ordem_prioridade) % 7,  -- 2. Rotação semanal
   created_at ASC  -- 3. Canal mais antigo
@@ -148,6 +152,7 @@ LIMIT 1;
 ```
 
 **Como funciona**:
+
 1. Prioriza canal com **menos ideias na última semana**
 2. Aplica rotação por dia da semana como desempate
 3. Canal mais antigo tem prioridade final
@@ -160,19 +165,19 @@ LIMIT 1;
 
 ```sql
 WITH canais_numerados AS (
-  SELECT 
+  SELECT
     c.id,
     c.nome,
     c.slug,
     c.idioma,
     c.metadata,
     ROW_NUMBER() OVER (ORDER BY c.created_at) - 1 as indice_canal,
-    (SELECT COUNT(*) FROM pulso_content.ideias 
+    (SELECT COUNT(*) FROM pulso_content.ideias
      WHERE canal_id = c.id AND created_at > NOW() - INTERVAL '7 days') as ideias_ultima_semana
   FROM pulso_core.canais c
   WHERE c.status = 'ATIVO'
 )
-SELECT 
+SELECT
   id as canal_id,
   nome as canal_nome,
   slug,
@@ -185,6 +190,7 @@ LIMIT 1;
 ```
 
 **Como funciona**:
+
 - Numera canais de 0 a N-1
 - Dia da semana (0-6) % total de canais = índice do canal
 - Garante que cada canal aparece exatamente uma vez por ciclo
@@ -197,7 +203,7 @@ LIMIT 1;
 
 ```sql
 WITH canais_com_stats AS (
-  SELECT 
+  SELECT
     c.id,
     c.nome,
     c.slug,
@@ -205,16 +211,16 @@ WITH canais_com_stats AS (
     c.metadata,
     COALESCE((c.metadata->>'ordem_prioridade')::integer, 0) as ordem_prioridade,
     COALESCE((c.metadata->>'peso_rotacao')::integer, 1) as peso_rotacao,
-    (SELECT COUNT(*) FROM pulso_content.ideias 
+    (SELECT COUNT(*) FROM pulso_content.ideias
      WHERE canal_id = c.id AND created_at > NOW() - INTERVAL '7 days') as ideias_7dias,
-    (SELECT COUNT(*) FROM pulso_content.ideias 
+    (SELECT COUNT(*) FROM pulso_content.ideias
      WHERE canal_id = c.id AND created_at::date = CURRENT_DATE) as ideias_hoje,
     (SELECT MAX(created_at) FROM pulso_content.ideias WHERE canal_id = c.id) as ultima_ideia_em
   FROM pulso_core.canais c
   WHERE c.status = 'ATIVO'
 ),
 canais_scored AS (
-  SELECT 
+  SELECT
     *,
     (
       (ideias_hoje * 100) +
@@ -223,7 +229,7 @@ canais_scored AS (
     ) / peso_rotacao as score
   FROM canais_com_stats
 )
-SELECT 
+SELECT
   id as canal_id,
   nome as canal_nome,
   slug,
@@ -240,11 +246,13 @@ LIMIT 1;
 **Como funciona**:
 
 1. **Score baseado em múltiplos fatores** (menor = melhor):
+
    - `ideias_hoje * 100`: Penalidade **alta** para canais com ideias criadas hoje
    - `ideias_7dias * 10`: Penalidade **média** para canais com muitas ideias na semana
    - `horas_desde_ultima_ideia`: **Bonus** para canais inativos há mais tempo
 
 2. **Peso de rotação** (`metadata.peso_rotacao`):
+
    - Valor entre 1 e 10 (padrão = 1)
    - Canais com peso 2 aparecem com dobro de frequência
    - Score final = score_bruto / peso_rotacao
@@ -254,6 +262,7 @@ LIMIT 1;
    - Usado apenas como desempate quando scores são iguais
 
 **Exemplo de scores**:
+
 ```
 Canal A: 0 ideias hoje, 5 na semana, última há 24h
 Score = (0*100 + 5*10 + 24) / 1 = 74
@@ -277,13 +286,14 @@ Use a **Versão 4 (Rotação Inteligente)** porque:
 ✅ Balanceia automaticamente a carga entre canais  
 ✅ Permite ajuste fino via metadata sem alterar código  
 ✅ Prioriza canais "descansados" (sem ideias recentes)  
-✅ Garante distribuição justa a longo prazo  
+✅ Garante distribuição justa a longo prazo
 
 ---
 
 ## 🔧 Configuração via Metadata
 
 ### Adicionar peso de rotação
+
 ```sql
 UPDATE pulso_core.canais
 SET metadata = jsonb_set(metadata, '{peso_rotacao}', '2')
@@ -291,6 +301,7 @@ WHERE slug = 'pulso-dark-pt';
 ```
 
 ### Adicionar ordem de prioridade
+
 ```sql
 UPDATE pulso_core.canais
 SET metadata = jsonb_set(metadata, '{ordem_prioridade}', '10')
@@ -316,12 +327,15 @@ Execute no Supabase SQL Editor:
 ## 🐛 Troubleshooting
 
 ### Erro: "column 'idioma' does not exist"
+
 - ✅ **Corrigido!** A coluna existe na estrutura real
 
 ### Erro: "cannot use window function in WHERE clause"
+
 - ✅ **Corrigido!** Movido ROW_NUMBER para CTE
 
 ### Sempre escolhe o mesmo canal
+
 - 🔍 Verifique se `metadata.peso_rotacao` está muito alto
 - 🔍 Verifique se há apenas um canal com `status = 'ATIVO'`
 - 🔍 Execute query sem LIMIT 1 para ver todos os scores
