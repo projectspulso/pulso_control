@@ -1,5 +1,5 @@
 {
-  "name": "WF00 - Gerar Ideias AI",
+  "name": "WF00 - Gerar Ideias AI (CORRIGIDO)",
   "nodes": [
     {
       "parameters": {
@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "00000000-0000-0000-0000-000000000001",
+      "id": "cron-trigger",
       "name": "CRON Diário 3h",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -21,128 +21,151 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "-- Selecionar canal do dia (rotação semanal)\nSELECT \n  c.id as canal_id,\n  c.nome as canal_nome,\n  c.slug,\n  c.linguagem_padrao,\n  c.metadata,\n  s.id as serie_id,\n  s.nome as serie_nome,\n  pp.intervalo_dias,\n  pp.horario_preferencial,\n  (\n    SELECT COUNT(*) \n    FROM ideias \n    WHERE canal_id = c.id \n      AND created_at > NOW() - INTERVAL '7 days'\n  ) as ideias_ultima_semana\nFROM canais c\nJOIN series s ON s.canal_id = c.id AND s.principal = true\nJOIN pulso_content.plano_publicacao pp ON pp.canal_id = c.id AND pp.ativo = true\nWHERE c.ativo = true\n  AND EXTRACT(DOW FROM NOW()) = MOD(c.ordem_prioridade::integer, 7)\nLIMIT 1;",
+        "query": "-- Selecionar canal do dia (rotação baseada no dia da semana)\nSELECT \n  c.id as canal_id,\n  c.nome as canal_nome,\n  c.slug,\n  c.idioma as linguagem_padrao,\n  c.metadata,\n  (\n    SELECT COUNT(*) \n    FROM pulso_content.ideias \n    WHERE canal_id = c.id \n      AND created_at > NOW() - INTERVAL '7 days'\n  ) as ideias_ultima_semana\nFROM pulso_core.canais c\nWHERE c.status = 'ATIVO'\n  -- Rotação: Seg=1, Ter=2, Qua=3, Qui=4, Sex=5, Sab=6, Dom=0\n  AND EXTRACT(DOW FROM NOW())::integer = MOD((ROW_NUMBER() OVER (ORDER BY c.created_at))::integer - 1, 7)\nLIMIT 1;",
         "options": {}
       },
-      "id": "00000000-0000-0000-0000-000000000002",
+      "id": "buscar-canal",
       "name": "Buscar Canal do Dia",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [460, 300],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Postgres supabase"
+          "id": "ziXq3E6EiLFU31DX",
+          "name": "Postgres Supabase NOVO"
         }
       }
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
             {
-              "id": "assign001",
-              "name": "canal_id",
-              "value": "={{ $json.canal_id }}",
-              "type": "string"
-            },
-            {
-              "id": "assign002",
-              "name": "canal_nome",
-              "value": "={{ $json.canal_nome }}",
-              "type": "string"
-            },
-            {
-              "id": "assign003",
-              "name": "serie_id",
-              "value": "={{ $json.serie_id }}",
-              "type": "string"
-            },
-            {
-              "id": "assign004",
-              "name": "linguagem",
-              "value": "={{ $json.linguagem_padrao }}",
-              "type": "string"
-            },
-            {
-              "id": "assign005",
-              "name": "tipo_canal",
-              "value": "={{ $json.metadata.tipo }}",
-              "type": "string"
-            },
-            {
-              "id": "assign006",
-              "name": "tom_voz",
-              "value": "={{ $json.metadata.tom_voz }}",
-              "type": "string"
-            },
-            {
-              "id": "assign007",
-              "name": "ideias_recentes",
-              "value": "={{ $json.ideias_ultima_semana }}",
-              "type": "number"
+              "id": "check-canal",
+              "leftValue": "={{ $json.canal_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
             }
-          ]
-        }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
       },
-      "id": "00000000-0000-0000-0000-000000000003",
-      "name": "Preparar Contexto",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "id": "check-canal",
+      "name": "Tem Canal?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
       "position": [680, 300]
     },
     {
       "parameters": {
-        "model": "gpt-4o",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "log-sem-canal",
+              "name": "mensagem",
+              "value": "Nenhum canal disponível para hoje",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "sem-canal",
+      "name": "Log - Sem Canal",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==================================================\n// PREPARAR PROMPT ESPECÍFICO POR CANAL\n// ==================================================\n\nconst canal = $input.item.json;\nconst canalNome = canal.canal_nome;\nconst metadata = canal.metadata || {};\n\n// Diretrizes específicas por canal\nconst diretrizesPorCanal = {\n  'Pulso Dark PT': `\n- Conteúdo sombrio, misterioso e perturbador\n- Histórias reais de crimes, fenômenos paranormais, experimentos macabros\n- Gancho impactante nos primeiros 3 segundos\n- Tom narrativo sério e envolvente\n- Eventos documentados e verificáveis\n- Foco em detalhes perturbadores que causam arrepios`,\n  \n  'PULSO Estudos & Produtividade': `\n- Técnicas comprovadas de estudo e produtividade\n- Baseado em ciência e pesquisas acadêmicas\n- Dicas práticas e aplicáveis imediatamente\n- Tom motivacional mas realista\n- Métodos testados por estudantes reais\n- Evitar promessas milagrosas`,\n  \n  'PULSO Motivacional': `\n- Histórias inspiradoras de superação\n- Frases impactantes de grandes pensadores\n- Lições de vida aplicáveis ao dia a dia\n- Tom energético e positivo\n- Casos reais de transformação\n- Evitar clichês vazios`,\n  \n  'PULSO Casos Reais & Bizarros': `\n- Casos documentados e verificáveis\n- Acontecimentos surpreendentes e inusitados\n- Revelação gradual com clímax no final\n- Tom jornalístico mas envolvente\n- Eventos que desafiam a lógica\n- Fatos checáveis em fontes confiáveis`,\n  \n  'PULSO Curiosidades': `\n- Fatos científicos surpreendentes\n- Fenômenos da natureza e do corpo humano\n- Descobertas recentes e estudos fascinantes\n- Tom educativo mas divertido\n- Informações que fazem repensar o mundo\n- Sempre baseado em ciência`,\n  \n  'PULSO Mistérios & História': `\n- Eventos históricos pouco conhecidos\n- Mistérios não resolvidos e teorias\n- Contextualização histórica precisa\n- Tom narrativo e investigativo\n- Conexões entre passado e presente\n- Fontes históricas verificáveis`,\n  \n  'PULSO Games Nostalgia': `\n- Jogos clássicos dos anos 90-2000\n- Curiosidades e Easter eggs\n- Histórias de desenvolvimento\n- Tom nostálgico e apaixonado\n- Fatos desconhecidos sobre jogos famosos\n- Impacto cultural dos games`,\n\n  'PULSO Contos & Microficção': `\n- Histórias curtas com reviravolta\n- Narrativas envolventes com início, meio e fim\n- Tom reflexivo e filosófico\n- Finais surpreendentes ou profundos\n- Personagens em situações cotidianas\n- Lições sutis sobre vida e escolhas`\n};\n\nconst diretrizes = diretrizesPorCanal[canalNome] || `\n- Conteúdo relevante e envolvente\n- Tom natural e conversacional\n- Histórias interessantes e verificáveis\n- Gancho forte nos primeiros segundos`;\n\n// Prompt completo\nconst promptCompleto = `Você é um especialista em criação de conteúdo viral para redes sociais brasileiras.\n\n**CANAL:** ${canalNome}\n**TOM:** ${metadata.tom_voz || 'narrativo e envolvente'}\n**PÚBLICO:** Brasileiros 18-35 anos\n**PLATAFORMAS:** TikTok, YouTube Shorts, Instagram Reels\n**DURAÇÃO:** 60-90 segundos\n**DATA:** ${new Date().toLocaleDateString('pt-BR')}\n\n**DIRETRIZES ESPECÍFICAS:**${diretrizes}\n\n**TAREFA:**\nGere exatamente 5 ideias de vídeo virais seguindo este formato JSON:\n\n\\`\\`\\`json\n[\n  {\n    \"titulo\": \"Título chamativo com max 60 caracteres\",\n    \"descricao\": \"Sinopse completa do vídeo em 2-3 linhas, explicando claramente o que será abordado e por que é interessante\",\n    \"gancho\": \"Primeira frase impactante que prende atenção nos primeiros 3 segundos - deve criar curiosidade ou choque imediato\",\n    \"tags\": [\"tag1\", \"tag2\", \"tag3\", \"tag4\"],\n    \"duracao_estimada\": \"75s\",\n    \"potencial_viral\": 8,\n    \"fontes_referencia\": [\"fonte1\", \"fonte2\"],\n    \"justificativa\": \"Por que este conteúdo tem potencial viral de engajamento alto\"\n  }\n]\n\\`\\`\\`\n\n**REQUISITOS CRÍTICOS:**\n1. Títulos devem ser clickbait mas honestos (sem enganar)\n2. Ganchos devem criar curiosidade imediata e forte\n3. Tags relevantes para busca no TikTok/YouTube/Instagram\n4. Potencial viral de 1-10 (mínimo 7 para aprovar)\n5. Todas as ideias devem ser factualmente verificáveis\n6. Evitar tópicos sensíveis demais ou polêmicos (política, religião)\n7. Foco em storytelling envolvente com arco narrativo\n8. Cada ideia deve ter ângulo único e interessante\n9. Descrição deve ter 120-200 caracteres\n10. Gancho deve ter 60-100 caracteres\n\n**EXEMPLO DE BOA IDEIA:**\n\\`\\`\\`json\n{\n  \"titulo\": \"O Homem Que Sobreviveu a Duas Bombas Atômicas\",\n  \"descricao\": \"A história incrível de Tsutomu Yamaguchi, que estava em Hiroshima quando a primeira bomba caiu, fugiu para Nagasaki e sobreviveu à segunda bomba também. Como isso é possível?\",\n  \"gancho\": \"Imagina sobreviver a uma bomba atômica... e três dias depois sobreviver a outra?\",\n  \"tags\": [\"historia\", \"japao\", \"segunda-guerra\", \"sobrevivencia\"],\n  \"duracao_estimada\": \"80s\",\n  \"potencial_viral\": 9,\n  \"fontes_referencia\": [\"Wikipedia: Tsutomu Yamaguchi\", \"Livro: The Man Who Survived Two Atomic Bombs\"],\n  \"justificativa\": \"História real extraordinária, gancho impactante, evento histórico conhecido mas com ângulo desconhecido, alto potencial de compartilhamento\"\n}\n\\`\\`\\`\n\nResponda APENAS com o array JSON válido, sem texto adicional antes ou depois.`;\n\n// Output\nreturn {\n  json: {\n    canal_id: canal.canal_id,\n    canal_nome: canalNome,\n    slug: canal.slug,\n    linguagem: canal.linguagem_padrao || 'pt-BR',\n    prompt: promptCompleto,\n    ideias_recentes: canal.ideias_ultima_semana || 0\n  }\n};"
+      },
+      "id": "preparar-prompt",
+      "name": "Preparar Prompt por Canal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
         "messages": {
           "values": [
             {
-              "content": "=Você é um especialista em criação de conteúdo viral para redes sociais brasileiras.\n\n**CANAL:** {{ $('Preparar Contexto').item.json.canal_nome }}\n**TIPO:** {{ $('Preparar Contexto').item.json.tipo_canal }}\n**TOM:** {{ $('Preparar Contexto').item.json.tom_voz }}\n**PÚBLICO:** Brasileiros 18-35 anos\n**PLATAFORMAS:** TikTok, YouTube Shorts, Instagram Reels\n**DURAÇÃO:** 40-60 segundos\n\n**DIRETRIZES ESPECÍFICAS:**\n\n{% if $('Preparar Contexto').item.json.canal_nome == 'Pulso Dark PT' %}\n- Conteúdo sombrio, misterioso e perturbador\n- Histórias reais de crimes, fenômenos paranormais, experimentos macabros\n- Gancho impactante nos primeiros 3 segundos\n- Tom narrativo sério e envolvente\n{% elif $('Preparar Contexto').item.json.canal_nome == 'PULSO Estudos & Produtividade' %}\n- Técnicas comprovadas de estudo e produtividade\n- Baseado em ciência e pesquisas acadêmicas\n- Dicas práticas e aplicáveis imediatamente\n- Tom motivacional mas realista\n{% elif $('Preparar Contexto').item.json.canal_nome == 'PULSO Motivacional' %}\n- Histórias inspiradoras de superação\n- Frases impactantes de grandes pensadores\n- Lições de vida aplicáveis ao dia a dia\n- Tom energético e positivo\n{% elif $('Preparar Contexto').item.json.canal_nome == 'PULSO Casos Reais & Bizarros' %}\n- Casos documentados e verificáveis\n- Acontecimentos surpreendentes e inusitados\n- Revelação gradual com clímax no final\n- Tom jornalístico mas envolvente\n{% elif $('Preparar Contexto').item.json.canal_nome == 'PULSO Psicologia & Comportamento' %}\n- Conceitos psicológicos explicados de forma simples\n- Experimentos famosos e estudos de comportamento\n- Aplicação prática no cotidiano\n- Tom educativo e acessível\n{% elif $('Preparar Contexto').item.json.canal_nome == 'PULSO Mistérios & História' %}\n- Eventos históricos pouco conhecidos\n- Mistérios não resolvidos e teorias\n- Contextualização histórica precisa\n- Tom narrativo e investigativo\n{% elif $('Preparar Contexto').item.json.canal_nome == 'PULSO Games Nostalgia' %}\n- Jogos clássicos dos anos 90-2000\n- Curiosidades e Easter eggs\n- Histórias de desenvolvimento\n- Tom nostálgico e apaixonado\n{% endif %}\n\n**PESQUISA DE MERCADO:**\n- Data: {{ $now.format('dd/MM/yyyy') }}\n- Trending topics Brasil: [insira 3-5 tópicos em alta]\n- Sazonalidade: [eventos/datas próximas relevantes]\n\n**TAREFA:**\nGere exatamente 5 ideias de vídeo virais seguindo este formato JSON:\n\n```json\n[\n  {\n    \"titulo\": \"Título chamativo com max 60 caracteres\",\n    \"descricao\": \"Sinopse completa do vídeo em 2-3 linhas, explicando o que será abordado\",\n    \"gancho\": \"Primeira frase que prende atenção nos primeiros 3 segundos - deve ser impactante\",\n    \"tags\": [\"tag1\", \"tag2\", \"tag3\"],\n    \"duracao_estimada\": \"45s\",\n    \"potencial_viral\": 8,\n    \"fontes_referencia\": [\"fonte1\", \"fonte2\"],\n    \"justificativa\": \"Por que este conteúdo tem potencial viral\"\n  }\n]\n```\n\n**REQUISITOS:**\n1. Títulos devem ser clickbait mas honestos\n2. Ganchos devem criar curiosidade imediata\n3. Tags relevantes para busca no TikTok/YouTube\n4. Potencial viral de 1-10 (mínimo 7)\n5. Todas as ideias devem ser factualmente verificáveis\n6. Evitar tópicos sensíveis ou polêmicos demais\n7. Foco em storytelling envolvente\n\nResponda APENAS com o array JSON, sem texto adicional."
+              "content": "={{ $json.prompt }}"
             }
           ]
         },
         "options": {
-          "temperature": 0.8,
-          "maxTokens": 2000
+          "temperature": 0.85,
+          "maxTokens": 2500,
+          "topP": 0.95
         }
       },
-      "id": "00000000-0000-0000-0000-000000000004",
+      "id": "gpt-gerar",
       "name": "GPT-4o - Gerar Ideias",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.5,
-      "position": [900, 300],
+      "position": [1120, 200],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
       "credentials": {
         "openAiApi": {
-          "id": "OPENAI_CREDENTIAL_ID",
-          "name": "OpenAi pulso_control"
+          "id": "kIHPoJY4nCrV5601",
+          "name": "OpenAi account"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.item.json.message?.content || $input.item.json.response;\n\nif (!response) {\n  throw new Error('Resposta da OpenAI vazia');\n}\n\n// Extrair JSON da resposta (remover markdown se houver)\nlet jsonString = response.trim();\nif (jsonString.startsWith('```json')) {\n  jsonString = jsonString.replace(/```json\\n?/g, '').replace(/```\\n?/g, '');\n}\n\ntry {\n  const ideias = JSON.parse(jsonString);\n  \n  if (!Array.isArray(ideias) || ideias.length === 0) {\n    throw new Error('Resposta não é um array válido de ideias');\n  }\n  \n  // Validar cada ideia\n  ideias.forEach((ideia, index) => {\n    if (!ideia.titulo || !ideia.descricao || !ideia.gancho) {\n      throw new Error(`Ideia ${index + 1} está incompleta`);\n    }\n  });\n  \n  return ideias.map(ideia => ({\n    json: {\n      ...ideia,\n      canal_id: $('Preparar Contexto').item.json.canal_id,\n      serie_id: $('Preparar Contexto').item.json.serie_id,\n      linguagem: $('Preparar Contexto').item.json.linguagem\n    }\n  }));\n  \n} catch (error) {\n  throw new Error(`Erro ao processar JSON da OpenAI: ${error.message}\\n\\nResposta recebida: ${jsonString.substring(0, 500)}`);\n}"
+        "jsCode": "// ==================================================\n// PROCESSAR JSON DA OPENAI\n// ==================================================\n\nconst response = $input.item.json.message?.content || $input.item.json.response || '';\n\nif (!response || response.trim().length < 50) {\n  throw new Error('Resposta da OpenAI está vazia ou muito curta');\n}\n\n// Extrair JSON (remover markdown se houver)\nlet jsonString = response.trim();\nif (jsonString.includes('```json')) {\n  jsonString = jsonString.replace(/```json\\n?/g, '').replace(/```\\n?$/g, '');\n} else if (jsonString.includes('```')) {\n  jsonString = jsonString.replace(/```\\n?/g, '');\n}\n\njsonString = jsonString.trim();\n\ntry {\n  const ideias = JSON.parse(jsonString);\n  \n  if (!Array.isArray(ideias)) {\n    throw new Error('Resposta não é um array');\n  }\n  \n  if (ideias.length === 0) {\n    throw new Error('Array de ideias está vazio');\n  }\n  \n  // Validar cada ideia\n  const ideiasValidas = ideias.filter((ideia, index) => {\n    const valido = !!(ideia.titulo && ideia.descricao && ideia.gancho);\n    if (!valido) {\n      console.log(`Ideia ${index + 1} inválida:`, ideia);\n    }\n    return valido;\n  });\n  \n  if (ideiasValidas.length === 0) {\n    throw new Error('Nenhuma ideia válida no array');\n  }\n  \n  // Contexto do canal\n  const contexto = $('Preparar Prompt por Canal').item.json;\n  \n  // Retornar cada ideia como item separado\n  return ideiasValidas.map(ideia => ({\n    json: {\n      // IDs\n      canal_id: contexto.canal_id,\n      \n      // Conteúdo\n      titulo: ideia.titulo.substring(0, 255),\n      descricao: ideia.descricao,\n      gancho_sugerido: ideia.gancho,\n      \n      // Metadata\n      tags: Array.isArray(ideia.tags) ? ideia.tags : [],\n      linguagem: contexto.linguagem,\n      duracao_estimada: ideia.duracao_estimada || '60s',\n      potencial_viral: ideia.potencial_viral || 7,\n      fontes_referencia: Array.isArray(ideia.fontes_referencia) ? ideia.fontes_referencia : [],\n      justificativa: ideia.justificativa || '',\n      \n      // Contexto\n      canal_nome: contexto.canal_nome\n    }\n  }));\n  \n} catch (error) {\n  throw new Error(`Erro ao processar JSON: ${error.message}\\n\\nResposta (primeiros 500 chars): ${jsonString.substring(0, 500)}`);\n}"
       },
-      "id": "00000000-0000-0000-0000-000000000005",
+      "id": "processar-json",
       "name": "Processar JSON",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 300]
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "loop-ideias",
+      "name": "Loop - Salvar Ideias",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1560, 200]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO ideias (\n  canal_id,\n  serie_id,\n  titulo,\n  descricao,\n  status,\n  tags,\n  linguagem,\n  metadata\n) VALUES (\n  '{{ $json.canal_id }}',\n  '{{ $json.serie_id }}',\n  '{{ $json.titulo }}',\n  '{{ $json.descricao }}',\n  'RASCUNHO',\n  ARRAY[{{ $json.tags.map(t => `'${t}'`).join(',') }}],\n  '{{ $json.linguagem }}',\n  jsonb_build_object(\n    'gancho_sugerido', '{{ $json.gancho }}',\n    'duracao_estimada', '{{ $json.duracao_estimada }}',\n    'potencial_viral', {{ $json.potencial_viral }},\n    'fontes_referencia', '{{ JSON.stringify($json.fontes_referencia) }}'::jsonb,\n    'justificativa', '{{ $json.justificativa }}',\n    'gerado_por_ia', true,\n    'modelo_ia', 'gpt-4o',\n    'gerado_em', NOW()::text\n  )\n) RETURNING id, titulo, status;",
+        "query": "INSERT INTO pulso_content.ideias (\n  canal_id,\n  titulo,\n  descricao,\n  status,\n  tags,\n  linguagem,\n  metadata\n) VALUES (\n  '{{ $json.canal_id }}'::uuid,\n  '{{ $json.titulo }}',\n  '{{ $json.descricao }}',\n  'APROVADA',\n  ARRAY[{{ $json.tags.map(t => `'${t.replace(/'/g, \"''\")}'`).join(',') }}]::text[],\n  '{{ $json.linguagem }}',\n  jsonb_build_object(\n    'gancho_sugerido', '{{ $json.gancho_sugerido.replace(/'/g, \"''\") }}',\n    'duracao_estimada', '{{ $json.duracao_estimada }}',\n    'potencial_viral', {{ $json.potencial_viral }},\n    'fontes_referencia', '{{ JSON.stringify($json.fontes_referencia) }}'::jsonb,\n    'justificativa', '{{ $json.justificativa.replace(/'/g, \"''\") }}',\n    'gerado_por_ia', true,\n    'modelo_ia', 'gpt-4o',\n    'gerado_em', NOW()::text\n  )\n) RETURNING id, titulo, status;",
         "options": {}
       },
-      "id": "00000000-0000-0000-0000-000000000006",
-      "name": "Salvar Ideias",
+      "id": "salvar-ideia",
+      "name": "Salvar Ideia",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1340, 300],
+      "position": [1780, 200],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Postgres supabase"
+          "id": "ziXq3E6EiLFU31DX",
+          "name": "Postgres Supabase NOVO"
         }
       }
     },
@@ -151,174 +174,158 @@
         "assignments": {
           "assignments": [
             {
-              "id": "summary001",
-              "name": "canal_processado",
-              "value": "={{ $('Preparar Contexto').item.json.canal_nome }}",
-              "type": "string"
-            },
-            {
-              "id": "summary002",
-              "name": "total_ideias_geradas",
-              "value": "={{ $runIndex + 1 }}",
-              "type": "number"
-            },
-            {
-              "id": "summary003",
+              "id": "result-id",
               "name": "ideia_id",
               "value": "={{ $json.id }}",
               "type": "string"
             },
             {
-              "id": "summary004",
-              "name": "ideia_titulo",
+              "id": "result-titulo",
+              "name": "titulo",
               "value": "={{ $json.titulo }}",
               "type": "string"
             },
             {
-              "id": "summary005",
+              "id": "result-status",
               "name": "status",
               "value": "={{ $json.status }}",
               "type": "string"
-            },
-            {
-              "id": "summary006",
-              "name": "timestamp",
-              "value": "={{ $now.toISO() }}",
-              "type": "string"
             }
           ]
-        }
+        },
+        "options": {}
       },
-      "id": "00000000-0000-0000-0000-000000000007",
-      "name": "Log Sucesso",
+      "id": "prep-resultado",
+      "name": "Preparar Resultado",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1560, 300]
+      "position": [2000, 200]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "ideias_geradas",
+        "options": {}
+      },
+      "id": "agregar-resultados",
+      "name": "Agregar Resultados",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1780, 300]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO pulso_content.logs_workflows (\n  workflow_name,\n  execution_id,\n  status,\n  canal_id,\n  detalhes,\n  created_at\n) VALUES (\n  'WF00_Gerar_Ideias',\n  '{{ $workflow.id }}_{{ $execution.id }}',\n  'sucesso',\n  '{{ $('Preparar Contexto').item.json.canal_id }}',\n  jsonb_build_object(\n    'canal_nome', '{{ $json.canal_processado }}',\n    'total_ideias', {{ $json.total_ideias_geradas }},\n    'timestamp', '{{ $json.timestamp }}'\n  ),\n  NOW()\n);",
+        "query": "INSERT INTO pulso_content.logs_workflows (\n  workflow_name,\n  status,\n  detalhes\n) VALUES (\n  'WF00_Gerar_Ideias',\n  'sucesso',\n  jsonb_build_object(\n    'canal_id', '{{ $('Preparar Prompt por Canal').item.json.canal_id }}',\n    'canal_nome', '{{ $('Preparar Prompt por Canal').item.json.canal_nome }}',\n    'total_ideias', {{ $json.ideias_geradas.length }},\n    'timestamp', NOW()::text\n  )\n);",
         "options": {}
       },
-      "id": "00000000-0000-0000-0000-000000000008",
-      "name": "Registrar Log",
+      "id": "log-final",
+      "name": "Log Final",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1780, 300],
+      "position": [2000, 300],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Postgres supabase"
+          "id": "ziXq3E6EiLFU31DX",
+          "name": "Postgres Supabase NOVO"
         }
       }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "final-success",
+              "name": "success",
+              "value": "true",
+              "type": "boolean"
+            },
+            {
+              "id": "final-canal",
+              "name": "canal_processado",
+              "value": "={{ $('Preparar Prompt por Canal').item.json.canal_nome }}",
+              "type": "string"
+            },
+            {
+              "id": "final-count",
+              "name": "total_ideias_geradas",
+              "value": "={{ $('Agregar Resultados').item.json.ideias_geradas.length }}",
+              "type": "number"
+            },
+            {
+              "id": "final-timestamp",
+              "name": "completed_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "resultado-final",
+      "name": "Resultado Final",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2220, 300]
     }
   ],
   "connections": {
     "CRON Diário 3h": {
-      "main": [
-        [
-          {
-            "node": "Buscar Canal do Dia",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Buscar Canal do Dia", "type": "main", "index": 0}]]
     },
     "Buscar Canal do Dia": {
+      "main": [[{"node": "Tem Canal?", "type": "main", "index": 0}]]
+    },
+    "Tem Canal?": {
       "main": [
-        [
-          {
-            "node": "Preparar Contexto",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Preparar Prompt por Canal", "type": "main", "index": 0}],
+        [{"node": "Log - Sem Canal", "type": "main", "index": 0}]
       ]
     },
-    "Preparar Contexto": {
-      "main": [
-        [
-          {
-            "node": "GPT-4o - Gerar Ideias",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Preparar Prompt por Canal": {
+      "main": [[{"node": "GPT-4o - Gerar Ideias", "type": "main", "index": 0}]]
     },
     "GPT-4o - Gerar Ideias": {
-      "main": [
-        [
-          {
-            "node": "Processar JSON",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Processar JSON", "type": "main", "index": 0}]]
     },
     "Processar JSON": {
+      "main": [[{"node": "Loop - Salvar Ideias", "type": "main", "index": 0}]]
+    },
+    "Loop - Salvar Ideias": {
       "main": [
-        [
-          {
-            "node": "Salvar Ideias",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Salvar Ideia", "type": "main", "index": 0}],
+        [{"node": "Agregar Resultados", "type": "main", "index": 0}]
       ]
     },
-    "Salvar Ideias": {
-      "main": [
-        [
-          {
-            "node": "Log Sucesso",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Salvar Ideia": {
+      "main": [[{"node": "Preparar Resultado", "type": "main", "index": 0}]]
     },
-    "Log Sucesso": {
-      "main": [
-        [
-          {
-            "node": "Registrar Log",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Preparar Resultado": {
+      "main": [[{"node": "Loop - Salvar Ideias", "type": "main", "index": 0}]]
+    },
+    "Agregar Resultados": {
+      "main": [[{"node": "Log Final", "type": "main", "index": 0}]]
+    },
+    "Log Final": {
+      "main": [[{"node": "Resultado Final", "type": "main", "index": 0}]]
     }
   },
+  "active": false,
   "settings": {
     "executionOrder": "v1",
     "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner",
-    "errorWorkflow": ""
+    "callerPolicy": "workflowsFromSameOwner"
   },
   "staticData": null,
   "tags": [
-    {
-      "createdAt": "2025-11-30T00:00:00.000Z",
-      "updatedAt": "2025-11-30T00:00:00.000Z",
-      "id": "1",
-      "name": "PULSO"
-    },
-    {
-      "createdAt": "2025-11-30T00:00:00.000Z",
-      "updatedAt": "2025-11-30T00:00:00.000Z",
-      "id": "2",
-      "name": "Automação"
-    }
+    {"id": "MFytbRYpluf20w5V", "name": "PULSO"},
+    {"id": "1oYaJvQyf1LhoYQ3", "name": "Automação"}
   ],
   "pinData": {},
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "nlcisbfdiokmipyihtuz"
+    "templateCredsSetupCompleted": true
   },
-  "id": "WF00",
-  "versionId": "1.0.0"
+  "id": "WF00_CORRIGIDO",
+  "versionId": "2.0.0"
 }

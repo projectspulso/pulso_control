@@ -161,6 +161,7 @@ supabase/migrations/trigger_auto_agendar_publicacao.sql
 Você verá mensagens de validação:
 
 **Do script de ajuste:**
+
 ```
 ✅ PIPELINE atualizado:
    - Items com data_prevista: 49
@@ -178,6 +179,7 @@ Você verá mensagens de validação:
 ```
 
 **Do trigger automático:**
+
 ```
 🧪 TESTE DO TRIGGER:
    ✅ Trigger instalado com sucesso!

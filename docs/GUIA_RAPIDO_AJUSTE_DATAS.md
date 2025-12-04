@@ -252,9 +252,11 @@ Você terá:
 ## 🔄 Como Funciona o Agendamento Automático
 
 ### Para Ideias Existentes (129)
+
 Usam o script `ajustar_datas_inicio_projeto.sql` que distribui datas manualmente.
 
 ### Para Novas Ideias (futuras)
+
 O **trigger** instalado funciona assim:
 
 1. 📝 Você cria uma nova ideia no sistema
@@ -266,6 +268,7 @@ O **trigger** instalado funciona assim:
 4. ✅ Atribui automaticamente `data_publicacao` e `data_prevista`
 
 **Exemplo**:
+
 ```
 Última ideia agendada: 22/01/2026 às 21:00
 Nova ideia criada: Recebe automaticamente 23/01/2026 às 09:00
