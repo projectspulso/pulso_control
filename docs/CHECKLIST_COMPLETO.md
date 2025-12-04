@@ -110,7 +110,7 @@
 - [x] **✅ Personagem "Pulso" criado**
 
   - **Conceito:** Personagem metamórfico único que se adapta ao canal
-  - **Variações:** 
+  - **Variações:**
     - Psicologia (calmo, tom grave, speed 0.9)
     - Fatos Inusitados (empolgado, tom agudo, speed 1.1)
     - Tecnologia (profissional, neutro, speed 1.0)
@@ -129,6 +129,7 @@
   - **Prioridade:** 🔴 CRÍTICA
 
 - [ ] **Criar assets visuais do Pulso**
+
   ```
   public/avatars/
     ├── pulso_psicologia.png (calmo, cores terra)
@@ -136,6 +137,7 @@
     ├── pulso_tecnologia.png (futurista, neon)
     └── pulso_default.png (base padrão)
   ```
+
   - **Prioridade:** 🟡 ALTA
   - **Opções:** DALL-E 3, Midjourney, ou placeholder
 
