@@ -7,7 +7,7 @@ Você está **100% correto**! Faltavam estruturas essenciais:
 ❌ **Personagens** (vozes, avatares, estilos)  
 ❌ **Thumbnails** (armazenamento, A/B testing)  
 ❌ **Feedback** (avaliar qualidade, treinar IA)  
-❌ **Métricas** (comparar expectativa vs realidade)  
+❌ **Métricas** (comparar expectativa vs realidade)
 
 Sem isso, a IA **não aprende** com os resultados e **não melhora** ao longo do tempo.
 
@@ -32,12 +32,13 @@ pulso_content.personagens
 ```
 
 **Exemplo de uso**:
+
 ```typescript
 // WF02 seleciona personagem para áudio
 const personagem = await selecionarPersonagem({
-  idioma: 'pt-BR',
-  tom: 'misterioso',
-  tipo: 'VOZ'
+  idioma: "pt-BR",
+  tom: "misterioso",
+  tipo: "VOZ",
 });
 // Retorna: {voz_id: 'fable', provedor: 'openai'}
 ```
@@ -62,6 +63,7 @@ pulso_content.thumbnails
 ```
 
 **Workflow de thumbnails**:
+
 ```
 1. Ideia aprovada → Gerar 3 variantes (A, B, C)
 2. IA prevê qual terá melhor CTR
@@ -99,6 +101,7 @@ pulso_content.feedbacks
 ```
 
 **Ciclo de feedback**:
+
 ```
 1. Roteiro gerado → IA avalia (nota 8.5/10, viral: 7/10)
 2. Humano revisa → Aprova ou rejeita + comentários
@@ -199,7 +202,7 @@ pulso_content.metricas_publicacao
 ```sql
 -- IA testa 3 personagens diferentes
 INSERT INTO pulso_content.feedbacks (entidade_tipo, entidade_id, avaliador_tipo, metadata)
-VALUES 
+VALUES
   ('AUDIO', 'uuid-audio-1', 'METRICAS_REAIS', '{"personagem": "alloy", "views": 8000}'),
   ('AUDIO', 'uuid-audio-2', 'METRICAS_REAIS', '{"personagem": "fable", "views": 15000}'),
   ('AUDIO', 'uuid-audio-3', 'METRICAS_REAIS', '{"personagem": "nova", "views": 12000}');
@@ -216,7 +219,7 @@ Thumb A (dark, emoji 💀): CTR 8.5%
 Thumb B (bright, sem emoji): CTR 4.2%
 Thumb C (medium, emoji 😱): CTR 6.8%
 
--- Aprendizado: 
+-- Aprendizado:
 -- 1. Estilo dark funciona melhor para esse canal
 -- 2. Emoji 💀 converte melhor que 😱
 -- 3. Cores escuras + contraste alto = CTR acima da média
@@ -225,7 +228,7 @@ Thumb C (medium, emoji 😱): CTR 6.8%
 ### **Exemplo 3: Horário de Publicação**
 
 ```sql
-SELECT 
+SELECT
   hora_publicacao,
   AVG(views_24h) as media_views,
   AVG(taxa_retencao) as media_retencao
@@ -366,7 +369,7 @@ SELECT * FROM pulso_content.vw_performance_por_tipo;
 
 -- Resultado:
 -- Terror: 18k views média, R$ 45 receita
--- Mistério: 14k views média, R$ 35 receita  
+-- Mistério: 14k views média, R$ 35 receita
 -- Curiosidade: 11k views média, R$ 28 receita
 ```
 
@@ -375,34 +378,39 @@ SELECT * FROM pulso_content.vw_performance_por_tipo;
 ## 🎯 Benefícios do Sistema
 
 ### **Para Humanos**
+
 ✅ Dashboard com insights de performance  
 ✅ Saber quais padrões funcionam melhor  
 ✅ Comparar previsão da IA vs realidade  
-✅ Tomar decisões baseadas em dados  
+✅ Tomar decisões baseadas em dados
 
 ### **Para IA**
+
 ✅ Aprender com resultados reais  
 ✅ Melhorar previsões ao longo do tempo  
 ✅ Identificar padrões de sucesso  
-✅ Otimizar automaticamente  
+✅ Otimizar automaticamente
 
 ### **Para o Negócio**
+
 ✅ Aumentar taxa de sucesso (% de virais)  
 ✅ Reduzir desperdício (conteúdos que não performam)  
 ✅ Maximizar ROI em produção  
-✅ Escalar produção mantendo qualidade  
+✅ Escalar produção mantendo qualidade
 
 ---
 
 ## 📋 Próximos Passos
 
 ### **1. Executar Migration**
+
 ```bash
 # Executar no Supabase SQL Editor:
 supabase/migrations/criar_estrutura_completa_assets_feedback.sql
 ```
 
 ### **2. Criar Personagens Iniciais**
+
 ```sql
 INSERT INTO pulso_content.personagens (nome, slug, tipo, voz_id, provedor, idioma, tom)
 VALUES
@@ -412,6 +420,7 @@ VALUES
 ```
 
 ### **3. Integrar nos Workflows**
+
 - WF02: Selecionar personagem baseado em tom do roteiro
 - WF04: Avaliar roteiro com IA antes de produzir
 - WF05: Coletar métricas após publicação
