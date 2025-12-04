@@ -57,9 +57,7 @@ ALTER TABLE pulso_content.pipeline_producao DROP CONSTRAINT IF EXISTS pipeline_p
 ALTER TABLE pulso_content.pipeline_producao DROP CONSTRAINT IF EXISTS pipeline_producao_video_id_fkey CASCADE;
 -- Dropar FK de assets.videos → assets.audios (se existir)
 ALTER TABLE IF EXISTS assets.videos DROP CONSTRAINT IF EXISTS videos_audio_id_fkey CASCADE;
-
-DO $$ BEGIN
-    RAISE NOTICE 'Foreign keys dropadas com sucesso';
+DO $$ BEGIN RAISE NOTICE 'Foreign keys dropadas com sucesso';
 END $$;
 -- =========================================================================
 -- PASSO 3: MOVER TABELAS (se existirem e tiverem dados)
@@ -140,17 +138,28 @@ ALTER TABLE pulso_content.pipeline_producao
 ADD CONSTRAINT pipeline_producao_video_id_fkey FOREIGN KEY (video_id) REFERENCES pulso_content.videos(id) ON DELETE
 SET NULL;
 -- FK: videos → audios (ambos em pulso_content agora)
-ALTER TABLE pulso_content.videos
-ADD CONSTRAINT videos_audio_id_fkey FOREIGN KEY (audio_id) REFERENCES pulso_content.audios(id) ON DELETE
-SET NULL;
+-- Só criar se a coluna audio_id existir
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'pulso_content' 
+        AND table_name = 'videos' 
+        AND column_name = 'audio_id'
+    ) THEN
+        ALTER TABLE pulso_content.videos
+        ADD CONSTRAINT videos_audio_id_fkey 
+        FOREIGN KEY (audio_id) REFERENCES pulso_content.audios(id) ON DELETE SET NULL;
+        RAISE NOTICE 'FK videos → audios criada';
+    ELSE
+        RAISE NOTICE 'Coluna audio_id não existe em videos, FK não criada';
+    END IF;
+END $$;
 -- FK: audios → roteiros
 ALTER TABLE pulso_content.audios DROP CONSTRAINT IF EXISTS audios_roteiro_id_fkey CASCADE;
 ALTER TABLE pulso_content.audios
 ADD CONSTRAINT audios_roteiro_id_fkey FOREIGN KEY (roteiro_id) REFERENCES pulso_content.roteiros(id) ON DELETE
 SET NULL;
-
-DO $$ BEGIN
-    RAISE NOTICE 'Foreign keys recriadas com sucesso';
+DO $$ BEGIN RAISE NOTICE 'Foreign keys recriadas com sucesso';
 END $$;
 -- =========================================================================
 -- PASSO 5: RECRIAR VIEW public.pipeline_producao (principal view afetada)
@@ -205,9 +214,7 @@ FROM pulso_content.pipeline_producao p
 GRANT SELECT ON public.pipeline_producao TO anon,
     authenticated;
 COMMENT ON VIEW public.pipeline_producao IS 'View pública do pipeline - agora usando pulso_content.audios e pulso_content.videos';
-
-DO $$ BEGIN
-    RAISE NOTICE 'View public.pipeline_producao recriada com sucesso';
+DO $$ BEGIN RAISE NOTICE 'View public.pipeline_producao recriada com sucesso';
 END $$;
 -- =========================================================================
 -- PASSO 6: DROPAR TABELAS ANTIGAS E SCHEMA ASSETS
@@ -217,9 +224,7 @@ DROP TABLE IF EXISTS assets.videos CASCADE;
 DROP TABLE IF EXISTS assets.audios CASCADE;
 -- Dropar schema assets (se estiver vazio)
 DROP SCHEMA IF EXISTS assets CASCADE;
-
-DO $$ BEGIN
-    RAISE NOTICE 'Schema assets eliminado com sucesso';
+DO $$ BEGIN RAISE NOTICE 'Schema assets eliminado com sucesso';
 END $$;
 -- =========================================================================
 -- PASSO 7: VERIFICAÇÃO FINAL
