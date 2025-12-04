@@ -1,5 +1,5 @@
 {
-  "name": "WF01 - CRON Gerar Roteiros",
+  "name": "WF01 - CRON Gerar Roteiros (CORRIGIDO)",
   "nodes": [
     {
       "parameters": {
@@ -35,6 +35,65 @@
           "name": "Postgres supabase"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-items",
+              "leftValue": "={{ $json.ideia_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-ideias",
+      "name": "Tem Ideias?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "log-vazio",
+              "name": "mensagem",
+              "value": "Nenhuma ideia aguardando roteirização",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "sem-ideias",
+      "name": "Log - Sem Ideias",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "loop-ideias",
+      "name": "Loop - Processar Ideias",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [900, 200]
     },
     {
       "parameters": {
@@ -102,7 +161,7 @@
       "name": "Preparar Contexto",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [680, 300]
+      "position": [1120, 200]
     },
     {
       "parameters": {
@@ -115,13 +174,13 @@
         "messages": {
           "values": [
             {
-              "content": "=Você é um roteirista profissional especializado em vídeos curtos virais para redes sociais.\n\n**BRIEFING DO CONTEÚDO:**\n🎬 Canal: {{ $json.canal_nome }} (@{{ $json.canal_slug }})\n📌 Título da Ideia: {{ $json.titulo }}\n📝 Descrição: {{ $json.descricao }}\n💡 Gancho Sugerido: {{ $json.gancho_sugerido }}\n🎭 Tom de Voz: {{ $json.tom_voz }}\n⏱️ Duração Alvo: 50 segundos\n🌍 Idioma: {{ $json.linguagem }}\n\n---\n\n**TAREFA:**\nCrie um roteiro viral de 50 segundos com ESTA ESTRUTURA:\n\n# [TÍTULO PÚBLICO SUPER CHAMATIVO]\n\n## 🎣 GANCHO (0-5 segundos)\n[Primeira frase que PARA o scroll. Deve criar curiosidade ou choque imediato]\n\n## 📖 DESENVOLVIMENTO (5-40 segundos)\n[Narrativa principal com storytelling envolvente. Use estrutura de 3 atos:\n- Contexto inicial (5-15s)\n- Build-up de tensão (15-30s)\n- Transição para clímax (30-40s)]\n\n## 🎆 CLÍMAX (40-50 segundos)\n[Revelação surpreendente, momento \"uau\" ou conclusão impactante]\n\n## 📢 CTA (50-55 segundos)\n[\"Segue o {{ $json.canal_nome }} para mais!\" ou similar]\n\n---\n\n**METADADOS:**\n- **Hashtags:** #tag1 #tag2 #tag3 #tag4 #tag5\n- **Duração estimada:** Xs\n- **Tom predominante:** [emocional/educativo/misterioso/etc]\n\n---\n\n**DIRETRIZES:**\n✅ Linguagem clara (8ª série)\n✅ Frases curtas (máx. 15 palavras)\n✅ Total: 110-130 palavras (~50 segundos)\n✅ Factualmente preciso\n\nResponda APENAS com o roteiro em markdown, seguindo a estrutura acima."
+              "content": "=Você é um roteirista profissional especializado em vídeos curtos virais para redes sociais (TikTok, Instagram Reels, YouTube Shorts).\n\n**BRIEFING DO CONTEÚDO:**\n🎬 Canal: {{ $json.canal_nome }} (@{{ $json.canal_slug }})\n📌 Título da Ideia: {{ $json.titulo }}\n📝 Descrição: {{ $json.descricao }}\n💡 Gancho Sugerido: {{ $json.gancho_sugerido }}\n🎭 Tom de Voz: {{ $json.tom_voz }}\n⏱️ Duração Alvo: 60-90 segundos\n🌍 Idioma: {{ $json.linguagem }}\n\n---\n\n**TAREFA:**\nCrie um roteiro viral otimizado para áudio (Text-to-Speech) com a seguinte estrutura:\n\n# [TÍTULO PÚBLICO SUPER CHAMATIVO]\n\n[Gancho inicial - primeira frase que PARA o scroll e cria curiosidade imediata]\n\n[Parágrafo 1: Contexto - apresente o tema de forma intrigante, faça uma pergunta provocativa ou apresente um fato surpreendente que conecte com a audiência]\n\n[Parágrafo 2: Desenvolvimento - conte a história principal, apresente dados interessantes, explique o conceito ou desenvolva a narrativa. Use storytelling envolvente com detalhes específicos que prendam a atenção]\n\n[Parágrafo 3: Build-up - aprofunde a história, adicione camadas de complexidade, revele informações progressivamente para manter o interesse crescente]\n\n[Parágrafo 4: Clímax - momento de revelação, conclusão impactante, lição principal ou insight surpreendente que faz valer a pena ter assistido]\n\n[Parágrafo 5: CTA - encerramento natural com call-to-action suave, como \"Segue o {{ $json.canal_nome }} para mais histórias que fazem você pensar\"]\n\n---\n\n**DIRETRIZES CRÍTICAS:**\n\n📏 **EXTENSÃO:**\n- Objetivo: 350-450 palavras (equivale a 60-90 segundos de áudio)\n- Mínimo absoluto: 300 palavras\n- Máximo: 500 palavras\n\n✍️ **ESTILO DE ESCRITA:**\n- Linguagem clara e natural (nível 8ª série)\n- Frases curtas e médias (8-15 palavras)\n- Tom conversacional, como se estivesse falando com um amigo\n- Use perguntas retóricas para engajar\n- Varie o ritmo: alterne frases curtas impactantes com frases mais descritivas\n\n🎯 **FORMATO:**\n- Use APENAS um título principal (# Título)\n- NÃO use subtítulos (##) ou emojis nas seções\n- NÃO inclua metadados, hashtags ou duração estimada\n- NÃO use marcadores de tempo (0-5s, 5-40s, etc)\n- Escreva em PARÁGRAFOS corridos, não em listas ou bullets\n- Cada parágrafo deve ter 3-5 frases\n\n🎭 **CONTEÚDO:**\n- Comece com gancho forte que gera curiosidade\n- Desenvolva com storytelling envolvente\n- Inclua detalhes específicos e concretos\n- Construa tensão ou interesse progressivamente\n- Termine com insight memorável\n- CTA natural e não forçado\n\n⚠️ **EVITAR:**\n- Formatação markdown além do título (#)\n- Emojis no corpo do texto\n- Listas numeradas ou com bullets\n- Citações em bloco\n- Seções claramente marcadas\n- Jargões ou termos técnicos complexos\n- Repetições desnecessárias\n\n✅ **EXEMPLO DE BOA ESTRUTURA:**\n\n# [Título Chamativo]\n\n[Gancho impactante em 1-2 frases curtas]\n\n[Desenvolvimento fluido em parágrafos corridos, contando a história de forma envolvente, com detalhes interessantes que mantêm a atenção...]\n\n[Mais desenvolvimento, aprofundando a narrativa...]\n\n[Clímax e conclusão impactante]\n\n[CTA natural]\n\n---\n\nResponda APENAS com o roteiro em texto corrido, começando diretamente com o título em markdown (# Título)."
             }
           ]
         },
         "options": {
-          "maxTokens": 1500,
-          "temperature": 0.75,
+          "maxTokens": 2000,
+          "temperature": 0.8,
           "topP": 1
         }
       },
@@ -129,7 +188,10 @@
       "name": "GPT-4o - Gerar Roteiro",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.5,
-      "position": [900, 300],
+      "position": [1340, 200],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
       "credentials": {
         "openAiApi": {
           "id": "UiqqtKTHr3xQlkcs",
@@ -139,27 +201,25 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extrair resposta do GPT-4o\nconst response = $input.item.json.message?.content || '';\n\nif (!response || response.trim().length < 100) {\n  throw new Error('Resposta da OpenAI está vazia ou muito curta');\n}\n\n// Contexto da ideia\nconst contexto = $('Preparar Contexto').item.json;\n\n// Extrair título (primeira linha com #)\nconst tituloMatch = response.match(/^#\\s+(.+)$/m);\nconst tituloPub = tituloMatch ? tituloMatch[1].replace(/[🎬📌💡🔥✨]/g, '').trim() : contexto.titulo;\n\n// Extrair metadados\nconst hashtagsMatch = response.match(/\\*\\*Hashtags:\\*\\*\\s*([^\\n]+)/);\nconst tomMatch = response.match(/\\*\\*Tom predominante:\\*\\*\\s*([^\\n]+)/);\n\n// Processar hashtags\nconst hashtagsRaw = hashtagsMatch ? hashtagsMatch[1] : '';\nconst hashtags = hashtagsRaw\n  .split(/[\\s,]+/)\n  .filter(h => h.startsWith('#'))\n  .map(h => h.replace('#', '').toLowerCase())\n  .slice(0, 10);\n\n// Calcular métricas\nconst palavrasTotal = response.split(/\\s+/).length;\nconst duracaoSegundos = Math.round(palavrasTotal / 2.5); // ~150 palavras/minuto\n\n// Função para extrair seção\nfunction extractSection(text, sectionName) {\n  const regex = new RegExp(`##\\\\s*[🎣📖🎆📢]*\\\\s*${sectionName}[\\\\s\\\\S]*?(?=##|$)`, 'i');\n  const match = text.match(regex);\n  return match ? match[0].replace(/##[^\\n]+\\n/, '').trim() : '';\n}\n\nconst gancho = extractSection(response, 'GANCHO');\nconst desenvolvimento = extractSection(response, 'DESENVOLVIMENTO');\nconst climax = extractSection(response, 'CLÍMAX|CLIMAX');\nconst cta = extractSection(response, 'CTA|Call to Action');\n\n// Quality score\nconst temGancho = gancho.length > 50;\nconst temDesenvolvimento = desenvolvimento.length > 200;\nconst temClimax = climax.length > 50;\nconst temCTA = cta.length > 20;\nconst qualityScore = [temGancho, temDesenvolvimento, temClimax, temCTA].filter(Boolean).length * 25;\n\nreturn {\n  json: {\n    // IDs\n    ideia_id: contexto.ideia_id,\n    canal_id: contexto.canal_id,\n    \n    // Conteúdo\n    titulo: tituloPub,\n    conteudo_md: response,\n    \n    // Métricas\n    duracao_segundos: duracaoSegundos,\n    palavras_total: palavrasTotal,\n    linguagem: contexto.linguagem,\n    \n    // Metadados\n    hashtags: hashtags,\n    tom_narrativo: tomMatch ? tomMatch[1].trim() : 'narrativo',\n    quality_score: qualityScore,\n    \n    // Seções\n    secoes: {\n      gancho: gancho,\n      desenvolvimento: desenvolvimento,\n      climax: climax,\n      cta: cta\n    },\n    \n    // Validações\n    validacoes: {\n      tem_gancho: temGancho,\n      tem_desenvolvimento: temDesenvolvimento,\n      tem_climax: temClimax,\n      tem_cta: temCTA\n    }\n  }\n};"
+        "jsCode": "// ==================================================\n// PROCESSAR ROTEIRO GERADO\n// ==================================================\n\nconst response = $input.item.json.message?.content || '';\n\nif (!response || response.trim().length < 100) {\n  throw new Error('Resposta da OpenAI está vazia ou muito curta');\n}\n\nconst contexto = $('Preparar Contexto').item.json;\n\n// ========== EXTRAIR TÍTULO ==========\nconst tituloMatch = response.match(/^#\\s+(.+)$/m);\nconst tituloPub = tituloMatch \n  ? tituloMatch[1].replace(/[🎬📌💡🔥✨⚡]/g, '').trim() \n  : contexto.titulo;\n\n// ========== CALCULAR MÉTRICAS ==========\nconst totalCaracteres = response.length;\nconst palavrasTotal = response.split(/\\s+/).filter(p => p.length > 0).length;\nconst paragrafos = response.split(/\\n\\n+/).filter(p => p.trim().length > 0).length;\n\n// Duração: ~25 caracteres/segundo para TTS\nconst duracaoSegundos = Math.ceil(totalCaracteres / 25);\n\n// ========== VALIDAÇÕES DE QUALIDADE ==========\nconst validacoes = {\n  tamanho_adequado: totalCaracteres >= 1800,  // Mínimo 1800 chars\n  palavras_suficientes: palavrasTotal >= 300,  // Mínimo 300 palavras\n  tem_paragrafos: paragrafos >= 4,  // Pelo menos 4 parágrafos\n  duracao_adequada: duracaoSegundos >= 60,  // Mínimo 60 segundos\n  tem_titulo: !!tituloMatch,\n  sem_formatacao_excessiva: (response.match(/##/g) || []).length === 0  // Sem subtítulos\n};\n\n// Score de qualidade (0-100)\nconst qualityScore = Object.values(validacoes).filter(Boolean).length * (100 / 6);\n\n// ========== DECISÃO DE STATUS ==========\n// Auto-aprovar se qualidade >= 80% E duração >= 60s\nconst autoAprovar = qualityScore >= 80 && duracaoSegundos >= 60;\nconst status = autoAprovar ? 'APROVADO' : 'RASCUNHO';\n\n// ========== ANÁLISE DE CONTEÚDO ==========\n// Detectar tipo de conteúdo\nconst temPergunta = /\\?/.test(response);\nconst temNumeros = /\\d{2,}/.test(response);\nconst temCitacao = /\"[^\"]+\"|'[^']+'/.test(response);\n\nconst caracteristicas = {\n  interativo: temPergunta,\n  com_dados: temNumeros,\n  com_citacoes: temCitacao,\n  narrativo: paragrafos >= 5\n};\n\n// ========== OUTPUT ==========\nreturn {\n  json: {\n    // IDs\n    ideia_id: contexto.ideia_id,\n    canal_id: contexto.canal_id,\n    \n    // Conteúdo\n    titulo: tituloPub,\n    conteudo_md: response,\n    \n    // Métricas\n    duracao_segundos: duracaoSegundos,\n    palavras_total: palavrasTotal,\n    total_caracteres: totalCaracteres,\n    total_paragrafos: paragrafos,\n    linguagem: contexto.linguagem,\n    \n    // Status\n    status: status,\n    auto_aprovado: autoAprovar,\n    quality_score: Math.round(qualityScore),\n    \n    // Metadados\n    validacoes: validacoes,\n    caracteristicas: caracteristicas,\n    \n    // Contexto original\n    canal_nome: contexto.canal_nome,\n    ideia_titulo: contexto.titulo\n  }\n};"
       },
       "id": "processar-roteiro",
       "name": "Processar Roteiro",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 300]
+      "position": [1560, 200]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO pulso_content.roteiros (\n  ideia_id,\n  canal_id,\n  titulo,\n  conteudo_md,\n  duracao_estimado_segundos,\n  status,\n  linguagem,\n  categoria_metadata,\n  metadata\n) VALUES (\n  $1::uuid,\n  $2::uuid,\n  $3,\n  $4,\n  $5,\n  'RASCUNHO',\n  $6,\n  'PADRAO_COMPLETO',\n  jsonb_build_object(\n    'ai_modelo', 'gpt-4o',\n    'gerado_via', 'cron',\n    'prompt_version', '3.0',\n    'hashtags_sugeridas', $7::jsonb,\n    'tom_narrativo', $8,\n    'palavras_total', $9,\n    'quality_score', $10,\n    'validacoes', $11::jsonb,\n    'secoes', $12::jsonb,\n    'gerado_em', NOW()::text\n  )\n) RETURNING id, titulo, status, duracao_estimado_segundos, created_at;",
-        "options": {
-          "queryParams": "={{ {\n  \"1\": $json.ideia_id,\n  \"2\": $json.canal_id,\n  \"3\": $json.titulo,\n  \"4\": $json.conteudo_md,\n  \"5\": $json.duracao_segundos,\n  \"6\": $json.linguagem,\n  \"7\": JSON.stringify($json.hashtags),\n  \"8\": $json.tom_narrativo,\n  \"9\": $json.palavras_total,\n  \"10\": $json.quality_score,\n  \"11\": JSON.stringify($json.validacoes),\n  \"12\": JSON.stringify($json.secoes)\n} }}"
-        }
+        "query": "INSERT INTO pulso_content.roteiros (\n  ideia_id,\n  canal_id,\n  titulo,\n  conteudo_md,\n  duracao_estimado_segundos,\n  status,\n  linguagem,\n  categoria_metadata,\n  metadata\n) VALUES (\n  '{{ $json.ideia_id }}'::uuid,\n  '{{ $json.canal_id }}'::uuid,\n  '{{ $json.titulo }}',\n  '{{ $json.conteudo_md }}',\n  {{ $json.duracao_segundos }},\n  '{{ $json.status }}',\n  '{{ $json.linguagem }}',\n  'PADRAO_COMPLETO_V2',\n  jsonb_build_object(\n    'ai_modelo', 'gpt-4o',\n    'gerado_via', 'cron',\n    'prompt_version', '4.0',\n    'palavras_total', {{ $json.palavras_total }},\n    'total_caracteres', {{ $json.total_caracteres }},\n    'total_paragrafos', {{ $json.total_paragrafos }},\n    'quality_score', {{ $json.quality_score }},\n    'auto_aprovado', {{ $json.auto_aprovado }},\n    'validacoes', '{{ JSON.stringify($json.validacoes) }}'::jsonb,\n    'caracteristicas', '{{ JSON.stringify($json.caracteristicas) }}'::jsonb,\n    'gerado_em', NOW()::text\n  )\n) RETURNING id, titulo, status, duracao_estimado_segundos, created_at;",
+        "options": {}
       },
       "id": "salvar-roteiro",
       "name": "Salvar Roteiro",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1340, 300],
+      "position": [1780, 200],
       "credentials": {
         "postgres": {
           "id": "q19Ps5vylbEtdVtd",
@@ -170,22 +230,108 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO pulso_content.logs_workflows (\n  workflow_name,\n  status,\n  detalhes,\n  tempo_execucao_ms,\n  created_at\n) VALUES (\n  'WF01_CRON_Gerar_Roteiros',\n  'sucesso',\n  jsonb_build_object(\n    'roteiro_id', $1::uuid,\n    'ideia_id', $2::uuid,\n    'titulo', $3,\n    'duracao_segundos', $4,\n    'quality_score', $5,\n    'timestamp', NOW()::text\n  ),\n  $6,\n  NOW()\n);",
-        "options": {
-          "queryParams": "={{ {\n  \"1\": $json.id,\n  \"2\": $('Processar Roteiro').item.json.ideia_id,\n  \"3\": $json.titulo,\n  \"4\": $json.duracao_estimado_segundos,\n  \"5\": $('Processar Roteiro').item.json.quality_score,\n  \"6\": $execution.executionTime || 0\n} }}"
-        }
+        "query": "INSERT INTO pulso_content.logs_workflows (\n  workflow_name,\n  status,\n  detalhes\n) VALUES (\n  'WF01_CRON_Gerar_Roteiros',\n  'sucesso',\n  jsonb_build_object(\n    'roteiro_id', '{{ $json.id }}',\n    'ideia_id', '{{ $('Processar Roteiro').item.json.ideia_id }}',\n    'titulo', '{{ $json.titulo }}',\n    'duracao_segundos', {{ $json.duracao_estimado_segundos }},\n    'status', '{{ $json.status }}',\n    'quality_score', {{ $('Processar Roteiro').item.json.quality_score }},\n    'auto_aprovado', {{ $('Processar Roteiro').item.json.auto_aprovado }},\n    'timestamp', '{{ $json.created_at }}'\n  )\n);",
+        "options": {}
       },
       "id": "log-sucesso",
-      "name": "Log Sucesso",
+      "name": "Log Sucesso Individual",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1560, 300],
+      "position": [2000, 200],
       "credentials": {
         "postgres": {
           "id": "q19Ps5vylbEtdVtd",
           "name": "Postgres supabase"
         }
       }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "result-roteiro",
+              "name": "roteiro_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "result-titulo",
+              "name": "titulo",
+              "value": "={{ $json.titulo }}",
+              "type": "string"
+            },
+            {
+              "id": "result-status",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "result-duracao",
+              "name": "duracao",
+              "value": "={{ $json.duracao_estimado_segundos }}s",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prep-resultado",
+      "name": "Preparar Resultado",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2220, 200]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "roteiros_gerados",
+        "options": {}
+      },
+      "id": "agregar-resultados",
+      "name": "Agregar Resultados",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "final-success",
+              "name": "success",
+              "value": "true",
+              "type": "boolean"
+            },
+            {
+              "id": "final-count",
+              "name": "total_roteiros_gerados",
+              "value": "={{ $json.roteiros_gerados.length }}",
+              "type": "number"
+            },
+            {
+              "id": "final-aprovados",
+              "name": "total_auto_aprovados",
+              "value": "={{ $json.roteiros_gerados.filter(r => r.status === 'APROVADO').length }}",
+              "type": "number"
+            },
+            {
+              "id": "final-timestamp",
+              "name": "completed_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "resultado-final",
+      "name": "Resultado Final",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1340, 300]
     }
   ],
   "connections": {
@@ -193,7 +339,19 @@
       "main": [[{"node": "Buscar Ideias Sem Roteiro", "type": "main", "index": 0}]]
     },
     "Buscar Ideias Sem Roteiro": {
-      "main": [[{"node": "Preparar Contexto", "type": "main", "index": 0}]]
+      "main": [[{"node": "Tem Ideias?", "type": "main", "index": 0}]]
+    },
+    "Tem Ideias?": {
+      "main": [
+        [{"node": "Loop - Processar Ideias", "type": "main", "index": 0}],
+        [{"node": "Log - Sem Ideias", "type": "main", "index": 0}]
+      ]
+    },
+    "Loop - Processar Ideias": {
+      "main": [
+        [{"node": "Preparar Contexto", "type": "main", "index": 0}],
+        [{"node": "Agregar Resultados", "type": "main", "index": 0}]
+      ]
     },
     "Preparar Contexto": {
       "main": [[{"node": "GPT-4o - Gerar Roteiro", "type": "main", "index": 0}]]
@@ -205,7 +363,16 @@
       "main": [[{"node": "Salvar Roteiro", "type": "main", "index": 0}]]
     },
     "Salvar Roteiro": {
-      "main": [[{"node": "Log Sucesso", "type": "main", "index": 0}]]
+      "main": [[{"node": "Log Sucesso Individual", "type": "main", "index": 0}]]
+    },
+    "Log Sucesso Individual": {
+      "main": [[{"node": "Preparar Resultado", "type": "main", "index": 0}]]
+    },
+    "Preparar Resultado": {
+      "main": [[{"node": "Loop - Processar Ideias", "type": "main", "index": 0}]]
+    },
+    "Agregar Resultados": {
+      "main": [[{"node": "Resultado Final", "type": "main", "index": 0}]]
     }
   },
   "active": false,
@@ -216,17 +383,13 @@
   },
   "staticData": null,
   "tags": [
-    {
-      "id": "MFytbRYpluf20w5V",
-      "name": "PULSO"
-    },
-    {
-      "id": "1oYaJvQyf1LhoYQ3",
-      "name": "Automação"
-    }
+    {"id": "MFytbRYpluf20w5V", "name": "PULSO"},
+    {"id": "1oYaJvQyf1LhoYQ3", "name": "Automação"}
   ],
   "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true
-  }
+  },
+  "id": "WF01_CORRIGIDO",
+  "versionId": "2.0.0"
 }
