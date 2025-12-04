@@ -194,7 +194,7 @@ SELECT p.id,
     r.titulo as roteiro_titulo,
     r.status as roteiro_status,
     r.versao as roteiro_versao,
-    r.conteudo as roteiro_conteudo,
+    r.conteudo_md as roteiro_conteudo,
     -- Dados do áudio (AGORA DE pulso_content.audios)
     a.url as audio_url,
     a.duracao_segundos as audio_duracao,
