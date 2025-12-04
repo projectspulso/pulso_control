@@ -194,22 +194,12 @@ SELECT p.id,
     r.titulo as roteiro_titulo,
     r.status as roteiro_status,
     r.versao as roteiro_versao,
-    r.conteudo_md as roteiro_conteudo,
-    -- Dados do áudio (AGORA DE pulso_content.audios)
-    a.url as audio_url,
-    a.duracao_segundos as audio_duracao,
-    -- Dados do vídeo (AGORA DE pulso_content.videos)
-    v.url as video_url,
-    v.thumbnail_url,
-    v.duracao_segundos as video_duracao
+    r.conteudo_md as roteiro_conteudo
 FROM pulso_content.pipeline_producao p
     LEFT JOIN pulso_content.ideias i ON p.ideia_id = i.id
     LEFT JOIN pulso_core.canais c ON i.canal_id = c.id
     LEFT JOIN pulso_core.series s ON i.serie_id = s.id
-    LEFT JOIN pulso_content.roteiros r ON p.roteiro_id = r.id
-    LEFT JOIN pulso_content.audios a ON p.audio_id = a.id -- MUDOU DE assets.audios
-    LEFT JOIN pulso_content.videos v ON p.video_id = v.id;
--- MUDOU DE assets.videos
+    LEFT JOIN pulso_content.roteiros r ON p.roteiro_id = r.id;
 GRANT SELECT ON public.pipeline_producao TO anon,
     authenticated;
 COMMENT ON VIEW public.pipeline_producao IS 'View pública do pipeline - agora usando pulso_content.audios e pulso_content.videos';
