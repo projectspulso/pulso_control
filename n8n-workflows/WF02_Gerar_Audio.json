@@ -1,5 +1,5 @@
 {
-  "name": "WF02 - Gerar Áudio TTS (V5 - DEBUG MODE)",
+  "name": "WF02 - Gerar Áudio TTS (CORRIGIDO)",
   "nodes": [
     {
       "parameters": {
@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "beba8ba7-ca98-4707-b1ab-c1a625e0054a",
+      "id": "cron-trigger",
       "name": "A cada 10 minutos",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -21,11 +21,11 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT \n r.id as roteiro_id,\n r.ideia_id,\n r.canal_id,\n i.serie_id,\n r.titulo,\n r.conteudo_md,\n r.duracao_estimado_segundos,\n r.linguagem,\n r.metadata,\n i.titulo as ideia_titulo,\n c.nome as canal_nome,\n c.slug as canal_slug,\n c.idioma as canal_linguagem,\n p.id as pipeline_id,\n p.status as pipeline_status\nFROM pulso_content.roteiros r\nINNER JOIN pulso_content.ideias i ON i.id = r.ideia_id\nINNER JOIN pulso_core.canais c ON c.id = r.canal_id\nLEFT JOIN pulso_content.pipeline_producao p ON p.ideia_id = r.ideia_id\nLEFT JOIN pulso_content.audios a ON a.roteiro_id = r.id\nWHERE \n r.status IN ('APROVADO', 'RASCUNHO')\n AND a.id IS NULL\n AND r.conteudo_md IS NOT NULL\nORDER BY r.created_at ASC\nLIMIT 5;",
+        "query": "SELECT \n  r.id as roteiro_id,\n  r.ideia_id,\n  r.canal_id,\n  i.serie_id,\n  r.titulo,\n  r.conteudo_md,\n  r.duracao_estimado_segundos,\n  r.linguagem,\n  r.metadata,\n  i.titulo as ideia_titulo,\n  c.nome as canal_nome,\n  c.slug as canal_slug,\n  c.idioma as canal_linguagem,\n  p.id as pipeline_id,\n  p.status as pipeline_status\nFROM pulso_content.roteiros r\nINNER JOIN pulso_content.ideias i ON i.id = r.ideia_id\nINNER JOIN pulso_core.canais c ON c.id = r.canal_id\nLEFT JOIN pulso_content.pipeline_producao p ON p.ideia_id = r.ideia_id\nLEFT JOIN pulso_content.audios a ON a.roteiro_id = r.id\nWHERE r.status = 'APROVADO'\n  AND a.id IS NULL\n  AND r.conteudo_md IS NOT NULL\n  AND LENGTH(r.conteudo_md) > 50\n  AND LENGTH(r.conteudo_md) < 4000\nORDER BY r.created_at ASC\nLIMIT 1;",
         "options": {}
       },
-      "id": "5befd06b-bb2c-4872-8ac1-75ca77a0ca7f",
-      "name": "Buscar Roteiros",
+      "id": "buscar-roteiro",
+      "name": "Buscar 1 Roteiro sem Áudio",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [460, 300],
@@ -38,11 +38,22 @@
     },
     {
       "parameters": {
-        "jsCode": "// ==================================================\n// EXPLODE ITEMS (FORÇA BRUTA)\n// ==================================================\nconst inputs = $input.all();\nconst resultados = [];\n\n// Itera sobre cada roteiro que veio do banco\nfor (let i = 0; i < inputs.length; i++) {\n  const roteiro = inputs[i].json;\n  const markdown = roteiro.conteudo_md;\n\n  // Validação simples\n  if (!markdown || markdown.length < 10) continue;\n\n  // Configuração básica\n  const lang = (roteiro.linguagem || 'pt-BR').toLowerCase();\n  const voice = lang.includes('en') ? 'nova' : 'alloy';\n\n  // Simulação de Chunking (simplificada para garantir funcionamento)\n  // Divide a cada 4000 chars aproximadamente\n  const chunks = markdown.match(/.{1,4000}/g) || [markdown];\n  \n  // CRIA UM ITEM NOVO PARA CADA PEDAÇO\n  chunks.forEach((texto, index) => {\n    resultados.push({\n      json: {\n        roteiro_id: roteiro.roteiro_id,\n        titulo: roteiro.titulo,\n        texto_tts: texto,\n        chunk_index: index + 1,\n        total_chunks: chunks.length,\n        is_chunk: chunks.length > 1,\n        precisa_merge: chunks.length > 1,\n        voice: voice,\n        speed: 1.0,\n        modelo: 'tts-1-hd',\n        // ID único para debug\n        debug_id: `R${roteiro.roteiro_id}_C${index}`\n      }\n    });\n  });\n}\n\n// IMPORTANTE: Isso garante que o n8n veja uma lista de itens\nreturn resultados;"
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ]
+        }
       },
-      "id": "e305374b-e853-43a9-8393-2947137f61b7",
-      "name": "Preparar Lista de Jobs",
-      "type": "n8n-nodes-base.code",
+      "id": "check-roteiro",
+      "name": "Tem Roteiro?",
+      "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [680, 300]
     },
@@ -51,77 +62,43 @@
         "assignments": {
           "assignments": [
             {
-              "id": "debug-count",
-              "name": "total_para_processar",
-              "value": "={{ $input.all().length }}",
-              "type": "number"
+              "name": "mensagem",
+              "value": "Nenhum roteiro aprovado aguardando geração de áudio",
+              "type": "string"
             },
             {
-              "id": "debug-first",
-              "name": "primeiro_id",
-              "value": "={{ $json.roteiro_id }}",
+              "name": "checked_at",
+              "value": "={{ $now.toISO() }}",
               "type": "string"
             }
           ]
-        },
-        "options": {}
+        }
       },
-      "id": "b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e",
-      "name": "DEBUG_CONTAGEM",
+      "id": "log-vazio",
+      "name": "Log - Nenhum Roteiro",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [900, 300]
+      "position": [900, 400]
     },
     {
       "parameters": {
-        "batchSize": 1,
-        "options": {}
+        "jsCode": "const item = $input.item.json;\nconst markdown = item.conteudo_md;\n\nif (!markdown || markdown.trim().length < 50) {\n  throw new Error(`Roteiro ${item.roteiro_id}: conteúdo muito curto ou vazio`);\n}\n\n// Limpar markdown\nlet textoLimpo = markdown\n  .replace(/^---[\\s\\S]*?---/m, '')\n  .replace(/^#{1,6}\\s+/gm, '')\n  .replace(/\\*\\*(.+?)\\*\\*/g, '$1')\n  .replace(/\\*(.+?)\\*/g, '$1')\n  .replace(/__(.+?)__/g, '$1')\n  .replace(/_(.+?)_/g, '$1')\n  .replace(/\\[(.+?)\\]\\(.+?\\)/g, '$1')\n  .replace(/!\\[.*?\\]\\(.+?\\)/g, '')\n  .replace(/^[-*+]\\s+/gm, '')\n  .replace(/^\\d+\\.\\s+/gm, '')\n  .replace(/`(.+?)`/g, '$1')\n  .replace(/```[\\s\\S]*?```/g, '')\n  .replace(/^>\\s+/gm, '')\n  .replace(/^[-*_]{3,}$/gm, '')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\n// Normalizar pronúncia\ntextoLimpo = textoLimpo\n  .replace(/\\b([0-9]+)\\s*%/g, '$1 por cento')\n  .replace(/\\b([0-9]+)\\s*km\\b/gi, '$1 quilômetros')\n  .replace(/\\b([0-9]+)\\s*m\\b(?!\\w)/gi, '$1 metros')\n  .replace(/\\b([0-9]+)\\s*kg\\b/gi, '$1 quilogramas')\n  .replace(/\\b([0-9]+)\\s*h\\b(?!\\w)/gi, '$1 horas')\n  .replace(/\\$\\s*([0-9,.]+)/g, '$1 dólares')\n  .replace(/R\\$\\s*([0-9,.]+)/g, '$1 reais')\n  .replace(/\\bDr\\./gi, 'Doutor')\n  .replace(/\\bDra\\./gi, 'Doutora')\n  .replace(/\\bSr\\./gi, 'Senhor')\n  .replace(/\\bSra\\./gi, 'Senhora')\n  .replace(/\\bProf\\./gi, 'Professor')\n  .replace(/\\bEUA\\b/g, 'Estados Unidos')\n  .replace(/https?:\\/\\/\\S+/g, '')\n  .replace(/\\S+@\\S+\\.\\S+/g, '')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nconst totalCaracteres = textoLimpo.length;\nconst custoEstimado = (totalCaracteres / 1000000) * 15;\n\nreturn {\n  json: {\n    roteiro_id: item.roteiro_id,\n    ideia_id: item.ideia_id,\n    canal_id: item.canal_id,\n    serie_id: item.serie_id,\n    pipeline_id: item.pipeline_id,\n    titulo: item.titulo,\n    texto_tts: textoLimpo,\n    total_caracteres: totalCaracteres,\n    custo_estimado_usd: parseFloat(custoEstimado.toFixed(4)),\n    linguagem: item.linguagem || item.canal_linguagem || 'pt-BR',\n    duracao_estimada_segundos: item.duracao_estimado_segundos || 60,\n    canal_nome: item.canal_nome,\n    canal_slug: item.canal_slug,\n    ideia_titulo: item.ideia_titulo\n  }\n};"
       },
-      "id": "a532c575-1a82-40f0-887f-f7f097a30cd7",
-      "name": "Loop Unico Jobs",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [1120, 300]
+      "id": "limpar-markdown",
+      "name": "Limpar Markdown para TTS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 200]
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "path-check",
-              "name": "caminho",
-              "value": "processando",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
+        "jsCode": "const item = $input.item.json;\nconst linguagem = (item.linguagem || 'pt-BR').toLowerCase();\n\nconst vozMapa = {\n  'pt-br': { voice: 'alloy', speed: 1.0 },\n  'pt-pt': { voice: 'alloy', speed: 0.95 },\n  'pt': { voice: 'alloy', speed: 1.0 },\n  'en-us': { voice: 'nova', speed: 1.0 },\n  'en-gb': { voice: 'shimmer', speed: 0.95 },\n  'en': { voice: 'nova', speed: 1.0 },\n  'es-es': { voice: 'fable', speed: 1.0 },\n  'es-mx': { voice: 'onyx', speed: 1.0 },\n  'es': { voice: 'fable', speed: 1.0 },\n  'fr-fr': { voice: 'echo', speed: 0.95 },\n  'fr': { voice: 'echo', speed: 0.95 },\n  'de-de': { voice: 'onyx', speed: 0.95 },\n  'de': { voice: 'onyx', speed: 0.95 },\n  'it-it': { voice: 'fable', speed: 1.0 },\n  'it': { voice: 'fable', speed: 1.0 }\n};\n\nconst config = vozMapa[linguagem] || { voice: 'alloy', speed: 1.0 };\n\nreturn {\n  json: {\n    roteiro_id: item.roteiro_id,\n    ideia_id: item.ideia_id,\n    canal_id: item.canal_id,\n    serie_id: item.serie_id,\n    pipeline_id: item.pipeline_id,\n    titulo: item.titulo,\n    texto_tts: item.texto_tts,\n    linguagem: item.linguagem,\n    duracao_estimada_segundos: item.duracao_estimada_segundos,\n    total_caracteres: item.total_caracteres,\n    custo_estimado_usd: item.custo_estimado_usd,\n    voice: config.voice,\n    speed: config.speed,\n    modelo: 'tts-1-hd',\n    canal_nome: item.canal_nome,\n    canal_slug: item.canal_slug\n  }\n};"
       },
-      "id": "aa11bb22-cc33-44dd-55ee-ff6677889900",
-      "name": "CAMINHO_LOOP",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [1360, 200]
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "path-end",
-              "name": "caminho",
-              "value": "finalizado",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "bb22cc33-dd44-55ee-66ff-77889900aa11",
-      "name": "CAMINHO_FIM",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [1360, 460]
+      "id": "selecionar-voz",
+      "name": "Selecionar Voz por Idioma",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
     },
     {
       "parameters": {
@@ -131,7 +108,7 @@
         "nodeCredentialType": "openAiApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n model: $json.modelo,\n input: $json.texto_tts,\n voice: $json.voice,\n speed: $json.speed,\n response_format: 'mp3'\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  model: $json.modelo,\n  input: $json.texto_tts,\n  voice: $json.voice,\n  speed: $json.speed,\n  response_format: 'mp3'\n}) }}",
         "options": {
           "response": {
             "response": {
@@ -140,11 +117,11 @@
           }
         }
       },
-      "id": "7a3a8e94-99a2-4e17-8d2d-255416f43066",
+      "id": "openai-tts",
       "name": "OpenAI TTS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1580, 200],
+      "position": [1340, 200],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000,
@@ -157,18 +134,18 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.item.json;\nconst binary = $input.item.binary;\n\nif (!binary || !binary.data) {\n throw new Error('Áudio não foi gerado');\n}\n\nconst filename = item.is_chunk \n ? `${item.roteiro_id}_chunk${item.chunk_index}.mp3`\n : `${item.roteiro_id}.mp3`;\n\nconst storagePath = `audios/${filename}`;\n\nreturn {\n json: {\n ...item,\n filename: filename,\n storage_path: storagePath\n },\n binary: {\n data: binary.data\n }\n};"
+        "jsCode": "const dadosVoz = $node['Selecionar Voz por Idioma'].json;\nconst binary = $input.item.binary;\n\nif (!binary || !binary.data) {\n  throw new Error('Áudio não foi gerado pela OpenAI');\n}\n\nconst roteiroId = dadosVoz.roteiro_id;\nconst filename = `${roteiroId}.mp3`;\nconst storagePath = `audios/${filename}`;\n\nreturn {\n  json: {\n    roteiro_id: roteiroId,\n    ideia_id: dadosVoz.ideia_id,\n    canal_id: dadosVoz.canal_id,\n    serie_id: dadosVoz.serie_id,\n    pipeline_id: dadosVoz.pipeline_id,\n    filename: filename,\n    storage_path: storagePath,\n    linguagem: dadosVoz.linguagem,\n    voice: dadosVoz.voice,\n    modelo: dadosVoz.modelo,\n    speed: dadosVoz.speed,\n    total_caracteres: dadosVoz.total_caracteres,\n    custo_estimado_usd: dadosVoz.custo_estimado_usd,\n    titulo: dadosVoz.titulo,\n    canal_nome: dadosVoz.canal_nome,\n    canal_slug: dadosVoz.canal_slug\n  },\n  binary: {\n    data: binary.data\n  }\n};"
       },
-      "id": "3db09abf-d3ae-4ede-a435-8ec0f628bae1",
+      "id": "prep-upload",
       "name": "Preparar Upload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1800, 200]
+      "position": [1560, 200]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://nlcisbfdiokmipyihtuz.supabase.co/storage/v1/object/{{ $json.storage_path }}",
+        "url": "=https://nlcisbfdiokmipyihtuz.supabase.co/storage/v1/object/audios/{{ $json.filename }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -191,28 +168,57 @@
         "options": {
           "response": {
             "response": {
-              "responseFormat": "json"
+              "responseFormat": "json",
+              "neverError": false
             }
           }
         }
       },
-      "id": "c6d8ce14-3c15-4e46-8406-f1efeab8c79a",
-      "name": "Upload Storage",
+      "id": "upload-storage",
+      "name": "Upload Supabase Storage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2020, 200]
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const dadosUpload = $node['Preparar Upload'].json;\nconst projectId = 'nlcisbfdiokmipyihtuz';\nconst storagePath = dadosUpload.storage_path;\nconst publicUrl = `https://${projectId}.supabase.co/storage/v1/object/public/${storagePath}`;\n\nconst duracaoEstimada = Math.ceil((dadosUpload.total_caracteres / 150) / dadosUpload.speed);\n\nconst metadata = {\n  provedor: 'openai',\n  modelo: dadosUpload.modelo,\n  voice: dadosUpload.voice,\n  speed: dadosUpload.speed,\n  caracteres: dadosUpload.total_caracteres,\n  custo_usd: dadosUpload.custo_estimado_usd,\n  duracao_estimada_segundos: duracaoEstimada,\n  gerado_em: new Date().toISOString(),\n  workflow_execution_id: $execution.id\n};\n\nreturn {\n  json: {\n    roteiro_id: dadosUpload.roteiro_id,\n    ideia_id: dadosUpload.ideia_id,\n    canal_id: dadosUpload.canal_id,\n    storage_path: storagePath,\n    public_url: publicUrl,\n    duracao_segundos: duracaoEstimada,\n    linguagem: dadosUpload.linguagem || 'pt-BR',\n    formato: 'audio/mpeg',\n    tipo: 'AUDIO_TTS',\n    status: 'OK',\n    metadata: metadata\n  }\n};"
+      },
+      "id": "prep-metadata",
+      "name": "Preparar Metadata Áudio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 200]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO pulso_content.audios (\n ideia_id,\n roteiro_id,\n canal_id,\n storage_path,\n public_url,\n duracao_segundos,\n linguagem,\n formato,\n tipo,\n status,\n metadata\n) VALUES (\n '{{ $json.ideia_id }}',\n '{{ $json.roteiro_id }}',\n '{{ $json.canal_id }}',\n '{{ $json.storage_path }}',\n '{{ $json.public_url || \"\" }}',\n 60,\n '{{ $json.linguagem || \"pt-BR\" }}',\n 'audio/mpeg',\n 'AUDIO_TTS',\n '{{ $json.precisa_merge ? \"AGUARDANDO_MERGE\" : \"OK\" }}',\n '{}'::jsonb\n)\nRETURNING id;",
+        "query": "INSERT INTO pulso_content.audios (\n  ideia_id,\n  roteiro_id,\n  canal_id,\n  storage_path,\n  public_url,\n  duracao_segundos,\n  linguagem,\n  formato,\n  tipo,\n  status,\n  metadata\n) VALUES (\n  COALESCE(NULLIF('{{ $json.ideia_id }}', 'undefined'), NULL)::uuid,\n  COALESCE(NULLIF('{{ $json.roteiro_id }}', 'undefined'), NULL)::uuid,\n  COALESCE(NULLIF('{{ $json.canal_id }}', 'undefined'), NULL)::uuid,\n  '{{ $json.storage_path }}',\n  '{{ $json.public_url }}',\n  {{ $json.duracao_segundos || 'NULL' }},\n  '{{ $json.linguagem }}',\n  '{{ $json.formato }}',\n  '{{ $json.tipo }}',\n  '{{ $json.status }}',\n  '{{ JSON.stringify($json.metadata) }}'::jsonb\n)\nRETURNING id, roteiro_id, public_url, duracao_segundos, status, created_at;",
         "options": {}
       },
-      "id": "975dfd78-5f29-42f5-a158-4aaa053cce2b",
-      "name": "Inserir DB (Simples)",
+      "id": "insert-audio",
+      "name": "Inserir Áudio no DB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [2240, 200],
+      "position": [2220, 200],
+      "credentials": {
+        "postgres": {
+          "id": "ziXq3E6EiLFU31DX",
+          "name": "Postgres Supabase NOVO"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO pulso_content.logs_workflows (\n  workflow_name,\n  status,\n  detalhes\n) VALUES (\n  'WF02_Gerar_Audio_TTS',\n  'sucesso',\n  jsonb_build_object(\n    'execution_id', '{{ $workflow.id }}_{{ $execution.id }}',\n    'audio_id', '{{ $json.id }}',\n    'roteiro_id', '{{ $json.roteiro_id }}',\n    'public_url', '{{ $json.public_url }}',\n    'duracao_segundos', {{ $json.duracao_segundos }},\n    'status_audio', '{{ $json.status }}',\n    'timestamp', '{{ $json.created_at }}'\n  )\n);",
+        "options": {}
+      },
+      "id": "log-sucesso",
+      "name": "Log Sucesso",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [2440, 200],
       "credentials": {
         "postgres": {
           "id": "ziXq3E6EiLFU31DX",
@@ -225,210 +231,81 @@
         "assignments": {
           "assignments": [
             {
-              "id": "done-check",
-              "name": "concluido",
+              "name": "success",
               "value": "true",
               "type": "boolean"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "88c61b7a-16a4-4ee6-9951-65b56f312e4b",
-      "name": "Item Concluido",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [2460, 200]
-    },
-    {
-      "parameters": {
-        "aggregate": "aggregateAllItemData",
-        "destinationFieldName": "items_processados",
-        "options": {}
-      },
-      "id": "2b2f3af6-ae5e-48c4-a6d4-f0c715463f8f",
-      "name": "Agregar Tudo",
-      "type": "n8n-nodes-base.aggregate",
-      "typeVersion": 1,
-      "position": [1600, 460]
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
+            },
             {
-              "id": "final-msg",
-              "name": "status",
-              "value": "Concluído com Sucesso",
+              "name": "audio_id",
+              "value": "={{ $json.id }}",
               "type": "string"
             },
             {
-              "id": "final-qtd",
-              "name": "audios_criados",
-              "value": "={{ $json.items_processados.length }}",
-              "type": "number"
+              "name": "roteiro_id",
+              "value": "={{ $json.roteiro_id }}",
+              "type": "string"
+            },
+            {
+              "name": "public_url",
+              "value": "={{ $json.public_url }}",
+              "type": "string"
+            },
+            {
+              "name": "duracao",
+              "value": "={{ $json.duracao_segundos }}s",
+              "type": "string"
+            },
+            {
+              "name": "completed_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
             }
           ]
-        },
-        "options": {}
+        }
       },
-      "id": "aff1726f-0292-4c25-9fbb-721726fbd36a",
-      "name": "FIM",
+      "id": "resultado-final",
+      "name": "Resultado Final",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1820, 460]
+      "position": [2660, 200]
     }
   ],
   "connections": {
     "A cada 10 minutos": {
+      "main": [[{"node": "Buscar 1 Roteiro sem Áudio", "type": "main", "index": 0}]]
+    },
+    "Buscar 1 Roteiro sem Áudio": {
+      "main": [[{"node": "Tem Roteiro?", "type": "main", "index": 0}]]
+    },
+    "Tem Roteiro?": {
       "main": [
-        [
-          {
-            "node": "Buscar Roteiros",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Limpar Markdown para TTS", "type": "main", "index": 0}],
+        [{"node": "Log - Nenhum Roteiro", "type": "main", "index": 0}]
       ]
     },
-    "Buscar Roteiros": {
-      "main": [
-        [
-          {
-            "node": "Preparar Lista de Jobs",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Limpar Markdown para TTS": {
+      "main": [[{"node": "Selecionar Voz por Idioma", "type": "main", "index": 0}]]
     },
-    "Preparar Lista de Jobs": {
-      "main": [
-        [
-          {
-            "node": "DEBUG_CONTAGEM",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "DEBUG_CONTAGEM": {
-      "main": [
-        [
-          {
-            "node": "Loop Unico Jobs",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Loop Unico Jobs": {
-      "main": [
-        [
-          {
-            "node": "CAMINHO_LOOP",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "CAMINHO_FIM",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "CAMINHO_LOOP": {
-      "main": [
-        [
-          {
-            "node": "OpenAI TTS",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Selecionar Voz por Idioma": {
+      "main": [[{"node": "OpenAI TTS", "type": "main", "index": 0}]]
     },
     "OpenAI TTS": {
-      "main": [
-        [
-          {
-            "node": "Preparar Upload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Preparar Upload", "type": "main", "index": 0}]]
     },
     "Preparar Upload": {
-      "main": [
-        [
-          {
-            "node": "Upload Storage",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Upload Supabase Storage", "type": "main", "index": 0}]]
     },
-    "Upload Storage": {
-      "main": [
-        [
-          {
-            "node": "Inserir DB (Simples)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Upload Supabase Storage": {
+      "main": [[{"node": "Preparar Metadata Áudio", "type": "main", "index": 0}]]
     },
-    "Inserir DB (Simples)": {
-      "main": [
-        [
-          {
-            "node": "Item Concluido",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Preparar Metadata Áudio": {
+      "main": [[{"node": "Inserir Áudio no DB", "type": "main", "index": 0}]]
     },
-    "Item Concluido": {
-      "main": [
-        [
-          {
-            "node": "Loop Unico Jobs",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Inserir Áudio no DB": {
+      "main": [[{"node": "Log Sucesso", "type": "main", "index": 0}]]
     },
-    "CAMINHO_FIM": {
-      "main": [
-        [
-          {
-            "node": "Agregar Tudo",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Agregar Tudo": {
-      "main": [
-        [
-          {
-            "node": "FIM",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Log Sucesso": {
+      "main": [[{"node": "Resultado Final", "type": "main", "index": 0}]]
     }
   },
   "pinData": {},
@@ -438,24 +315,15 @@
     "saveManualExecutions": true,
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "5.0.0",
+  "versionId": "4.1.0-CORRIGIDO",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "1c07f1eb90393b2121c4e2d78af1ae5997f57da70bbfa23f5e98d20637e2a2f6"
   },
-  "id": "WF02_FINAL_DEBUG_V5",
+  "id": "WF02_CORRIGIDO",
   "tags": [
-    {
-      "id": "MFytbRYpluf20w5V",
-      "name": "PULSO"
-    },
-    {
-      "id": "1oYaJvQyf1LhoYQ3",
-      "name": "Automação"
-    },
-    {
-      "id": "voZKlFfz1Fmjxnht",
-      "name": "Audio"
-    }
+    {"id": "MFytbRYpluf20w5V", "name": "PULSO"},
+    {"id": "1oYaJvQyf1LhoYQ3", "name": "Automação"},
+    {"id": "voZKlFfz1Fmjxnht", "name": "Audio"}
   ]
 }

@@ -117,9 +117,24 @@ export default function AssetsPage() {
                 style={{ animationDelay: `${200 + idx * 30}ms` }}
               >
                 <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-pink-600/20 blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
-                {/* Preview */}
-                <div className="aspect-video bg-zinc-950 flex items-center justify-center">
-                  {getIconeTipo(asset.tipo)}
+                
+                {/* Preview com Player */}
+                <div className="aspect-video bg-zinc-950 flex items-center justify-center relative overflow-hidden">
+                  {asset.tipo === 'audio' && asset.public_url ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                      <Music className="h-12 w-12 text-purple-400 mb-3" />
+                      <audio 
+                        controls 
+                        className="w-full"
+                        preload="metadata"
+                      >
+                        <source src={asset.public_url} type="audio/mpeg" />
+                        Seu navegador não suporta áudio.
+                      </audio>
+                    </div>
+                  ) : (
+                    getIconeTipo(asset.tipo)
+                  )}
                 </div>
 
                 {/* Info */}

@@ -176,36 +176,51 @@ export default function RoteiroDetalhesPage({ params }: { params: Promise<{ id: 
               {/* Status de Áudio */}
               {audio ? (
                 <div className="mt-4 glass rounded-xl p-4 border border-green-500/20">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                      <span className="text-xl">🎵</span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-green-400">Áudio Gerado</p>
-                        <span className={`text-xs px-2 py-0.5 rounded ${
-                          audio.status === 'OK' 
-                            ? 'bg-green-500/20 text-green-400' 
-                            : audio.status === 'AGUARDANDO_MERGE'
-                            ? 'bg-yellow-500/20 text-yellow-400'
-                            : 'bg-zinc-700 text-zinc-400'
-                        }`}>
-                          {audio.status}
-                        </span>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <span className="text-xl">🎵</span>
                       </div>
-                      <p className="text-xs text-zinc-500 mt-0.5">
-                        {audio.duracao_segundos}s • {audio.linguagem}
-                      </p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-green-400">Áudio Gerado</p>
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            audio.status === 'OK' 
+                              ? 'bg-green-500/20 text-green-400' 
+                              : audio.status === 'AGUARDANDO_MERGE'
+                              ? 'bg-yellow-500/20 text-yellow-400'
+                              : 'bg-zinc-700 text-zinc-400'
+                          }`}>
+                            {audio.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-0.5">
+                          {audio.duracao_segundos}s • {audio.linguagem} • {audio.metadata?.voice || 'alloy'}
+                        </p>
+                      </div>
+                      {audio.public_url && (
+                        <a
+                          href={audio.public_url}
+                          download
+                          className="glass glass-hover rounded-lg px-3 py-2 text-xs text-zinc-400 hover:text-zinc-300 transition-all"
+                        >
+                          ⬇️ Baixar
+                        </a>
+                      )}
                     </div>
+                    
+                    {/* Player de Áudio Integrado */}
                     {audio.public_url && (
-                      <a
-                        href={audio.public_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="glass glass-hover rounded-lg px-4 py-2 text-sm text-blue-400 hover:text-blue-300 transition-all"
-                      >
-                        🎧 Ouvir
-                      </a>
+                      <div className="bg-zinc-900/50 rounded-lg p-3">
+                        <audio 
+                          controls 
+                          className="w-full"
+                          preload="metadata"
+                        >
+                          <source src={audio.public_url} type="audio/mpeg" />
+                          Seu navegador não suporta reprodução de áudio.
+                        </audio>
+                      </div>
                     )}
                   </div>
                 </div>
