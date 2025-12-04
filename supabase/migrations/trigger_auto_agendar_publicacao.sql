@@ -103,50 +103,45 @@ quando um novo item é inserido no pipeline_producao, caso esses campos estejam 
 -- TESTE DO TRIGGER
 -- =====================================================
 DO $$
-DECLARE 
-    test_ideia_id uuid;
-    data_atribuida timestamp with time zone;
-BEGIN 
-    -- Buscar primeira ideia que já existe no pipeline
-    SELECT ideia_id INTO test_ideia_id
-    FROM pulso_content.pipeline_producao
-    LIMIT 1;
-    
-    -- Se não houver ideias no pipeline, buscar qualquer ideia
-    IF test_ideia_id IS NULL THEN
-        SELECT id INTO test_ideia_id
-        FROM pulso_content.ideias
-        LIMIT 1;
-    END IF;
-    
-    -- Inserir item de teste SEM data_publicacao
-    INSERT INTO pulso_content.pipeline_producao (
+DECLARE test_ideia_id uuid;
+data_atribuida timestamp with time zone;
+BEGIN -- Buscar primeira ideia que já existe no pipeline
+SELECT ideia_id INTO test_ideia_id
+FROM pulso_content.pipeline_producao
+LIMIT 1;
+-- Se não houver ideias no pipeline, buscar qualquer ideia
+IF test_ideia_id IS NULL THEN
+SELECT id INTO test_ideia_id
+FROM pulso_content.ideias
+LIMIT 1;
+END IF;
+-- Inserir item de teste SEM data_publicacao
+INSERT INTO pulso_content.pipeline_producao (
         ideia_id,
         status,
         prioridade
     )
-    VALUES (
+VALUES (
         test_ideia_id,
         'AGUARDANDO_ROTEIRO',
         5
     )
-    RETURNING data_publicacao INTO data_atribuida;
-    
-    -- Deletar o item de teste (rollback do insert)
-    DELETE FROM pulso_content.pipeline_producao
-    WHERE ideia_id = test_ideia_id
-        AND data_publicacao = data_atribuida
-        AND status = 'AGUARDANDO_ROTEIRO'
-        AND prioridade = 5;
-    
-    -- Mostrar resultado
-    RAISE NOTICE '';
-    RAISE NOTICE '🧪 TESTE DO TRIGGER:';
-    RAISE NOTICE '   ✅ Trigger instalado com sucesso!';
-    RAISE NOTICE '   ✅ Data atribuída automaticamente: %', data_atribuida;
-    RAISE NOTICE '   ✅ Item de teste removido';
-    RAISE NOTICE '';
-    RAISE NOTICE '📌 Próximas inserções no pipeline receberão data automaticamente!';
+RETURNING data_publicacao INTO data_atribuida;
+-- Deletar o item de teste (rollback do insert)
+DELETE FROM pulso_content.pipeline_producao
+WHERE ideia_id = test_ideia_id
+    AND data_publicacao = data_atribuida
+    AND status = 'AGUARDANDO_ROTEIRO'
+    AND prioridade = 5;
+-- Mostrar resultado
+RAISE NOTICE '';
+RAISE NOTICE '🧪 TESTE DO TRIGGER:';
+RAISE NOTICE '   ✅ Trigger instalado com sucesso!';
+RAISE NOTICE '   ✅ Data atribuída automaticamente: %',
+data_atribuida;
+RAISE NOTICE '   ✅ Item de teste removido';
+RAISE NOTICE '';
+RAISE NOTICE '📌 Próximas inserções no pipeline receberão data automaticamente!';
 END $$;
 -- =====================================================
 -- QUERY PARA VISUALIZAR PRÓXIMA DATA DISPONÍVEL
