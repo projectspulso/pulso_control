@@ -194,7 +194,17 @@ FROM pulso_content.personagens,
 WHERE nome = 'Pulso'
 ORDER BY canal;
 COMMIT;
--- =========================================================================
+| nome | canal | expressao | arquivo_visual | speed | estilo | descricao | | ----- | ---------------- | ---------------------------- | -------------------------- | ----- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| Pulso | default | neutro,
+versátil | pulso_default.png | 1.0 | equilibrado | Forma padrão do Pulso para canais sem variação específica.| | Pulso | fatos_inusitados | curioso,
+empolgado,
+surpreso | pulso_fatos_inusitados.png | 1.1 | empolgado | Pulso fica empolgado e curioso,
+com cores vibrantes.Voz rápida e animada para surpreender com fatos inusitados.| | Pulso | psicologia | calmo,
+sábio,
+acolhedor | pulso_psicologia.png | 0.9 | reflexivo | Pulso assume uma forma calma e acolhedora,
+com cores terrosas.Voz pausada e reflexiva para conteúdos de psicologia.| | Pulso | tecnologia | confiante,
+moderno,
+inovador | pulso_tecnologia.png | 1.0 | profissional | Pulso assume forma futurista com cores tech (azul / roxo).Voz moderna e precisa para conteúdos de tecnologia.| -- =========================================================================
 -- PRÓXIMOS PASSOS:
 -- =========================================================================
 -- 1. Executar este script no Supabase SQL Editor
