@@ -139,20 +139,19 @@ ADD CONSTRAINT pipeline_producao_video_id_fkey FOREIGN KEY (video_id) REFERENCES
 SET NULL;
 -- FK: videos → audios (ambos em pulso_content agora)
 -- Só criar se a coluna audio_id existir
-DO $$ BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'pulso_content' 
-        AND table_name = 'videos' 
+DO $$ BEGIN IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'pulso_content'
+        AND table_name = 'videos'
         AND column_name = 'audio_id'
-    ) THEN
-        ALTER TABLE pulso_content.videos
-        ADD CONSTRAINT videos_audio_id_fkey 
-        FOREIGN KEY (audio_id) REFERENCES pulso_content.audios(id) ON DELETE SET NULL;
-        RAISE NOTICE 'FK videos → audios criada';
-    ELSE
-        RAISE NOTICE 'Coluna audio_id não existe em videos, FK não criada';
-    END IF;
+) THEN
+ALTER TABLE pulso_content.videos
+ADD CONSTRAINT videos_audio_id_fkey FOREIGN KEY (audio_id) REFERENCES pulso_content.audios(id) ON DELETE
+SET NULL;
+RAISE NOTICE 'FK videos → audios criada';
+ELSE RAISE NOTICE 'Coluna audio_id não existe em videos, FK não criada';
+END IF;
 END $$;
 -- FK: audios → roteiros
 ALTER TABLE pulso_content.audios DROP CONSTRAINT IF EXISTS audios_roteiro_id_fkey CASCADE;
@@ -190,7 +189,7 @@ SELECT p.id,
     c.slug as canal_slug,
     -- Dados da série
     s.id as serie_id,
-    s.titulo as serie_titulo,
+    s.nome as serie_nome,
     -- Dados do roteiro
     r.titulo as roteiro_titulo,
     r.status as roteiro_status,
