@@ -27,10 +27,10 @@ INSERT INTO pulso_content.personagens (
 VALUES (
         'Pulso',
         'pulso',
-        'AVATAR_ADAPTATIVO',
+        'AVATAR',
         'NEUTRO',
         'pt-BR',
-        'ADAPTATIVO',
+        'adaptativo',
         jsonb_build_object(
             'conceito',
             'Personagem metamórfico que se adapta ao canal',
