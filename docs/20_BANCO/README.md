@@ -24,6 +24,8 @@ Esta pasta organiza a parte de banco em quatro camadas:
 - `RESULTADO_INVESTIGACAO_RUNTIME_MVP_20260311.md` -> conclusao da investigacao ja executada
 - `VALIDACAO_POS_MIGRATION_WORKFLOW_QUEUE.md` -> como validar a unica migration confirmada do runtime
 - `RESULTADO_VALIDACAO_WORKFLOW_QUEUE_20260311.md` -> confirmacao de que a fila foi criada e validada no banco real
+- `INVESTIGACAO_STORAGE_ASSETS_MVP.md` -> trilha para descobrir por que os assets estao batendo em bucket ausente
+- `RESULTADO_INVESTIGACAO_STORAGE_ASSETS_20260311.md` -> conclusao da investigacao do storage dos assets
 - `banco_de_dados.md` -> consolidado antigo de banco
 - `apoio/` -> docs e SQLs de apoio
 - `sql/` -> SQLs documentais que ficaram no acervo de docs

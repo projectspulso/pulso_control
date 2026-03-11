@@ -1,53 +1,39 @@
 import { NextResponse } from 'next/server'
 
+import { triggerN8nWorkflow } from '@/lib/n8n/runtime'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 async function triggerRoteiroWebhook(roteiroId: string) {
-  const webhookUrl = process.env.N8N_WEBHOOK_APROVAR_ROTEIRO
+  const result = await triggerN8nWorkflow('gerar-audio', {
+    roteiro_id: roteiroId,
+    timestamp: new Date().toISOString(),
+  })
 
-  if (!webhookUrl) {
+  if (
+    !result.success &&
+    result.status === 500 &&
+    typeof result.error === 'string' &&
+    result.error.includes('nao configurado')
+  ) {
     return {
       status: 'skipped',
       message: 'Roteiro aprovado, mas webhook WF02 nao configurado',
     }
   }
 
-  const webhookResponse = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(process.env.WEBHOOK_SECRET
-        ? { 'X-Webhook-Secret': process.env.WEBHOOK_SECRET }
-        : {}),
-    },
-    body: JSON.stringify({
-      roteiro_id: roteiroId,
-      timestamp: new Date().toISOString(),
-    }),
-  })
-
-  const rawBody = await webhookResponse.text()
-  let parsedBody: unknown = null
-
-  if (rawBody) {
-    try {
-      parsedBody = JSON.parse(rawBody)
-    } catch {
-      parsedBody = rawBody
-    }
-  }
-
-  if (!webhookResponse.ok) {
+  if (!result.success) {
     return {
       status: 'error',
       message: 'Roteiro aprovado, mas webhook WF02 falhou',
-      details: parsedBody,
+      details: result.details,
+      tried_urls: result.tried_urls,
     }
   }
 
   return {
     status: 'triggered',
-    data: parsedBody,
+    data: result.data,
+    url: result.url,
   }
 }
 

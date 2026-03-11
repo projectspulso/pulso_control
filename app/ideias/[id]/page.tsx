@@ -57,6 +57,32 @@ function getErrorMessage(error: unknown) {
   return 'Falha inesperada. Revise os logs e tente novamente.'
 }
 
+function getApiErrorMessage(data: {
+  error?: string
+  details?: unknown
+  tried_urls?: string[]
+} | null) {
+  if (!data) {
+    return 'Erro ao gerar roteiro'
+  }
+
+  const parts: string[] = []
+
+  if (typeof data.error === 'string' && data.error) {
+    parts.push(data.error)
+  }
+
+  if (typeof data.details === 'string' && data.details) {
+    parts.push(data.details)
+  }
+
+  if (Array.isArray(data.tried_urls) && data.tried_urls.length > 0) {
+    parts.push(`URLs testadas: ${data.tried_urls.join(', ')}`)
+  }
+
+  return parts.join(' | ') || 'Erro ao gerar roteiro'
+}
+
 function buildIdeiaFormState(ideia: IdeiaRow): IdeiaFormState {
   return {
     titulo: ideia.titulo || '',
@@ -178,7 +204,7 @@ export default function IdeiaDetalhesPage({
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao gerar roteiro')
+        throw new Error(getApiErrorMessage(data))
       }
 
       await queryClient.invalidateQueries({ queryKey: ['roteiros'] })

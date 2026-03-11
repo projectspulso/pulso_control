@@ -1,6 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
 
+function sanitizeStorageValue(value?: string | null) {
+  if (!value) {
+    return undefined
+  }
+
+  const normalized = value.trim()
+
+  if (!normalized || normalized === 'undefined' || normalized === 'null') {
+    return undefined
+  }
+
+  return normalized
+}
+
 // Interface baseada na view vw_pulso_pipeline_com_assets
 export interface AssetComVariante {
   // Pipeline
@@ -121,13 +135,13 @@ export function useAssetsPorTipo(tipo?: string) {
         
         if (error) throw error
         
-        // Mapear para formato Asset
-        return (data || []).map(audio => ({
+      // Mapear para formato Asset
+      return (data || []).map(audio => ({
           id: audio.id,
           tipo: 'audio' as const,
           nome: audio.roteiros?.[0]?.titulo || `Audio ${audio.id.slice(0, 8)}`,
           descricao: `Status: ${audio.status}`,
-          caminho_storage: audio.storage_path,
+          caminho_storage: sanitizeStorageValue(audio.storage_path) || '',
           provedor: audio.metadata?.provedor || 'openai',
           duracao_segundos: audio.duracao_segundos,
           tamanho_bytes: undefined,
@@ -138,7 +152,7 @@ export function useAssetsPorTipo(tipo?: string) {
           criado_por: undefined,
           created_at: audio.created_at,
           updated_at: audio.updated_at,
-          public_url: audio.public_url
+          public_url: sanitizeStorageValue(audio.public_url)
         }))
       }
       

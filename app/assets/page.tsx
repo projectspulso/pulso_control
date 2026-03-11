@@ -14,6 +14,20 @@ import { useAssetsPorTipo, useAudiosGerados } from '@/lib/hooks/use-assets'
 
 const STORAGE_BASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 
+function isValidStorageValue(value?: string | null) {
+  if (!value) {
+    return false
+  }
+
+  const normalized = value.trim()
+
+  if (!normalized || normalized === 'undefined' || normalized === 'null') {
+    return false
+  }
+
+  return !normalized.includes('/undefined')
+}
+
 export default function AssetsPage() {
   const [tipoFiltro, setTipoFiltro] = useState<string>('')
   const { data: assets, isLoading, isError, refetch } = useAssetsPorTipo(
@@ -73,11 +87,11 @@ export default function AssetsPage() {
   }
 
   const getAssetHref = (caminhoStorage?: string, publicUrl?: string) => {
-    if (publicUrl) {
+    if (isValidStorageValue(publicUrl)) {
       return publicUrl
     }
 
-    if (!caminhoStorage || !STORAGE_BASE_URL) {
+    if (!isValidStorageValue(caminhoStorage) || !STORAGE_BASE_URL) {
       return null
     }
 
@@ -172,11 +186,11 @@ export default function AssetsPage() {
                   <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-pink-600/20 opacity-0 blur-2xl transition-all duration-500 group-hover:opacity-100" />
 
                   <div className="relative aspect-video overflow-hidden bg-zinc-950">
-                    {asset.tipo === 'audio' && asset.public_url ? (
+                    {asset.tipo === 'audio' && assetHref ? (
                       <div className="flex h-full flex-col items-center justify-center p-4">
                         <Music className="mb-3 h-12 w-12 text-purple-400" />
                         <audio controls className="w-full" preload="metadata">
-                          <source src={asset.public_url} type="audio/mpeg" />
+                          <source src={assetHref} type="audio/mpeg" />
                           Seu navegador nao suporta audio.
                         </audio>
                       </div>
@@ -213,6 +227,12 @@ export default function AssetsPage() {
 
                     <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
                       <span className="rounded bg-zinc-800 px-2 py-1">{asset.tipo}</span>
+
+                      {!assetHref && (
+                        <span className="rounded bg-red-500/10 px-2 py-1 text-red-300">
+                          URL invalida no banco
+                        </span>
+                      )}
 
                       {asset.tamanho_bytes && (
                         <span className="rounded bg-zinc-800 px-2 py-1">

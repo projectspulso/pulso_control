@@ -63,6 +63,9 @@ Motivo:
 - `database/sql/migrations/20260311_create_workflow_queue_runtime_mvp.sql` foi criada como migration limpa e oficial desta etapa
 - `database/sql/investigacao/20260311_validar_workflow_queue_pos_migration.sql` foi criado como pacote de validacao pos-migration
 - a migration `workflow_queue` foi aplicada e validada no banco real
+- a integracao com n8n saiu do browser direto e passou a ser roteada pelo servidor em `app/api/n8n/*`
+- o runtime de webhook agora tenta caminhos compativeis do n8n antes de concluir que houve `404`
+- a investigacao de storage mostrou que o bucket `audios` existe; o problema atual dos assets vem de `storage_path/public_url` gravados como `undefined`
 
 ## Leitura honesta
 
@@ -79,5 +82,6 @@ Nao por estar limpo, mas porque:
 
 1. validar runtime real do app em `/monitor` e `/settings`
 2. validar fluxo ponta a ponta com ambiente real de banco e n8n
-3. reduzir warnings de tipagem e limpeza nas paginas e hooks ainda nao tratados
-4. registrar historico de aprovacoes, retries e sinais operacionais do workflow
+3. corrigir a origem dos registros invalidos em `pulso_content.audios`
+4. reduzir warnings de tipagem e limpeza nas paginas e hooks ainda nao tratados
+5. registrar historico de aprovacoes, retries e sinais operacionais do workflow

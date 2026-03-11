@@ -1,51 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { triggerN8nWorkflow } from '@/lib/n8n/runtime'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 async function triggerIdeiaWebhook(ideiaId: string) {
-  const webhookUrl = process.env.N8N_WEBHOOK_APROVAR_IDEIA
-
-  if (!webhookUrl) {
-    return {
-      statusCode: 200,
-      body: {
-        status: 'skipped',
-        message: 'Webhook nao configurado',
-      },
-    }
-  }
-
-  const webhookResponse = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-webhook-secret': process.env.WEBHOOK_SECRET ?? '',
-    },
-    body: JSON.stringify({
-      ideia_id: ideiaId,
-      trigger: 'app-aprovacao',
-      timestamp: new Date().toISOString(),
-    }),
+  const result = await triggerN8nWorkflow('gerar-roteiro', {
+    ideia_id: ideiaId,
+    trigger: 'app-aprovacao',
+    timestamp: new Date().toISOString(),
   })
 
-  const rawBody = await webhookResponse.text()
-  let parsedBody: unknown = null
-
-  if (rawBody) {
-    try {
-      parsedBody = JSON.parse(rawBody)
-    } catch {
-      parsedBody = rawBody
-    }
-  }
-
-  if (!webhookResponse.ok) {
+  if (!result.success) {
     return {
       statusCode: 207,
       body: {
         status: 'error',
-        message: `Webhook retornou ${webhookResponse.status}`,
-        details: parsedBody,
+        message: result.error || `Webhook retornou ${result.status}`,
+        details: result.details,
+        tried_urls: result.tried_urls,
       },
     }
   }
@@ -55,7 +27,8 @@ async function triggerIdeiaWebhook(ideiaId: string) {
     body: {
       status: 'triggered',
       message: 'Roteiro sendo gerado',
-      data: parsedBody,
+      data: result.data,
+      url: result.url,
     },
   }
 }

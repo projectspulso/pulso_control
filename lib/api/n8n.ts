@@ -1,10 +1,7 @@
 /**
- * API para integração com n8n
- * Dispara workflows e monitora execuções
+ * API client do frontend para integrações do n8n.
+ * Todo acesso externo passa primeiro pelas rotas server do app.
  */
-
-const N8N_URL = process.env.N8N_URL || process.env.NEXT_PUBLIC_N8N_URL
-const N8N_API_KEY = process.env.N8N_API_KEY || process.env.NEXT_PUBLIC_N8N_API_KEY
 
 interface N8nWorkflow {
   id: string
@@ -25,55 +22,70 @@ interface N8nExecution {
   status: 'running' | 'success' | 'error' | 'waiting'
 }
 
-export const n8nApi = {
-  /**
-   * Lista todos os workflows ativos no n8n
-   */
-  async getWorkflows(): Promise<N8nWorkflow[]> {
-    if (!N8N_URL || !N8N_API_KEY) {
-      console.warn('n8n não configurado')
-      return []
-    }
+function buildWorkflowErrorMessage(errorBody: {
+  error?: string
+  details?: unknown
+  tried_urls?: string[]
+} | null, status: number) {
+  const parts: string[] = []
 
+  if (errorBody?.error) {
+    parts.push(errorBody.error)
+  } else {
+    parts.push(`Webhook error: ${status}`)
+  }
+
+  if (typeof errorBody?.details === 'string' && errorBody.details.trim()) {
+    parts.push(errorBody.details.trim())
+  }
+
+  if (Array.isArray(errorBody?.tried_urls) && errorBody.tried_urls.length > 0) {
+    parts.push(`URLs testadas: ${errorBody.tried_urls.join(', ')}`)
+  }
+
+  return parts.join(' | ')
+}
+
+async function parseJsonSafely(response: Response) {
+  try {
+    return await response.json()
+  } catch {
+    return null
+  }
+}
+
+export const n8nApi = {
+  async getWorkflows(): Promise<N8nWorkflow[]> {
     try {
-      const response = await fetch(`${N8N_URL}/api/v1/workflows`, {
-        headers: {
-          'X-N8N-API-KEY': N8N_API_KEY,
-          'Content-Type': 'application/json'
-        }
-      })
+      const response = await fetch('/api/n8n/workflows')
 
       if (!response.ok) {
         throw new Error(`n8n API error: ${response.status}`)
       }
 
-      const result = await response.json()
-      return result.data || []
+      return (await response.json()) || []
     } catch (error) {
       console.error('Erro ao buscar workflows do n8n:', error)
       return []
     }
   },
 
-  /**
-   * Executa um workflow no n8n via webhook
-   */
-  async executeWorkflow(webhookPath: string, payload: any): Promise<any> {
-    if (!N8N_URL) {
-      throw new Error('N8N_URL não configurado')
-    }
-
+  async executeWorkflow(webhookPath: string, payload: unknown): Promise<unknown> {
     try {
-      const response = await fetch(`${N8N_URL}/webhook/${webhookPath}`, {
+      const response = await fetch('/api/n8n/trigger', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          workflow: webhookPath,
+          payload,
+        }),
       })
 
       if (!response.ok) {
-        throw new Error(`Webhook error: ${response.status}`)
+        const errorBody = await parseJsonSafely(response)
+        throw new Error(buildWorkflowErrorMessage(errorBody, response.status))
       }
 
       return await response.json()
@@ -83,89 +95,60 @@ export const n8nApi = {
     }
   },
 
-  /**
-   * Busca execuções recentes de um workflow
-   */
   async getExecutions(workflowId: string, limit = 20): Promise<N8nExecution[]> {
-    if (!N8N_URL || !N8N_API_KEY) {
-      console.warn('n8n não configurado')
-      return []
-    }
-
     try {
       const response = await fetch(
-        `${N8N_URL}/api/v1/executions?workflowId=${workflowId}&limit=${limit}`,
-        {
-          headers: {
-            'X-N8N-API-KEY': N8N_API_KEY,
-            'Content-Type': 'application/json'
-          }
-        }
+        `/api/n8n/executions?workflowId=${workflowId}&limit=${limit}`,
       )
 
       if (!response.ok) {
         throw new Error(`n8n API error: ${response.status}`)
       }
 
-      const result = await response.json()
-      return result.data || []
+      return (await response.json()) || []
     } catch (error) {
-      console.error('Erro ao buscar execuções do n8n:', error)
+      console.error('Erro ao buscar execucoes do n8n:', error)
       return []
     }
   },
 
-  /**
-   * Workflows específicos do PULSO
-   */
   workflows: {
-    /**
-     * WF00 - Gera ideias automaticamente para um canal
-     */
-    async gerarIdeias(canalId: string, quantidade: number = 5) {
+    async gerarIdeias(canalId: string, quantidade = 5) {
       return n8nApi.executeWorkflow('gerar-ideias', {
         canal_id: canalId,
-        quantidade
+        quantidade,
       })
     },
 
-    /**
-     * WF01 - Gera roteiro a partir de uma ideia aprovada
-     */
     async gerarRoteiro(ideiaId: string) {
-      return n8nApi.executeWorkflow('ideia-aprovada', {
-        ideia_id: ideiaId
+      return n8nApi.executeWorkflow('gerar-roteiro', {
+        ideia_id: ideiaId,
       })
     },
 
-    /**
-     * WF02 - Gera áudio TTS a partir de um roteiro aprovado
-     */
     async gerarAudio(roteiroId: string) {
-      return n8nApi.executeWorkflow('roteiro-aprovado', {
-        roteiro_id: roteiroId
+      return n8nApi.executeWorkflow('gerar-audio', {
+        roteiro_id: roteiroId,
       })
     },
 
-    /**
-     * WF04 - Agenda publicação de conteúdo
-     */
-    async agendarPublicacao(pipelineId: string, dataHora: string, plataformas: string[]) {
+    async agendarPublicacao(
+      pipelineId: string,
+      dataHora: string,
+      plataformas: string[],
+    ) {
       return n8nApi.executeWorkflow('agendar-publicacao', {
         pipeline_id: pipelineId,
         data_hora_publicacao: dataHora,
-        plataformas
+        plataformas,
       })
     },
 
-    /**
-     * WF04 - Publica múltiplos conteúdos imediatamente
-     */
     async publicarAgora(pipelineIds: string[], plataformas: string[]) {
       return n8nApi.executeWorkflow('publicar-agora', {
         pipeline_ids: pipelineIds,
-        plataformas
+        plataformas,
       })
-    }
-  }
+    },
+  },
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { triggerN8nWorkflow } from '@/lib/n8n/runtime'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 function getRoteiroIdFromWorkflowData(workflowData: unknown) {
@@ -29,50 +30,21 @@ function getRoteiroIdFromWorkflowData(workflowData: unknown) {
 }
 
 async function triggerRoteiroWorkflow(ideiaId: string) {
-  const webhookUrl = process.env.N8N_WEBHOOK_APROVAR_IDEIA
-
-  if (!webhookUrl) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Webhook WF01 nao configurado',
-      },
-      { status: 500 },
-    )
-  }
-
-  const webhookResponse = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-webhook-secret': process.env.WEBHOOK_SECRET ?? '',
-    },
-    body: JSON.stringify({
-      ideia_id: ideiaId,
-      trigger: 'manual-gerar-roteiro',
-      timestamp: new Date().toISOString(),
-    }),
+  const result = await triggerN8nWorkflow('gerar-roteiro', {
+    ideia_id: ideiaId,
+    trigger: 'manual-gerar-roteiro',
+    timestamp: new Date().toISOString(),
   })
 
-  const rawBody = await webhookResponse.text()
-  let parsedBody: unknown = null
-
-  if (rawBody) {
-    try {
-      parsedBody = JSON.parse(rawBody)
-    } catch {
-      parsedBody = rawBody
-    }
-  }
-
-  if (!webhookResponse.ok) {
+  if (!result.success) {
     return NextResponse.json(
       {
         success: false,
-        error: `Webhook retornou ${webhookResponse.status}`,
-        details: parsedBody,
+        error: result.error || `Webhook retornou ${result.status}`,
+        details: result.details,
+        tried_urls: result.tried_urls,
       },
-      { status: 500 },
+      { status: result.status || 500 },
     )
   }
 
@@ -80,7 +52,9 @@ async function triggerRoteiroWorkflow(ideiaId: string) {
     success: true,
     workflow: {
       status: 'triggered',
-      data: parsedBody,
+      data: result.data,
+      url: result.url,
+      tried_urls: result.tried_urls,
     },
   })
 }
