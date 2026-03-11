@@ -31,6 +31,10 @@ export interface Configuracao {
   updated_at: string
 }
 
+function coreTable(table: 'configuracoes' | 'plataforma_credenciais') {
+  return supabase.schema('pulso_core').from(table)
+}
+
 // Hook: Listar todas as plataformas
 export function usePlataformas() {
   return useQuery({
@@ -70,7 +74,7 @@ export function useConfiguracoes(categoria?: string) {
   return useQuery({
     queryKey: ['configuracoes', categoria],
     queryFn: async () => {
-      let query = supabase.from('configuracoes').select('*')
+      let query = coreTable('configuracoes').select('*')
       
       if (categoria) {
         query = query.eq('categoria', categoria)
@@ -90,8 +94,7 @@ export function useAtualizarConfiguracao() {
   
   return useMutation({
     mutationFn: async ({ chave, valor }: { chave: string; valor: string }) => {
-      const { data, error } = await supabase
-        .from('configuracoes')
+      const { data, error } = await coreTable('configuracoes')
         .update({ valor, updated_at: new Date().toISOString() })
         .eq('chave', chave)
         .select()
@@ -127,6 +130,7 @@ export function useSalvarCredenciais() {
       escopo?: string[]
     }) => {
       const { data, error } = await supabase
+        .schema('pulso_core')
         .from('plataforma_credenciais')
         .upsert({
           plataforma_id,
@@ -157,8 +161,7 @@ export function useDesconectarPlataforma() {
   
   return useMutation({
     mutationFn: async (plataforma_id: string) => {
-      const { error } = await supabase
-        .from('plataforma_credenciais')
+      const { error } = await coreTable('plataforma_credenciais')
         .delete()
         .eq('plataforma_id', plataforma_id)
       

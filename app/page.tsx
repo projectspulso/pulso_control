@@ -11,18 +11,16 @@ import { useRoteiros } from "@/lib/hooks/use-roteiros";
 import { ErrorState } from "@/components/ui/error-state";
 import { Megaphone, TrendingUp, Zap, Sparkles, ArrowUpRight, Activity } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const { data: canais, isError: isCanaisError, refetch: refetchCanais } = useCanais()
   const { data: ideias, isError: isIdeiasError, refetch: refetchIdeias } = useIdeias()
   const { data: roteiros, isError: isRoteirosError, refetch: refetchRoteiros } = useRoteiros()
-  const [currentTime, setCurrentTime] = useState('')
-  const [mounted, setMounted] = useState(false)
+  const [currentTime, setCurrentTime] = useState('--:--:--')
 
   // Atualizar tempo apenas no cliente
   useEffect(() => {
-    setMounted(true)
     const updateTime = () => {
       setCurrentTime(new Date().toLocaleTimeString('pt-BR', {
         hour: '2-digit',
@@ -80,7 +78,7 @@ export default function Home() {
             <div className="glass rounded-2xl px-6 py-4 text-right space-y-1 animate-slide-in-right">
               <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Sistema Online</p>
               <p className="text-2xl font-bold bg-linear-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent tabular-nums">
-                {mounted ? currentTime : '--:--:--'}
+                {currentTime}
               </p>
             </div>
           </div>

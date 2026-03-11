@@ -1,40 +1,30 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase/client'
 import { Zap, CheckCircle2, XCircle, Clock, Activity, TrendingUp } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
-import { useGerarIdeias } from '@/lib/hooks/use-n8n'
 import PipelineMonitor from '@/components/pipeline-monitor'
 import { WorkflowQueueMonitor } from '@/components/workflow-queue-monitor'
+import { selectWorkflowLogs } from '@/lib/supabase/runtime-access'
 
 interface WorkflowLog {
   id: string
   workflow_name: string
   status: string
-  detalhes: any
+  detalhes: Record<string, unknown> | null
   created_at: string
 }
 
 async function getWorkflowLogs(): Promise<WorkflowLog[]> {
-  const { data, error } = await supabase
-    .from('logs_workflows')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(50)
-
-  if (error) throw error
-  return data
+  return selectWorkflowLogs<WorkflowLog>('*', { limit: 50, ascending: false })
 }
 
 export default function MonitorPage() {
-  const { data: logs, isLoading } = useQuery({
+  const { data: logs } = useQuery({
     queryKey: ['workflow-logs'],
     queryFn: getWorkflowLogs,
     refetchInterval: 5000 // Atualiza a cada 5s
   })
-
-  const gerarIdeias = useGerarIdeias()
 
   // Stats por workflow
   const stats = logs?.reduce((acc, log) => {

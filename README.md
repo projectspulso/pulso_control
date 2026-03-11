@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PULSO Control
 
-## Getting Started
+Centro de comando para operar videos curtos faceless com pipeline editorial, producao, publicacao assistida e integracoes com Supabase e n8n.
 
-First, run the development server:
+## Comece por aqui
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Documentacao mestre: [docs/README.md](./docs/README.md)
+- Trilha oficial: [docs/00_MESTRE/TRILHA_OFICIAL_DE_EXECUCAO.md](./docs/00_MESTRE/TRILHA_OFICIAL_DE_EXECUCAO.md)
+- Banco de dados: [database/README.md](./database/README.md)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Estrutura principal
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `app/` -> app Next.js
+- `components/` -> componentes de interface
+- `lib/` -> hooks, APIs e integracoes
+- `automation/` -> docs e materiais de n8n
+- `n8n-workflows/` -> exports JSON dos workflows
+- `database/` -> schema, seeds, scripts e investigacoes de banco
+- `docs/` -> documentacao curada e acervo legado
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Leitura recomendada
 
-## Learn More
+1. `docs/README.md`
+2. `docs/00_MESTRE/TRILHA_OFICIAL_DE_EXECUCAO.md`
+3. `docs/00_MESTRE/ESTADO_ATUAL_E_FONTES_DE_VERDADE.md`
+4. `docs/40_PRODUTO/README.md`
+5. `docs/20_BANCO/MIGRATIONS_NECESSARIAS.md`
 
-To learn more about Next.js, take a look at the following resources:
+## Observacao
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+O repositorio ja tem bastante implementacao real de app e operacao, mas a documentacao antiga ainda convive com a nova camada curada. Para evitar ruido, use `docs/README.md` como ponto de entrada e `database/README.md` como ponto de entrada do banco.

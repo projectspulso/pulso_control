@@ -1,147 +1,129 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import type { Database } from '@/lib/supabase/database.types'
+
+import { getSupabaseAdminClient } from '@/lib/supabase/server'
+
+async function triggerIdeiaWebhook(ideiaId: string) {
+  const webhookUrl = process.env.N8N_WEBHOOK_APROVAR_IDEIA
+
+  if (!webhookUrl) {
+    return {
+      statusCode: 200,
+      body: {
+        status: 'skipped',
+        message: 'Webhook nao configurado',
+      },
+    }
+  }
+
+  const webhookResponse = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-webhook-secret': process.env.WEBHOOK_SECRET ?? '',
+    },
+    body: JSON.stringify({
+      ideia_id: ideiaId,
+      trigger: 'app-aprovacao',
+      timestamp: new Date().toISOString(),
+    }),
+  })
+
+  const rawBody = await webhookResponse.text()
+  let parsedBody: unknown = null
+
+  if (rawBody) {
+    try {
+      parsedBody = JSON.parse(rawBody)
+    } catch {
+      parsedBody = rawBody
+    }
+  }
+
+  if (!webhookResponse.ok) {
+    return {
+      statusCode: 207,
+      body: {
+        status: 'error',
+        message: `Webhook retornou ${webhookResponse.status}`,
+        details: parsedBody,
+      },
+    }
+  }
+
+  return {
+    statusCode: 200,
+    body: {
+      status: 'triggered',
+      message: 'Roteiro sendo gerado',
+      data: parsedBody,
+    },
+  }
+}
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  void request
+
   try {
-    console.log('🚀 Iniciando aprovação de ideia...')
-    
     const { id } = await params
-    console.log(`📝 ID da ideia: ${id}`)
-    
-    // Criar cliente Supabase aqui, dentro da função
-    // IMPORTANTE: Usar SERVICE_ROLE_KEY para ter permissão total
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY // Usar apenas SERVICE_ROLE_KEY
-    
-    console.log('🔑 Verificando credenciais...')
-    console.log('   URL:', !!supabaseUrl)
-    console.log('   SERVICE_ROLE_KEY:', !!supabaseKey)
-    
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('❌ Variáveis de ambiente faltando!')
-      console.error('SUPABASE_URL:', !!supabaseUrl)
-      console.error('SUPABASE_SERVICE_ROLE_KEY:', !!supabaseKey)
-      return NextResponse.json(
-        { error: 'Configuração do servidor incompleta' },
-        { status: 500 }
-      )
-    }
-    
-    const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false
-      }
-    })
-    
-    console.log('✅ Cliente Supabase criado, tentando atualizar...')
-    console.log('🔧 Usando view public.ideias (mesma que o frontend)')
-    
-    // 1. Atualizar status da ideia para APROVADA (via view public.ideias)
-    // Cast para any para contornar limitação de tipos com views
-    const supabaseAny = supabase as any
-    const { data: ideia, error: updateError } = await supabaseAny
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = getSupabaseAdminClient() as any
+
+    const { data: ideia, error: updateError } = await supabase
       .from('ideias')
       .update({ status: 'APROVADA' })
       .eq('id', id)
       .select()
       .single()
-    
+
     if (updateError) {
-      console.error('❌ Erro ao aprovar ideia:', updateError)
-      console.error('❌ Detalhes do erro:', JSON.stringify(updateError, null, 2))
+      console.error('Erro ao aprovar ideia:', updateError)
       return NextResponse.json(
         { error: 'Erro ao aprovar ideia', details: updateError.message },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
-    console.log(`✅ Ideia ${id} aprovada com sucesso`)
-
-    // 2. Chamar webhook do n8n (WF01 - Gerar Roteiro)
-    const webhookUrl = process.env.N8N_WEBHOOK_APROVAR_IDEIA
-    
-    if (!webhookUrl) {
-      console.warn('⚠️ Webhook URL não configurada, roteiro não será gerado automaticamente')
-      return NextResponse.json({
-        success: true,
-        ideia,
-        workflow: { status: 'skipped', message: 'Webhook não configurado' }
-      })
-    }
-
     try {
-      console.log(`📞 Chamando webhook do n8n: ${webhookUrl}`)
-      
-      const webhookResponse = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-webhook-secret': process.env.WEBHOOK_SECRET || ''
-        },
-        body: JSON.stringify({
-          ideia_id: id,
-          trigger: 'app-aprovacao',
-          timestamp: new Date().toISOString()
-        })
-      })
+      const workflow = await triggerIdeiaWebhook(id)
 
-      if (!webhookResponse.ok) {
-        const errorText = await webhookResponse.text()
-        console.error(`❌ Webhook falhou: ${webhookResponse.status} - ${errorText}`)
-        
-        return NextResponse.json({
+      return NextResponse.json(
+        {
+          success: true,
+          ideia,
+          workflow: workflow.body,
+        },
+        { status: workflow.statusCode },
+      )
+    } catch (webhookError) {
+      console.error('Erro ao chamar webhook da ideia:', webhookError)
+
+      return NextResponse.json(
+        {
           success: true,
           ideia,
           workflow: {
             status: 'error',
-            message: `Webhook retornou ${webhookResponse.status}`,
-            details: errorText
-          }
-        }, { status: 207 }) // 207 = Multi-Status (ideia ok, workflow falhou)
-      }
-
-      const workflowResult = await webhookResponse.json()
-      console.log('✅ Workflow WF01 disparado com sucesso:', workflowResult)
-
-      return NextResponse.json({
-        success: true,
-        ideia,
-        workflow: {
-          status: 'triggered',
-          message: 'Roteiro sendo gerado...',
-          data: workflowResult
-        }
-      })
-
-    } catch (webhookError) {
-      console.error('💥 Erro ao chamar webhook:', webhookError)
-      
-      // Ideia foi aprovada, mas workflow falhou
-      return NextResponse.json({
-        success: true,
-        ideia,
-        workflow: {
-          status: 'error',
-          message: 'Não foi possível disparar geração de roteiro',
-          error: webhookError instanceof Error ? webhookError.message : 'Erro desconhecido'
-        }
-      }, { status: 207 })
+            message: 'Nao foi possivel disparar geracao de roteiro',
+            error:
+              webhookError instanceof Error
+                ? webhookError.message
+                : 'Erro desconhecido',
+          },
+        },
+        { status: 207 },
+      )
     }
-
   } catch (error) {
-    console.error('💥 Erro geral ao processar aprovação:', error)
+    console.error('Erro geral ao aprovar ideia:', error)
     return NextResponse.json(
-      { 
-        error: 'Erro ao processar aprovação',
-        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      {
+        error: 'Erro ao processar aprovacao',
+        details: error instanceof Error ? error.message : 'Erro desconhecido',
       },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

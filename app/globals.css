@@ -9,6 +9,8 @@
   /* Core Colors */
   --background: #0a0a0a;
   --foreground: #ededed;
+  --font-sans: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  --font-mono: "Cascadia Code", "Fira Code", Consolas, monospace;
   
   /* Brand Colors - PULSO */
   --pulso-primary: #a855f7;
@@ -28,8 +30,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 /* ================================
@@ -48,7 +50,7 @@ body {
     radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%);
   background-attachment: fixed;
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   overflow-x: hidden;
 }
 

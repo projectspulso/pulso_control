@@ -5,8 +5,7 @@ import type {
   PipelineComAsset,
   PipelineComAssetsAgrupado,
   FiltroCalendario,
-  PipelineStatus,
-  agruparAssetsPorPipeline
+  PipelineStatus
 } from '@/lib/types/pipeline'
 
 // Re-exportar types para uso nos componentes
@@ -280,6 +279,7 @@ export function useAtualizarStatusPipeline() {
       novoStatus: PipelineStatus 
     }) => {
       const { data, error } = await supabase
+        .schema('pulso_content')
         .from('pipeline_producao')
         .update({ status: novoStatus })
         .eq('id', pipelineId)
