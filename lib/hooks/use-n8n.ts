@@ -1,130 +1,101 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { n8nApi } from '../api/n8n'
+/**
+ * Hooks legados de n8n — redirecionados para automação AI-native.
+ * Mantém a mesma interface pública para compatibilidade do frontend.
+ */
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { automationApi } from '../api/automation'
 
 /**
- * Lista workflows do n8n
+ * @deprecated Use useAutomationQueue de use-automation.ts
  */
 export function useN8nWorkflows() {
-  return useQuery({
-    queryKey: ['n8n', 'workflows'],
-    queryFn: n8nApi.getWorkflows,
-    staleTime: 5 * 60 * 1000 // Cache por 5 minutos
-  })
+  return { data: [], isLoading: false, error: null, refetch: () => Promise.resolve({ data: [], error: null, isError: false, isLoading: false, isSuccess: true, status: 'success' as const }) }
 }
 
 /**
- * Lista execuções de um workflow específico
+ * @deprecated Use useAutomationQueue de use-automation.ts
  */
-export function useN8nExecutions(workflowId: string) {
-  return useQuery({
-    queryKey: ['n8n', 'executions', workflowId],
-    queryFn: () => n8nApi.getExecutions(workflowId),
-    enabled: !!workflowId,
-    refetchInterval: 10 * 1000 // Atualiza a cada 10s
-  })
+export function useN8nExecutions(_workflowId: string) {
+  return { data: [], isLoading: false, error: null, refetch: () => Promise.resolve({ data: [], error: null, isError: false, isLoading: false, isSuccess: true, status: 'success' as const }) }
 }
 
-/**
- * Hook para gerar roteiro (WF01 - Webhook)
- */
 export function useGerarRoteiro() {
   const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: (ideiaId: string) => n8nApi.workflows.gerarRoteiro(ideiaId),
+    mutationFn: (ideiaId: string) => automationApi.aprovarIdeia(ideiaId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roteiros'] })
       queryClient.invalidateQueries({ queryKey: ['ideias'] })
       queryClient.invalidateQueries({ queryKey: ['pipeline'] })
+      queryClient.invalidateQueries({ queryKey: ['automation-queue'] })
     }
   })
 }
 
-/**
- * Hook para gerar áudio (WF02 - Webhook)
- */
 export function useGerarAudio() {
   const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: (roteiroId: string) => n8nApi.workflows.gerarAudio(roteiroId),
+    mutationFn: (roteiroId: string) => automationApi.aprovarRoteiro(roteiroId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pipeline'] })
       queryClient.invalidateQueries({ queryKey: ['roteiros'] })
+      queryClient.invalidateQueries({ queryKey: ['automation-queue'] })
     }
   })
 }
 
-/**
- * Hook para gerar ideias (WF00 - Manual trigger)
- */
 export function useGerarIdeiasManual() {
   const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: ({ canalId, quantidade }: { canalId: string; quantidade?: number }) =>
-      n8nApi.workflows.gerarIdeias(canalId, quantidade || 5),
+      automationApi.triggerGerarIdeias(canalId, quantidade || 5),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideias'] })
+      queryClient.invalidateQueries({ queryKey: ['automation-queue'] })
     }
   })
 }
 
-/**
- * Hook para agendar publicação
- */
 export function useAgendarPublicacao() {
   const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: ({ pipelineId, dataHora, plataformas }: { 
+    mutationFn: ({ pipelineId }: {
       pipelineId: string
       dataHora: string
-      plataformas: string[] 
+      plataformas: string[]
     }) =>
-      n8nApi.workflows.agendarPublicacao(pipelineId, dataHora, plataformas),
+      automationApi.triggerPublicar(pipelineId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pipeline_producao'] })
       queryClient.invalidateQueries({ queryKey: ['calendario'] })
-      queryClient.invalidateQueries({ queryKey: ['conteudos-prontos'] })
+      queryClient.invalidateQueries({ queryKey: ['automation-queue'] })
     }
   })
 }
 
-/**
- * Hook para publicar vários conteúdos agora
- */
 export function usePublicarAgora() {
   const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: ({ pipelineIds, plataformas }: { 
+    mutationFn: ({ pipelineIds }: {
       pipelineIds: string[]
-      plataformas: string[] 
+      plataformas: string[]
     }) =>
-      n8nApi.workflows.publicarAgora(pipelineIds, plataformas),
+      Promise.all(pipelineIds.map(id => automationApi.triggerPublicar(id))),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pipeline_producao'] })
-      queryClient.invalidateQueries({ queryKey: ['workflow_execucoes'] })
-      queryClient.invalidateQueries({ queryKey: ['conteudos-prontos'] })
-      queryClient.invalidateQueries({ queryKey: ['calendario'] })
+      queryClient.invalidateQueries({ queryKey: ['automation-queue'] })
     }
   })
 }
 
-/**
- * Hook para gerar ideias automaticamente
- */
 export function useGerarIdeias() {
   const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: ({ canalId, quantidade }: { canalId: string; quantidade?: number }) =>
-      n8nApi.workflows.gerarIdeias(canalId, quantidade),
+      automationApi.triggerGerarIdeias(canalId, quantidade),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideias'] })
-      queryClient.invalidateQueries({ queryKey: ['workflow_execucoes'] })
+      queryClient.invalidateQueries({ queryKey: ['automation-queue'] })
     }
   })
 }
-

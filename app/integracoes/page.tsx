@@ -1,6 +1,6 @@
 'use client'
 
-import { useN8nWorkflows } from '@/lib/hooks/use-n8n'
+import { useAutomationStats } from '@/lib/hooks/use-automation'
 import { useWorkflowExecucoes } from '@/lib/hooks/use-workflows'
 import { useIdeias } from '@/lib/hooks/use-ideias'
 import { useRoteiros } from '@/lib/hooks/use-roteiros'
@@ -8,13 +8,13 @@ import { ErrorState } from '@/components/ui/error-state'
 import { CheckCircle2, XCircle, Zap, Database, Lightbulb, FileText, Loader2, AlertCircle } from 'lucide-react'
 
 export default function IntegrationsPage() {
-  const { data: n8nWorkflows, isLoading: loadingN8n, error: n8nError, refetch: refetchN8n } = useN8nWorkflows()
+  const { data: automationStats, isLoading: loadingAutomation, error: automationError, refetch: refetchAutomation } = useAutomationStats()
   const { data: execucoes } = useWorkflowExecucoes()
   const { data: ideias, isError: isIdeiasError, refetch: refetchIdeias } = useIdeias()
   const { data: roteiros, isError: isRoteirosError, refetch: refetchRoteiros } = useRoteiros()
 
   const handleRetry = () => {
-    refetchN8n()
+    refetchAutomation()
     refetchIdeias()
     refetchRoteiros()
   }
@@ -33,13 +33,15 @@ export default function IntegrationsPage() {
     )
   }
 
-  // Determinar status do n8n
-  const n8nStatus: 'connected' | 'disconnected' | 'error' | 'loading' = n8nError 
-    ? 'error' 
-    : loadingN8n 
-    ? 'loading' 
-    : n8nWorkflows && n8nWorkflows.length > 0 
-    ? 'connected' 
+  // Determinar status da automação
+  const totalSucesso = automationStats?.reduce((acc: number, s: { sucesso: number }) => acc + s.sucesso, 0) || 0
+  const totalErros = automationStats?.reduce((acc: number, s: { erros: number }) => acc + s.erros, 0) || 0
+  const automationStatus: 'connected' | 'disconnected' | 'error' | 'loading' = automationError
+    ? 'error'
+    : loadingAutomation
+    ? 'loading'
+    : automationStats && automationStats.length > 0
+    ? 'connected'
     : 'disconnected'
 
   const integrations = [
@@ -54,16 +56,16 @@ export default function IntegrationsPage() {
       ]
     },
     {
-      name: 'n8n Workflows',
-      description: 'Automação e orquestração',
+      name: 'Automação AI-Native',
+      description: 'Fila de automação via banco + pg_cron',
       icon: Zap,
-      status: n8nStatus,
+      status: automationStatus,
       details: [
-        { label: 'Workflows Ativos', value: n8nWorkflows?.filter((w: any) => w.active).length || 0 },
-        { label: 'Total Workflows', value: n8nWorkflows?.length || 0 },
-        { label: 'Execuções', value: execucoes?.length || 0 }
+        { label: 'Tipos de Job', value: automationStats?.length || 0 },
+        { label: 'Sucesso (7d)', value: totalSucesso },
+        { label: 'Erros (7d)', value: totalErros }
       ],
-      error: n8nError
+      error: automationError
     }
   ]
 
