@@ -3,11 +3,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
-import { 
-  LayoutDashboard, 
-  Megaphone, 
-  Workflow, 
-  FileText, 
+import {
+  LayoutDashboard,
+  Megaphone,
+  Workflow,
   BarChart3,
   Settings,
   Zap,
@@ -20,7 +19,6 @@ import {
   Plug,
   Library,
   Sparkles,
-  Activity
 } from 'lucide-react'
 
 const navigation = [
@@ -33,8 +31,6 @@ const navigation = [
   { name: 'Calendário', href: '/calendario', icon: Calendar, badge: null },
   { name: 'Publicar', href: '/publicar', icon: Send, badge: null },
   { name: 'Automação', href: '/automacao', icon: Zap, badge: 'ai' },
-  { name: 'Monitor n8n', href: '/monitor', icon: Activity, badge: null },
-  { name: 'Organograma', href: '/organograma', icon: BarChart3, badge: null },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null },
   { name: 'Canais', href: '/canais', icon: Megaphone, badge: null },
   { name: 'Workflows', href: '/workflows', icon: Workflow, badge: null },

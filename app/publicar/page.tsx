@@ -18,7 +18,7 @@ import { useState } from 'react'
 
 import { ErrorState } from '@/components/ui/error-state'
 import { useConteudosProntos } from '@/lib/hooks/use-calendario'
-import { useAgendarPublicacao, usePublicarAgora } from '@/lib/hooks/use-n8n'
+import { usePublicar } from '@/lib/hooks/use-automation'
 
 type FeedbackTone = 'success' | 'error' | 'info'
 
@@ -61,8 +61,8 @@ function getFeedbackClasses(tone: FeedbackTone) {
 
 export default function PublicarPage() {
   const { data: conteudos, isLoading, isError, refetch } = useConteudosProntos()
-  const publicarAgora = usePublicarAgora()
-  const agendarPublicacao = useAgendarPublicacao()
+  const publicarAgora = usePublicar()
+  const agendarPublicacao = usePublicar()
 
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [mostrarModalAgendar, setMostrarModalAgendar] = useState(false)
@@ -192,8 +192,7 @@ export default function PublicarPage() {
     try {
       for (const pipelineId of Array.from(selecionados)) {
         await agendarPublicacao.mutateAsync({
-          pipelineId,
-          dataHora,
+          pipelineIds: [pipelineId],
           plataformas: PLATAFORMAS_ASSISTIDAS,
         })
       }

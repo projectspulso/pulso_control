@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/feedback-banner'
 import { useCanais } from '@/lib/hooks/use-core'
 import { useIdeias } from '@/lib/hooks/use-ideias'
-import { useGerarIdeias } from '@/lib/hooks/use-n8n'
+import { useGerarIdeias } from '@/lib/hooks/use-automation'
 import type { Database } from '@/lib/supabase/database.types'
 
 type Canal = Database['pulso_core']['Tables']['canais']['Row']
