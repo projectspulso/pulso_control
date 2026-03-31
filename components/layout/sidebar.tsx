@@ -3,11 +3,9 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
-import { 
-  LayoutDashboard, 
-  Megaphone, 
-  Workflow, 
-  FileText, 
+import {
+  LayoutDashboard,
+  Megaphone,
   BarChart3,
   Settings,
   Zap,
@@ -17,29 +15,23 @@ import {
   FolderOpen,
   Calendar,
   Send,
-  Plug,
-  Library,
+  Video,
   Sparkles,
-  Activity
 } from 'lucide-react'
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, badge: null },
-  { name: 'Conteúdo', href: '/conteudo', icon: Library, badge: null },
-  { name: 'Ideias', href: '/ideias', icon: Lightbulb, badge: 'new' },
-  { name: 'Roteiros', href: '/roteiros', icon: FileEdit, badge: null },
-  { name: 'Produção', href: '/producao', icon: Clapperboard, badge: null },
-  { name: 'Assets', href: '/assets', icon: FolderOpen, badge: null },
-  { name: 'Calendário', href: '/calendario', icon: Calendar, badge: null },
-  { name: 'Publicar', href: '/publicar', icon: Send, badge: null },
-  { name: 'Automação', href: '/automacao', icon: Zap, badge: 'ai' },
-  { name: 'Monitor n8n', href: '/monitor', icon: Activity, badge: null },
-  { name: 'Organograma', href: '/organograma', icon: BarChart3, badge: null },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null },
-  { name: 'Canais', href: '/canais', icon: Megaphone, badge: null },
-  { name: 'Workflows', href: '/workflows', icon: Workflow, badge: null },
-  { name: 'Integrações', href: '/integracoes', icon: Plug, badge: null },
-  { name: 'Configurações', href: '/settings', icon: Settings, badge: null },
+  { name: 'Dashboard',  href: '/',          icon: LayoutDashboard, badge: null },
+  { name: 'Ideias',     href: '/ideias',     icon: Lightbulb,       badge: 'new' },
+  { name: 'Roteiros',   href: '/roteiros',   icon: FileEdit,        badge: null },
+  { name: 'Produção',   href: '/producao',   icon: Clapperboard,    badge: null },
+  { name: 'Assets',     href: '/assets',     icon: FolderOpen,      badge: null },
+  { name: 'Vídeos',     href: '/videos',     icon: Video,           badge: 'ai' },
+  { name: 'Calendário', href: '/calendario', icon: Calendar,        badge: null },
+  { name: 'Publicar',   href: '/publicar',   icon: Send,            badge: null },
+  { name: 'Automação',  href: '/automacao',  icon: Zap,             badge: 'ai' },
+  { name: 'Analytics',  href: '/analytics',  icon: BarChart3,       badge: null },
+  { name: 'Canais',     href: '/canais',     icon: Megaphone,       badge: null },
+  { name: 'Configurações', href: '/settings', icon: Settings,       badge: null },
 ]
 
 export function Sidebar() {

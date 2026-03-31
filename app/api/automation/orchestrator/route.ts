@@ -119,6 +119,7 @@ function getWorkerUrl(tipo: string, request: NextRequest): string | null {
     GERAR_IDEIAS: `${baseUrl}/api/automation/gerar-ideias`,
     GERAR_ROTEIRO: `${baseUrl}/api/automation/gerar-roteiro`,
     GERAR_AUDIO: `${baseUrl}/api/automation/gerar-audio`,
+    GERAR_VIDEO: `${baseUrl}/api/automation/gerar-video`,
     PUBLICAR: `${baseUrl}/api/automation/publicar`,
   }
 
