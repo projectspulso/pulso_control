@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 import {
   useAutomationQueue,
   useAutomationStats,
@@ -109,25 +110,40 @@ export default function AutomacaoPage() {
     { pendentes: 0, processando: 0, sucesso: 0, erros: 0, retry: 0, total: 0 }
   ) ?? { pendentes: 0, processando: 0, sucesso: 0, erros: 0, retry: 0, total: 0 }
 
-  // Quick actions — insert directly into queue via API client
+  // Quick actions — call API endpoint directly
   async function handleQuickAction(tipo: AutomationTipo) {
     setActionLoading(tipo)
     try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      const { createClient } = await import('@supabase/supabase-js')
-      const supabase = createClient(supabaseUrl, supabaseKey)
-      await supabase
-        .schema('pulso_automation' as 'public')
-        .from('automation_queue')
-        .insert({
-          tipo,
-          payload: {},
-          origem: 'manual',
-        })
+      // Map tipo to the correct endpoint
+      const endpointMap: Partial<Record<AutomationTipo, string>> = {
+        GERAR_IDEIAS: '/api/automation/gerar-ideias',
+        PROCESSAR_FILA: '/api/automation/orchestrator',
+        COLETAR_METRICAS: '/api/automation/coletar-metricas',
+        RELATORIO_SEMANAL: '/api/automation/relatorio',
+      }
+      const endpoint = endpointMap[tipo]
+      if (!endpoint) throw new Error(`Ação não suportada: ${tipo}`)
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Erro ${res.status}`)
+
+      // Show success feedback
+      const msgs: Partial<Record<AutomationTipo, string>> = {
+        GERAR_IDEIAS: `✅ Ideias geradas com sucesso!`,
+        PROCESSAR_FILA: `✅ Fila processada: ${data.processed ?? 0} itens`,
+        COLETAR_METRICAS: `✅ Coleta de métricas iniciada`,
+        RELATORIO_SEMANAL: `✅ Relatório semanal gerado`,
+      }
+      toast.success(msgs[tipo] ?? '✅ Ação executada com sucesso!')
       refetchQueue()
-    } catch {
-      // silently fail — the queue will show errors
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+      toast.error(`❌ ${msg}`)
     } finally {
       setActionLoading(null)
     }
