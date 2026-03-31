@@ -161,6 +161,7 @@ export async function POST(request: NextRequest) {
         ideia_id: roteiro.ideia_id,
         canal_id: roteiro.canal_id,
         storage_path: storagePath,
+        public_url: publicUrl?.publicUrl,
         url: publicUrl?.publicUrl,
         duracao_segundos: roteiro.duracao_estimado_segundos,
         tamanho_bytes: finalBuffer.byteLength,
