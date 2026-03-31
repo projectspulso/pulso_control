@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
       .from('pulso-assets')
       .getPublicUrl(storagePath)
 
-    // Salvar registro de áudio
+    // Salvar registro de áudio (usando colunas reais da tabela pulso_content.audios)
     const { data: audioSaved, error: audioError } = await supabase
       .schema('pulso_content')
       .from('audios')
@@ -160,18 +160,18 @@ export async function POST(request: NextRequest) {
         roteiro_id: roteiro.id,
         canal_id: roteiro.canal_id,
         storage_path: storagePath,
-        url_publica: publicUrl?.publicUrl,
+        url: publicUrl?.publicUrl,
         duracao_segundos: roteiro.duracao_estimado_segundos,
         tamanho_bytes: finalBuffer.byteLength,
         formato: 'mp3',
-        provider: 'openai',
-        voz: voz,
-        modelo: 'tts-1-hd',
         status: 'PRONTO',
         metadata: {
           chunks: chunks.length,
           caracteres_total: textoLimpo.length,
           gerado_em: new Date().toISOString(),
+          provider: 'openai',
+          voz,
+          modelo: 'tts-1-hd',
         },
       })
       .select('id')
