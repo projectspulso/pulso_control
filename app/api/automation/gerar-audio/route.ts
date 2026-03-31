@@ -158,6 +158,7 @@ export async function POST(request: NextRequest) {
       .from('audios')
       .insert({
         roteiro_id: roteiro.id,
+        ideia_id: roteiro.ideia_id,
         canal_id: roteiro.canal_id,
         storage_path: storagePath,
         url: publicUrl?.publicUrl,
