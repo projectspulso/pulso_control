@@ -44,7 +44,7 @@ Promessa correta:
 - organizar o fluxo `ideia -> roteiro -> producao -> publicacao -> acompanhamento`
 - reduzir friccao operacional
 - dar visibilidade do pipeline
-- conectar app, banco e n8n em um processo repetivel
+- conectar app, banco e automacao nativa em um processo repetivel
 
 ## Nao prometer
 

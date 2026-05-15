@@ -267,3 +267,4 @@ Se quiser, posso gerar AGORA:
 ✔️ Modelo padrão de vídeo (estrutura + legenda + CTA)
 ✔️ Plano de posts para 30 dias
 ✔️ Workflow técnico detalhado para o n8n
+> Aviso de status: este documento fica em `90_APOIO` como registro historico. A decisao operacional vigente em 15 de maio de 2026 e nao usar n8n no MVP e nao operar multiplos canais antes de validar 1 canal foco.

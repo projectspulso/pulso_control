@@ -70,7 +70,7 @@ Elemento tecnico:
 
 - hooks de `publicarAgora`
 - hooks de `agendarPublicacao`
-- workflows de publicacao no n8n
+- fila de publicacao assistida e API routes do app
 
 ## Fluxo 5 - Monitoramento
 
@@ -100,7 +100,7 @@ Ponto de entrada:
 
 Objetivo:
 
-- configurar n8n
+- configurar plataformas e automacao nativa
 - ver plataformas conectadas
 - centralizar parte das integracoes
 

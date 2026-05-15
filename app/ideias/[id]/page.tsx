@@ -215,10 +215,10 @@ export default function IdeiaDetalhesPage({
 
       registrarFeedback(
         'success',
-        'Workflow acionado',
+        'Automacao acionada',
         data.roteiro_id
           ? `Roteiro criado com sucesso. ID: ${data.roteiro_id}.`
-          : 'O workflow de roteiro foi disparado com sucesso.',
+          : 'A geracao de roteiro foi disparada com sucesso.',
       )
     } catch (error) {
       console.error('Erro ao gerar roteiro:', error)
@@ -528,7 +528,7 @@ export default function IdeiaDetalhesPage({
             {!hasRoteiro ? (
               <div className="space-y-4">
                 <p className="text-sm text-zinc-400">
-                  Nenhum roteiro gerado ainda. Use o workflow para criar a primeira
+                  Nenhum roteiro gerado ainda. Use a automacao para criar a primeira
                   versao.
                 </p>
                 <button

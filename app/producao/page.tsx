@@ -7,7 +7,9 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { ErrorState } from '@/components/ui/error-state'
-import { Calendar, Clock, User } from 'lucide-react'
+import { ModoFocoBanner } from '@/components/modo-foco-banner'
+import { MODO_FOCO } from '@/lib/config/modo-foco'
+import { Calendar, Clock, Film, User } from 'lucide-react'
 import Link from 'next/link'
 
 const COLUNAS: { id: StatusProducao; titulo: string; cor: string }[] = [
@@ -136,6 +138,7 @@ export default function ProducaoPage() {
   const atualizarStatus = useAtualizarStatusProducao()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeConteudo, setActiveConteudo] = useState<any>(null)
+  const conteudosModoFoco = conteudos?.filter((item) => item.canal === MODO_FOCO.canalNomeDb) ?? []
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -148,7 +151,7 @@ export default function ProducaoPage() {
   const handleDragStart = (event: DragStartEvent) => {
     const id = event.active.id as string
     setActiveId(id)
-    const conteudo = conteudos?.find(c => c.pipeline_id === id)
+    const conteudo = conteudosModoFoco.find(c => c.pipeline_id === id)
     setActiveConteudo(conteudo)
   }
 
@@ -165,7 +168,7 @@ export default function ProducaoPage() {
     const novoStatus = over.id as StatusProducao
     
     // Só atualiza se mudou de coluna
-    const conteudo = conteudos?.find(c => c.pipeline_id === conteudoId)
+    const conteudo = conteudosModoFoco.find(c => c.pipeline_id === conteudoId)
     if (conteudo && conteudo.pipeline_status !== novoStatus) {
       console.log('Atualizando status:', { conteudoId, novoStatus })
       atualizarStatus.mutate({ id: conteudoId, novoStatus })
@@ -176,7 +179,7 @@ export default function ProducaoPage() {
   }
 
   const conteudoPorStatus = (status: StatusProducao) => {
-    return conteudos?.filter(c => c.pipeline_status === status) || []
+    return conteudosModoFoco.filter(c => c.pipeline_status === status)
   }
 
   if (isLoading) {
@@ -216,14 +219,28 @@ export default function ProducaoPage() {
                 🎬 Pipeline de Produção
               </h1>
             </div>
-            <Link
-              href="/calendario"
-              className="glass-hover px-5 py-3 text-white rounded-lg transition-all flex items-center gap-2 relative overflow-hidden group"
-            >
-              <div className="absolute inset-0 bg-linear-to-r from-teal-600 to-blue-600 opacity-100 group-hover:opacity-80 transition-opacity" />
-              <Calendar className="h-4 w-4 relative" />
-              <span className="relative">Ver Calendário</span>
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/producao/higgsfield"
+                className="glass-hover px-5 py-3 text-white rounded-lg transition-all flex items-center gap-2 relative overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-linear-to-r from-orange-600 to-amber-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+                <Film className="h-4 w-4 relative" />
+                <span className="relative">Kit Higgsfield</span>
+              </Link>
+              <Link
+                href="/calendario"
+                className="glass-hover px-5 py-3 text-white rounded-lg transition-all flex items-center gap-2 relative overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-linear-to-r from-teal-600 to-blue-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+                <Calendar className="h-4 w-4 relative" />
+                <span className="relative">Ver Calendário</span>
+              </Link>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <ModoFocoBanner detail="Pipeline filtrado para o canal foco. Os demais canais ficam fora da execucao do MVP." />
           </div>
           
           <div className="grid grid-cols-6 gap-4">

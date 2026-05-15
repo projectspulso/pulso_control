@@ -12,9 +12,22 @@ O projeto ja e um sistema interno de operacao editorial com:
 - monitor de workflows
 - publicacao assistida
 - integracao com Supabase
-- integracao com n8n
+- automacao nativa via banco, API routes e fila
 
 Isso significa que o repositorio ja passou da fase de conceito.
+
+## Decisao operacional atual
+
+n8n nao faz mais parte da rota operacional do MVP.
+
+A automacao oficial do PULSO Control deve seguir a linha AI-native:
+
+- Supabase como estado e fila
+- API routes como workers
+- pg_cron ou acionadores controlados como agenda
+- logs e retries dentro do banco/app
+
+Materiais sobre n8n continuam como acervo historico, mas nao devem guiar novas implementacoes.
 
 ## O que ainda nao e
 
@@ -55,15 +68,16 @@ Olhar primeiro:
 
 Esses arquivos mostram as correcoes, fixs e ajustes feitos para o app atual rodar.
 
-### Workflows e automacao
+### Automacao
 
 Olhar primeiro:
 
-- `automation/n8n/docs/`
-- `n8n-workflows/`
+- `docs/30_AUTOMACAO/AUTOMACAO_AI_NATIVE.md`
+- `app/api/automation/`
+- `lib/api/automation.ts`
+- `lib/hooks/use-automation.ts`
 
-Os docs descrevem a intencao.
-Os JSONs em `n8n-workflows/` sao a representacao mais proxima do que precisa existir no n8n.
+O acervo `automation/n8n/` e `n8n-workflows/` e legado. Nao usar como fonte ativa sem revalidar contra a decisao atual.
 
 ## Tensao principal do projeto
 
@@ -114,9 +128,8 @@ Ler:
 
 Ler:
 
+- `docs/30_AUTOMACAO/AUTOMACAO_AI_NATIVE.md`
 - `docs/30_AUTOMACAO/INVESTIGACOES_AUTOMACAO_E_PUBLICACAO.md`
-- `automation/n8n/docs/`
-- `n8n-workflows/`
 
 ### Entender o legado
 

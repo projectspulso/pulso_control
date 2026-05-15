@@ -21,6 +21,32 @@ Ordem de decisao:
 - P1.1 UX sem `alert`, `confirm` e `prompt` na superficie principal: concluido
 - P1.2 biblioteca de assets e telas de detalhe: estabilizadas para operacao manual do MVP
 
+## Status atual em 15 de maio de 2026
+
+- `/validacao` criada como tela central de decisao do MVP interno
+- navegacao principal emagrecida para o fluxo que importa no lote de validacao
+- Modo Foco ativado no app para `PULSO Mistérios & História`
+- `/ideias` e `/roteiros` agora iniciam no canal foco
+- `/producao` e `/publicar` agora filtram a operacao para o canal foco
+- paginas de canais fora do foco bloqueiam nova execucao operacional ate o gate do MVP
+- Pulso foi definido para o MVP como voz/narrador com imagens, cortes, legendas e movimento simples; animacao complexa fica fora do primeiro lote
+- auditoria read-only do banco real executada contra `nlcisbfdiokmipyihtuz`
+- banco real tem 10 canais ativos, 131 ideias, 129 itens no pipeline e 363 itens na fila
+- `/validacao` agora mostra alertas de foco, backlog da fila e gargalo do pipeline
+- worker de publicacao corrigido para respeitar `pipeline_ids` e o status real `PRONTO_PUBLICACAO`
+- `/validacao` agora mostra ranking de canal foco recomendado e politica operacional de fila
+- `/validacao` agora mostra lote recomendado de ate 5 itens para executar no canal foco
+- `/validacao` agora mostra roadmap datado de implantacao do MVP, da escolha do canal ao gate GO/AJUSTAR/KILL
+- `/validacao` agora mostra mapa dos canais, sequencia de uso do app e criterios objetivos de GO/AJUSTAR/KILL
+- feedback legado com `alert()` foi removido dos componentes de aprovacao conhecidos em favor de toast
+- cliente Supabase da automacao no browser passou a ser reutilizado para evitar multiplas instancias GoTrue
+- `npm install` executado com sucesso
+- `npm run build` executado com sucesso
+- `npm run build` reexecutado apos Modo Foco; sucesso
+- rotas `/ideias`, `/roteiros`, `/producao` e `/publicar` responderam HTTP 200 com servidor local na porta 3000
+- lint ainda nao foi revalidado nesta etapa
+- `npm audit` reportou 10 vulnerabilidades; nao corrigir automaticamente sem avaliar impacto em dependencias
+
 ## P0 - Bloqueadores de viabilidade
 
 1. Congelar a trilha oficial de banco
@@ -37,7 +63,7 @@ Ordem de decisao:
 
 4. Alinhar variaveis de ambiente com o codigo
    Resultado esperado:
-   `.env.example` e `.env.local` cobrindo o que app, banco e n8n usam de verdade
+   `.env.example` e `.env.local` cobrindo o que app, banco e automacao nativa usam de verdade
 
 5. Corrigir uso de cliente Supabase em contexto server
    Resultado esperado:
@@ -53,12 +79,14 @@ Ordem de decisao:
 
 ## P1 - Produto operavel
 
-1. Trocar `alert`, `confirm` e `prompt` por UX consistente
-2. Criar trilha clara de upload e validacao de assets
-3. Melhorar configuracao de plataformas no `/settings`
-4. Registrar historico de aprovacoes e motivos
-5. Dar visibilidade do estado de webhooks e retries
-6. Criar rubric de qualidade de ideia, roteiro e video
+1. Validar fluxo ponta a ponta do canal foco: ideia, roteiro, audio, producao, publicacao assistida e metrica
+2. Definir politica para limpar, cancelar ou arquivar o backlog antigo da `automation_queue`
+3. Definir voz MVP do Pulso e padrao visual simples do primeiro lote
+4. Criar rubric de qualidade de ideia, roteiro e video dentro do fluxo operacional
+5. Registrar historico de aprovacoes e motivos
+6. Dar visibilidade do estado de webhooks e retries
+7. Melhorar configuracao de plataformas no `/settings`
+8. Criar trilha clara de upload e validacao de assets
 
 ## P2 - Produto melhorando a cada lote
 
@@ -77,6 +105,7 @@ Ordem de decisao:
 
 ## Leitura de sequencia agora
 
-1. o nucleo do app ja compila e navega como MVP interno
-2. o proximo ganho real nao esta mais em layout; esta em integracao real e confiabilidade
-3. depois da validacao ponta a ponta, o backlog deve ser reorganizado por incidencia real de uso
+1. o nucleo do app compila como MVP interno
+2. o app agora tem uma tela de decisao e uma trava de foco para nao confundir producao com progresso
+3. o proximo ganho real e executar um lote pequeno no canal foco
+4. depois da validacao ponta a ponta, o backlog deve ser reorganizado por incidencia real de uso

@@ -1,38 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { triggerN8nWorkflow } from '@/lib/n8n/runtime'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
-async function triggerIdeiaWebhook(ideiaId: string) {
-  const result = await triggerN8nWorkflow('gerar-roteiro', {
-    ideia_id: ideiaId,
-    trigger: 'app-aprovacao',
-    timestamp: new Date().toISOString(),
-  })
-
-  if (!result.success) {
-    return {
-      statusCode: 207,
-      body: {
-        status: 'error',
-        message: result.error || `Webhook retornou ${result.status}`,
-        details: result.details,
-        tried_urls: result.tried_urls,
-      },
-    }
-  }
-
-  return {
-    statusCode: 200,
-    body: {
-      status: 'triggered',
-      message: 'Roteiro sendo gerado',
-      data: result.data,
-      url: result.url,
-    },
-  }
-}
-
+/**
+ * POST /api/ideias/[id]/aprovar
+ * Aprova uma ideia → trigger no banco enfileira GERAR_ROTEIRO automaticamente
+ */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -46,7 +19,7 @@ export async function POST(
 
     const { data: ideia, error: updateError } = await supabase
       .from('ideias')
-      .update({ status: 'APROVADA' })
+      .update({ status: 'APROVADA', updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single()
@@ -59,36 +32,14 @@ export async function POST(
       )
     }
 
-    try {
-      const workflow = await triggerIdeiaWebhook(id)
-
-      return NextResponse.json(
-        {
-          success: true,
-          ideia,
-          workflow: workflow.body,
-        },
-        { status: workflow.statusCode },
-      )
-    } catch (webhookError) {
-      console.error('Erro ao chamar webhook da ideia:', webhookError)
-
-      return NextResponse.json(
-        {
-          success: true,
-          ideia,
-          workflow: {
-            status: 'error',
-            message: 'Nao foi possivel disparar geracao de roteiro',
-            error:
-              webhookError instanceof Error
-                ? webhookError.message
-                : 'Erro desconhecido',
-          },
-        },
-        { status: 207 },
-      )
-    }
+    return NextResponse.json({
+      success: true,
+      ideia,
+      automation: {
+        status: 'enqueued',
+        message: 'Geração de roteiro enfileirada automaticamente via trigger',
+      },
+    })
   } catch (error) {
     console.error('Erro geral ao aprovar ideia:', error)
     return NextResponse.json(

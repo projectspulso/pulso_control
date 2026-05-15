@@ -1,67 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { triggerN8nWorkflow } from '@/lib/n8n/runtime'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
-
-function getRoteiroIdFromWorkflowData(workflowData: unknown) {
-  if (typeof workflowData !== 'object' || workflowData === null) {
-    return undefined
-  }
-
-  if (!('data' in workflowData)) {
-    return undefined
-  }
-
-  const firstDataLevel = workflowData.data
-  if (typeof firstDataLevel !== 'object' || firstDataLevel === null) {
-    return undefined
-  }
-
-  if (!('roteiro' in firstDataLevel)) {
-    return undefined
-  }
-
-  const roteiro = firstDataLevel.roteiro
-  if (typeof roteiro !== 'object' || roteiro === null || !('id' in roteiro)) {
-    return undefined
-  }
-
-  return roteiro.id
-}
-
-async function triggerRoteiroWorkflow(ideiaId: string) {
-  const result = await triggerN8nWorkflow('gerar-roteiro', {
-    ideia_id: ideiaId,
-    trigger: 'manual-gerar-roteiro',
-    timestamp: new Date().toISOString(),
-  })
-
-  if (!result.success) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: result.error || `Webhook retornou ${result.status}`,
-        details: result.details,
-        tried_urls: result.tried_urls,
-      },
-      { status: result.status || 500 },
-    )
-  }
-
-  return NextResponse.json({
-    success: true,
-    workflow: {
-      status: 'triggered',
-      data: result.data,
-      url: result.url,
-      tried_urls: result.tried_urls,
-    },
-  })
-}
 
 /**
  * POST /api/ideias/[id]/gerar-roteiro
- * Dispara o workflow WF01 para gerar roteiro sem alterar status da ideia.
+ * Enfileira geração de roteiro manualmente (sem alterar status da ideia).
+ * Ideia precisa estar APROVADA.
  */
 export async function POST(
   request: NextRequest,
@@ -76,7 +20,7 @@ export async function POST(
 
     const { data: ideia, error: fetchError } = await supabase
       .from('ideias')
-      .select('id, status, titulo')
+      .select('id, status, titulo, canal_id')
       .eq('id', id)
       .single()
 
@@ -110,22 +54,37 @@ export async function POST(
       )
     }
 
-    const workflowResponse = await triggerRoteiroWorkflow(id)
-    const workflowPayload = await workflowResponse.json()
+    // Enfileira na automation_queue
+    const { error: queueError } = await supabase
+      .schema('pulso_automation')
+      .from('automation_queue')
+      .insert({
+        tipo: 'GERAR_ROTEIRO',
+        payload: { ideia_id: id, canal_id: ideia.canal_id },
+        referencia_id: id,
+        referencia_tipo: 'ideia',
+        origem: 'manual',
+      })
 
-    if (!workflowResponse.ok) {
-      return NextResponse.json(workflowPayload, { status: workflowResponse.status })
+    if (queueError) {
+      console.error('Erro ao enfileirar geração de roteiro:', queueError)
+      return NextResponse.json(
+        { error: 'Erro ao enfileirar geração de roteiro', details: queueError.message },
+        { status: 500 },
+      )
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Roteiro sendo gerado',
+      message: 'Geração de roteiro enfileirada',
       ideia: {
         id: ideia.id,
         titulo: ideia.titulo,
       },
-      workflow: workflowPayload.workflow,
-      roteiro_id: getRoteiroIdFromWorkflowData(workflowPayload.workflow?.data),
+      automation: {
+        status: 'enqueued',
+        message: 'Geração de roteiro enfileirada na automation_queue',
+      },
     })
   } catch (error) {
     console.error('Erro geral ao processar geracao de roteiro:', error)

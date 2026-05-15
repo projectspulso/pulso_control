@@ -17,8 +17,10 @@ import {
 import { useState } from 'react'
 
 import { ErrorState } from '@/components/ui/error-state'
+import { ModoFocoBanner } from '@/components/modo-foco-banner'
+import { MODO_FOCO } from '@/lib/config/modo-foco'
 import { useConteudosProntos } from '@/lib/hooks/use-calendario'
-import { useAgendarPublicacao, usePublicarAgora } from '@/lib/hooks/use-n8n'
+import { usePublicar } from '@/lib/hooks/use-automation'
 
 type FeedbackTone = 'success' | 'error' | 'info'
 
@@ -44,7 +46,7 @@ function getErrorMessage(error: unknown) {
     return error.message
   }
 
-  return 'Falha inesperada. Revise o workflow e as credenciais configuradas.'
+  return 'Falha inesperada. Revise a fila de automacao e as credenciais configuradas.'
 }
 
 function getFeedbackClasses(tone: FeedbackTone) {
@@ -61,8 +63,8 @@ function getFeedbackClasses(tone: FeedbackTone) {
 
 export default function PublicarPage() {
   const { data: conteudos, isLoading, isError, refetch } = useConteudosProntos()
-  const publicarAgora = usePublicarAgora()
-  const agendarPublicacao = useAgendarPublicacao()
+  const publicarAgora = usePublicar()
+  const agendarPublicacao = usePublicar()
 
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [mostrarModalAgendar, setMostrarModalAgendar] = useState(false)
@@ -71,7 +73,8 @@ export default function PublicarPage() {
   const [horaAgendamento, setHoraAgendamento] = useState('')
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
 
-  const totalConteudos = conteudos?.length ?? 0
+  const conteudosModoFoco = conteudos?.filter((conteudo) => conteudo.canal === MODO_FOCO.canalNomeDb) ?? []
+  const totalConteudos = conteudosModoFoco.length
   const selecionouTodos = totalConteudos > 0 && selecionados.size === totalConteudos
 
   const toggleSelecao = (id: string) => {
@@ -87,7 +90,7 @@ export default function PublicarPage() {
   }
 
   const selecionarTodos = () => {
-    if (!conteudos || conteudos.length === 0) {
+    if (conteudosModoFoco.length === 0) {
       return
     }
 
@@ -96,7 +99,7 @@ export default function PublicarPage() {
       return
     }
 
-    setSelecionados(new Set(conteudos.map((conteudo) => conteudo.pipeline_id)))
+    setSelecionados(new Set(conteudosModoFoco.map((conteudo) => conteudo.pipeline_id)))
   }
 
   const abrirAgendamento = (pipelineId?: string) => {
@@ -192,8 +195,7 @@ export default function PublicarPage() {
     try {
       for (const pipelineId of Array.from(selecionados)) {
         await agendarPublicacao.mutateAsync({
-          pipelineId,
-          dataHora,
+          pipelineIds: [pipelineId],
           plataformas: PLATAFORMAS_ASSISTIDAS,
         })
       }
@@ -311,6 +313,8 @@ export default function PublicarPage() {
           )}
         </div>
 
+        <ModoFocoBanner detail="Publicacao assistida limitada ao canal foco. Outros canais ficam congelados ate o gate." />
+
         {feedback && (
           <div className={`rounded-2xl border p-4 ${getFeedbackClasses(feedback.tone)}`}>
             <div className="flex items-start justify-between gap-4">
@@ -346,7 +350,7 @@ export default function PublicarPage() {
               <span className="text-sm text-zinc-400">Agendados</span>
             </div>
             <p className="text-3xl font-bold text-white">
-              {conteudos?.filter((conteudo) => conteudo.data_publicacao_planejada).length || 0}
+              {conteudosModoFoco.filter((conteudo) => conteudo.data_publicacao_planejada).length}
             </p>
           </div>
 
@@ -364,7 +368,7 @@ export default function PublicarPage() {
               <span className="text-sm text-zinc-400">Hoje</span>
             </div>
             <p className="text-3xl font-bold text-white">
-              {conteudos?.filter((conteudo) => {
+              {conteudosModoFoco.filter((conteudo) => {
                 if (!conteudo.data_publicacao_planejada) {
                   return false
                 }
@@ -378,7 +382,7 @@ export default function PublicarPage() {
           </div>
         </div>
 
-        {!conteudos || conteudos.length === 0 ? (
+        {conteudosModoFoco.length === 0 ? (
           <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-12 text-center">
             <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-zinc-700" />
             <h3 className="mb-2 text-xl font-bold text-white">Nenhum conteudo pronto</h3>
@@ -415,7 +419,7 @@ export default function PublicarPage() {
             </div>
 
             <div className="divide-y divide-zinc-800">
-              {conteudos.map((conteudo) => {
+              {conteudosModoFoco.map((conteudo) => {
                 const selecionado = selecionados.has(conteudo.pipeline_id)
                 const prioridade = conteudo.prioridade ?? 5
 
@@ -522,7 +526,7 @@ export default function PublicarPage() {
           </div>
         )}
 
-        {conteudos && conteudos.length > 0 && (
+        {conteudosModoFoco.length > 0 && (
           <div className="rounded-lg border border-blue-600/20 bg-blue-600/10 p-4">
             <div className="flex items-start gap-3">
               <Sparkles className="mt-0.5 h-5 w-5 text-blue-400" />
@@ -531,7 +535,7 @@ export default function PublicarPage() {
                   Operacao assistida, nao autopost irrestrito
                 </h4>
                 <p className="text-sm text-zinc-300">
-                  Esta tela envia itens para a fila de publicacao e para os workflows do n8n.
+                  Esta tela envia itens para a fila de publicacao assistida do app.
                 </p>
                 <p className="text-sm text-zinc-400">
                   Validacao final de conta, plataforma, credenciais e elegibilidade continua sendo humana.
@@ -549,7 +553,7 @@ export default function PublicarPage() {
                 Voce esta enviando {selecionados.size} conteudo(s) para a fila assistida.
               </p>
               <p className="mt-3 text-sm text-zinc-500">
-                O disparo passa pelos workflows e pelas plataformas configuradas, mas a validacao final continua operacional.
+                O disparo passa pela automacao nativa e pelas plataformas configuradas, mas a validacao final continua operacional.
               </p>
 
               <div className="mt-4 rounded-lg border border-green-600/20 bg-green-600/10 p-3 text-xs text-green-300">
@@ -615,7 +619,7 @@ export default function PublicarPage() {
 
                 <div className="rounded-lg border border-violet-600/20 bg-violet-600/10 p-3">
                   <p className="text-xs text-violet-300">
-                    O horario agenda a fila e o workflow. Publicacao real ainda depende de plataforma valida e contas configuradas.
+                    O horario agenda a fila de automacao. Publicacao real ainda depende de plataforma valida e contas configuradas.
                   </p>
                 </div>
               </div>

@@ -121,7 +121,7 @@ export default function AssetsPage() {
 
           <div className="glass flex items-center gap-2 rounded-xl px-6 py-3 text-sm text-zinc-400">
             <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-            Biblioteca ligada aos workflows do n8n
+            Biblioteca ligada a automacao nativa do app
           </div>
         </div>
 

@@ -3,6 +3,8 @@
 import { useRoteiros, useRoteirosStats } from '@/lib/hooks/use-roteiros'
 import { useCanais } from '@/lib/hooks/use-core'
 import { ErrorState } from '@/components/ui/error-state'
+import { ModoFocoBanner } from '@/components/modo-foco-banner'
+import { MODO_FOCO } from '@/lib/config/modo-foco'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -12,7 +14,7 @@ export default function RoteirosPage() {
   const { data: canais } = useCanais()
   
   const [filtroStatus, setFiltroStatus] = useState<string>('TODOS')
-  const [filtroCanal, setFiltroCanal] = useState<string>('TODOS')
+  const [filtroCanal, setFiltroCanal] = useState<string>(MODO_FOCO.canalId)
   const [busca, setBusca] = useState('')
 
   const roteirosFiltrados = roteiros?.filter(roteiro => {
@@ -67,6 +69,8 @@ export default function RoteirosPage() {
             </p>
           </div>
         </div>
+
+        <ModoFocoBanner detail="Roteiros fora do canal foco podem ser auditados, mas nao entram no lote atual." />
 
         {/* Stats Cards */}
         {stats && stats.por_status && Object.keys(stats.por_status).length > 0 && (
@@ -124,9 +128,10 @@ export default function RoteirosPage() {
                 onChange={(e) => setFiltroCanal(e.target.value)}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-violet-500"
               >
-                <option value="TODOS">Todos os canais</option>
+                <option value={MODO_FOCO.canalId}>{MODO_FOCO.canalNome}</option>
+                <option value="TODOS">Todos os canais (auditoria)</option>
                 {canais?.map(canal => (
-                  <option key={canal.id} value={canal.id}>
+                  <option key={canal.id} value={canal.id} disabled={canal.id === MODO_FOCO.canalId}>
                     {canal.nome}
                   </option>
                 ))}

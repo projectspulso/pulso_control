@@ -1,42 +1,11 @@
 import { NextResponse } from 'next/server'
 
-import { triggerN8nWorkflow } from '@/lib/n8n/runtime'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
-async function triggerRoteiroWebhook(roteiroId: string) {
-  const result = await triggerN8nWorkflow('gerar-audio', {
-    roteiro_id: roteiroId,
-    timestamp: new Date().toISOString(),
-  })
-
-  if (
-    !result.success &&
-    result.status === 500 &&
-    typeof result.error === 'string' &&
-    result.error.includes('nao configurado')
-  ) {
-    return {
-      status: 'skipped',
-      message: 'Roteiro aprovado, mas webhook WF02 nao configurado',
-    }
-  }
-
-  if (!result.success) {
-    return {
-      status: 'error',
-      message: 'Roteiro aprovado, mas webhook WF02 falhou',
-      details: result.details,
-      tried_urls: result.tried_urls,
-    }
-  }
-
-  return {
-    status: 'triggered',
-    data: result.data,
-    url: result.url,
-  }
-}
-
+/**
+ * POST /api/roteiros/[id]/aprovar
+ * Aprova um roteiro → trigger no banco enfileira GERAR_AUDIO automaticamente
+ */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -66,22 +35,14 @@ export async function POST(
       )
     }
 
-    try {
-      const webhook = await triggerRoteiroWebhook(id)
-
-      return NextResponse.json({
-        success: true,
-        roteiro,
-        webhook,
-      })
-    } catch (webhookError) {
-      console.error('Erro ao chamar webhook WF02:', webhookError)
-      return NextResponse.json({
-        success: true,
-        roteiro,
-        warning: 'Roteiro aprovado, mas webhook WF02 com erro',
-      })
-    }
+    return NextResponse.json({
+      success: true,
+      roteiro,
+      automation: {
+        status: 'enqueued',
+        message: 'Geração de áudio enfileirada automaticamente via trigger',
+      },
+    })
   } catch (error) {
     console.error('Erro ao aprovar roteiro:', error)
     return NextResponse.json(

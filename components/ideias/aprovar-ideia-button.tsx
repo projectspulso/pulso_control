@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 
 interface AprovarIdeiaButtonProps {
   ideiaId: string
@@ -22,14 +23,14 @@ export function AprovarIdeiaButton({
 
   async function handleAprovar() {
     if (ideiaStatus === 'APROVADA') {
-      alert('Esta ideia já foi aprovada')
+      toast('Esta ideia ja foi aprovada')
       return
     }
 
     setIsApproving(true)
 
     try {
-      console.log(`📞 Aprovando ideia ${ideiaId}...`)
+      console.log(`Aprovando ideia ${ideiaId}...`)
       
       const response = await fetch(`/api/ideias/${ideiaId}/aprovar`, {
         method: 'POST',
@@ -41,38 +42,38 @@ export function AprovarIdeiaButton({
       const data = await response.json()
 
       if (!response.ok) {
-        console.error('❌ Erro ao aprovar:', data)
-        alert(data.error || 'Erro ao aprovar ideia')
+        console.error('Erro ao aprovar:', data)
+        toast.error(data.error || 'Erro ao aprovar ideia')
         return
       }
 
-      console.log('✅ Resposta da API:', data)
+      console.log('Resposta da API:', data)
 
-      // Sucesso na aprovação
+      // Sucesso na aprovacao
       if (data.success) {
-        alert(`✅ "${titulo}" aprovada!`)
+        toast.success(`"${titulo}" aprovada`)
 
         // Verificar status do workflow
         if (data.workflow?.status === 'triggered') {
-          console.log('🤖 Roteiro sendo gerado pelo n8n...')
+          console.log('Roteiro sendo gerado pela automacao nativa...')
         } else if (data.workflow?.status === 'error') {
-          console.warn('⚠️ Ideia aprovada, mas workflow falhou')
+          console.warn('Ideia aprovada, mas workflow falhou')
         } else if (data.workflow?.status === 'skipped') {
-          console.info('ℹ️ Webhook não configurado')
+          console.info('Webhook nao configurado')
         }
 
         // Callback de sucesso
         if (onSuccess) {
           onSuccess()
         } else {
-          // Recarregar página ou redirecionar
+          // Recarregar pagina ou redirecionar
           router.refresh()
         }
       }
 
     } catch (error) {
-      console.error('💥 Erro ao aprovar ideia:', error)
-      alert('Erro ao conectar com servidor')
+      console.error('Erro ao aprovar ideia:', error)
+      toast.error('Erro ao conectar com servidor')
     } finally {
       setIsApproving(false)
     }
@@ -98,7 +99,7 @@ export function AprovarIdeiaButton({
       ) : isAprovada ? (
         <>
           <Check className="mr-2 h-4 w-4" />
-          Já Aprovada
+          Ja Aprovada
         </>
       ) : (
         <>

@@ -1,5 +1,7 @@
 # Checklist da Trilha Oficial
 
+Data de referencia: 15 de maio de 2026
+
 ## Fase 1 - Leitura
 
 - [ ] Li `docs/README.md`
@@ -14,68 +16,55 @@
 - [ ] Criei `.env.local`
 - [ ] Preenchi Supabase publico
 - [ ] Preenchi Supabase server
-- [ ] Preenchi n8n API
-- [ ] Preenchi webhooks WF01 e WF02
-- [ ] Defini `WEBHOOK_SECRET`
+- [ ] Preenchi `ACCESS_TOKEN_SUPABASE`
+- [ ] Preenchi `PROJECT_URL_SUPABASE`
 - [ ] Rodei `npm install`
 - [ ] Rodei `npm run dev`
-- [ ] Validei `/api/debug/env`
+- [ ] Validei `/validacao`
 
 ## Fase 3 - Banco
 
-- [ ] Rodei `database/sql/investigacao/20260311_validacao_runtime_mvp.sql`
-- [ ] Li `docs/20_BANCO/RESULTADO_INVESTIGACAO_RUNTIME_MVP_20260311.md`
-- [ ] Rodei diagnostico de views
-- [ ] Rodei validacao de estado real
-- [ ] Validei enums e ids
+- [ ] Confirmei acesso ao projeto Supabase correto
 - [ ] Listei tabelas e views usadas pelo app
-- [ ] Decidi o lote minimo de migrations
-- [ ] Separei scripts perigosos
-- [ ] Confirmei se `pulso_content.workflow_queue` era a unica lacuna real
+- [ ] Validei counts de canais, ideias, roteiros, pipeline, posts, metricas e fila
+- [ ] Validei estados reais do pipeline
+- [ ] Validei erros recentes da `automation_queue`
+- [ ] Separei backlog antigo de operacao atual
 
-## Fase 4 - Migration minima
+## Fase 4 - App
 
-- [ ] Apliquei `database/sql/migrations/20260311_create_workflow_queue_runtime_mvp.sql`
-- [ ] Rodei `database/sql/investigacao/20260311_validar_workflow_queue_pos_migration.sql`
-- [ ] Validei a `workflow_queue` com o doc de validacao
-
-## Fase 5 - App
-
+- [ ] `/validacao` funciona
 - [ ] `/ideias` funciona
 - [ ] `/roteiros` funciona
 - [ ] `/producao` funciona
-- [ ] `/calendario` funciona
-- [ ] `/assets` funciona
 - [ ] `/publicar` funciona
-- [ ] `/monitor` funciona
+- [ ] `/automacao` funciona
+- [ ] `/analytics` funciona
 - [ ] rotas de aprovacao respondem
 
-## Fase 6 - n8n
+## Fase 5 - Automacao nativa
 
-- [ ] Importei WF00
-- [ ] Importei WF01
-- [ ] Importei WF02
-- [ ] Importei WF03
-- [ ] Importei WF04
-- [ ] Importei WF99
-- [ ] Configurei credenciais
-- [ ] Copiei URLs reais de webhook
-- [ ] Testei comunicacao app <-> n8n
+- [ ] `automation_queue` tem politica definida para pendentes antigos
+- [ ] API route de publicacao respeita `pipeline_ids`
+- [ ] status real `PRONTO_PUBLICACAO` foi validado
+- [ ] logs e retries aparecem no app
+- [ ] falhas sao tratadas sem depender de ferramenta externa
 
-## Fase 7 - Fluxo ponta a ponta
+## Fase 6 - Fluxo ponta a ponta
 
+- [ ] Escolhi 1 canal foco
 - [ ] Aprovei uma ideia
-- [ ] O WF01 criou roteiro
+- [ ] Gerei ou vinculei roteiro
 - [ ] Aprovei um roteiro
-- [ ] O WF02 criou audio
-- [ ] O WF03 preparou video
-- [ ] O video foi montado e subido
-- [ ] O WF04 gerou item de publicacao
+- [ ] Gerei ou vinculei audio
+- [ ] O item apareceu no pipeline de producao
+- [ ] O item chegou em publicacao assistida
 - [ ] Logs apareceram no banco
 
 ## Gate final
 
 - [ ] Consigo repetir o fluxo completo
 - [ ] O banco esta estavel
-- [ ] O app e o n8n usam a mesma verdade operacional
-- [ ] O MVP esta pronto para 1 canal
+- [ ] O app e a automacao nativa usam a mesma verdade operacional
+- [ ] A fila nao esta acumulando erro silencioso
+- [ ] O MVP esta pronto para validar 1 canal

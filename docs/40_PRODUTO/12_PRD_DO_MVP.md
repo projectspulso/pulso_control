@@ -33,9 +33,9 @@ Inclui:
 - calendario
 - assets
 - publicacao assistida
-- monitoramento de workflows
+- monitoramento de automacoes
 - integracao com Supabase
-- integracao com n8n
+- automacao nativa via banco e API routes
 
 Nao inclui:
 
@@ -72,8 +72,8 @@ Alguem que precisa validar 1 canal com processo e menos caos operacional.
 
 - banco com trilha minima congelada
 - variaveis de ambiente coerentes
-- webhooks reais do n8n
 - logs e retry funcionando
+- workers de automacao operando com fila controlada
 
 ## Metricas de sucesso
 

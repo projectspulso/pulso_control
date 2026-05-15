@@ -17,10 +17,12 @@ export async function GET() {
       next_public_url: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
       next_public_anon: Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
     },
-    n8n: {
-      webhook_ideia: Boolean(process.env.N8N_WEBHOOK_APROVAR_IDEIA),
-      webhook_roteiro: Boolean(process.env.N8N_WEBHOOK_APROVAR_ROTEIRO),
+    automation: {
+      openai_api_key: Boolean(process.env.OPENAI_API_KEY),
+      anthropic_api_key: Boolean(process.env.ANTHROPIC_API_KEY),
       webhook_secret: Boolean(process.env.WEBHOOK_SECRET),
+      tts_provider: process.env.TTS_PROVIDER || 'openai',
+      manus_webhook_url: Boolean(process.env.MANUS_WEBHOOK_URL),
     },
     node_env: process.env.NODE_ENV,
     debug_api_enabled: true,
