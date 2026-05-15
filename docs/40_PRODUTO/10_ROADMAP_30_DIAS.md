@@ -11,7 +11,7 @@ Objetivo:
 - alinhar docs
 - configurar ambiente
 - congelar a verdade do banco
-- subir app e n8n com previsibilidade
+- subir app e automacao nativa com previsibilidade
 
 Entregaveis:
 
@@ -56,9 +56,17 @@ Entregaveis:
 - lote de 5 a 10 posts analisado
 - formato vencedor ou tese revisada
 - backlog P0/P1 atualizado
+- tela `/validacao` usada como fonte operacional da decisao
+
+## Ajuste atual do roadmap
+
+Em 15 de maio de 2026, o app ganhou a rota `/validacao` para concentrar plano de negocio, plano de marketing, checklist do lote e decisao GO/AJUSTAR/KILL.
+
+Essa rota passa a ser a primeira tela de decisao do MVP interno. Docs e telas auxiliares nao devem substituir essa leitura operacional.
 
 ## Regras do roadmap
 
 1. nao abrir 2o canal antes de estabilizar o 1o
 2. nao prometer multi-rede antes de validar a ancora
 3. nao empilhar feature se o fluxo principal ainda quebra
+4. nao chamar renda de passiva antes de existir receita recorrente ou operacao delegavel

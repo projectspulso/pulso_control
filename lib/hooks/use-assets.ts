@@ -181,7 +181,7 @@ export function useAssetsDeVariante(varianteId: string) {
 }
 
 // ============================================
-// NOTA: Assets são gerenciados via n8n workflows
+// NOTA: Assets devem ser gerenciados pela automacao nativa do app.
 // Os hooks abaixo são READ-ONLY para visualização
 // ============================================
 

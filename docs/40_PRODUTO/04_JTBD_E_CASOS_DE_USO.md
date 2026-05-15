@@ -45,16 +45,16 @@ Por que encaixa:
 
 - o produto ja oferece pipeline e separacao operacional suficientes para este porte
 
-## Caso de uso 3 - Time pequeno com n8n e Supabase
+## Caso de uso 3 - Time pequeno com Supabase e automacao nativa
 
 Objetivo:
 
 - tirar do improviso a camada de automacao
-- centralizar o que esta em workflow e o que esta no app
+- centralizar fila, logs e retries no app
 
 Por que encaixa:
 
-- o projeto ja conecta rotas, banco e workflows exportados
+- o projeto ja conecta rotas, banco, fila e monitoramento operacional
 
 ## Caso de uso nao recomendado
 

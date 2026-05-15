@@ -21,15 +21,26 @@ export async function POST(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
   const payload = await request.json()
+  const pipelineIds = Array.isArray(payload.pipeline_ids)
+    ? payload.pipeline_ids
+    : payload.pipeline_id
+      ? [payload.pipeline_id]
+      : []
 
   try {
     // Buscar conteúdos prontos para publicação
-    const { data: pipeline, error: pipeError } = await supabase
+    let pipelineQuery = supabase
       .schema('pulso_content')
       .from('pipeline_producao')
       .select('*')
-      .in('status', ['PRONTO_PARA_PUBLICACAO', 'PRONTO'])
+      .in('status', ['PRONTO_PUBLICACAO', 'PRONTO'])
       .limit(10)
+
+    if (pipelineIds.length > 0) {
+      pipelineQuery = pipelineQuery.in('id', pipelineIds)
+    }
+
+    const { data: pipeline, error: pipeError } = await pipelineQuery
 
     if (pipeError || !pipeline?.length) {
       return NextResponse.json({

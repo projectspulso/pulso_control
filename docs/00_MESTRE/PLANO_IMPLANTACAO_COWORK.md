@@ -886,7 +886,7 @@ Antes do CoWork começar a executar, confirmar:
 
 ## Notas Importantes
 
-1. **Manter n8n como fallback** durante a Fase 1-2. Só desligar após pipeline nativo validado.
+1. **Nao manter n8n como fallback operacional**. A decisao atual e validar o pipeline nativo; n8n permanece apenas como acervo legado.
 2. **Não automatizar publicação real** até ter ao menos 10 vídeos testados manualmente.
 3. **Começar com 1 canal** (PULSO Curiosidades) e expandir após validação.
 4. **Humano no loop** para aprovação de roteiros na Fase 1. Auto-approve só após quality score confiável.

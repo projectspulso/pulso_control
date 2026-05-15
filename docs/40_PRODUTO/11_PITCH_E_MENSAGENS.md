@@ -10,7 +10,7 @@
 
 ## Pitch de 2 minutos
 
-"O problema no inicio nao e falta de ideia nem falta de IA. O problema e operacao quebrada: pauta solta, roteiro sem controle, producao sem status, publicacao improvisada e aprendizado disperso. O PULSO Control resolve isso com um centro de comando conectado ao Supabase e ao n8n, mantendo humano no loop onde a qualidade importa. O foco nao e escalar 10 canais no escuro. O foco e validar 1 canal original com processo, repetibilidade e menos friccao."
+"O problema no inicio nao e falta de ideia nem falta de IA. O problema e operacao quebrada: pauta solta, roteiro sem controle, producao sem status, publicacao improvisada e aprendizado disperso. O PULSO Control resolve isso com um centro de comando conectado ao Supabase e a automacao nativa do app, mantendo humano no loop onde a qualidade importa. O foco nao e escalar 10 canais no escuro. O foco e validar 1 canal original com processo, repetibilidade e menos friccao."
 
 ## Hero copy
 

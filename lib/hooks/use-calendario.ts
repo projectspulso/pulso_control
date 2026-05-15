@@ -8,6 +8,38 @@ import type {
   PipelineStatus
 } from '@/lib/types/pipeline'
 
+type CalendarioViewRow = {
+  pipeline_id: string
+  canal_nome: string | null
+  serie_nome: string | null
+  ideia_titulo: string | null
+  ideia_status: string
+  pipeline_status: string
+  is_piloto: boolean | null
+  data_prevista: string | null
+  data_publicacao_planejada: string | null
+  hora_publicacao: string | null
+  prioridade: number | null
+  pipeline_metadata: any
+}
+
+function mapCalendarioRow(row: CalendarioViewRow): PipelineCalendario {
+  return {
+    pipeline_id: row.pipeline_id,
+    canal: row.canal_nome || 'Sem canal',
+    serie: row.serie_nome,
+    ideia: row.ideia_titulo || 'Sem titulo',
+    ideia_status: row.ideia_status,
+    pipeline_status: row.pipeline_status,
+    is_piloto: row.is_piloto,
+    data_prevista: row.data_prevista,
+    data_publicacao_planejada: row.data_publicacao_planejada,
+    hora_publicacao: row.hora_publicacao,
+    prioridade: row.prioridade,
+    metadata: row.pipeline_metadata || {},
+  }
+}
+
 // Re-exportar types para uso nos componentes
 export type { PipelineCalendario, PipelineComAsset, PipelineComAssetsAgrupado, FiltroCalendario, PipelineStatus }
 
@@ -22,11 +54,11 @@ export function useCalendario(filtros?: FiltroCalendario) {
       
       // Aplicar filtros
       if (filtros?.canal) {
-        query = query.eq('canal', filtros.canal)
+        query = query.eq('canal_nome', filtros.canal)
       }
       
       if (filtros?.serie) {
-        query = query.eq('serie', filtros.serie)
+        query = query.eq('serie_nome', filtros.serie)
       }
       
       if (filtros?.status && filtros.status.length > 0) {
@@ -61,7 +93,7 @@ export function useCalendario(filtros?: FiltroCalendario) {
       const { data, error } = await query
       
       if (error) throw error
-      return data as PipelineCalendario[]
+      return (data || []).map((row) => mapCalendarioRow(row as CalendarioViewRow))
     },
   })
 }
@@ -79,7 +111,7 @@ export function useCalendarioDia(dia: string) {
         .order('hora_publicacao', { ascending: true })
       
       if (error) throw error
-      return data as PipelineCalendario[]
+      return (data || []).map((row) => mapCalendarioRow(row as CalendarioViewRow))
     },
   })
 }
@@ -98,7 +130,7 @@ export function useCalendarioIntervalo(dataInicio: string, dataFim: string) {
         .order('hora_publicacao', { ascending: true })
       
       if (error) throw error
-      return data as PipelineCalendario[]
+      return (data || []).map((row) => mapCalendarioRow(row as CalendarioViewRow))
     },
   })
 }
@@ -116,7 +148,7 @@ export function useConteudosProntos() {
         .order('hora_publicacao', { ascending: true })
       
       if (error) throw error
-      return data as PipelineCalendario[]
+      return (data || []).map((row) => mapCalendarioRow(row as CalendarioViewRow))
     },
   })
 }
@@ -134,7 +166,7 @@ export function usePipelinePorStatus(status: PipelineStatus[]) {
         .order('data_publicacao_planejada', { ascending: true })
       
       if (error) throw error
-      return data as PipelineCalendario[]
+      return (data || []).map((row) => mapCalendarioRow(row as CalendarioViewRow))
     },
   })
 }
@@ -175,11 +207,11 @@ export function usePipelinesComAssets(filtros?: FiltroCalendario) {
       
       // Aplicar filtros
       if (filtros?.canal) {
-        query = query.eq('canal', filtros.canal)
+        query = query.eq('canal_nome', filtros.canal)
       }
       
       if (filtros?.serie) {
-        query = query.eq('serie', filtros.serie)
+        query = query.eq('serie_nome', filtros.serie)
       }
       
       if (filtros?.status && filtros.status.length > 0) {
@@ -225,7 +257,7 @@ export function usePilotos() {
         .order('data_publicacao_planejada', { ascending: true })
       
       if (error) throw error
-      return data as PipelineCalendario[]
+      return (data || []).map((row) => mapCalendarioRow(row as CalendarioViewRow))
     },
   })
 }
@@ -238,11 +270,11 @@ export function useConteudosPorCanal(canal: string) {
       const { data, error } = await supabase
         .from('vw_pulso_calendario_publicacao_v2')
         .select('*')
-        .eq('canal', canal)
+        .eq('canal_nome', canal)
         .order('data_publicacao_planejada', { ascending: true })
       
       if (error) throw error
-      return data as PipelineCalendario[]
+      return (data || []).map((row) => mapCalendarioRow(row as CalendarioViewRow))
     },
     enabled: !!canal,
   })
@@ -256,11 +288,11 @@ export function useConteudosPorSerie(serie: string) {
       const { data, error } = await supabase
         .from('vw_pulso_calendario_publicacao_v2')
         .select('*')
-        .eq('serie', serie)
+        .eq('serie_nome', serie)
         .order('data_publicacao_planejada', { ascending: true })
       
       if (error) throw error
-      return data as PipelineCalendario[]
+      return (data || []).map((row) => mapCalendarioRow(row as CalendarioViewRow))
     },
     enabled: !!serie,
   })
@@ -301,3 +333,4 @@ export function useAtualizarStatusPipeline() {
     },
   })
 }
+

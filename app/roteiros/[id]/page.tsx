@@ -162,7 +162,7 @@ export default function RoteiroDetalhesPage({
         'Roteiro aprovado',
         data.warning
           ? data.warning
-          : 'O roteiro foi aprovado e o workflow de audio foi acionado.',
+          : 'O roteiro foi aprovado e a geracao de audio foi acionada.',
       )
       await refetch()
     } catch (error) {
@@ -371,7 +371,7 @@ export default function RoteiroDetalhesPage({
                     Aguardando geracao de audio
                   </p>
                   <p className="mt-1 text-xs text-zinc-500">
-                    O workflow de audio deve processar este roteiro apos a aprovacao.
+                    A automacao de audio deve processar este roteiro apos a aprovacao.
                   </p>
                 </div>
               ) : null}
@@ -530,7 +530,7 @@ export default function RoteiroDetalhesPage({
                         Roteiro aprovado
                       </div>
                       <p className="mt-1 text-xs text-zinc-400">
-                        O workflow de audio deve seguir a partir deste estado.
+                        A automacao de audio deve seguir a partir deste estado.
                       </p>
                     </div>
                     <button
@@ -599,7 +599,7 @@ export default function RoteiroDetalhesPage({
                 <div>
                   <div className="mb-1 text-zinc-500">Criado por</div>
                   <div className="text-white">
-                    {roteiro.gerado_por === 'IA' ? 'IA (workflow)' : 'Manual'}
+                    {roteiro.gerado_por === 'IA' ? 'IA (automacao)' : 'Manual'}
                   </div>
                 </div>
               </div>

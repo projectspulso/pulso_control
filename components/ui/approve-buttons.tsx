@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { CheckCircle2, Loader2, Sparkles, Volume2, FileText } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 
 interface ApproveIdeiaButtonProps {
   ideiaId: string
@@ -42,7 +43,7 @@ export function ApproveIdeiaButton({ ideiaId, currentStatus, onSuccess, classNam
       onSuccess?.()
     } catch (error) {
       console.error('Erro ao aprovar ideia:', error)
-      alert('Erro ao aprovar ideia. Tente novamente.')
+      toast.error('Erro ao aprovar ideia. Tente novamente.')
     } finally {
       setIsApproving(false)
     }
@@ -83,8 +84,8 @@ interface GerarRoteiroButtonProps {
 }
 
 /**
- * Botão para gerar roteiro via WF01
- * Só aparece se ideia estiver aprovada e NÃO tiver roteiro ainda
+ * Botao para gerar roteiro via automacao
+ * So aparece se ideia estiver aprovada e NAO tiver roteiro ainda
  */
 export function GerarRoteiroButton({ 
   ideiaId, 
@@ -117,11 +118,11 @@ export function GerarRoteiroButton({
       queryClient.invalidateQueries({ queryKey: ['roteiros'] })
       queryClient.invalidateQueries({ queryKey: ['pipeline'] })
 
-      alert(`✅ Roteiro gerado com sucesso! ID: ${data.roteiro_id || 'N/A'}`)
+      toast.success(`Roteiro gerado. ID: ${data.roteiro_id || 'N/A'}`)
       onSuccess?.()
     } catch (error) {
       console.error('Erro ao gerar roteiro:', error)
-      alert('Erro ao gerar roteiro. Tente novamente.')
+      toast.error('Erro ao gerar roteiro. Tente novamente.')
     } finally {
       setIsGenerating(false)
     }
@@ -162,7 +163,7 @@ interface ApproveRoteiroButtonProps {
 }
 
 /**
- * Botão para aprovar roteiro e disparar WF02 (Gerar Áudio)
+ * Botao para aprovar roteiro e gerar audio
  */
 export function ApproveRoteiroButton({ roteiroId, onSuccess }: ApproveRoteiroButtonProps) {
   const [isApproving, setIsApproving] = useState(false)
@@ -192,7 +193,7 @@ export function ApproveRoteiroButton({ roteiroId, onSuccess }: ApproveRoteiroBut
       onSuccess?.()
     } catch (error) {
       console.error('Erro ao aprovar roteiro:', error)
-      alert('Erro ao aprovar roteiro. Tente novamente.')
+      toast.error('Erro ao aprovar roteiro. Tente novamente.')
     } finally {
       setIsApproving(false)
     }

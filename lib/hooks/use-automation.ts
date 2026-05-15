@@ -13,6 +13,7 @@ export function useAutomationQueue(filters?: {
   return useQuery({
     queryKey: ['automation', 'queue', filters],
     queryFn: () => automationApi.getQueue(filters),
+    staleTime: 5 * 1000,
     refetchInterval: 10 * 1000,
   })
 }

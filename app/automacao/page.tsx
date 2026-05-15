@@ -26,20 +26,20 @@ import {
   Ban,
 } from 'lucide-react'
 
-// ── Helpers ──────────────────────────────────────────────────
+// Helpers
 
 function tempoRelativo(iso: string): string {
   const agora = Date.now()
   const data = new Date(iso).getTime()
   const diff = agora - data
   const seg = Math.floor(diff / 1000)
-  if (seg < 60) return `${seg}s atrás`
+  if (seg < 60) return `${seg}s atras`
   const min = Math.floor(seg / 60)
-  if (min < 60) return `${min}min atrás`
+  if (min < 60) return `${min}min atras`
   const hrs = Math.floor(min / 60)
-  if (hrs < 24) return `${hrs}h atrás`
+  if (hrs < 24) return `${hrs}h atras`
   const dias = Math.floor(hrs / 24)
-  return `${dias}d atrás`
+  return `${dias}d atras`
 }
 
 function formatarDuracao(seg: number | null): string {
@@ -50,7 +50,7 @@ function formatarDuracao(seg: number | null): string {
   return `${min}m ${rest}s`
 }
 
-// ── Badge configs ────────────────────────────────────────────
+// Badge configs
 
 const statusConfig: Record<AutomationStatus, { label: string; bg: string; text: string; icon: typeof Clock }> = {
   PENDENTE:     { label: 'Pendente',     bg: 'bg-blue-500/15',   text: 'text-blue-400',   icon: Clock },
@@ -64,11 +64,11 @@ const statusConfig: Record<AutomationStatus, { label: string; bg: string; text: 
 const tipoLabels: Record<AutomationTipo, string> = {
   GERAR_IDEIAS:      'Gerar Ideias',
   GERAR_ROTEIRO:     'Gerar Roteiro',
-  GERAR_AUDIO:       'Gerar Áudio',
-  PREPARAR_VIDEO:    'Preparar Vídeo',
+  GERAR_AUDIO:       'Gerar Audio',
+  PREPARAR_VIDEO:    'Preparar Video',
   PUBLICAR:          'Publicar',
-  COLETAR_METRICAS:  'Coletar Métricas',
-  RELATORIO_SEMANAL: 'Relatório Semanal',
+  COLETAR_METRICAS:  'Coletar Metricas',
+  RELATORIO_SEMANAL: 'Relatorio Semanal',
   PROCESSAR_FILA:    'Processar Fila',
   CUSTOM:            'Custom',
 }
@@ -85,7 +85,7 @@ const tipoColors: Record<AutomationTipo, string> = {
   CUSTOM:            'bg-zinc-500/15 text-zinc-400',
 }
 
-// ── Main Page ────────────────────────────────────────────────
+// Main Page
 
 export default function AutomacaoPage() {
   const { data: queue, isLoading: queueLoading, isError: queueError, refetch: refetchQueue } = useAutomationQueue({ limit: 50 })
@@ -110,7 +110,7 @@ export default function AutomacaoPage() {
     { pendentes: 0, processando: 0, sucesso: 0, erros: 0, retry: 0, total: 0 }
   ) ?? { pendentes: 0, processando: 0, sucesso: 0, erros: 0, retry: 0, total: 0 }
 
-  // Quick actions — call API endpoint directly
+  // Quick actions call API endpoint directly
   async function handleQuickAction(tipo: AutomationTipo) {
     setActionLoading(tipo)
     try {
@@ -122,7 +122,7 @@ export default function AutomacaoPage() {
         RELATORIO_SEMANAL: '/api/automation/relatorio',
       }
       const endpoint = endpointMap[tipo]
-      if (!endpoint) throw new Error(`Ação não suportada: ${tipo}`)
+      if (!endpoint) throw new Error(`Acao nao suportada: ${tipo}`)
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -134,16 +134,16 @@ export default function AutomacaoPage() {
 
       // Show success feedback
       const msgs: Partial<Record<AutomationTipo, string>> = {
-        GERAR_IDEIAS: `✅ Ideias geradas com sucesso!`,
-        PROCESSAR_FILA: `✅ Fila processada: ${data.processed ?? 0} itens`,
-        COLETAR_METRICAS: `✅ Coleta de métricas iniciada`,
-        RELATORIO_SEMANAL: `✅ Relatório semanal gerado`,
+        GERAR_IDEIAS: `Ideias geradas com sucesso!`,
+        PROCESSAR_FILA: `Fila processada: ${data.processed ?? 0} itens`,
+        COLETAR_METRICAS: `Coleta de metricas iniciada`,
+        RELATORIO_SEMANAL: `Relatorio semanal gerado`,
       }
-      toast.success(msgs[tipo] ?? '✅ Ação executada com sucesso!')
+      toast.success(msgs[tipo] ?? 'Acao executada com sucesso!')
       refetchQueue()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido'
-      toast.error(`❌ ${msg}`)
+      toast.error(msg)
     } finally {
       setActionLoading(null)
     }
@@ -156,7 +156,7 @@ export default function AutomacaoPage() {
     return matchStatus && matchTipo
   })
 
-  // ── Loading state ──
+  // Loading state
   if (queueLoading && statsLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
@@ -170,14 +170,14 @@ export default function AutomacaoPage() {
     )
   }
 
-  // ── Error state ──
+  // Error state
   if (queueError && statsError) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
         <div className="max-w-7xl mx-auto">
           <ErrorState
-            title="Erro ao carregar automação"
-            message="Não foi possível conectar ao sistema de automação. Verifique sua conexão e tente novamente."
+            title="Erro ao carregar automacao"
+            message="Nao foi possivel conectar ao sistema de automacao. Verifique sua conexao e tente novamente."
             onRetry={() => refetchQueue()}
           />
         </div>
@@ -189,7 +189,7 @@ export default function AutomacaoPage() {
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="animate-fade-in">
           <div className="flex items-center gap-3 mb-2">
             <div className="h-10 w-10 rounded-xl bg-linear-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
@@ -197,17 +197,17 @@ export default function AutomacaoPage() {
             </div>
             <div>
               <h1 className="text-4xl font-black bg-linear-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-                Automação AI-Native
+                Automacao AI-Native
               </h1>
             </div>
           </div>
           <p className="text-zinc-400 mt-1 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            Sistema nativo de automação — substitui n8n por banco + Edge Functions
+            Sistema nativo de automacao com banco, fila e workers do app
           </p>
         </div>
 
-        {/* ── Stats Cards ── */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
           <StatCard label="Pendentes" value={totais.pendentes} color="blue" icon={Clock} />
           <StatCard label="Processando" value={totais.processando} color="yellow" icon={Loader2} />
@@ -217,9 +217,9 @@ export default function AutomacaoPage() {
           <StatCard label="Total (7d)" value={totais.total} color="zinc" icon={BarChart3} />
         </div>
 
-        {/* ── Quick Actions ── */}
+        {/* Quick Actions */}
         <div className="glass rounded-2xl p-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
-          <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">Ações Rápidas</h2>
+          <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">Acoes Rapidas</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <QuickActionButton
               label="Gerar Ideias"
@@ -236,14 +236,14 @@ export default function AutomacaoPage() {
               onClick={() => handleQuickAction('PROCESSAR_FILA')}
             />
             <QuickActionButton
-              label="Coletar Métricas"
+              label="Coletar Metricas"
               icon={BarChart3}
               color="from-amber-600 to-orange-600"
               loading={actionLoading === 'COLETAR_METRICAS'}
               onClick={() => handleQuickAction('COLETAR_METRICAS')}
             />
             <QuickActionButton
-              label="Gerar Relatório"
+              label="Gerar Relatorio"
               icon={FileText}
               color="from-teal-600 to-emerald-600"
               loading={actionLoading === 'RELATORIO_SEMANAL'}
@@ -252,7 +252,7 @@ export default function AutomacaoPage() {
           </div>
         </div>
 
-        {/* ── Filters ── */}
+        {/* Filters */}
         <div className="glass rounded-2xl p-6 animate-fade-in" style={{ animationDelay: '300ms' }}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -287,11 +287,11 @@ export default function AutomacaoPage() {
           </div>
         </div>
 
-        {/* ── Queue Table ── */}
+        {/* Queue Table */}
         <div className="glass rounded-2xl overflow-hidden animate-fade-in" style={{ animationDelay: '400ms' }}>
           <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">
-              Fila de Automação
+              Fila de Automacao
             </h2>
             <span className="text-xs text-zinc-500">
               Auto-refresh a cada 10s
@@ -305,9 +305,9 @@ export default function AutomacaoPage() {
                   <th className="text-left px-6 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">Status</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">Origem</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">Tentativas</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">Duração</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">Duracao</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">Criado</th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">Ações</th>
+                  <th className="text-right px-6 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">Acoes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
@@ -351,7 +351,7 @@ export default function AutomacaoPage() {
                           </span>
                         </td>
 
-                        {/* Duração */}
+                        {/* Duracao */}
                         <td className="px-6 py-4">
                           <span className="text-sm text-zinc-400 tabular-nums">
                             {formatarDuracao(item.duracao_segundos)}
@@ -365,7 +365,7 @@ export default function AutomacaoPage() {
                           </span>
                         </td>
 
-                        {/* Ações */}
+                        {/* Acoes */}
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             {(item.status === 'ERRO' || item.status === 'RETRY') && (
@@ -401,7 +401,7 @@ export default function AutomacaoPage() {
           </div>
         </div>
 
-        {/* ── Per-type Stats ── */}
+        {/* Per-type Stats */}
         {stats && stats.length > 0 && (
           <div className="glass rounded-2xl p-6 animate-fade-in" style={{ animationDelay: '500ms' }}>
             <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">Desempenho por Tipo (7 dias)</h2>
@@ -429,12 +429,12 @@ export default function AutomacaoPage() {
                       <div className="text-lg font-bold text-zinc-400 tabular-nums">
                         {s.duracao_media_seg != null ? `${s.duracao_media_seg.toFixed(1)}s` : '-'}
                       </div>
-                      <div className="text-[10px] text-zinc-500 uppercase">média</div>
+                      <div className="text-[10px] text-zinc-500 uppercase">media</div>
                     </div>
                   </div>
                   {s.ultima_execucao_ok && (
                     <div className="mt-2 text-[10px] text-zinc-600 text-right">
-                      Último sucesso: {tempoRelativo(s.ultima_execucao_ok)}
+                      Ultimo sucesso: {tempoRelativo(s.ultima_execucao_ok)}
                     </div>
                   )}
                 </div>
@@ -452,7 +452,7 @@ export default function AutomacaoPage() {
   )
 }
 
-// ── Subcomponents ────────────────────────────────────────────
+// Subcomponents
 
 function StatCard({
   label,
@@ -523,3 +523,4 @@ function QuickActionButton({
     </button>
   )
 }
+

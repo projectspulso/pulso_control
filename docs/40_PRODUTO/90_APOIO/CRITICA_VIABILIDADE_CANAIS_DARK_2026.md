@@ -2,6 +2,8 @@
 
 Data de referencia: 11 de marco de 2026
 
+> Aviso de status: este documento fica em `90_APOIO` como registro historico de analise. A decisao operacional vigente em 15 de maio de 2026 e nao usar n8n no MVP; consulte `docs/00_MESTRE/TRILHA_OFICIAL_DE_EXECUCAO.md` e `docs/30_AUTOMACAO/README.md` antes de executar qualquer recomendacao tecnica daqui.
+
 ## Resumo executivo
 
 Veredito cru:

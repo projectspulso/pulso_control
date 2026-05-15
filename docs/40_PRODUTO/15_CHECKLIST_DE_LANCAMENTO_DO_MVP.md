@@ -11,7 +11,7 @@
 
 - [ ] O app sobe localmente
 - [ ] O banco tem lote minimo definido
-- [ ] O n8n esta alinhado com o app
+- [ ] A automacao nativa esta alinhada com o app
 - [ ] Os webhooks principais respondem
 - [ ] Nao restam hardcodes sensiveis em scripts criticos
 

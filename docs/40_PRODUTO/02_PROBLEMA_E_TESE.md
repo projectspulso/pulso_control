@@ -39,7 +39,7 @@ Se organizarmos todo o fluxo em um unico centro de comando, com estados claros, 
 1. o time consegue produzir conteudo faceless claramente original
 2. o time aceita humano no loop como parte obrigatoria do processo
 3. o app reduz friccao operacional de verdade
-4. o banco e o n8n podem sustentar um fluxo repetivel sem gambiarra recorrente
+4. o banco e a automacao nativa podem sustentar um fluxo repetivel sem gambiarra recorrente
 5. uma rede ancora responde melhor do que operar tudo ao mesmo tempo
 
 ## Hipoteses que matam o produto

@@ -76,13 +76,12 @@ export interface PipelineComAssetsAgrupado {
 
 // Status válidos do pipeline
 export type PipelineStatus = 
-  | 'RASCUNHO'
-  | 'EM_REVISAO'
-  | 'APROVADO'
-  | 'EM_PRODUCAO'
+  | 'AGUARDANDO_ROTEIRO'
+  | 'ROTEIRO_PRONTO'
+  | 'AUDIO_GERADO'
+  | 'EM_EDICAO'
   | 'PRONTO_PUBLICACAO'
   | 'PUBLICADO'
-  | 'ARQUIVADO'
 
 // Status válidos do conteúdo/ideia
 export type ConteudoStatus =

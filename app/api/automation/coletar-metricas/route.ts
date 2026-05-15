@@ -396,7 +396,7 @@ async function coletarInstagram(mediaId: string): Promise<MetricasPlataforma | n
   insightsUrl.searchParams.set('metric', metricsForType)
   insightsUrl.searchParams.set('access_token', accessToken)
 
-  let insightsData: Record<string, number> = {}
+  const insightsData: Record<string, number> = {}
 
   try {
     const insightsResponse = await fetch(insightsUrl.toString(), {

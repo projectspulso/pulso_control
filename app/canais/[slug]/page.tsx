@@ -6,10 +6,12 @@ import { useState } from 'react'
 import { ArrowLeft, Filter, Plus, Sparkles } from 'lucide-react'
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { ModoFocoBanner } from '@/components/modo-foco-banner'
 import {
   type FeedbackTone,
   FeedbackBanner,
 } from '@/components/ui/feedback-banner'
+import { MODO_FOCO } from '@/lib/config/modo-foco'
 import { useCanais } from '@/lib/hooks/use-core'
 import { useIdeias } from '@/lib/hooks/use-ideias'
 import { useGerarIdeias } from '@/lib/hooks/use-automation'
@@ -63,6 +65,7 @@ export default function CanalPage() {
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
 
   const canal = canais?.find((item: Canal) => item.slug === slug)
+  const isCanalFoco = canal?.id === MODO_FOCO.canalId
   const ideias =
     allIdeias?.filter((item: Ideia) => item.canal_id === canal?.id) ?? []
   const ideiasFiltered =
@@ -89,6 +92,15 @@ export default function CanalPage() {
 
   const handleGerarIdeias = async () => {
     if (!canal) {
+      return
+    }
+
+    if (!isCanalFoco) {
+      registrarFeedback(
+        'info',
+        'Canal congelado pelo Modo Foco',
+        `Novas ideias devem ser geradas apenas para ${MODO_FOCO.canalNome}.`,
+      )
       return
     }
 
@@ -155,7 +167,7 @@ export default function CanalPage() {
             <button
               type="button"
               onClick={() => setShowGenerateDialog(true)}
-              disabled={gerarIdeias.isPending}
+              disabled={gerarIdeias.isPending || !isCanalFoco}
               className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Sparkles className="h-4 w-4" />
@@ -163,7 +175,9 @@ export default function CanalPage() {
             </button>
             <Link
               href={`/ideias/nova?canal=${canal.id}`}
-              className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-white transition-colors hover:bg-purple-700"
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-white transition-colors ${
+                isCanalFoco ? 'bg-purple-600 hover:bg-purple-700' : 'pointer-events-none bg-zinc-800 text-zinc-500'
+              }`}
             >
               <Plus className="h-4 w-4" />
               Nova ideia
@@ -171,6 +185,12 @@ export default function CanalPage() {
           </div>
         </div>
       </div>
+
+      {!isCanalFoco && (
+        <div className="mb-6">
+          <ModoFocoBanner detail="Este canal esta congelado para o MVP. Use apenas para consulta ate o gate." />
+        </div>
+      )}
 
       {feedback && (
         <div className="mb-6">

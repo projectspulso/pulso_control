@@ -1,6 +1,6 @@
 # PULSO Control
 
-Centro de comando para operar videos curtos faceless com pipeline editorial, producao, publicacao assistida e integracoes com Supabase e n8n.
+Centro de comando para operar videos curtos faceless com pipeline editorial, producao, publicacao assistida e automacao nativa com Supabase.
 
 ## Comece por aqui
 
@@ -13,8 +13,8 @@ Centro de comando para operar videos curtos faceless com pipeline editorial, pro
 - `app/` -> app Next.js
 - `components/` -> componentes de interface
 - `lib/` -> hooks, APIs e integracoes
-- `automation/` -> docs e materiais de n8n
-- `n8n-workflows/` -> exports JSON dos workflows
+- `automation/` -> docs e materiais de automacao
+- `n8n-workflows/` -> acervo legado de workflows, fora da rota operacional atual
 - `database/` -> schema, seeds, scripts e investigacoes de banco
 - `docs/` -> documentacao curada e acervo legado
 
