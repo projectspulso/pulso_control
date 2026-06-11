@@ -151,6 +151,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // mantém o kanban: garante entrada no pipeline (AGUARDANDO_ROTEIRO até aprovação; ROTEIRO_PRONTO se auto-aprovado)
+    {
+      const { data: pipeExist } = await supabase
+        .schema('pulso_content')
+        .from('pipeline_producao')
+        .select('id')
+        .eq('ideia_id', ideia.id)
+        .limit(1)
+      const statusPipe = shouldAutoApprove ? 'ROTEIRO_PRONTO' : 'AGUARDANDO_ROTEIRO'
+      if (pipeExist && pipeExist.length > 0) {
+        await supabase
+          .schema('pulso_content')
+          .from('pipeline_producao')
+          .update({ roteiro_id: saved.id, status: statusPipe })
+          .eq('id', pipeExist[0].id)
+      } else {
+        await supabase
+          .schema('pulso_content')
+          .from('pipeline_producao')
+          .insert({ ideia_id: ideia.id, roteiro_id: saved.id, status: statusPipe, prioridade: 5,
+            metadata: { criado_por: 'automation' } })
+      }
+    }
+
     return NextResponse.json({
       success: true,
       roteiro_id: saved?.id,

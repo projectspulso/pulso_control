@@ -186,6 +186,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+
+    // kanban: marca o pipeline como ÁUDIO GERADO
+    await supabase
+      .schema('pulso_content')
+      .from('pipeline_producao')
+      .update({ status: 'AUDIO_GERADO' })
+      .eq('ideia_id', roteiro.ideia_id)
+
     return NextResponse.json({
       success: true,
       audio_id: audioSaved?.id,
