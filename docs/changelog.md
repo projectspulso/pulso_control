@@ -51,3 +51,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 - Credenciais META_* salvas no .env local (pendente: copiar ao Vercel quando F1/F2 entrarem no código)
 - API validada: page token OK, IG business account vinculado (17841478757082171), leitura de mídia/likes OK
 - Caminho aberto: publicação direta IG Reels + FB Reels via Graph API e métricas Meta no app
+
+## 2026-06-11 (cont.) — F1 NO AR: métricas reais no app
+- Envs META_* + INSTAGRAM_ACCESS_TOKEN no Vercel (token novo com instagram_manage_insights)
+- Rota /api/automation/coletar-metricas reescrita contra o schema real + cron diário 8h BRT (vercel.json)
+- 5 vídeos do lançamento agora existem na cadeia completa: conteudos → conteudo_variantes → pulso_distribution.posts (20 posts PUBLICADO)
+- Snapshots diários em pulso_analytics.metricas_diarias (FK válida) → painel /analytics com números reais
+- IDs YouTube V1/V4 corrigidos (confusão l/I): aIsJjjviNuA, IJ2VhSSFuxw
+- Push corrigido: credencial x-access-token fixada no remote origin
+- PRIMEIRA LEITURA DE ADERÊNCIA (24h): YouTube V1 Mistérios 282 views (12x o 2º lugar V5 Casos Reais 22) — sinal forte pra faixa âncora da grade; IG total ~551 views distribuído
