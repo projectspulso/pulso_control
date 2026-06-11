@@ -44,6 +44,21 @@ export async function POST(request: NextRequest) {
         .order('total_ideias', { ascending: true })
         .limit(1)
       canal = canais?.[0]
+
+      if (!canal) {
+        // fallback: rotação direta em pulso_core.canais (canal com menos ideias)
+        const [{ data: todos }, { data: ideiasExist }] = await Promise.all([
+          supabase.schema('pulso_core').from('canais').select('id, nome, descricao, idioma, slug'),
+          supabase.schema('pulso_content').from('ideias').select('canal_id'),
+        ])
+        const contagem = new Map<string, number>()
+        for (const i of ideiasExist || []) {
+          if (i.canal_id) contagem.set(i.canal_id, (contagem.get(i.canal_id) || 0) + 1)
+        }
+        canal = (todos || []).sort(
+          (a: { id: string }, b: { id: string }) => (contagem.get(a.id) || 0) - (contagem.get(b.id) || 0)
+        )[0]
+      }
     }
 
     if (!canal) {
@@ -68,11 +83,18 @@ export async function POST(request: NextRequest) {
       json_mode: true,
     })
 
-    // Parse JSON response
+    // Parse JSON response — em json_mode o modelo embrulha o array em alguma chave do objeto
     let ideias
     try {
       const parsed = JSON.parse(content)
-      ideias = Array.isArray(parsed) ? parsed : parsed.ideias || [parsed]
+      if (Array.isArray(parsed)) {
+        ideias = parsed
+      } else {
+        const arrayInterno = Object.values(parsed).find((v) => Array.isArray(v)) as unknown[] | undefined
+        ideias = parsed.ideias || arrayInterno || [parsed]
+      }
+      ideias = (ideias as Array<{ titulo?: string }>).filter((i) => i && typeof i.titulo === 'string' && i.titulo)
+      if (ideias.length === 0) throw new Error('sem ideias com titulo')
     } catch {
       return NextResponse.json(
         { error: 'GPT retornou JSON inválido', raw: content },
