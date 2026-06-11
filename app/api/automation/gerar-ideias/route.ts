@@ -93,8 +93,10 @@ export async function POST(request: NextRequest) {
       if (Array.isArray(parsed)) {
         ideias = parsed
       } else {
-        const arrayInterno = Object.values(parsed).find((v) => Array.isArray(v)) as unknown[] | undefined
-        ideias = parsed.ideias || arrayInterno || [parsed]
+        const ehListaDeIdeias = (v: unknown): v is unknown[] =>
+          Array.isArray(v) && v.length > 0 && typeof v[0] === 'object' && v[0] !== null && 'titulo' in v[0]
+        const arrayInterno = Object.values(parsed).find(ehListaDeIdeias)
+        ideias = ehListaDeIdeias(parsed.ideias) ? parsed.ideias : arrayInterno || [parsed]
       }
       ideias = (ideias as Array<{ titulo?: string }>).filter((i) => i && typeof i.titulo === 'string' && i.titulo)
       if (ideias.length === 0) throw new Error('sem ideias com titulo')
