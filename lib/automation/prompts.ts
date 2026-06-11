@@ -64,7 +64,8 @@ REGRAS DURAS (harness):
 - Evite temas sensíveis (tragédias recentes, política partidária, saúde com risco)
 - NÃO repita ideias genéricas — específico, surpreendente, com número/nome/data quando possível
 
-Retorne APENAS o JSON array, sem explicações ou markdown.`
+Retorne um OBJETO JSON exatamente neste formato, com TODAS as ${quantidade} ideias dentro do array:
+{"ideias": [ { ...ideia 1... }, { ...ideia 2... } ]}`
 }
 
 // ====== PROMPTS DE GERAÇÃO DE ROTEIRO ======
