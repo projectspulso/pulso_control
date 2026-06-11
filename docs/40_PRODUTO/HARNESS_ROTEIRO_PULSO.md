@@ -152,3 +152,14 @@ Se o vídeo não aciona **pelo menos 2**, reescrever.
 - Este harness **trava todo roteiro**. Geração por IA (OpenAI/Gemini/Claude) recebe estas regras como *system prompt*.
 - Localização: a mesma estrutura, com **voz nativa e gatilhos culturais** por nacionalidade (não traduzir — **adaptar**).
 - Evolui com dados: quando houver métricas reais (retenção/compart.), ajustar as travas pelo que o público confirma.
+
+
+## §6.1 — Travas de pt-BR na voz (12/06/2026)
+
+Incidente: vídeo 009 (Foco) saiu com trechos em português europeu (deriva do modelo multilíngue).
+
+**Travas permanentes (no código da rota gerar-audio e na geração local):**
+1. `voice_settings`: stability **0.7** + similarity_boost **0.8** + style 0 (estabilidade alta reduz deriva de sotaque)
+2. `previous_text` âncora: "Fala, pessoal! Aqui é o PULSO, direto do Brasil..." — contexto pt-BR que NÃO é falado, mas fixa o dialeto
+3. Prompt do roteiro proíbe construções lusitanas (gerúndio obrigatório, vocabulário BR, nunca "está a fazer")
+4. QC de escuta: antes de montar, ouvir os 10 primeiros segundos de cada narração; deriva detectada = regenerar (custa ~1k chars)
