@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
-import { callOpenAITTS, limparParaTTS, splitTextForTTS } from '@/lib/automation/ai-clients'
+import { callElevenLabsTTS, limparParaTTS, splitTextForTTS } from '@/lib/automation/ai-clients'
 
 /**
  * POST /api/automation/gerar-audio
