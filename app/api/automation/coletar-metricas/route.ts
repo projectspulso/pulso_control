@@ -117,6 +117,26 @@ async function coletar(request: NextRequest) {
           shares: insights.shares || 0,
           saves: insights.saved || 0,
         }
+      } else if (pub.plataforma === 'facebook' && process.env.INSTAGRAM_ACCESS_TOKEN) {
+        // page access token cobre os Reels da Página (video_insights)
+        const token = process.env.INSTAGRAM_ACCESS_TOKEN
+        const insUrl = new URL(`https://graph.facebook.com/v23.0/${pub.post_id}/video_insights`)
+        insUrl.searchParams.set('access_token', token)
+        const insResp = await fetch(insUrl.toString())
+        if (!insResp.ok) throw new Error(`FB video_insights ${insResp.status}`)
+        const ins = await insResp.json()
+        const vals: Record<string, unknown> = {}
+        for (const m of ins.data || []) vals[m.name] = m.values?.[0]?.value
+        const reacoes = (vals.post_video_likes_by_reaction_type || {}) as Record<string, number>
+        const likesFb = Object.values(reacoes).reduce((a, b) => a + (b || 0), 0)
+        const social = (vals.post_video_social_actions || {}) as Record<string, number>
+        metricas = {
+          views: (vals.fb_reels_total_plays as number) || (vals.blue_reels_play_count as number) || 0,
+          likes: likesFb,
+          comentarios: social.COMMENT || 0,
+          shares: social.SHARE || 0,
+          saves: 0,
+        }
       } else {
         resultados.push({ id: pub.id, plataforma: pub.plataforma, status: 'MANUAL' })
         continue
