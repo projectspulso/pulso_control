@@ -128,10 +128,10 @@ export function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-white text-sm truncate group-hover:text-purple-400 transition-colors">
-              Modo Foco
+              PULSO multi-canal
             </p>
             <p className="text-xs text-zinc-500 truncate">
-              {MODO_FOCO.canalNome}
+              10 verticais · grade pela aderência
             </p>
           </div>
           <Settings className="h-4 w-4 text-zinc-600 group-hover:text-purple-400 group-hover:rotate-90 transition-all duration-300" />

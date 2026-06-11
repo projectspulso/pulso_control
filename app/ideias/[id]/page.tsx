@@ -621,9 +621,10 @@ function StatusBadge({ status }: { status: string | null }) {
     ARQUIVADA: { label: 'Arquivada', color: 'bg-zinc-500' },
   }
 
-  const config = status
-    ? statusConfig[status]
-    : { label: 'Indefinido', color: 'bg-zinc-600' }
+  const config = (status && statusConfig[status]) || {
+    label: status ? status.replace(/_/g, ' ').toLowerCase() : 'Indefinido',
+    color: status === 'APROVADO' ? 'bg-green-600' : 'bg-zinc-600',
+  }
 
   return (
     <span

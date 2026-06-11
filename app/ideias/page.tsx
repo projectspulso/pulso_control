@@ -256,7 +256,7 @@ function StatusBadge({ status }: { status: string | null }) {
     ARQUIVADA: { label: 'Arquivada', color: 'bg-gray-600' },
   }
 
-  const config = status ? statusConfig[status] : { label: status || 'Indefinido', color: 'bg-zinc-600' }
+  const config = status ? (statusConfig[status] || { label: status || 'Indefinido', color: 'bg-zinc-600' }) : { label: status || 'Indefinido', color: 'bg-zinc-600' }
 
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white ${config.color}`}>

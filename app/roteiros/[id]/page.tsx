@@ -787,9 +787,7 @@ function StatusBadge({ status }: { status: string | null }) {
     CONCLUIDO: { label: 'Concluido', color: 'bg-cyan-600' },
   }
 
-  const config = status
-    ? statusConfig[status]
-    : { label: 'Indefinido', color: 'bg-zinc-600' }
+  const config = (status && statusConfig[status]) || { label: 'Indefinido', color: 'bg-zinc-600' }
 
   return (
     <span
