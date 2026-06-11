@@ -80,3 +80,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 - /api/automation/publicar REESCRITA: publica IG Reels + FB Reels DIRETO via Graph API (container/publish + reels start/upload/finish), exige confirmar:true (R-011), registra metricas_publicacao + pipeline; "Manus" órfão aposentado
 - Gate de confirmação validado em produção (400 sem confirmar)
 - Primeira publicação real via API: no próximo vídeo do pipeline (precisa de video_url público — Supabase Storage ou OneDrive direto)
+
+## 2026-06-12 — TikTok 100% integrado: publicação E métricas via API
+- TikTok for Developers: app pulso_control1 + Sandbox configurado (ícone injetado via JS), test user @pulsohistorias
+- OAuth Login Kit funcionando: token salvo em pulso_core.configuracoes (tiktok_oauth), refresh automático
+- /api/automation/tiktok-upload: envia vídeo pros RASCUNHOS do TikTok (inbox/FILE_UPLOAD) — publicação nativa pelo celular com som trending (remédio do shadowban)
+- Coleta de métricas TikTok via Display API (video.list) integrada à rota coletar-metricas
+- MARCO: 20/20 publicações com métricas 100% automáticas (YouTube, Instagram, Facebook, TikTok) — cowork agora só audita e reporta
