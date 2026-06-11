@@ -171,8 +171,30 @@ export default function ProducaoPage() {
     // Só atualiza se mudou de coluna
     const conteudo = conteudosModoFoco.find(c => c.pipeline_id === conteudoId)
     if (conteudo && conteudo.pipeline_status !== novoStatus) {
-      console.log('Atualizando status:', { conteudoId, novoStatus })
       atualizarStatus.mutate({ id: conteudoId, novoStatus })
+
+      // kanban operacional: arrastar TAMBÉM dispara a geração correspondente
+      const disparar = async (endpoint: string, payload: Record<string, unknown>, oQue: string) => {
+        try {
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+          const data = await res.json()
+          if (!res.ok && res.status !== 409) {
+            alert(`Falha ao gerar ${oQue}: ${data.error || res.status}`)
+          }
+          refetch()
+        } catch {
+          alert(`Falha ao gerar ${oQue} — tente pelo botão da tela.`)
+        }
+      }
+      if (novoStatus === 'ROTEIRO_PRONTO' && !conteudo.roteiro_id) {
+        disparar('/api/automation/gerar-roteiro', { ideia_id: conteudo.ideia_id }, 'roteiro')
+      } else if (novoStatus === 'AUDIO_GERADO' && conteudo.roteiro_id) {
+        disparar('/api/automation/gerar-audio', { roteiro_id: conteudo.roteiro_id }, 'áudio (voz PULSO)')
+      }
     }
     
     setActiveId(null)
