@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     // Determinar voz baseado no canal
-    let voz = 'alloy'
+    let voz = 'Daniel (ElevenLabs — voz oficial PULSO)'
     if (vozConfig?.valor && roteiro.canal_id) {
       const { data: canal } = await supabase
         .from('vw_pulso_canais')
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         const vozes = typeof vozConfig.valor === 'string'
           ? JSON.parse(vozConfig.valor)
           : vozConfig.valor
-        voz = vozes[canal.slug] || 'alloy'
+        voz = 'Daniel (ElevenLabs — voz oficial PULSO)'
       }
     }
 
