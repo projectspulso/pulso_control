@@ -8,7 +8,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
-import { MODO_FOCO } from '@/lib/config/modo-foco'
+import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { Calendar, Clock, Film, User } from 'lucide-react'
 import Link from 'next/link'
 
@@ -138,7 +138,7 @@ export default function ProducaoPage() {
   const atualizarStatus = useAtualizarStatusProducao()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeConteudo, setActiveConteudo] = useState<any>(null)
-  const conteudosModoFoco = conteudos?.filter((item) => item.canal === MODO_FOCO.canalNomeDb) ?? []
+  const conteudosModoFoco = (MODO_FOCO_ATIVO ? conteudos?.filter((item) => item.canal === MODO_FOCO.canalNomeDb) : conteudos) ?? []
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

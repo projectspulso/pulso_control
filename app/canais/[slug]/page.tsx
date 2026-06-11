@@ -11,7 +11,7 @@ import {
   type FeedbackTone,
   FeedbackBanner,
 } from '@/components/ui/feedback-banner'
-import { MODO_FOCO } from '@/lib/config/modo-foco'
+import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { useCanais } from '@/lib/hooks/use-core'
 import { useIdeias } from '@/lib/hooks/use-ideias'
 import { useGerarIdeias } from '@/lib/hooks/use-automation'
@@ -65,7 +65,7 @@ export default function CanalPage() {
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
 
   const canal = canais?.find((item: Canal) => item.slug === slug)
-  const isCanalFoco = canal?.id === MODO_FOCO.canalId
+  const isCanalFoco = !MODO_FOCO_ATIVO || canal?.id === MODO_FOCO.canalId
   const ideias =
     allIdeias?.filter((item: Ideia) => item.canal_id === canal?.id) ?? []
   const ideiasFiltered =

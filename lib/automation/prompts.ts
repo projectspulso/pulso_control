@@ -38,30 +38,31 @@ export function buildPromptGerarIdeias(
     ? `\nSérie atual: ${serie.nome} - ${serie.descricao}`
     : ''
 
-  return `Você é um produtor de conteúdo especializado em vídeos curtos virais.
+  return `Você é o editor-chefe do PULSO, operação de vídeos curtos faceless. Segue o HARNESS editorial do projeto: cada vídeo tem UMA emoção-âncora, hook que prende em ≤2 segundos, lacuna de curiosidade que só fecha no final, e fatos reais verificáveis (nunca inventar).
 
 Canal: ${canal.nome}
 Descrição: ${canal.descricao}
-Formato: Shorts/Reels/TikTok (15-60 segundos)
+Formato: Shorts/Reels/TikTok vertical 9:16 (40-70 segundos)
 Idioma: ${canal.idioma}${serieCtx}
 
 Gere ${quantidade} ideias de vídeos curtos para este canal.
 Para cada ideia, retorne um JSON com:
-- titulo: string (max 80 chars, gancho forte)
-- descricao: string (1-2 frases com hook + contexto)
+- titulo: string (max 80 chars — deve abrir uma lacuna de curiosidade que o espectador PRECISA fechar)
+- descricao: string (1-2 frases: o fato real + por que prende)
+- emocao_ancora: string (UMA só: suspense|awe|identificacao|catarse|indignacao|nostalgia)
 - tags: string[] (3-5 tags relevantes)
-- duracao_estimada: number (segundos, entre 15 e 60)
-- tipo_formato: string (curiosidade_rapida|psicologia|storytelling|misterio|motivacional)
-- prioridade: number (1-10, baseado em potencial viral)
-- gancho_sugerido: string (frase de abertura do vídeo)
+- duracao_estimada: number (segundos, entre 40 e 70)
+- tipo_formato: string (curiosidade_rapida|psicologia|storytelling|misterio|motivacional|caso_real)
+- prioridade: number (1-10, potencial de retenção + compartilhamento STEPPS)
+- gancho_sugerido: string (primeira frase falada — proibido "você sabia?"; afirme algo impossível de ignorar)
 
-REGRAS:
-- Cada título deve gerar curiosidade imediata
-- A descrição deve ser um mini-pitch que "vende" a ideia
-- Priorize temas que geram comentários e compartilhamentos
-- Evite temas sensíveis ou polêmicos demais
-- Pense em retenção: os primeiros 3 segundos decidem tudo
-- NÃO repita ideias genéricas — seja específico e surpreendente
+REGRAS DURAS (harness):
+- FATOS REAIS apenas — tema verificável em fontes confiáveis; sem lendas apresentadas como fato
+- 1 emoção-âncora por ideia, declarada no campo emocao_ancora
+- O gancho NUNCA entrega a resposta; a lacuna fecha só no fim (retenção)
+- Priorize STEPPS: moeda social (compartilhar faz o espectador parecer inteligente), emoção de alta ativação, valor prático
+- Evite temas sensíveis (tragédias recentes, política partidária, saúde com risco)
+- NÃO repita ideias genéricas — específico, surpreendente, com número/nome/data quando possível
 
 Retorne APENAS o JSON array, sem explicações ou markdown.`
 }

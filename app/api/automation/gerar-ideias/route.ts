@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
         tipo_formato?: string
         prioridade?: number
         gancho_sugerido?: string
+        emocao_ancora?: string
       }) => ({
         canal_id: canal.id,
         serie_id: serie?.id || null,
@@ -106,6 +107,8 @@ export async function POST(request: NextRequest) {
           duracao_estimada: `${ideia.duracao_estimada || 30}s`,
           tipo_formato: ideia.tipo_formato,
           gancho_sugerido: ideia.gancho_sugerido,
+          emocao_ancora: ideia.emocao_ancora,
+          harness: 'HARNESS_ROTEIRO_PULSO.md',
           tokens_usados: usage,
         },
       })

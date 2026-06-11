@@ -4,7 +4,6 @@ import { useIdeias, useIdeiasStats } from '@/lib/hooks/use-ideias'
 import { useCanais } from '@/lib/hooks/use-core'
 import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
-import { MODO_FOCO } from '@/lib/config/modo-foco'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -14,7 +13,7 @@ export default function IdeiasPage() {
   const { data: canais } = useCanais()
   
   const [filtroStatus, setFiltroStatus] = useState<string>('TODOS')
-  const [filtroCanal, setFiltroCanal] = useState<string>(MODO_FOCO.canalId)
+  const [filtroCanal, setFiltroCanal] = useState<string>('TODOS')
   const [busca, setBusca] = useState('')
 
   const ideiasFiltradas = ideias?.filter(ideia => {
@@ -70,7 +69,7 @@ export default function IdeiasPage() {
           </div>
           
           <Link
-            href={`/ideias/nova?canal=${MODO_FOCO.canalId}`}
+            href={`/ideias/nova`}
             className="group glass glass-hover rounded-xl px-6 py-3 font-semibold bg-linear-to-r from-violet-600 to-purple-600 text-white border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/20 transition-all"
           >
             <span className="flex items-center gap-2">
@@ -140,10 +139,9 @@ export default function IdeiasPage() {
                 onChange={(e) => setFiltroCanal(e.target.value)}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-violet-500"
               >
-                <option value={MODO_FOCO.canalId}>{MODO_FOCO.canalNome}</option>
-                <option value="TODOS">Todos os canais (auditoria)</option>
+                <option value="TODOS">Todos os canais</option>
                 {canais?.map(canal => (
-                  <option key={canal.id} value={canal.id} disabled={canal.id === MODO_FOCO.canalId}>
+                  <option key={canal.id} value={canal.id}>
                     {canal.nome}
                   </option>
                 ))}

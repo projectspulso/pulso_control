@@ -18,7 +18,7 @@ import { useState } from 'react'
 
 import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
-import { MODO_FOCO } from '@/lib/config/modo-foco'
+import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { useConteudosProntos } from '@/lib/hooks/use-calendario'
 import { usePublicar } from '@/lib/hooks/use-automation'
 
@@ -73,7 +73,7 @@ export default function PublicarPage() {
   const [horaAgendamento, setHoraAgendamento] = useState('')
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
 
-  const conteudosModoFoco = conteudos?.filter((conteudo) => conteudo.canal === MODO_FOCO.canalNomeDb) ?? []
+  const conteudosModoFoco = (MODO_FOCO_ATIVO ? conteudos?.filter((conteudo) => conteudo.canal === MODO_FOCO.canalNomeDb) : conteudos) ?? []
   const totalConteudos = conteudosModoFoco.length
   const selecionouTodos = totalConteudos > 0 && selecionados.size === totalConteudos
 

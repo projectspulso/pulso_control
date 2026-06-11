@@ -1,3 +1,7 @@
+// Desativado em 11/06/2026: operação voltou a ser multi-canal (1 canal online,
+// verticais misturadas via grade — doc 17). Telas usam MODO_FOCO_ATIVO nos filtros.
+export const MODO_FOCO_ATIVO = false
+
 export const MODO_FOCO = {
   canalId: '257b5ac4-72ab-4d96-a2eb-031833a319a6',
   canalNome: 'PULSO Misterios & Historia',

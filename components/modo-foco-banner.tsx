@@ -1,13 +1,14 @@
 import Link from 'next/link'
 import { Lock, ArrowRight } from 'lucide-react'
 
-import { MODO_FOCO } from '@/lib/config/modo-foco'
+import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 
 interface ModoFocoBannerProps {
   detail?: string
 }
 
 export function ModoFocoBanner({ detail }: ModoFocoBannerProps) {
+  if (!MODO_FOCO_ATIVO) return null
   return (
     <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-cyan-100">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
