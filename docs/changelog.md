@@ -69,3 +69,8 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 - /publicar: botão "Copiar kit" (kit completo por rede com configs e hashtags) — gate humano via navegador
 - /analytics virou BI: filtros rede/vertical/período, curva diária, custo AI por vídeo (lib/config/custos.ts), receita aguardando gate CNPJ
 - Coletor Facebook Reels via video_insights — 15/20 publicações automáticas; TikTok via rotina cowork atualizada
+
+## 2026-06-11 (cont. 3) — Geração AI de ideias validada em produção
+- /api/automation/gerar-ideias: parse robusto (objeto único, array embrulhado), fallback de rotação de canais (canal com menos ideias), emocao_ancora no metadata
+- Validado ponta a ponta em produção: rotação automática → GPT-4o → ideia salva como RASCUNHO (curadoria humana decide)
+- Próximo refinamento: forçar N ideias por chamada (GPT às vezes devolve 1)
