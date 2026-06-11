@@ -97,8 +97,8 @@ export default function ValidacaoPage() {
           <div>
             <h1 className="text-3xl font-bold text-white">Validação · Aderência</h1>
             <p className="mt-1 text-zinc-400">
-              Números reais das 4 redes. YouTube, Instagram e Facebook coletados automaticamente; TikTok completado
-              pelo cowork diário.
+              Números reais das 4 redes — todas coletadas automaticamente (YouTube, Instagram, Facebook e TikTok via
+              APIs oficiais).
               {data.ultimaColeta && (
                 <span className="ml-2 text-zinc-500">
                   Última coleta: {new Date(data.ultimaColeta).toLocaleString('pt-BR')}
@@ -254,8 +254,7 @@ export default function ValidacaoPage() {
 
         <p className="flex items-center gap-2 text-xs text-zinc-600">
           <Activity className="h-3.5 w-3.5" />
-          Atualização automática a cada 5 minutos · cron diário no Vercel (8h BRT) · TikTok via rotina cowork (sem API
-          pública)
+          Atualização automática a cada 5 minutos · cron diário no Vercel (8h BRT) · 4 redes via APIs oficiais
         </p>
       </div>
     </div>

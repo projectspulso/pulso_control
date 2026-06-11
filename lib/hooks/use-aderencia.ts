@@ -34,7 +34,7 @@ export interface AderenciaSnapshot {
   ultimaColeta: string | null
 }
 
-const PLATAFORMAS_AUTO = new Set(['youtube', 'instagram', 'facebook'])
+const PLATAFORMAS_AUTO = new Set(['youtube', 'instagram', 'facebook', 'tiktok'])
 
 export function useAderencia() {
   return useQuery<AderenciaSnapshot>({
