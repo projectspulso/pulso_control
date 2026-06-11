@@ -81,6 +81,47 @@ async function coletar(request: NextRequest) {
     }
   }
 
+  // TikTok via Display API (video.list) — token OAuth guardado em pulso_core.configuracoes
+  const ttStats = new Map<string, { views: number; likes: number; comentarios: number; shares: number }>()
+  try {
+    const { data: cfg } = await supabase
+      .schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'tiktok_oauth').single()
+    if (cfg?.valor) {
+      let oauth = JSON.parse(cfg.valor)
+      if (Date.now() > oauth.expires_at - 60_000 && oauth.refresh_token) {
+        const r = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_key: (process.env.TIKTOK_SANDBOX_KEY || process.env.TIKTOK_CLIENT_KEY) ?? '',
+            client_secret: (process.env.TIKTOK_SANDBOX_SECRET || process.env.TIKTOK_CLIENT_SECRET) ?? '',
+            grant_type: 'refresh_token',
+            refresh_token: oauth.refresh_token,
+          }),
+        }).then((x) => x.json())
+        if (r.access_token) {
+          oauth = { ...oauth, access_token: r.access_token, refresh_token: r.refresh_token,
+            expires_at: Date.now() + (r.expires_in || 86400) * 1000 }
+          await supabase.schema('pulso_core').from('configuracoes')
+            .update({ valor: JSON.stringify(oauth) }).eq('chave', 'tiktok_oauth')
+        }
+      }
+      const lista = await fetch(
+        'https://open.tiktokapis.com/v2/video/list/?fields=id,view_count,like_count,comment_count,share_count',
+        { method: 'POST', headers: { Authorization: `Bearer ${oauth.access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ max_count: 20 }) }
+      ).then((x) => x.json())
+      for (const v of lista?.data?.videos || []) {
+        ttStats.set(String(v.id), {
+          views: v.view_count || 0, likes: v.like_count || 0,
+          comentarios: v.comment_count || 0, shares: v.share_count || 0,
+        })
+      }
+    }
+  } catch {
+    avisos.push('TikTok video.list falhou — coleta manual nesta rodada')
+  }
+
   const agora = new Date()
   const resultados: Array<{ id: string; plataforma: string; status: string; views?: number; motivo?: string }> = []
 
@@ -116,6 +157,14 @@ async function coletar(request: NextRequest) {
           comentarios: media.comments_count || 0,
           shares: insights.shares || 0,
           saves: insights.saved || 0,
+        }
+      } else if (pub.plataforma === 'tiktok') {
+        const s = ttStats.get(pub.post_id as string)
+        if (s) {
+          metricas = { views: s.views, likes: s.likes, comentarios: s.comentarios, shares: s.shares, saves: 0 }
+        } else {
+          resultados.push({ id: pub.id, plataforma: pub.plataforma, status: 'MANUAL' })
+          continue
         }
       } else if (pub.plataforma === 'facebook' && process.env.INSTAGRAM_ACCESS_TOKEN) {
         // page access token cobre os Reels da Página (video_insights)
