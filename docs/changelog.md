@@ -87,3 +87,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 - /api/automation/tiktok-upload: envia vídeo pros RASCUNHOS do TikTok (inbox/FILE_UPLOAD) — publicação nativa pelo celular com som trending (remédio do shadowban)
 - Coleta de métricas TikTok via Display API (video.list) integrada à rota coletar-metricas
 - MARCO: 20/20 publicações com métricas 100% automáticas (YouTube, Instagram, Facebook, TikTok) — cowork agora só audita e reporta
+
+## 2026-06-12 (cont.) — LOTE 2 PRODUZIDO: 5 vídeos prontos pra publicar
+- 5 vídeos montados (voz Daniel + receita E, legendas sincronizadas, avatar, trilhas por emoção): Lua 75s, Relógio 61s, Relâmpagos 69s, Foco 68s, Tetris 105s
+- 33 cenas Seedance (tetris perdeu 3 pro filtro de marca — esticada com clone)
+- Arquivos: OneDrive video_006..010 + UPLOAD no Supabase Storage (lote2_*.mp4) prontos pra publicação via API
+- Kanban: 5 cards em PRONTO_PUBLICACAO (roteiros todos aprovados)
+- Cobertura do experimento: com a publicação do lote 2, 10/10 verticais testadas
