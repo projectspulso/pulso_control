@@ -60,3 +60,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 - IDs YouTube V1/V4 corrigidos (confusão l/I): aIsJjjviNuA, IJ2VhSSFuxw
 - Push corrigido: credencial x-access-token fixada no remote origin
 - PRIMEIRA LEITURA DE ADERÊNCIA (24h): YouTube V1 Mistérios 282 views (12x o 2º lugar V5 Casos Reais 22) — sinal forte pra faixa âncora da grade; IG total ~551 views distribuído
+
+## 2026-06-11 (cont. 2) — Central de comando: 7 frentes implementadas
+- /validacao reescrita: aderência viva das 4 redes (auto + cowork), ranking por vertical, coletar agora, refresh 5min
+- MODO_FOCO desativado — operação multi-canal de volta em ideias/roteiros/producao/publicar/canais
+- Prompt de ideias AI reescrito com o harness (emoção-âncora, lacuna de curiosidade, STEPPS, fatos reais)
+- /producao: banner de antecipação (dias de cobertura vs meta 7-20 dias, via plano_publicacao)
+- /publicar: botão "Copiar kit" (kit completo por rede com configs e hashtags) — gate humano via navegador
+- /analytics virou BI: filtros rede/vertical/período, curva diária, custo AI por vídeo (lib/config/custos.ts), receita aguardando gate CNPJ
+- Coletor Facebook Reels via video_insights — 15/20 publicações automáticas; TikTok via rotina cowork atualizada
