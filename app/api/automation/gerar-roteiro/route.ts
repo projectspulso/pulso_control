@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
       tags: ideia.tags,
       gancho_sugerido: ideia.metadata?.gancho_sugerido,
       tipo_formato: ideia.metadata?.tipo_formato,
-      duracao_estimada: parseInt(ideia.metadata?.duracao_estimada) || 35,
+      emocao_ancora: ideia.metadata?.emocao_ancora,
+      duracao_estimada: parseInt(ideia.metadata?.duracao_estimada) || 55,
     }
 
     // Gerar roteiro via GPT

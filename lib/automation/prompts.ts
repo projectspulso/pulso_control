@@ -77,41 +77,45 @@ export function buildPromptGerarRoteiro(
   const duracaoAlvo = ideia.duracao_estimada || 35
   const palavrasAlvo = Math.round(duracaoAlvo * 2.5) // ~2.5 palavras/segundo pt-BR
 
-  return `Você é um roteirista profissional de vídeos curtos virais.
+  const emocao = (ideia as { emocao_ancora?: string }).emocao_ancora
+
+  return `Você é o roteirista-chefe do PULSO e segue o HARNESS editorial do projeto (Atenção → Lacuna → Dopamina): o hook prende em ≤2 segundos, abre uma lacuna de curiosidade que SÓ fecha no final, e tudo é fato real verificável — nunca invente.
 
 CANAL: ${canal.nome}
-FORMATO: Vídeo curto para ${plataformas.join(', ')} (${duracaoAlvo} segundos)
+FORMATO: Vídeo curto vertical para ${plataformas.join(', ')} (${duracaoAlvo} segundos)
 IDEIA: ${ideia.titulo}
 CONTEXTO: ${ideia.descricao}
+${emocao ? `EMOÇÃO-ÂNCORA (única do vídeo): ${emocao}` : ''}
 ${ideia.gancho_sugerido ? `GANCHO SUGERIDO: ${ideia.gancho_sugerido}` : ''}
 ${ideia.tipo_formato ? `TIPO: ${ideia.tipo_formato}` : ''}
 
 Escreva um roteiro completo em texto corrido (NÃO use marcações de tempo).
 
-ESTRUTURA OBRIGATÓRIA:
+ESTRUTURA OBRIGATÓRIA (harness):
 
-1. HOOK (primeiros 3 segundos):
-   - Frase de impacto que PRENDE atenção
-   - Deve gerar curiosidade ou choque leve
+1. HOOK (primeiras ~2 segundos / 1 frase):
+   - Afirmação impossível de ignorar; PROIBIDO "você sabia" e perguntas genéricas
+   - Abre a lacuna de curiosidade sem entregar a resposta
 
-2. DESENVOLVIMENTO (corpo, 70% do tempo):
-   - Informação entregue de forma envolvente
-   - Use storytelling, dados surpreendentes, comparações
-   - Mantenha ritmo rápido, sem enrolação
+2. DESENVOLVIMENTO (corpo, ~70% do tempo):
+   - Fatos com número, nome e data quando existirem; comparações concretas ("do tamanho de...")
+   - Ritmo acelerado: cada frase puxa a próxima (loops abertos pequenos)
+   - Sustente a emoção-âncora${emocao ? ` (${emocao})` : ''} do início ao fim — uma só
 
-3. TWIST/CLÍMAX (momento de pico):
-   - Revelação surpreendente ou insight poderoso
+3. FECHO DA LACUNA (clímax, perto do fim):
+   - A revelação que o hook prometeu — só aqui
 
-4. CTA (últimos 3-5 segundos):
-   - Chamada para ação natural: "Segue o PULSO", "Comenta", "Salva esse vídeo"
+4. CTA (últimos 3-5 segundos, 1 frase):
+   - Natural e curto: variações de "Segue o PULSO", "Comenta o que você faria", "Manda pra alguém"
 
-REGRAS:
-- Escreva em ${canal.idioma}, tom conversacional e direto
+REGRAS DURAS:
+- Escreva em ${canal.idioma}, tom conversacional, segunda pessoa
 - Duração alvo: ${duracaoAlvo} segundos (~${palavrasAlvo} palavras)
+- SOMENTE fatos reais e verificáveis; se a ideia tiver elemento de lenda, deixe isso explícito no texto ("diz a lenda...")
 - NÃO use emojis, hashtags ou indicações de edição
-- O texto será lido por uma voz narrada (TTS)
+- O texto será narrado por TTS (voz do PULSO): frases curtas, sem parênteses
 - Cada parágrafo = uma pausa natural na narração
-- Termine com CTA mencionando o canal "${canal.nome}"
+- Termine com CTA mencionando "PULSO"
 
 Retorne APENAS o roteiro em texto, sem títulos ou formatação markdown.`
 }
