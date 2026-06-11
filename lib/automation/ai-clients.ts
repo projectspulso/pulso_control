@@ -58,6 +58,34 @@ export async function callOpenAI(
 
 // ====== OPENAI TTS ======
 
+
+/**
+ * ElevenLabs TTS — voz oficial do PULSO (Daniel, harness §6).
+ * A "receita E" (graves/compressão ffmpeg) é aplicada na montagem local.
+ */
+export async function callElevenLabsTTS(
+  text: string,
+  options?: { voiceId?: string; modelId?: string }
+): Promise<ArrayBuffer> {
+  const apiKey = process.env.ELEVENLABS_API_KEY
+  if (!apiKey) throw new Error('ELEVENLABS_API_KEY não configurada — voz oficial PULSO indisponível')
+
+  const voiceId = options?.voiceId || 'onwK4e9ZLuTAKqWW03F9' // Daniel
+  const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'xi-api-key': apiKey },
+    body: JSON.stringify({
+      text,
+      model_id: options?.modelId || 'eleven_multilingual_v2',
+      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+    }),
+  })
+  if (!response.ok) {
+    throw new Error(`ElevenLabs TTS ${response.status}: ${(await response.text()).slice(0, 200)}`)
+  }
+  return response.arrayBuffer()
+}
+
 export async function callOpenAITTS(
   text: string,
   options?: {

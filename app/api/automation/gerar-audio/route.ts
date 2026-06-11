@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     // Gerar áudio para cada chunk
     const audioBuffers: ArrayBuffer[] = []
     for (const chunk of chunks) {
-      const buffer = await callOpenAITTS(chunk, { voice: voz })
+      const buffer = await callElevenLabsTTS(chunk)
       audioBuffers.push(buffer)
     }
 
@@ -171,9 +171,9 @@ export async function POST(request: NextRequest) {
           chunks: chunks.length,
           caracteres_total: textoLimpo.length,
           gerado_em: new Date().toISOString(),
-          provider: 'openai',
-          voz,
-          modelo: 'tts-1-hd',
+          provider: 'elevenlabs',
+          voz: 'Daniel (oficial PULSO)',
+          modelo: 'eleven_multilingual_v2',
         },
       })
       .select('id')
