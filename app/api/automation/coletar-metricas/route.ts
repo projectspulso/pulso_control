@@ -41,6 +41,19 @@ async function coletar(request: NextRequest) {
   }
 
   const publicacoes = (linhas || []) as LinhaPublicacao[]
+
+  // mapa metricas_publicacao.id -> pulso_distribution.posts.id (para o snapshot diário com FK válida)
+  const postIdPorPub = new Map<string, string>()
+  const { data: postsRows } = await supabase
+    .schema('pulso_distribution')
+    .from('posts')
+    .select('id, metadata')
+    .eq('status', 'PUBLICADO')
+  for (const p of postsRows || []) {
+    const pubId = p.metadata?.metricas_publicacao_id
+    if (pubId) postIdPorPub.set(pubId, p.id)
+  }
+
   const avisos: string[] = []
   if (!process.env.YOUTUBE_API_KEY) avisos.push('YOUTUBE_API_KEY ausente — YouTube ignorado')
   if (!process.env.INSTAGRAM_ACCESS_TOKEN) avisos.push('INSTAGRAM_ACCESS_TOKEN ausente — Instagram ignorado')
@@ -131,6 +144,32 @@ async function coletar(request: NextRequest) {
         resultados.push({ id: pub.id, plataforma: pub.plataforma, status: 'ERRO', motivo: upError.message })
       } else {
         resultados.push({ id: pub.id, plataforma: pub.plataforma, status: 'SUCESSO', views: metricas.views })
+      }
+
+      // snapshot diário em pulso_analytics.metricas_diarias (alimenta /analytics e o histórico de aderência)
+      const distPostId = postIdPorPub.get(pub.id)
+      if (distPostId) {
+        const dataRef = agora.toISOString().slice(0, 10)
+        const snapshot = {
+          views: metricas.views || 0,
+          likes: metricas.likes || 0,
+          comentarios: metricas.comentarios || 0,
+          compartilhamentos: metricas.shares || 0,
+          metadata: { plataforma: pub.plataforma, ideia_id: pub.ideia_id, saves: metricas.saves || 0 },
+        }
+        const { data: snapUpdated } = await supabase
+          .schema('pulso_analytics')
+          .from('metricas_diarias')
+          .update(snapshot)
+          .eq('post_id', distPostId)
+          .eq('data_ref', dataRef)
+          .select('id')
+        if (!snapUpdated || snapUpdated.length === 0) {
+          await supabase
+            .schema('pulso_analytics')
+            .from('metricas_diarias')
+            .insert({ post_id: distPostId, data_ref: dataRef, ...snapshot })
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido'
