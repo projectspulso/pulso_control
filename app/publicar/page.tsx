@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   Calendar,
+  Copy,
   CheckCircle2,
   Clock,
   ExternalLink,
@@ -76,6 +77,41 @@ export default function PublicarPage() {
   const conteudosModoFoco = (MODO_FOCO_ATIVO ? conteudos?.filter((conteudo) => conteudo.canal === MODO_FOCO.canalNomeDb) : conteudos) ?? []
   const totalConteudos = conteudosModoFoco.length
   const selecionouTodos = totalConteudos > 0 && selecionados.size === totalConteudos
+
+
+  const HASHTAGS_VERTICAL: Record<string, string> = {
+    'Mistérios': '#misterio #historiareal #curiosidades #shorts #fyp',
+    'Curiosidades': '#curiosidades #ciencia #vocesabia #shorts #fyp',
+    'Psicologia': '#psicologia #saudemental #comportamento #shorts #fyp',
+    'Motivacional': '#motivacao #mindset #disciplina #shorts #fyp',
+    'Casos Reais': '#historiareal #casosreais #historia #shorts #fyp',
+  }
+
+  const copiarKit = async (conteudo: { ideia: string; canal: string; serie?: string | null }) => {
+    const vertical = Object.keys(HASHTAGS_VERTICAL).find((v) => conteudo.canal.includes(v.split(' ')[0]))
+    const tags = vertical ? HASHTAGS_VERTICAL[vertical] : '#shorts #fyp'
+    const kit = [
+      `=== KIT DE PUBLICACAO — ${conteudo.ideia} ===`,
+      '',
+      `[YouTube Shorts]`,
+      `Titulo: ${conteudo.ideia}`,
+      `Descricao: ${conteudo.ideia} — segue o PULSO pra mais. 👁️`,
+      `Tags: ${tags}`,
+      `Config: Nao e para criancas · PT-BR · Entretenimento · Publico`,
+      '',
+      `[TikTok]`,
+      `Legenda: ${conteudo.ideia} 👁️ ${tags}`,
+      `Config: marcar CONTEUDO GERADO POR IA · Publico`,
+      '',
+      `[Meta Business Suite — IG + FB juntos]`,
+      `Legenda: ${conteudo.ideia} 👁️ Segue o PULSO. ${tags}`,
+      `Config: cross-post Instagram + Facebook · Reels`,
+      '',
+      `Arquivo: OneDrive pulso/videos/ (pasta do video)`,
+    ].join('\n')
+    await navigator.clipboard.writeText(kit)
+    setFeedback({ tone: 'success', title: 'Kit copiado', description: `Kit de publicacao de "${conteudo.ideia}" na area de transferencia.` })
+  }
 
   const toggleSelecao = (id: string) => {
     const novos = new Set(selecionados)
@@ -502,6 +538,14 @@ export default function PublicarPage() {
                     </div>
 
                     <div className="col-span-1 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => copiarKit(conteudo)}
+                        className="rounded-lg p-2 text-cyan-400 transition-colors hover:bg-cyan-600/10"
+                        aria-label={`Copiar kit de publicacao de ${conteudo.ideia}`}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => abrirAgendamento(conteudo.pipeline_id)}

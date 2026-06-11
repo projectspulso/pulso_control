@@ -1,60 +1,94 @@
 'use client'
 
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { useMemo, useState } from 'react'
 import {
-  AlertCircle,
+  BadgeDollarSign,
   BarChart3,
-  CheckCircle2,
-  Clock3,
   Eye,
+  Filter,
+  Heart,
+  MessageCircle,
+  Share2,
   TrendingUp,
-  Users,
+  Trophy,
+  Wallet,
 } from 'lucide-react'
 
 import { ErrorState } from '@/components/ui/error-state'
-import { useAnalyticsMvp } from '@/lib/hooks/use-analytics-mvp'
+import { ASSINATURAS_MENSAIS_BRL, CUSTO_POR_VIDEO } from '@/lib/config/custos'
+import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
 
-function formatCompactNumber(value: number) {
+const PLATAFORMAS = [
+  { value: 'todas', label: 'Todas as redes' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'tiktok', label: 'TikTok' },
+]
+
+const PERIODOS = [
+  { value: 0, label: 'Desde o início' },
+  { value: 7, label: 'Últimos 7 dias' },
+  { value: 30, label: 'Últimos 30 dias' },
+]
+
+function n(value: number) {
   return new Intl.NumberFormat('pt-BR', {
-    notation: 'compact',
-    maximumFractionDigits: value < 1000 ? 0 : 1,
+    notation: value >= 10000 ? 'compact' : 'standard',
+    maximumFractionDigits: 1,
   }).format(value)
 }
 
-function formatPercent(value: number) {
-  return `${value.toFixed(1)}%`
-}
-
-function getWorkflowBadgeClasses(status: string) {
-  if (status === 'sucesso') {
-    return 'bg-green-500/15 text-green-300'
-  }
-
-  if (status === 'erro') {
-    return 'bg-red-500/15 text-red-300'
-  }
-
-  return 'bg-yellow-500/15 text-yellow-300'
+function brl(value: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
 export default function AnalyticsPage() {
-  const { data, isLoading, isError, refetch } = useAnalyticsMvp()
+  const [filtros, setFiltros] = useState<BiFiltros>({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 })
+  const { data, isLoading, isError, refetch } = useBi(filtros)
+
+  const resumo = useMemo(() => {
+    if (!data) return null
+    const views = data.publicacoes.reduce((a, p) => a + p.views, 0)
+    const likes = data.publicacoes.reduce((a, p) => a + p.likes, 0)
+    const comentarios = data.publicacoes.reduce((a, p) => a + p.comentarios, 0)
+    const shares = data.publicacoes.reduce((a, p) => a + p.shares + p.saves, 0)
+    const custoProducao = data.videosProduzidos * CUSTO_POR_VIDEO.totalBRL
+    const assinaturas = Object.values<number>({ ...ASSINATURAS_MENSAIS_BRL }).reduce((a, b) => a + b, 0)
+    return {
+      views,
+      likes,
+      comentarios,
+      shares,
+      ressonancia: views > 0 ? (likes / views) * 100 : 0,
+      custoProducao,
+      assinaturas,
+      custoPorView: views > 0 ? custoProducao / views : 0,
+      receita: 0, // gate de monetização (CNPJ/AdSense) ainda não aberto — ver CONFIG_REDES §3.3
+    }
+  }, [data])
+
+  const rankingVertical = useMemo(() => {
+    if (!data) return []
+    const acc = new Map<string, { views: number; likes: number }>()
+    for (const p of data.publicacoes) {
+      const key = p.canalNome.replace(/^PULSO\s*/i, '')
+      const v = acc.get(key) || { views: 0, likes: 0 }
+      v.views += p.views
+      v.likes += p.likes
+      acc.set(key, v)
+    }
+    return [...acc.entries()].sort((a, b) => b[1].views - a[1].views)
+  }, [data])
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          <div className="space-y-3">
-            <div className="skeleton h-10 w-56" />
-            <div className="skeleton h-4 w-80" />
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div
-                key={index}
-                className="glass rounded-2xl border border-zinc-800/50 p-6"
-              >
+          <div className="skeleton h-10 w-56" />
+          <div className="grid gap-4 md:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="glass rounded-2xl border border-zinc-800/50 p-6">
                 <div className="skeleton h-5 w-24" />
                 <div className="mt-4 skeleton h-8 w-20" />
               </div>
@@ -65,13 +99,13 @@ export default function AnalyticsPage() {
     )
   }
 
-  if (isError || !data) {
+  if (isError || !data || !resumo) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
         <div className="mx-auto max-w-7xl">
           <ErrorState
-            title="Erro ao carregar analytics"
-            message="Nao foi possivel montar o painel minimo de validacao. Tente novamente."
+            title="Erro ao carregar o BI"
+            message="Não foi possível montar o painel. Tente novamente."
             onRetry={() => refetch()}
           />
         </div>
@@ -79,255 +113,224 @@ export default function AnalyticsPage() {
     )
   }
 
-  const maxViews = Math.max(...data.metricas7d.map((dia) => dia.views), 1)
-  const hasRealMetrics =
-    data.cards.totalViews > 0 ||
-    data.cards.trackedPosts > 0 ||
-    data.workflows.total > 0
+  const maxDia = Math.max(1, ...data.serieDiaria.map((d) => d.views))
 
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="mx-auto max-w-7xl space-y-8">
-        <div className="animate-fade-in">
-          <div className="mb-2 flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse-glow" />
-            <h1 className="bg-linear-to-r from-cyan-400 via-blue-400 to-cyan-400 bg-clip-text text-4xl font-black text-transparent">
-              Analytics de Validacao
-            </h1>
-          </div>
-          <p className="text-zinc-400">
-            Painel minimo para enxergar saude operacional, editorial e sinais de performance do MVP.
-          </p>
+        {/* Header + filtros */}
+        <div>
+          <h1 className="text-3xl font-bold text-white">Analytics · BI</h1>
+          <p className="mt-1 text-zinc-400">Decisões rápidas: alcance, ressonância, custo e curso por vertical.</p>
         </div>
 
-        {!hasRealMetrics && (
-          <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 text-blue-100">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="mt-0.5 h-5 w-5 text-blue-300" />
-              <div>
-                <h2 className="text-sm font-semibold">Leitura honesta do momento</h2>
-                <p className="mt-1 text-sm text-blue-100/85">
-                  O painel ja esta ligado. Se as metricas externas ainda nao chegaram, ele continua mostrando a saude do processo e zera apenas os sinais que ainda nao existem.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="glass flex flex-wrap items-center gap-3 rounded-2xl border border-zinc-800/50 p-4">
+          <Filter className="h-4 w-4 text-violet-400" />
+          <select
+            value={filtros.plataforma}
+            onChange={(e) => setFiltros((f) => ({ ...f, plataforma: e.target.value }))}
+            className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+          >
+            {PLATAFORMAS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filtros.canalId}
+            onChange={(e) => setFiltros((f) => ({ ...f, canalId: e.target.value }))}
+            className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+          >
+            <option value="todos">Todas as verticais</option>
+            {data.canais.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filtros.periodoDias}
+            onChange={(e) => setFiltros((f) => ({ ...f, periodoDias: Number(e.target.value) }))}
+            className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+          >
+            {PERIODOS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+          <span className="ml-auto text-xs text-zinc-500">
+            {data.publicacoes.length} publicações · {data.videosProduzidos} vídeos no recorte
+          </span>
+        </div>
 
+        {/* Cards */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="glass group relative overflow-hidden rounded-2xl border border-zinc-800/50 p-6">
-            <div className="absolute inset-0 bg-blue-600/10 opacity-0 blur-xl transition-all duration-300 group-hover:opacity-100" />
-            <div className="relative z-10 mb-2 flex items-center gap-3">
-              <Eye className="h-5 w-5 text-blue-400" />
-              <span className="text-sm text-zinc-400">Views (7 dias)</span>
-            </div>
-            <p className="relative z-10 text-3xl font-bold text-white tabular-nums">
-              {formatCompactNumber(data.cards.totalViews)}
+          <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+            <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              <Eye className="h-4 w-4" /> Views
+            </p>
+            <p className="mt-3 text-3xl font-bold text-white">{n(resumo.views)}</p>
+          </div>
+          <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+            <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              <Heart className="h-4 w-4" /> Ressonância
+            </p>
+            <p className="mt-3 text-3xl font-bold text-white">{resumo.ressonancia.toFixed(1)}%</p>
+            <p className="mt-1 text-sm text-zinc-500">{n(resumo.likes)} likes</p>
+          </div>
+          <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+            <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              <MessageCircle className="h-4 w-4" /> Conversa
+            </p>
+            <p className="mt-3 text-3xl font-bold text-white">{n(resumo.comentarios)}</p>
+            <p className="mt-1 flex items-center gap-1 text-sm text-zinc-500">
+              <Share2 className="h-3.5 w-3.5" /> {n(resumo.shares)} shares+saves
             </p>
           </div>
-
-          <div className="glass group relative overflow-hidden rounded-2xl border border-zinc-800/50 p-6">
-            <div className="absolute inset-0 bg-green-600/10 opacity-0 blur-xl transition-all duration-300 group-hover:opacity-100" />
-            <div className="relative z-10 mb-2 flex items-center gap-3">
-              <Users className="h-5 w-5 text-green-400" />
-              <span className="text-sm text-zinc-400">Engajamento</span>
-            </div>
-            <p className="relative z-10 text-3xl font-bold text-white tabular-nums">
-              {formatPercent(data.cards.engagementRate)}
+          <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+            <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              <Wallet className="h-4 w-4" /> Custo AI
             </p>
-          </div>
-
-          <div className="glass group relative overflow-hidden rounded-2xl border border-zinc-800/50 p-6">
-            <div className="absolute inset-0 bg-purple-600/10 opacity-0 blur-xl transition-all duration-300 group-hover:opacity-100" />
-            <div className="relative z-10 mb-2 flex items-center gap-3">
-              <TrendingUp className="h-5 w-5 text-purple-400" />
-              <span className="text-sm text-zinc-400">Posts medidos</span>
-            </div>
-            <p className="relative z-10 text-3xl font-bold text-white tabular-nums">
-              {data.cards.trackedPosts}
-            </p>
-          </div>
-
-          <div className="glass group relative overflow-hidden rounded-2xl border border-zinc-800/50 p-6">
-            <div className="absolute inset-0 bg-yellow-600/10 opacity-0 blur-xl transition-all duration-300 group-hover:opacity-100" />
-            <div className="relative z-10 mb-2 flex items-center gap-3">
-              <BarChart3 className="h-5 w-5 text-yellow-400" />
-              <span className="text-sm text-zinc-400">Sucesso de workflow</span>
-            </div>
-            <p className="relative z-10 text-3xl font-bold text-white tabular-nums">
-              {formatPercent(data.cards.workflowSuccessRate)}
+            <p className="mt-3 text-3xl font-bold text-white">{brl(resumo.custoProducao)}</p>
+            <p className="mt-1 text-sm text-zinc-500">
+              {resumo.views > 0 ? `${brl(resumo.custoPorView)} por view` : 'estimativa por vídeo'}
             </p>
           </div>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-            <div className="mb-6 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Views e interacoes</h2>
-                <p className="text-sm text-zinc-500">
-                  Soma diaria dos ultimos 7 dias a partir de `metricas_diarias`.
-                </p>
-              </div>
-              <Clock3 className="h-5 w-5 text-zinc-500" />
+        {/* Curva diária */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-green-400" />
+            <h2 className="text-lg font-semibold text-white">Views por dia (coleta diária)</h2>
+          </div>
+          {data.serieDiaria.length === 0 ? (
+            <p className="mt-4 text-sm text-zinc-500">
+              Ainda sem histórico no recorte — a curva nasce com as coletas diárias do cron (8h BRT).
+            </p>
+          ) : (
+            <div className="mt-4 flex h-40 items-end gap-2">
+              {data.serieDiaria.map((d) => (
+                <div key={d.data} className="flex flex-1 flex-col items-center gap-1">
+                  <span className="text-xs text-zinc-400">{n(d.views)}</span>
+                  <div
+                    className="w-full rounded-t-lg bg-linear-to-t from-violet-700 to-violet-500"
+                    style={{ height: `${Math.max(4, (d.views / maxDia) * 100)}%` }}
+                  />
+                  <span className="text-[10px] text-zinc-600">{d.data.slice(5)}</span>
+                </div>
+              ))}
             </div>
+          )}
+        </div>
 
-            <div className="flex h-56 items-end gap-3">
-              {data.metricas7d.map((dia) => {
-                const heightPercent = Math.max((dia.views / maxViews) * 100, dia.views > 0 ? 12 : 4)
-
+        {/* Ranking vertical + financeiro */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-amber-400" />
+              <h2 className="text-lg font-semibold text-white">Aderência por vertical</h2>
+            </div>
+            <div className="mt-4 space-y-3">
+              {rankingVertical.map(([vertical, stats], idx) => {
+                const max = rankingVertical[0]?.[1].views || 1
                 return (
-                  <div key={dia.label} className="flex flex-1 flex-col items-center gap-3">
-                    <div className="text-xs text-zinc-500">{formatCompactNumber(dia.views)}</div>
-                    <div className="flex h-40 w-full items-end rounded-xl bg-zinc-800/70 p-2">
+                  <div key={vertical} className="flex items-center gap-3">
+                    <span className="w-5 text-right font-mono text-sm text-zinc-500">{idx + 1}º</span>
+                    <span className="w-40 truncate text-sm text-zinc-200">{vertical}</span>
+                    <div className="h-5 flex-1 overflow-hidden rounded-full bg-zinc-800/80">
                       <div
-                        className="w-full rounded-lg bg-linear-to-t from-cyan-500 to-blue-400"
-                        style={{ height: `${heightPercent}%` }}
-                        title={`${dia.label}: ${dia.views} views`}
+                        className={`h-full rounded-full ${idx === 0 ? 'bg-linear-to-r from-amber-500 to-orange-500' : 'bg-violet-600/70'}`}
+                        style={{ width: `${Math.max(2, Math.round((stats.views / max) * 100))}%` }}
                       />
                     </div>
-                    <div className="text-xs text-zinc-400">{dia.label}</div>
+                    <span className="w-16 text-right text-sm text-zinc-300">{n(stats.views)}</span>
                   </div>
                 )
               })}
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-400" />
-                <h2 className="text-lg font-semibold text-white">Editorial</h2>
-              </div>
-              <div className="space-y-4">
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm text-zinc-400">Ideias aprovadas</span>
-                    <span className="text-sm font-semibold text-white">
-                      {data.editorial.ideiasAprovadas}/{data.editorial.ideiasTotal}
-                    </span>
-                  </div>
-                  <div className="mt-2 h-2 rounded-full bg-zinc-800">
-                    <div
-                      className="h-2 rounded-full bg-green-500"
-                      style={{ width: `${data.editorial.ideiasTaxaAprovacao}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs text-zinc-500">
-                    Taxa: {formatPercent(data.editorial.ideiasTaxaAprovacao)}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm text-zinc-400">Roteiros aprovados</span>
-                    <span className="text-sm font-semibold text-white">
-                      {data.editorial.roteirosAprovados}/{data.editorial.roteirosTotal}
-                    </span>
-                  </div>
-                  <div className="mt-2 h-2 rounded-full bg-zinc-800">
-                    <div
-                      className="h-2 rounded-full bg-cyan-500"
-                      style={{ width: `${data.editorial.roteirosTaxaAprovacao}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs text-zinc-500">
-                    Taxa: {formatPercent(data.editorial.roteirosTaxaAprovacao)}
-                  </p>
-                </div>
-              </div>
+          <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+            <div className="flex items-center gap-2">
+              <BadgeDollarSign className="h-5 w-5 text-green-400" />
+              <h2 className="text-lg font-semibold text-white">Financeiro</h2>
             </div>
-
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-violet-400" />
-                <h2 className="text-lg font-semibold text-white">Pipeline</h2>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-zinc-400">Custo de produção (AI) no recorte</dt>
+                <dd className="font-semibold text-white">{brl(resumo.custoProducao)}</dd>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">Prontos</p>
-                  <p className="mt-2 text-2xl font-bold text-white">
-                    {data.pipeline.prontosPublicacao}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">Agendados</p>
-                  <p className="mt-2 text-2xl font-bold text-white">
-                    {data.pipeline.agendados}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">Publicados</p>
-                  <p className="mt-2 text-2xl font-bold text-white">
-                    {data.pipeline.publicados}
-                  </p>
-                </div>
+              <div className="flex justify-between">
+                <dt className="text-zinc-400">
+                  Custo médio por vídeo (Higgsfield {CUSTO_POR_VIDEO.higgsfieldCreditos}cr + ElevenLabs + GPT)
+                </dt>
+                <dd className="font-semibold text-white">{brl(CUSTO_POR_VIDEO.totalBRL)}</dd>
               </div>
-            </div>
+              <div className="flex justify-between">
+                <dt className="text-zinc-400">Assinaturas mensais (configurar em lib/config/custos.ts)</dt>
+                <dd className="font-semibold text-white">{brl(resumo.assinaturas)}</dd>
+              </div>
+              <div className="flex justify-between border-t border-zinc-800/50 pt-3">
+                <dt className="text-zinc-400">Receita dos canais</dt>
+                <dd className="font-semibold text-zinc-500">
+                  {brl(resumo.receita)} · aguardando gate de monetização (CNPJ/AdSense)
+                </dd>
+              </div>
+            </dl>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Clock3 className="h-5 w-5 text-amber-400" />
-            <h2 className="text-lg font-semibold text-white">Workflows recentes</h2>
+        {/* Tabela de publicações */}
+        <div className="glass overflow-hidden rounded-2xl border border-zinc-800/50">
+          <div className="flex items-center gap-2 border-b border-zinc-800/50 p-6 pb-4">
+            <BarChart3 className="h-5 w-5 text-violet-400" />
+            <h2 className="text-lg font-semibold text-white">Publicações no recorte</h2>
           </div>
-
-          <div className="mb-4 grid gap-3 md:grid-cols-4">
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Total</p>
-              <p className="mt-2 text-2xl font-bold text-white">{data.workflows.total}</p>
-            </div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Sucesso</p>
-              <p className="mt-2 text-2xl font-bold text-green-300">
-                {data.workflows.sucesso}
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Erro</p>
-              <p className="mt-2 text-2xl font-bold text-red-300">{data.workflows.erro}</p>
-            </div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Em andamento</p>
-              <p className="mt-2 text-2xl font-bold text-yellow-300">
-                {data.workflows.emAndamento}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {data.workflows.recentes.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-zinc-700 p-4 text-sm text-zinc-500">
-                Nenhum log de workflow encontrado ainda.
-              </div>
-            ) : (
-              data.workflows.recentes.map((workflow) => (
-                <div
-                  key={`${workflow.workflow_name}-${workflow.created_at}`}
-                  className="flex flex-col gap-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-4 md:flex-row md:items-center md:justify-between"
-                >
-                  <div>
-                    <p className="font-medium text-white">{workflow.workflow_name}</p>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      {format(new Date(workflow.created_at), "dd/MM/yyyy 'as' HH:mm", {
-                        locale: ptBR,
-                      })}
-                    </p>
-                    {workflow.erro_mensagem && (
-                      <p className="mt-2 text-xs text-red-300">{workflow.erro_mensagem}</p>
-                    )}
-                  </div>
-                  <span
-                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getWorkflowBadgeClasses(
-                      workflow.status,
-                    )}`}
-                  >
-                    {workflow.status}
-                  </span>
-                </div>
-              ))
-            )}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800/50 text-left text-xs uppercase tracking-wider text-zinc-500">
+                  <th className="px-6 py-3">Vídeo</th>
+                  <th className="px-3 py-3">Vertical</th>
+                  <th className="px-3 py-3">Rede</th>
+                  <th className="px-3 py-3 text-right">Views</th>
+                  <th className="px-3 py-3 text-right">Likes</th>
+                  <th className="px-3 py-3 text-right">Coment.</th>
+                  <th className="px-6 py-3 text-right">Shares+Saves</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.publicacoes.map((p) => (
+                  <tr key={p.id} className="border-b border-zinc-800/30 hover:bg-zinc-900/40">
+                    <td className="max-w-xs truncate px-6 py-3 text-zinc-200" title={p.ideiaTitulo}>
+                      {p.url ? (
+                        <a
+                          href={p.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline-offset-2 hover:text-violet-300 hover:underline"
+                        >
+                          {p.ideiaTitulo}
+                        </a>
+                      ) : (
+                        p.ideiaTitulo
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3 text-zinc-400">
+                      {p.canalNome.replace(/^PULSO\s*/i, '')}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3 capitalize text-zinc-400">{p.plataforma}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-right font-semibold text-white">{n(p.views)}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-right text-zinc-300">{n(p.likes)}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-right text-zinc-300">{n(p.comentarios)}</td>
+                    <td className="whitespace-nowrap px-6 py-3 text-right text-zinc-300">{n(p.shares + p.saves)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

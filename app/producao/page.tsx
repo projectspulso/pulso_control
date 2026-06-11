@@ -8,6 +8,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
+import { EstoqueBanner } from '@/components/estoque-banner'
 import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { Calendar, Clock, Film, User } from 'lucide-react'
 import Link from 'next/link'
@@ -241,6 +242,7 @@ export default function ProducaoPage() {
 
           <div className="mb-6">
             <ModoFocoBanner detail="Pipeline filtrado para o canal foco. Os demais canais ficam fora da execucao do MVP." />
+            <div className="mt-3"><EstoqueBanner /></div>
           </div>
           
           <div className="grid grid-cols-6 gap-4">
