@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
   if (erro) return new NextResponse(`Autorização negada: ${erro}`, { status: 400 })
   if (!code) return new NextResponse('Faltou o code', { status: 400 })
 
-  const clientKey = process.env.TIKTOK_CLIENT_KEY
-  const clientSecret = process.env.TIKTOK_CLIENT_SECRET
+  const clientKey = (process.env.TIKTOK_SANDBOX_KEY || process.env.TIKTOK_CLIENT_KEY)
+  const clientSecret = (process.env.TIKTOK_SANDBOX_SECRET || process.env.TIKTOK_CLIENT_SECRET)
   if (!clientKey || !clientSecret) {
     return new NextResponse('TIKTOK_CLIENT_KEY/SECRET não configuradas', { status: 500 })
   }
