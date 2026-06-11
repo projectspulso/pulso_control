@@ -46,16 +46,19 @@ export async function POST(request: NextRequest) {
       canal = canais?.[0]
 
       if (!canal) {
-        // fallback: rotação direta em pulso_core.canais (canal com menos ideias)
-        const [{ data: todos }, { data: ideiasExist }] = await Promise.all([
+        // fallback: rotação direta na tabela de canais (canal com menos ideias)
+        const [todosQ, ideiasQ] = await Promise.all([
           supabase.schema('pulso_core').from('canais').select('id, nome, descricao, idioma, slug'),
           supabase.schema('pulso_content').from('ideias').select('canal_id'),
         ])
+        if (todosQ.error) {
+          return NextResponse.json({ error: `Fallback canais: ${todosQ.error.message}` }, { status: 500 })
+        }
         const contagem = new Map<string, number>()
-        for (const i of ideiasExist || []) {
+        for (const i of ideiasQ.data || []) {
           if (i.canal_id) contagem.set(i.canal_id, (contagem.get(i.canal_id) || 0) + 1)
         }
-        canal = (todos || []).sort(
+        canal = (todosQ.data || []).sort(
           (a: { id: string }, b: { id: string }) => (contagem.get(a.id) || 0) - (contagem.get(b.id) || 0)
         )[0]
       }
