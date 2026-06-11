@@ -31,7 +31,7 @@ interface FeedbackState {
   description: string
 }
 
-const PLATAFORMAS_ASSISTIDAS = ['tiktok', 'youtube', 'instagram']
+const PLATAFORMAS_ASSISTIDAS = ['instagram', 'facebook', 'tiktok', 'youtube']
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
@@ -625,7 +625,8 @@ export default function PublicarPage() {
               </p>
 
               <div className="mt-4 rounded-lg border border-green-600/20 bg-green-600/10 p-3 text-xs text-green-300">
-                Plataformas alvo: {PLATAFORMAS_ASSISTIDAS.join(', ')}.
+                Instagram + FACEBOOK: publicação direta via Meta API · TikTok: rascunho no celular (postar
+                nativo com som trending) · YouTube: manual via kit (botão copiar).
               </div>
 
               <div className="mt-6 flex gap-3">
