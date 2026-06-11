@@ -110,7 +110,8 @@ ESTRUTURA OBRIGATÓRIA (harness):
    - Natural e curto: variações de "Segue o PULSO", "Comenta o que você faria", "Manda pra alguém"
 
 REGRAS DURAS:
-- Escreva em ${canal.idioma}, tom conversacional, segunda pessoa
+- Escreva em PORTUGUÊS BRASILEIRO coloquial (NUNCA português europeu): use "você" e gerúndio ("está fazendo" — JAMAIS "está a fazer"), vocabulário BR ("celular", "ônibus", "café da manhã") e NENHUMA construção lusitana
+- Tom conversacional, segunda pessoa
 - Duração alvo: ${duracaoAlvo} segundos (~${palavrasAlvo} palavras)
 - SOMENTE fatos reais e verificáveis; se a ideia tiver elemento de lenda, deixe isso explícito no texto ("diz a lenda...")
 - NÃO use emojis, hashtags ou indicações de edição

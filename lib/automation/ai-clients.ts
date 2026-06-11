@@ -77,7 +77,11 @@ export async function callElevenLabsTTS(
     body: JSON.stringify({
       text,
       model_id: options?.modelId || 'eleven_multilingual_v2',
-      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      // TRAVAS pt-BR (12/06): stability alta reduz deriva de sotaque; previous_text ancora
+      // o modelo no português BRASILEIRO sem ser falado no áudio.
+      voice_settings: { stability: 0.7, similarity_boost: 0.8, style: 0 },
+      previous_text:
+        'Fala, pessoal! Aqui é o PULSO, direto do Brasil. A gente vai contar uma história incrível pra vocês agora.',
     }),
   })
   if (!response.ok) {
