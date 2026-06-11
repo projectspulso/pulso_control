@@ -74,3 +74,9 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 - /api/automation/gerar-ideias: parse robusto (objeto único, array embrulhado), fallback de rotação de canais (canal com menos ideias), emocao_ancora no metadata
 - Validado ponta a ponta em produção: rotação automática → GPT-4o → ideia salva como RASCUNHO (curadoria humana decide)
 - Próximo refinamento: forçar N ideias por chamada (GPT às vezes devolve 1)
+
+## 2026-06-11 (cont. 4) — Ciclo completo dentro do app: ideia AI → roteiro AI → publicar via Meta API
+- gerar-roteiro: prompt com harness (lacuna, emoção-âncora, fatos reais, TTS-friendly); testado em produção — roteiro "Por que a Lua brilha no escuro?" gerado com quality_score 100, 68s, status RASCUNHO (gate humano)
+- /api/automation/publicar REESCRITA: publica IG Reels + FB Reels DIRETO via Graph API (container/publish + reels start/upload/finish), exige confirmar:true (R-011), registra metricas_publicacao + pipeline; "Manus" órfão aposentado
+- Gate de confirmação validado em produção (400 sem confirmar)
+- Primeira publicação real via API: no próximo vídeo do pipeline (precisa de video_url público — Supabase Storage ou OneDrive direto)
