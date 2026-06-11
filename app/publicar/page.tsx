@@ -70,6 +70,7 @@ export default function PublicarPage() {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [mostrarModalAgendar, setMostrarModalAgendar] = useState(false)
   const [mostrarModalPublicar, setMostrarModalPublicar] = useState(false)
+  const [publicando, setPublicando] = useState(false)
   const [dataAgendamento, setDataAgendamento] = useState('')
   const [horaAgendamento, setHoraAgendamento] = useState('')
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
@@ -184,26 +185,49 @@ export default function PublicarPage() {
       return
     }
 
+    setPublicando(true)
+    const resultadosMsg: string[] = []
     try {
-      await publicarAgora.mutateAsync({
-        pipelineIds: Array.from(selecionados),
-        plataformas: PLATAFORMAS_ASSISTIDAS,
-      })
+      for (const pipelineId of Array.from(selecionados)) {
+        const conteudo = conteudosModoFoco.find((c) => c.pipeline_id === pipelineId)
+        const videoUrl = conteudo?.metadata?.video_url
+        const caption = conteudo?.metadata?.caption
+        if (!videoUrl) {
+          resultadosMsg.push(`${conteudo?.ideia || pipelineId}: sem video_url no pipeline — gere/registre o arquivo antes`)
+          continue
+        }
+
+        // IG + FB direto via Meta API (o clique neste modal É a confirmacao humana)
+        const meta = await fetch('/api/automation/publicar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pipeline_id: pipelineId, video_url: videoUrl, caption, confirmar: true }),
+        }).then((r) => r.json())
+        resultadosMsg.push(
+          `${conteudo?.ideia?.slice(0, 30) || pipelineId}: IG/FB ${meta.publicados ?? 0} publicadas, ${meta.erros ?? 0} erros`
+        )
+
+        // TikTok: manda pros rascunhos (publicacao nativa pelo celular)
+        const tt = await fetch('/api/automation/tiktok-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ video_url: videoUrl, confirmar: true }),
+        }).then((r) => r.json())
+        resultadosMsg.push(tt.success ? '  TikTok: rascunho enviado pro celular' : `  TikTok: ${tt.error || 'falhou'}`)
+      }
 
       setFeedback({
         tone: 'success',
-        title: 'Fila assistida acionada',
-        description: `${selecionados.size} conteudo(s) enviado(s) para a fila assistida de publicacao.`,
+        title: 'Publicacao executada',
+        description: resultadosMsg.join(' | '),
       })
       setSelecionados(new Set())
       setMostrarModalPublicar(false)
     } catch (error) {
-      console.error('Erro ao enviar para publicacao assistida:', error)
-      setFeedback({
-        tone: 'error',
-        title: 'Falha ao acionar a fila',
-        description: getErrorMessage(error),
-      })
+      console.error('Erro ao publicar:', error)
+      setFeedback({ tone: 'error', title: 'Falha na publicacao', description: getErrorMessage(error) })
+    } finally {
+      setPublicando(false)
     }
   }
 
