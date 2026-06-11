@@ -103,7 +103,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Salvar ideias no banco
-    const ideiasParaSalvar = ideias.map(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ideiasParaSalvar = (ideias as any[]).map(
       (ideia: {
         titulo: string
         descricao: string
