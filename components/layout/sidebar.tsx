@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   BarChart3,
+  Wallet,
   Clapperboard,
   FileEdit,
   LayoutDashboard,
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'Publicar', href: '/publicar', icon: Send, badge: null },
   { name: 'Automacao', href: '/automacao', icon: Zap, badge: 'ai' },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null },
+  { name: 'Financeiro', href: '/financeiro', icon: Wallet, badge: null },
 ]
 
 export function Sidebar() {
