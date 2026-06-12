@@ -15,10 +15,24 @@ import {
 } from 'lucide-react'
 
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { useQuery } from '@tanstack/react-query'
 
 import { ErrorState } from '@/components/ui/error-state'
 import { ASSINATURAS_MENSAIS_BRL, CUSTO_POR_VIDEO } from '@/lib/config/custos'
+import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
 import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
+
+interface StatusContas {
+  contas: Record<string, { seguidores: number | null; detalhe?: string }>
+}
+
+function useStatusContas() {
+  return useQuery<StatusContas>({
+    queryKey: ['status-contas'],
+    refetchInterval: 60 * 60 * 1000,
+    queryFn: () => fetch('/api/automation/status-contas').then((r) => r.json()),
+  })
+}
 
 const PLATAFORMAS = [
   { value: 'todas', label: 'Todas as redes' },
@@ -51,6 +65,7 @@ export default function AnalyticsPage() {
   const [filtros, setFiltros] = useState<BiFiltros>({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 })
   const [paginaPubs, setPaginaPubs] = useState(1)
   const { data, isLoading, isError, refetch } = useBi(filtros)
+  const { data: statusContas } = useStatusContas()
 
   const resumo = useMemo(() => {
     if (!data) return null
@@ -216,6 +231,45 @@ export default function AnalyticsPage() {
             <p className="mt-1 text-sm text-zinc-500">
               {resumo.views > 0 ? `${brl(resumo.custoPorView)} por view` : 'estimativa por vídeo'}
             </p>
+          </div>
+        </div>
+
+        {/* Rumo à monetização */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold text-white">🎯 Rumo à monetização</h2>
+            <span className="text-xs text-zinc-500">
+              alvo inicial = 1º gate de cada rede · plano em docs/40_PRODUTO/18_PLANO_MONETIZACAO.md
+            </span>
+          </div>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {GATES_MONETIZACAO.map((g) => {
+              const atual = statusContas?.contas?.[g.plataforma]?.seguidores ?? null
+              const pct = atual === null ? 0 : Math.min(100, (atual / g.metaSeguidores) * 100)
+              return (
+                <div key={g.plataforma} className="rounded-xl bg-zinc-900/60 p-4">
+                  <div className="flex items-baseline justify-between">
+                    <p className="text-sm font-semibold text-zinc-200">
+                      {g.label} <span className="font-normal text-zinc-500">· {g.programa}</span>
+                    </p>
+                    <p className="text-sm font-bold tabular-nums text-white">
+                      {atual === null ? '—' : n(atual)}
+                      <span className="font-normal text-zinc-500"> / {n(g.metaSeguidores)}</span>
+                    </p>
+                  </div>
+                  <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-zinc-800">
+                    <div
+                      className={`h-full rounded-full ${pct >= 100 ? 'bg-linear-to-r from-green-500 to-emerald-400' : 'bg-linear-to-r from-amber-500 to-orange-500'}`}
+                      style={{ width: `${Math.max(1.5, pct)}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-zinc-500">
+                    {pct >= 100 ? '✅ gate de seguidores batido! ' : `${pct.toFixed(1)}% · `}
+                    {g.metaSecundaria} · <span className="text-zinc-400">{g.recompensa}</span>
+                  </p>
+                </div>
+              )
+            })}
           </div>
         </div>
 
