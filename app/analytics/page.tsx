@@ -81,6 +81,22 @@ export default function AnalyticsPage() {
     return [...acc.entries()].sort((a, b) => b[1].views - a[1].views)
   }, [data])
 
+  const porRede = useMemo(() => {
+    if (!data) return []
+    const acc = new Map<string, { views: number; likes: number; posts: number }>()
+    for (const p of data.publicacoes) {
+      const v = acc.get(p.plataforma) || { views: 0, likes: 0, posts: 0 }
+      v.views += p.views
+      v.likes += p.likes
+      v.posts += 1
+      acc.set(p.plataforma, v)
+    }
+    const total = [...acc.values()].reduce((a, v) => a + v.views, 0) || 1
+    return [...acc.entries()]
+      .map(([rede, v]) => ({ rede, ...v, share: (v.views / total) * 100 }))
+      .sort((a, b) => b.views - a.views)
+  }, [data])
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
@@ -200,6 +216,31 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
+        {/* Share por rede */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <h2 className="text-lg font-semibold text-white">Onde os views estão nascendo</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {porRede.map((r) => (
+              <div key={r.rede} className="rounded-xl bg-zinc-900/60 p-4">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-sm font-semibold capitalize text-zinc-300">{r.rede}</p>
+                  <p className="text-xs text-zinc-500">{r.posts} posts</p>
+                </div>
+                <p className="mt-2 text-2xl font-black tabular-nums text-white">{n(r.views)}</p>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-800">
+                  <div
+                    className="h-full rounded-full bg-linear-to-r from-violet-600 to-pink-500"
+                    style={{ width: `${Math.max(2, r.share)}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {r.share.toFixed(1)}% do alcance · {n(r.likes)} likes
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Curva diária */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-center gap-2">
@@ -296,6 +337,7 @@ export default function AnalyticsPage() {
                   <th className="px-6 py-3">Vídeo</th>
                   <th className="px-3 py-3">Vertical</th>
                   <th className="px-3 py-3">Rede</th>
+                  <th className="px-3 py-3">Publicado</th>
                   <th className="px-3 py-3 text-right">Views</th>
                   <th className="px-3 py-3 text-right">Likes</th>
                   <th className="px-3 py-3 text-right">Coment.</th>
@@ -323,6 +365,9 @@ export default function AnalyticsPage() {
                       {p.canalNome.replace(/^PULSO\s*/i, '')}
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 capitalize text-zinc-400">{p.plataforma}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-zinc-500">
+                      {p.dataPublicacao ? new Date(p.dataPublicacao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'}
+                    </td>
                     <td className="whitespace-nowrap px-3 py-3 text-right font-semibold text-white">{n(p.views)}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-right text-zinc-300">{n(p.likes)}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-right text-zinc-300">{n(p.comentarios)}</td>

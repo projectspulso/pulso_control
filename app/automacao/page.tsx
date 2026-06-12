@@ -197,13 +197,37 @@ export default function AutomacaoPage() {
             </div>
             <div>
               <h1 className="text-4xl font-black bg-linear-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-                Automacao AI-Native
+                Automações
               </h1>
             </div>
           </div>
           <p className="text-zinc-400 mt-1 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            Sistema nativo de automacao com banco, fila e workers do app
+            A esteira do PULSO: o que roda sozinho, o que espera você
+          </p>
+        </div>
+
+        {/* Mapa da esteira — quem faz o quê */}
+        <div className="glass rounded-2xl p-6 animate-fade-in">
+          <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">Mapa da esteira</h2>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            {[
+              { etapa: '1 · Ideias', quem: 'AI', detalhe: 'GPT gera por canal; você aprova a curadoria', cor: 'border-violet-500/30' },
+              { etapa: '2 · Roteiro', quem: 'AI + você', detalhe: 'Harness pt-BR; aprovação humana obrigatória', cor: 'border-indigo-500/30' },
+              { etapa: '3 · Áudio', quem: 'AI', detalhe: 'ElevenLabs voz PULSO (travas pt-BR + Receita E)', cor: 'border-cyan-500/30' },
+              { etapa: '4 · Vídeo', quem: 'AI assistida', detalhe: 'Cenas Seedance + montagem (cowork dirige)', cor: 'border-pink-500/30' },
+              { etapa: '5 · Publicar', quem: 'misto', detalhe: 'IG: API direto · FB: Business Suite manual · TikTok: draft → celular · YT: Studio', cor: 'border-green-500/30' },
+            ].map((e) => (
+              <div key={e.etapa} className={`rounded-xl border ${e.cor} bg-zinc-900/50 p-4`}>
+                <p className="text-sm font-bold text-white">{e.etapa}</p>
+                <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-400">{e.quem}</p>
+                <p className="mt-2 text-xs leading-relaxed text-zinc-400">{e.detalhe}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-zinc-500">
+            Coleta de métricas: automática todo dia às 8h BRT (cron Vercel) nas 4 redes — dispare manualmente em
+            &quot;Coletar Métricas&quot; abaixo. Gate humano (R-011): nada é publicado sem clique seu.
           </p>
         </div>
 
