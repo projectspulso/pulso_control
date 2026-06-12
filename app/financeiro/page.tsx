@@ -106,6 +106,57 @@ export default function FinanceiroPage() {
           </div>
         </div>
 
+        {/* Controle mês a mês */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex items-baseline justify-between">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+              <PiggyBank className="h-5 w-5 text-green-400" /> Controle mês a mês
+            </h2>
+            <span className="text-xs text-zinc-500">produção = consumo de créditos/serviços · caixa = dinheiro que saiu (top-ups)</span>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800/50 text-left text-xs uppercase tracking-wider text-zinc-500">
+                  <th className="px-3 py-2">Mês</th>
+                  <th className="px-3 py-2 text-right">Produção (R$)</th>
+                  <th className="px-3 py-2 text-right">Créditos</th>
+                  <th className="px-3 py-2 text-right">Caixa / top-ups (R$)</th>
+                  <th className="px-3 py-2 text-right">vs teto mensal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.porMes.map((m) => {
+                  const pct = (m.producaoBRL / tetoMes) * 100
+                  const mesLabel = new Date(m.mes + '-15T12:00:00').toLocaleDateString('pt-BR', {
+                    month: 'long',
+                    year: 'numeric',
+                  })
+                  return (
+                    <tr key={m.mes} className="border-b border-zinc-800/30">
+                      <td className="px-3 py-3 capitalize text-zinc-200">{mesLabel}</td>
+                      <td className="px-3 py-3 text-right font-semibold text-white">{brl(m.producaoBRL)}</td>
+                      <td className="px-3 py-3 text-right text-zinc-400">{m.creditos}</td>
+                      <td className="px-3 py-3 text-right text-zinc-300">{brl(m.caixaBRL)}</td>
+                      <td className="px-3 py-3">
+                        <div className="ml-auto flex max-w-[220px] items-center gap-2">
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
+                            <div
+                              className={`h-full rounded-full ${pct > 100 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-green-500'}`}
+                              style={{ width: `${Math.min(100, Math.max(2, pct))}%` }}
+                            />
+                          </div>
+                          <span className="w-12 text-right text-xs text-zinc-500">{pct.toFixed(0)}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Travas */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-white">

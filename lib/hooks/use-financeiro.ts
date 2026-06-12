@@ -21,6 +21,14 @@ export interface Travas {
   modelo_padrao: string
 }
 
+export interface MesResumo {
+  mes: string // YYYY-MM
+  producaoBRL: number
+  caixaBRL: number
+  creditos: number
+  videos?: number
+}
+
 export interface FinanceiroData {
   lancamentos: Lancamento[]
   travas: Travas | null
@@ -31,6 +39,7 @@ export interface FinanceiroData {
   gastoMesBRL: number
   caixaMesBRL: number
   gastoPorServico: { servico: string; brl: number }[]
+  porMes: MesResumo[]
 }
 
 export function useFinanceiro() {
@@ -85,6 +94,21 @@ export function useFinanceiro() {
         porServico.set(l.servico, (porServico.get(l.servico) || 0) + l.brl)
       }
 
+      // controle gerencial mês a mês (produção vs caixa)
+      const meses = new Map<string, MesResumo>()
+      for (const l of lancamentos) {
+        const m = l.data.slice(0, 7)
+        if (!m) continue
+        const acc = meses.get(m) || { mes: m, producaoBRL: 0, caixaBRL: 0, creditos: 0 }
+        if (l.servico === 'topup') acc.caixaBRL += l.brl
+        else {
+          acc.producaoBRL += l.brl
+          if (l.servico === 'higgsfield') acc.creditos += l.creditos || 0
+        }
+        meses.set(m, acc)
+      }
+      const porMes = [...meses.values()].sort((a, b) => a.mes.localeCompare(b.mes))
+
       return {
         lancamentos,
         travas,
@@ -94,6 +118,7 @@ export function useFinanceiro() {
         gastoHojeCreditos,
         gastoMesBRL,
         caixaMesBRL,
+        porMes,
         gastoPorServico: [...porServico.entries()]
           .map(([servico, brl]) => ({ servico, brl }))
           .sort((a, b) => b.brl - a.brl),
