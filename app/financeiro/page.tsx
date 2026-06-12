@@ -101,7 +101,7 @@ export default function FinanceiroPage() {
             </p>
             <p className="mt-3 text-3xl font-bold text-white">{data.clipsNoBanco}</p>
             <p className="mt-1 text-sm text-zinc-500">
-              cenas pagas reutilizáveis (≈ {brl(data.clipsNoBanco * 45)} já investidos)
+              cenas pagas reutilizáveis (≈ {brl(data.clipsNoBanco * 45 * (t?.credito_brl ?? 0.27))} já investidos)
             </p>
           </div>
         </div>
