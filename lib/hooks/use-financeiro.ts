@@ -37,22 +37,18 @@ export function useFinanceiro() {
     queryKey: ['financeiro'],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const [logsQ, cfgQ, clipsQ] = await Promise.all([
+      const [logsQ, cfgRes, clipsQ] = await Promise.all([
         supabase
           .schema('pulso_content')
           .from('logs_workflows')
           .select('id, detalhes, created_at')
           .eq('workflow_name', 'GASTO_SERVICO')
           .order('created_at', { ascending: false }),
-        supabase
-          .schema('pulso_core')
-          .from('configuracoes')
-          .select('chave, valor')
-          .in('chave', ['orcamento_travas', 'higgsfield_saldo']),
+        // configuracoes tem RLS — leitura via rota server (service role)
+        fetch('/api/automation/financeiro-config').then((r) => r.json()),
         supabase.schema('pulso_content').from('videos').select('id', { count: 'exact', head: true }).eq('tipo', 'CLIP_CENA'),
       ])
       if (logsQ.error) throw logsQ.error
-      if (cfgQ.error) throw cfgQ.error
 
       const lancamentos: Lancamento[] = (logsQ.data || []).map((l) => {
         const d = (l.detalhes || {}) as Record<string, unknown>
@@ -66,9 +62,8 @@ export function useFinanceiro() {
         }
       })
 
-      const cfg = new Map((cfgQ.data || []).map((c) => [c.chave, c.valor]))
-      const travas = cfg.has('orcamento_travas') ? (JSON.parse(cfg.get('orcamento_travas')!) as Travas) : null
-      const saldoHiggsfield = cfg.has('higgsfield_saldo') ? JSON.parse(cfg.get('higgsfield_saldo')!) : null
+      const travas = (cfgRes?.travas as Travas) ?? null
+      const saldoHiggsfield = cfgRes?.saldoHiggsfield ?? null
 
       const hoje = new Date().toISOString().slice(0, 10)
       const mes = hoje.slice(0, 7)
