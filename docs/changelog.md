@@ -8,7 +8,13 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 -
 
 ### Mudado
--
+- **Facebook fora da publicação via API** (12/06): teste A/B provou que reels FB
+  publicados via Graph API na Página Pulso Projects são sufocados pelo algoritmo
+  (4 reels API = 0-2 plays em 13h; mesmo vídeo repostado manual no Business Suite
+  = 232 plays em 40min, "2,1x acima da média"). Default da rota `/api/automation/publicar`
+  e do modal de publicar agora é só `['instagram']`; FB volta ao fluxo manual
+  (Business Suite) até a Página ter histórico — re-teste futuro com
+  `plataformas:['facebook']` explícito.
 
 ### Removido
 -

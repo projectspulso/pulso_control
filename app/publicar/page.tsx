@@ -197,14 +197,17 @@ export default function PublicarPage() {
           continue
         }
 
-        // IG + FB direto via Meta API (o clique neste modal É a confirmacao humana)
+        // IG direto via Meta API (o clique neste modal É a confirmacao humana).
+        // FB fica MANUAL via Business Suite: teste A/B 12/06 provou que reels FB
+        // publicados via API nesta Página são sufocados pelo algoritmo (0-2 plays
+        // em 13h vs 232 em 40min do mesmo vídeo postado manual).
         const meta = await fetch('/api/automation/publicar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pipeline_id: pipelineId, video_url: videoUrl, caption, confirmar: true }),
+          body: JSON.stringify({ pipeline_id: pipelineId, video_url: videoUrl, caption, confirmar: true, plataformas: ['instagram'] }),
         }).then((r) => r.json())
         resultadosMsg.push(
-          `${conteudo?.ideia?.slice(0, 30) || pipelineId}: IG/FB ${meta.publicados ?? 0} publicadas, ${meta.erros ?? 0} erros`
+          `${conteudo?.ideia?.slice(0, 30) || pipelineId}: IG ${meta.publicados ?? 0} publicada(s), ${meta.erros ?? 0} erros — FB: postar manual no Business Suite`
         )
 
         // TikTok: manda pros rascunhos (publicacao nativa pelo celular)
@@ -625,7 +628,8 @@ export default function PublicarPage() {
               </p>
 
               <div className="mt-4 rounded-lg border border-green-600/20 bg-green-600/10 p-3 text-xs text-green-300">
-                Instagram + FACEBOOK: publicação direta via Meta API · TikTok: rascunho no celular (postar
+                Instagram: publicação direta via Meta API · FACEBOOK: manual no Business Suite (reels via
+                API são sufocados pelo algoritmo — teste A/B 12/06) · TikTok: rascunho no celular (postar
                 nativo com som trending) · YouTube: manual via kit (botão copiar).
               </div>
 

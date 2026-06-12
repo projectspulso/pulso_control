@@ -16,6 +16,8 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
  * }
  *
  * YouTube/TikTok continuam via kit + navegador (F3/F4).
+ * FACEBOOK também: desde 12/06 o default é só Instagram — reels FB via API
+ * nesta Página são sufocados pelo algoritmo (ver teste A/B no changelog).
  */
 
 const GRAPH = 'https://graph.facebook.com/v23.0'
@@ -87,7 +89,10 @@ async function publicarFacebook(videoUrl: string, description: string, token: st
 export async function POST(request: NextRequest) {
   const payload = await request.json().catch(() => ({}))
   const { pipeline_id, video_url, caption, confirmar } = payload
-  const plataformas: string[] = payload.plataformas || ['instagram', 'facebook']
+  // Default SEM facebook: teste A/B 12/06 — reels FB via API nesta Página são
+  // sufocados pelo algoritmo (0-2 plays/13h vs 232/40min manual). FB = Business Suite.
+  // Passar plataformas:['facebook'] explícito ainda funciona (para re-teste futuro).
+  const plataformas: string[] = payload.plataformas || ['instagram']
 
   if (!confirmar) {
     return NextResponse.json(
