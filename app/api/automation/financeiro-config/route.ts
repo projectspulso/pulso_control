@@ -12,9 +12,13 @@ export async function GET() {
     .in('chave', ['orcamento_travas', 'higgsfield_saldo'])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const map = new Map((data || []).map((c: { chave: string; valor: string }) => [c.chave, c.valor]))
+  const map = new Map<string, string>(
+    (data || []).map((c: { chave: string; valor: string }) => [c.chave, c.valor] as [string, string])
+  )
+  const travasRaw = map.get('orcamento_travas')
+  const saldoRaw = map.get('higgsfield_saldo')
   return NextResponse.json({
-    travas: map.has('orcamento_travas') ? JSON.parse(map.get('orcamento_travas')!) : null,
-    saldoHiggsfield: map.has('higgsfield_saldo') ? JSON.parse(map.get('higgsfield_saldo')!) : null,
+    travas: travasRaw ? JSON.parse(travasRaw) : null,
+    saldoHiggsfield: saldoRaw ? JSON.parse(saldoRaw) : null,
   })
 }
