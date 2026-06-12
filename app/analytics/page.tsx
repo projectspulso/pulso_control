@@ -14,6 +14,8 @@ import {
   Wallet,
 } from 'lucide-react'
 
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+
 import { ErrorState } from '@/components/ui/error-state'
 import { ASSINATURAS_MENSAIS_BRL, CUSTO_POR_VIDEO } from '@/lib/config/custos'
 import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
@@ -43,8 +45,11 @@ function brl(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+const PUBS_POR_PAGINA = 15
+
 export default function AnalyticsPage() {
   const [filtros, setFiltros] = useState<BiFiltros>({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 })
+  const [paginaPubs, setPaginaPubs] = useState(1)
   const { data, isLoading, isError, refetch } = useBi(filtros)
 
   const resumo = useMemo(() => {
@@ -129,8 +134,6 @@ export default function AnalyticsPage() {
     )
   }
 
-  const maxDia = Math.max(1, ...data.serieDiaria.map((d) => d.views))
-
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="mx-auto max-w-7xl space-y-8">
@@ -144,7 +147,7 @@ export default function AnalyticsPage() {
           <Filter className="h-4 w-4 text-violet-400" />
           <select
             value={filtros.plataforma}
-            onChange={(e) => setFiltros((f) => ({ ...f, plataforma: e.target.value }))}
+            onChange={(e) => { setFiltros((f) => ({ ...f, plataforma: e.target.value })); setPaginaPubs(1) }}
             className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
           >
             {PLATAFORMAS.map((p) => (
@@ -155,7 +158,7 @@ export default function AnalyticsPage() {
           </select>
           <select
             value={filtros.canalId}
-            onChange={(e) => setFiltros((f) => ({ ...f, canalId: e.target.value }))}
+            onChange={(e) => { setFiltros((f) => ({ ...f, canalId: e.target.value })); setPaginaPubs(1) }}
             className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
           >
             <option value="todos">Todas as verticais</option>
@@ -167,7 +170,7 @@ export default function AnalyticsPage() {
           </select>
           <select
             value={filtros.periodoDias}
-            onChange={(e) => setFiltros((f) => ({ ...f, periodoDias: Number(e.target.value) }))}
+            onChange={(e) => { setFiltros((f) => ({ ...f, periodoDias: Number(e.target.value) })); setPaginaPubs(1) }}
             className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
           >
             {PERIODOS.map((p) => (
@@ -252,17 +255,43 @@ export default function AnalyticsPage() {
               Ainda sem histórico no recorte — a curva nasce com as coletas diárias do cron (8h BRT).
             </p>
           ) : (
-            <div className="mt-4 flex h-40 items-end gap-2">
-              {data.serieDiaria.map((d) => (
-                <div key={d.data} className="flex flex-1 flex-col items-center gap-1">
-                  <span className="text-xs text-zinc-400">{n(d.views)}</span>
-                  <div
-                    className="w-full rounded-t-lg bg-linear-to-t from-violet-700 to-violet-500"
-                    style={{ height: `${Math.max(4, (d.views / maxDia) * 100)}%` }}
+            <div className="mt-4 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data.serieDiaria} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradViews" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.5} />
+                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.05} />
+                    </linearGradient>
+                    <linearGradient id="gradLikes" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ec4899" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="#ec4899" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis
+                    dataKey="data"
+                    tickFormatter={(v: string) => v.slice(5).split('-').reverse().join('/')}
+                    tick={{ fill: '#71717a', fontSize: 11 }}
+                    axisLine={{ stroke: '#3f3f46' }}
+                    tickLine={false}
                   />
-                  <span className="text-[10px] text-zinc-600">{d.data.slice(5)}</span>
-                </div>
-              ))}
+                  <YAxis
+                    tickFormatter={(v: number) => n(v)}
+                    tick={{ fill: '#71717a', fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={48}
+                  />
+                  <Tooltip
+                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12, color: '#fff' }}
+                    labelFormatter={(v: string) => new Date(v + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    formatter={(value: number, name: string) => [n(value), name === 'views' ? 'Views' : 'Likes']}
+                  />
+                  <Area type="monotone" dataKey="views" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#gradViews)" />
+                  <Area type="monotone" dataKey="likes" stroke="#ec4899" strokeWidth={2} fill="url(#gradLikes)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           )}
         </div>
@@ -345,7 +374,10 @@ export default function AnalyticsPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.publicacoes.map((p) => (
+                {data.publicacoes
+                  .slice((Math.min(paginaPubs, Math.ceil(data.publicacoes.length / PUBS_POR_PAGINA) || 1) - 1) * PUBS_POR_PAGINA,
+                    Math.min(paginaPubs, Math.ceil(data.publicacoes.length / PUBS_POR_PAGINA) || 1) * PUBS_POR_PAGINA)
+                  .map((p) => (
                   <tr key={p.id} className="border-b border-zinc-800/30 hover:bg-zinc-900/40">
                     <td className="max-w-xs truncate px-6 py-3 text-zinc-200" title={p.ideiaTitulo}>
                       {p.url ? (
@@ -377,6 +409,31 @@ export default function AnalyticsPage() {
               </tbody>
             </table>
           </div>
+          {data.publicacoes.length > PUBS_POR_PAGINA && (
+            <div className="flex items-center justify-between border-t border-zinc-800/50 px-6 py-3">
+              <span className="text-xs text-zinc-500">
+                {data.publicacoes.length} publicações · página{' '}
+                {Math.min(paginaPubs, Math.ceil(data.publicacoes.length / PUBS_POR_PAGINA))} de{' '}
+                {Math.ceil(data.publicacoes.length / PUBS_POR_PAGINA)}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPaginaPubs((p) => Math.max(1, p - 1))}
+                  disabled={paginaPubs <= 1}
+                  className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-40"
+                >
+                  ← Anterior
+                </button>
+                <button
+                  onClick={() => setPaginaPubs((p) => Math.min(Math.ceil(data.publicacoes.length / PUBS_POR_PAGINA), p + 1))}
+                  disabled={paginaPubs >= Math.ceil(data.publicacoes.length / PUBS_POR_PAGINA)}
+                  className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-40"
+                >
+                  Próxima →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
