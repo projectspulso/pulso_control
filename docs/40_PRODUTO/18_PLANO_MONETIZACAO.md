@@ -31,9 +31,9 @@
 
 A preparação fiscal/cadastral pode ser feita já, para não perder semanas quando o 1º gate abrir:
 
-- [ ] **Definir o CNPJ receptor** (DIGIAI ou empresa do grupo). Verificar com contador se o CNAE
-      cobre receita de plataformas digitais — usuais: 5911-1/99 (produção audiovisual),
-      6319-4/00 (portais de conteúdo), 7319-0/99 (publicidade). *Precisa de validação manual.*
+- [x] **CNPJ receptor definido** (12/06/2026): CNPJ aberto e funcionando, incluído no DIGIAI.
+      Conferir com contador apenas a cobertura de CNAE para receita de plataformas (usuais:
+      5911-1/99 audiovisual, 6319-4/00 portais, 7319-0/99 publicidade).
 - [ ] **Google AdSense PJ**: criar conta AdSense no CNPJ (nome/endereço fiscal) e deixar pronta —
       é pré-requisito do YPP e leva dias para verificar. Vincular ao canal quando o gate abrir.
 - [ ] **Meta**: Página já está em portfólio business (Projetos Pulso ✓). Preencher
