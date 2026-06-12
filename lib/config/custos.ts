@@ -15,9 +15,9 @@ export const CUSTO_POR_VIDEO = {
   // realidade do lote 3 (receita antiga: 7 cenas + retries, tudo Seedance 2.0 via CLI)
   higgsfieldCreditos: 342,
   higgsfieldBRL: 92.3, // 342 cr × R$ 0,27
-  elevenlabsBRL: 1.2, // ~1.3k chars/vídeo
-  openaiBRL: 0.4, // ideias + roteiro (GPT-4o)
-  totalBRL: 93.9,
+  elevenlabsBRL: 1.28, // ~1.3k chars/vídeo (Creator: US$22/121k créditos — real 12/06)
+  openaiBRL: 0.18, // ideias + roteiro (real 12/06: US$0,49/mês p/ 15 vídeos, org pulso control)
+  totalBRL: 93.8,
   // meta da receita enxuta (≤5 cenas novas + ≥1 clip do banco + modelo barato/unlimited via site):
   metaCreditos: 100,
   metaBRL: 28.6,
@@ -25,6 +25,6 @@ export const CUSTO_POR_VIDEO = {
 
 export const ASSINATURAS_MENSAIS_BRL = {
   higgsfield: 265.0, // plano Plus ~US$49/mês (inclui 1.000 cr/mês + modelos unlimited VIA SITE)
-  elevenlabs: 0, // preencher com o plano real
-  openai: 0, // pay-as-you-go
+  elevenlabs: 119.0, // Creator US$22/mês · 131k créditos/mês · renova dia 5
+  openai: 0, // pay-as-you-go (~R$ 3/mês; budget nativo US$120/mês na org pulso control)
 } as const
