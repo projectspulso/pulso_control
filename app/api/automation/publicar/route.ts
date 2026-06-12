@@ -100,8 +100,9 @@ export async function POST(request: NextRequest) {
   }
 
   const token = process.env.INSTAGRAM_ACCESS_TOKEN
-  const igUserId = process.env.META_IG_USER_ID
-  const pageId = process.env.META_PAGE_ID
+  // IDs públicos da Página/IG do PULSO como fallback (portfólio Projetos Pulso)
+  const igUserId = process.env.META_IG_USER_ID || '17841478757082171'
+  const pageId = process.env.META_PAGE_ID || '926237593895365'
   if (!token || !igUserId || !pageId) {
     return NextResponse.json(
       { error: 'Credenciais Meta ausentes (INSTAGRAM_ACCESS_TOKEN / META_IG_USER_ID / META_PAGE_ID)' },
