@@ -21,6 +21,7 @@ import { ErrorState } from '@/components/ui/error-state'
 import { ASSINATURAS_MENSAIS_BRL, CUSTO_POR_VIDEO } from '@/lib/config/custos'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
 import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
+import { useFinanceiro } from '@/lib/hooks/use-financeiro'
 
 interface StatusContas {
   contas: Record<string, { seguidores: number | null; detalhe?: string }>
@@ -66,6 +67,7 @@ export default function AnalyticsPage() {
   const [paginaPubs, setPaginaPubs] = useState(1)
   const { data, isLoading, isError, refetch } = useBi(filtros)
   const { data: statusContas } = useStatusContas()
+  const { data: fin } = useFinanceiro()
 
   const resumo = useMemo(() => {
     if (!data) return null
@@ -73,7 +75,13 @@ export default function AnalyticsPage() {
     const likes = data.publicacoes.reduce((a, p) => a + p.likes, 0)
     const comentarios = data.publicacoes.reduce((a, p) => a + p.comentarios, 0)
     const shares = data.publicacoes.reduce((a, p) => a + p.shares + p.saves, 0)
-    const custoProducao = data.videosProduzidos * CUSTO_POR_VIDEO.totalBRL
+    // custo REAL vindo do ledger (mesma fonte do /financeiro), respeitando o período do filtro
+    const limite = filtros.periodoDias > 0 ? Date.now() - filtros.periodoDias * 864e5 : 0
+    const lancProducao = (fin?.lancamentos || []).filter(
+      (l) => l.servico !== 'topup' && l.servico !== 'assinatura' && (!limite || new Date(l.data).getTime() >= limite)
+    )
+    const custoProducao = lancProducao.reduce((a, l) => a + l.brl, 0)
+    const custoPorVideo = data.videosProduzidos > 0 ? custoProducao / data.videosProduzidos : 0
     const assinaturas = Object.values<number>({ ...ASSINATURAS_MENSAIS_BRL }).reduce((a, b) => a + b, 0)
     return {
       views,
@@ -82,11 +90,12 @@ export default function AnalyticsPage() {
       shares,
       ressonancia: views > 0 ? (likes / views) * 100 : 0,
       custoProducao,
+      custoPorVideo,
       assinaturas,
       custoPorView: views > 0 ? custoProducao / views : 0,
       receita: 0, // gate de monetização (CNPJ/AdSense) ainda não aberto — ver CONFIG_REDES §3.3
     }
-  }, [data])
+  }, [data, fin, filtros.periodoDias])
 
   const rankingVertical = useMemo(() => {
     if (!data) return []
@@ -389,9 +398,13 @@ export default function AnalyticsPage() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-zinc-400">
-                  Custo médio por vídeo (Higgsfield {CUSTO_POR_VIDEO.higgsfieldCreditos}cr + ElevenLabs + GPT)
+                  Custo médio por vídeo no recorte (ledger real ÷ vídeos produzidos)
                 </dt>
-                <dd className="font-semibold text-white">{brl(CUSTO_POR_VIDEO.totalBRL)}</dd>
+                <dd className="font-semibold text-white">{brl(resumo.custoPorVideo)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-zinc-500">Meta da receita enxuta (≤5 cenas + banco de clips)</dt>
+                <dd className="font-semibold text-zinc-400">{brl(CUSTO_POR_VIDEO.metaBRL)}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-zinc-400">Assinaturas mensais (configurar em lib/config/custos.ts)</dt>
