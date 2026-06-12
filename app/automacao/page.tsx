@@ -88,7 +88,7 @@ const tipoColors: Record<AutomationTipo, string> = {
 // Main Page
 
 export default function AutomacaoPage() {
-  const { data: queue, isLoading: queueLoading, isError: queueError, refetch: refetchQueue } = useAutomationQueue({ limit: 50 })
+  const { data: queue, isLoading: queueLoading, isError: queueError, refetch: refetchQueue } = useAutomationQueue({ limit: 300 })
   const { data: stats, isLoading: statsLoading, isError: statsError } = useAutomationStats()
   const cancelar = useCancelarAutomation()
   const retry = useRetryAutomation()
@@ -96,6 +96,8 @@ export default function AutomacaoPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [filtroStatus, setFiltroStatus] = useState<string>('TODOS')
   const [filtroTipo, setFiltroTipo] = useState<string>('TODOS')
+  const [pagina, setPagina] = useState(1)
+  const POR_PAGINA = 15
 
   // Aggregate stats across all types
   const totais = stats?.reduce(
@@ -155,6 +157,10 @@ export default function AutomacaoPage() {
     const matchTipo = filtroTipo === 'TODOS' || item.tipo === filtroTipo
     return matchStatus && matchTipo
   })
+
+  const totalPaginas = Math.max(1, Math.ceil((queueFiltrada?.length || 0) / POR_PAGINA))
+  const paginaAtual = Math.min(pagina, totalPaginas)
+  const queuePagina = queueFiltrada?.slice((paginaAtual - 1) * POR_PAGINA, paginaAtual * POR_PAGINA)
 
   // Loading state
   if (queueLoading && statsLoading) {
@@ -283,7 +289,7 @@ export default function AutomacaoPage() {
               <label className="block text-sm text-zinc-400 mb-2">Status</label>
               <select
                 value={filtroStatus}
-                onChange={(e) => setFiltroStatus(e.target.value)}
+                onChange={(e) => { setFiltroStatus(e.target.value); setPagina(1) }}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
               >
                 <option value="TODOS">Todos os status</option>
@@ -299,7 +305,7 @@ export default function AutomacaoPage() {
               <label className="block text-sm text-zinc-400 mb-2">Tipo</label>
               <select
                 value={filtroTipo}
-                onChange={(e) => setFiltroTipo(e.target.value)}
+                onChange={(e) => { setFiltroTipo(e.target.value); setPagina(1) }}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
               >
                 <option value="TODOS">Todos os tipos</option>
@@ -335,14 +341,14 @@ export default function AutomacaoPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
-                {!queueFiltrada || queueFiltrada.length === 0 ? (
+                {!queuePagina || queuePagina.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center text-zinc-500">
                       Nenhum item na fila
                     </td>
                   </tr>
                 ) : (
-                  queueFiltrada.map((item) => {
+                  queuePagina.map((item) => {
                     const sc = statusConfig[item.status]
                     const StatusIcon = sc.icon
 
@@ -423,6 +429,29 @@ export default function AutomacaoPage() {
               </tbody>
             </table>
           </div>
+          {(queueFiltrada?.length || 0) > POR_PAGINA && (
+            <div className="flex items-center justify-between border-t border-zinc-800 px-6 py-3">
+              <span className="text-xs text-zinc-500">
+                {queueFiltrada?.length} itens · página {paginaAtual} de {totalPaginas}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                  disabled={paginaAtual <= 1}
+                  className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-40"
+                >
+                  ← Anterior
+                </button>
+                <button
+                  onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                  disabled={paginaAtual >= totalPaginas}
+                  className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-40"
+                >
+                  Próxima →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Per-type Stats */}
