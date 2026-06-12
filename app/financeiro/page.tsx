@@ -82,7 +82,7 @@ export default function FinanceiroPage() {
               <PiggyBank className="h-4 w-4" /> Gasto no mês
             </p>
             <p className="mt-3 text-3xl font-bold text-white">{brl(data.gastoMesBRL)}</p>
-            <p className="mt-1 text-sm text-zinc-500">teto {brl(tetoMes)}</p>
+            <p className="mt-1 text-sm text-zinc-500">teto {brl(tetoMes)} · caixa (top-ups): {brl(data.caixaMesBRL)}</p>
           </div>
           <div className="glass rounded-2xl border border-zinc-800/50 p-6">
             <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">

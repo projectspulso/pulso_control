@@ -29,6 +29,7 @@ export interface FinanceiroData {
   gastoHojeBRL: number
   gastoHojeCreditos: number
   gastoMesBRL: number
+  caixaMesBRL: number
   gastoPorServico: { servico: string; brl: number }[]
 }
 
@@ -67,14 +68,19 @@ export function useFinanceiro() {
 
       const hoje = new Date().toISOString().slice(0, 10)
       const mes = hoje.slice(0, 7)
-      const gastoHojeBRL = lancamentos.filter((l) => l.data === hoje).reduce((a, l) => a + l.brl, 0)
-      const gastoHojeCreditos = lancamentos
+      // topup é movimento de CAIXA (compra de créditos); produção é o consumo — não somar os dois
+      const producao = lancamentos.filter((l) => l.servico !== 'topup')
+      const gastoHojeBRL = producao.filter((l) => l.data === hoje).reduce((a, l) => a + l.brl, 0)
+      const gastoHojeCreditos = producao
         .filter((l) => l.data === hoje && l.servico === 'higgsfield')
         .reduce((a, l) => a + (l.creditos || 0), 0)
-      const gastoMesBRL = lancamentos.filter((l) => l.data.startsWith(mes)).reduce((a, l) => a + l.brl, 0)
+      const gastoMesBRL = producao.filter((l) => l.data.startsWith(mes)).reduce((a, l) => a + l.brl, 0)
+      const caixaMesBRL = lancamentos
+        .filter((l) => l.servico === 'topup' && l.data.startsWith(mes))
+        .reduce((a, l) => a + l.brl, 0)
 
       const porServico = new Map<string, number>()
-      for (const l of lancamentos) {
+      for (const l of producao) {
         if (!l.data.startsWith(mes)) continue
         porServico.set(l.servico, (porServico.get(l.servico) || 0) + l.brl)
       }
@@ -87,6 +93,7 @@ export function useFinanceiro() {
         gastoHojeBRL,
         gastoHojeCreditos,
         gastoMesBRL,
+        caixaMesBRL,
         gastoPorServico: [...porServico.entries()]
           .map(([servico, brl]) => ({ servico, brl }))
           .sort((a, b) => b.brl - a.brl),
