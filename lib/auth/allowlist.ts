@@ -2,6 +2,7 @@
 // papel: 'admin' vê tudo (incl. /financeiro) · 'operador' vê tudo MENOS financeiro.
 // Para liberar o cowork: adicione o e-mail dele aqui com papel 'operador'.
 export const ALLOWLIST: Record<string, { papel: 'admin' | 'operador'; nome: string }> = {
+  'junior@oticastatymello.com.br': { papel: 'admin', nome: 'Junior (super admin)' },
   'oticastatymello@gmail.com': { papel: 'admin', nome: 'Junior (dono)' },
   // 'email-do-cowork@gmail.com': { papel: 'operador', nome: 'Cowork' },
 }
