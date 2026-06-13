@@ -2,7 +2,8 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
 import {
   BarChart3,
   Wallet,
@@ -10,135 +11,174 @@ import {
   FileEdit,
   LayoutDashboard,
   Lightbulb,
+  LogOut,
+  Menu,
   Send,
   Settings,
   Sparkles,
   Target,
+  X,
   Zap,
 } from 'lucide-react'
-import { MODO_FOCO } from '@/lib/config/modo-foco'
+
+import { getSupabaseBrowser } from '@/lib/supabase/browser'
+import { useUsuario } from '@/lib/hooks/use-usuario'
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, badge: null },
-  { name: 'Validacao', href: '/validacao', icon: Target, badge: 'mvp' },
-  { name: 'Ideias', href: '/ideias', icon: Lightbulb, badge: null },
-  { name: 'Roteiros', href: '/roteiros', icon: FileEdit, badge: null },
-  { name: 'Producao', href: '/producao', icon: Clapperboard, badge: null },
-  { name: 'Publicar', href: '/publicar', icon: Send, badge: null },
-  { name: 'Automacao', href: '/automacao', icon: Zap, badge: 'ai' },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null },
-  { name: 'Financeiro', href: '/financeiro', icon: Wallet, badge: null },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, badge: null, soAdmin: false },
+  { name: 'Validacao', href: '/validacao', icon: Target, badge: 'mvp', soAdmin: false },
+  { name: 'Ideias', href: '/ideias', icon: Lightbulb, badge: null, soAdmin: false },
+  { name: 'Roteiros', href: '/roteiros', icon: FileEdit, badge: null, soAdmin: false },
+  { name: 'Producao', href: '/producao', icon: Clapperboard, badge: null, soAdmin: false },
+  { name: 'Publicar', href: '/publicar', icon: Send, badge: null, soAdmin: false },
+  { name: 'Automacao', href: '/automacao', icon: Zap, badge: 'ai', soAdmin: false },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null, soAdmin: false },
+  { name: 'Financeiro', href: '/financeiro', icon: Wallet, badge: null, soAdmin: true },
 ]
 
-export function Sidebar() {
+function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
+  const { papel } = useUsuario()
+  const itens = navigation.filter((i) => !i.soAdmin || papel === 'admin')
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-zinc-950/90 backdrop-blur-xl border-r border-zinc-800/50 relative overflow-hidden">
-      <div className="absolute inset-0 bg-linear-to-b from-purple-600/5 via-transparent to-pink-600/5 pointer-events-none" />
-
-      <div className="relative flex h-20 items-center gap-3 border-b border-zinc-800/50 px-6 backdrop-blur-sm">
-        <div className="relative h-10 w-10 rounded-xl bg-linear-to-br from-purple-500 to-pink-500 p-0.5 animate-pulse-glow">
-          <div className="h-full w-full rounded-[10px] bg-zinc-950 flex items-center justify-center overflow-hidden">
-            <Image
-              src="/pulso/logo.png"
-              alt="PULSO"
-              width={32}
-              height={32}
-              className="object-contain"
-              priority
-            />
-          </div>
-        </div>
-        <div className="flex flex-col">
-          <span className="text-lg font-bold bg-linear-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-            PULSO
-          </span>
-          <span className="text-[10px] text-zinc-500 font-medium tracking-wider uppercase">
-            Control Center
-          </span>
-        </div>
-      </div>
-
-      <nav className="flex-1 space-y-1 px-3 py-6 overflow-y-auto relative z-10">
-        {navigation.map((item, index) => {
-          const isActive = pathname === item.href
-          const Icon = item.icon
-
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`
-                group flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium
-                transition-all duration-300 relative overflow-hidden
-                ${isActive
-                  ? 'bg-linear-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
-                }
-              `}
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              {!isActive && (
-                <div className="absolute inset-0 bg-linear-to-r from-purple-600/0 via-purple-600/5 to-pink-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              )}
-
-              <div className="flex items-center gap-3 relative z-10">
-                <Icon className={`h-5 w-5 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                <span>{item.name}</span>
-              </div>
-
-              {item.badge && (
-                <div className="relative z-10">
-                  {item.badge === 'ai' && (
-                    <div className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-purple-500/20 text-purple-400 rounded-full border border-purple-500/30 uppercase tracking-wider">
-                      <Sparkles className="h-2.5 w-2.5" />
-                      AI
-                    </div>
-                  )}
-                  {item.badge === 'mvp' && (
-                    <span className="px-2 py-0.5 text-[10px] font-bold bg-cyan-500/20 text-cyan-300 rounded-full border border-cyan-500/30 uppercase tracking-wider">
-                      MVP
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full shadow-lg shadow-white/50" />
-              )}
-            </Link>
-          )
-        })}
-      </nav>
-
-      <div className="relative border-t border-zinc-800/50 p-4 backdrop-blur-sm">
-        <Link href="/settings" className="glass glass-hover rounded-xl p-3 group flex items-center gap-3">
-          <div className="relative">
-            <div className="h-10 w-10 rounded-xl bg-linear-to-br from-purple-500 via-pink-500 to-yellow-500 p-0.5">
-              <div className="h-full w-full rounded-[11px] bg-zinc-950 flex items-center justify-center overflow-hidden">
-                <Image
-                  src="/pulso/mascote.png"
-                  alt="PULSO Mascote"
-                  width={36}
-                  height={36}
-                  className="object-cover"
-                />
-              </div>
+    <>
+      {itens.map((item) => {
+        const isActive = pathname === item.href
+        const Icon = item.icon
+        return (
+          <Link
+            key={item.name}
+            href={item.href}
+            onClick={onNavigate}
+            className={`group relative flex items-center justify-between gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ${
+              isActive
+                ? 'bg-linear-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20'
+                : 'text-zinc-400 hover:bg-zinc-900/50 hover:text-white'
+            }`}
+          >
+            <div className="relative z-10 flex items-center gap-3">
+              <Icon className={`h-5 w-5 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+              <span>{item.name}</span>
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-zinc-950 shadow-lg shadow-green-500/50" />
+            {item.badge === 'ai' && (
+              <div className="relative z-10 flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-400">
+                <Sparkles className="h-2.5 w-2.5" /> AI
+              </div>
+            )}
+            {item.badge === 'mvp' && (
+              <span className="relative z-10 rounded-full border border-cyan-500/30 bg-cyan-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-300">
+                MVP
+              </span>
+            )}
+          </Link>
+        )
+      })}
+    </>
+  )
+}
+
+function Rodape() {
+  const router = useRouter()
+  const { email, papel } = useUsuario()
+  const [saindo, setSaindo] = useState(false)
+
+  async function sair() {
+    setSaindo(true)
+    await getSupabaseBrowser().auth.signOut()
+    router.replace('/login')
+    router.refresh()
+  }
+
+  return (
+    <div className="relative border-t border-zinc-800/50 p-4">
+      <div className="mb-2 flex items-center gap-3 rounded-xl bg-zinc-900/50 p-3">
+        <div className="h-9 w-9 shrink-0 rounded-lg bg-linear-to-br from-purple-500 to-pink-500 p-0.5">
+          <div className="flex h-full w-full items-center justify-center rounded-[7px] bg-zinc-950 text-xs font-bold text-white">
+            {(email || 'P')[0].toUpperCase()}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-white text-sm truncate group-hover:text-purple-400 transition-colors">
-              PULSO multi-canal
-            </p>
-            <p className="text-xs text-zinc-500 truncate">
-              10 verticais · grade pela aderência
-            </p>
-          </div>
-          <Settings className="h-4 w-4 text-zinc-600 group-hover:text-purple-400 group-hover:rotate-90 transition-all duration-300" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-white">{email || 'PULSO'}</p>
+          <p className="text-xs capitalize text-zinc-500">{papel || '—'}</p>
+        </div>
+        <Link href="/settings" className="text-zinc-600 transition-colors hover:text-purple-400">
+          <Settings className="h-4 w-4" />
         </Link>
       </div>
+      <button
+        onClick={sair}
+        disabled={saindo}
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-900/50 px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+      >
+        <LogOut className="h-4 w-4" /> Sair
+      </button>
     </div>
+  )
+}
+
+function Cabecalho() {
+  return (
+    <div className="relative flex h-16 items-center gap-3 border-b border-zinc-800/50 px-6">
+      <div className="h-10 w-10 rounded-xl bg-linear-to-br from-purple-500 to-pink-500 p-0.5">
+        <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-[10px] bg-zinc-950">
+          <Image src="/pulso/logo.png" alt="PULSO" width={32} height={32} className="object-contain" priority />
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <span className="bg-linear-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-lg font-bold text-transparent">
+          PULSO
+        </span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Control Center</span>
+      </div>
+    </div>
+  )
+}
+
+export function Sidebar() {
+  const [aberto, setAberto] = useState(false)
+
+  return (
+    <>
+      {/* Desktop */}
+      <aside className="relative hidden h-screen w-64 flex-col overflow-hidden border-r border-zinc-800/50 bg-zinc-950/90 backdrop-blur-xl md:flex">
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-purple-600/5 via-transparent to-pink-600/5" />
+        <Cabecalho />
+        <nav className="relative z-10 flex-1 space-y-1 overflow-y-auto px-3 py-6">
+          <NavLinks />
+        </nav>
+        <Rodape />
+      </aside>
+
+      {/* Top bar mobile */}
+      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-zinc-800/50 bg-zinc-950/95 px-4 backdrop-blur-xl md:hidden">
+        <div className="flex items-center gap-2">
+          <Image src="/pulso/logo.png" alt="PULSO" width={28} height={28} className="rounded-lg" />
+          <span className="bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text font-bold text-transparent">PULSO</span>
+        </div>
+        <button onClick={() => setAberto(true)} className="rounded-lg p-2 text-zinc-300 hover:bg-zinc-900" aria-label="Menu">
+          <Menu className="h-6 w-6" />
+        </button>
+      </div>
+
+      {/* Drawer mobile */}
+      {aberto && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setAberto(false)} />
+          <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85%] flex-col bg-zinc-950 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-800/50 pr-2">
+              <Cabecalho />
+              <button onClick={() => setAberto(false)} className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-900" aria-label="Fechar">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+              <NavLinks onNavigate={() => setAberto(false)} />
+            </nav>
+            <Rodape />
+          </aside>
+        </div>
+      )}
+    </>
   )
 }

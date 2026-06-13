@@ -1,6 +1,14 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(npm view *)",
+      "Bash(npx --yes skills@latest --help)",
+      "Bash(npx --yes skills@latest add higgsfield-ai/skills -l)",
+      "Bash(npx --yes skills@latest add higgsfield-ai/skills --all)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }
