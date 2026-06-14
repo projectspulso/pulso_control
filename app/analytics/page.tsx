@@ -6,7 +6,10 @@ import {
   BarChart3,
   Eye,
   Filter,
+  Flame,
+  Grid3x3,
   Heart,
+  Lightbulb,
   MessageCircle,
   Share2,
   TrendingUp,
@@ -122,8 +125,59 @@ export default function AnalyticsPage() {
     }
     const total = [...acc.values()].reduce((a, v) => a + v.views, 0) || 1
     return [...acc.entries()]
-      .map(([rede, v]) => ({ rede, ...v, share: (v.views / total) * 100 }))
+      .map(([rede, v]) => ({ rede, ...v, share: (v.views / total) * 100, ressonancia: v.views ? (v.likes / v.views) * 100 : 0 }))
       .sort((a, b) => b.views - a.views)
+  }, [data])
+
+  // 1) Top conteúdos somando TODAS as redes (qual vídeo viralizou)
+  const topConteudos = useMemo(() => {
+    if (!data) return []
+    const acc = new Map<string, { titulo: string; vertical: string; views: number; likes: number; redes: Set<string> }>()
+    for (const p of data.publicacoes) {
+      const key = p.ideia_id || p.ideiaTitulo
+      const v = acc.get(key) || { titulo: p.ideiaTitulo, vertical: p.canalNome.replace(/^PULSO\s*/i, ''), views: 0, likes: 0, redes: new Set<string>() }
+      v.views += p.views
+      v.likes += p.likes
+      v.redes.add(p.plataforma)
+      acc.set(key, v)
+    }
+    return [...acc.values()].sort((a, b) => b.views - a.views)
+  }, [data])
+
+  // 3) Recomendação de produção: views/vídeo por vertical
+  const recomendacao = useMemo(() => {
+    if (!data) return []
+    const acc = new Map<string, { views: number; videos: Set<string> }>()
+    for (const p of data.publicacoes) {
+      const key = p.canalNome.replace(/^PULSO\s*/i, '')
+      const v = acc.get(key) || { views: 0, videos: new Set<string>() }
+      v.views += p.views
+      v.videos.add(p.ideia_id || p.ideiaTitulo)
+      acc.set(key, v)
+    }
+    const linhas = [...acc.entries()]
+      .map(([vertical, v]) => ({ vertical, mediaPorVideo: Math.round(v.views / Math.max(1, v.videos.size)), videos: v.videos.size }))
+      .sort((a, b) => b.mediaPorVideo - a.mediaPorVideo)
+    const max = linhas[0]?.mediaPorVideo || 1
+    return linhas.map((l) => ({
+      ...l,
+      acao: l.mediaPorVideo >= max * 0.6 ? 'produzir' : l.mediaPorVideo >= max * 0.3 ? 'manter' : 'segurar',
+    }))
+  }, [data])
+
+  // 4) Matriz mesmo vídeo × rede
+  const matrizRedes = useMemo(() => {
+    if (!data) return { redes: [] as string[], linhas: [] as { titulo: string; total: number; porRede: Record<string, number> }[] }
+    const redes = [...new Set(data.publicacoes.map((p) => p.plataforma))].sort()
+    const acc = new Map<string, { titulo: string; total: number; porRede: Record<string, number> }>()
+    for (const p of data.publicacoes) {
+      const key = p.ideia_id || p.ideiaTitulo
+      const v = acc.get(key) || { titulo: p.ideiaTitulo, total: 0, porRede: {} }
+      v.porRede[p.plataforma] = (v.porRede[p.plataforma] || 0) + p.views
+      v.total += p.views
+      acc.set(key, v)
+    }
+    return { redes, linhas: [...acc.values()].sort((a, b) => b.total - a.total) }
   }, [data])
 
   if (isLoading) {
@@ -282,28 +336,137 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Share por rede */}
+        {/* Share + ressonância por rede */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
-          <h2 className="text-lg font-semibold text-white">Onde os views estão nascendo</h2>
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold text-white">Onde os views nascem · onde a galera engaja</h2>
+            <span className="text-xs text-zinc-500">barra = % do alcance · ressonância = likes/views</span>
+          </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {porRede.map((r) => (
-              <div key={r.rede} className="rounded-xl bg-zinc-900/60 p-4">
-                <div className="flex items-baseline justify-between">
-                  <p className="text-sm font-semibold capitalize text-zinc-300">{r.rede}</p>
-                  <p className="text-xs text-zinc-500">{r.posts} posts</p>
+            {porRede.map((r) => {
+              const melhorEngajamento = Math.max(...porRede.map((x) => x.ressonancia))
+              const ehTopEngaja = r.ressonancia === melhorEngajamento && r.ressonancia > 0
+              return (
+                <div key={r.rede} className={`rounded-xl p-4 ${ehTopEngaja ? 'bg-emerald-500/10 ring-1 ring-emerald-500/30' : 'bg-zinc-900/60'}`}>
+                  <div className="flex items-baseline justify-between">
+                    <p className="text-sm font-semibold capitalize text-zinc-300">{r.rede}</p>
+                    <p className="text-xs text-zinc-500">{r.posts} posts</p>
+                  </div>
+                  <p className="mt-2 text-2xl font-black tabular-nums text-white">{n(r.views)}</p>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-800">
+                    <div
+                      className="h-full rounded-full bg-linear-to-r from-violet-600 to-pink-500"
+                      style={{ width: `${Math.max(2, r.share)}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 flex items-center justify-between text-xs">
+                    <span className="text-zinc-500">{r.share.toFixed(1)}% alcance</span>
+                    <span className={ehTopEngaja ? 'font-bold text-emerald-400' : 'text-zinc-400'}>
+                      {ehTopEngaja && '🔥 '}
+                      {r.ressonancia.toFixed(1)}% engaja
+                    </span>
+                  </p>
                 </div>
-                <p className="mt-2 text-2xl font-black tabular-nums text-white">{n(r.views)}</p>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-800">
-                  <div
-                    className="h-full rounded-full bg-linear-to-r from-violet-600 to-pink-500"
-                    style={{ width: `${Math.max(2, r.share)}%` }}
-                  />
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 1) Top conteúdos (soma das redes) */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex items-center gap-2">
+            <Flame className="h-5 w-5 text-orange-400" />
+            <h2 className="text-lg font-semibold text-white">Top conteúdos — soma de todas as redes</h2>
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">Qual vídeo viralizou no total. Replique a fórmula dos campeões.</p>
+          <div className="mt-4 space-y-2">
+            {topConteudos.slice(0, 8).map((c, i) => {
+              const max = topConteudos[0]?.views || 1
+              return (
+                <div key={c.titulo + i} className="flex items-center gap-3">
+                  <span className="w-5 text-right font-mono text-sm text-zinc-500">{i + 1}º</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-zinc-200">{c.titulo}</p>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                      <div
+                        className={`h-full rounded-full ${i === 0 ? 'bg-linear-to-r from-orange-500 to-amber-400' : 'bg-violet-600/70'}`}
+                        style={{ width: `${Math.max(3, (c.views / max) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="w-14 shrink-0 text-xs text-zinc-500">{c.vertical}</span>
+                  <span className="w-12 shrink-0 text-center text-xs text-zinc-600">{c.redes.size} redes</span>
+                  <span className="w-16 shrink-0 text-right text-sm font-bold text-white">{n(c.views)}</span>
                 </div>
-                <p className="mt-1 text-xs text-zinc-500">
-                  {r.share.toFixed(1)}% do alcance · {n(r.likes)} likes
-                </p>
-              </div>
-            ))}
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 3) Recomendação de produção por vertical */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-yellow-400" />
+            <h2 className="text-lg font-semibold text-white">Recomendação de produção</h2>
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">Baseado em views por vídeo. O guia do próximo lote.</p>
+          <div className="mt-4 grid gap-2 md:grid-cols-3">
+            {(['produzir', 'manter', 'segurar'] as const).map((acao) => {
+              const itens = recomendacao.filter((r) => r.acao === acao)
+              const cfg = {
+                produzir: { label: '🚀 Produzir mais', cor: 'border-emerald-500/30 bg-emerald-500/5', txt: 'text-emerald-400' },
+                manter: { label: '➡️ Manter', cor: 'border-zinc-700/60 bg-zinc-900/40', txt: 'text-zinc-300' },
+                segurar: { label: '🛑 Segurar', cor: 'border-red-500/30 bg-red-500/5', txt: 'text-red-300' },
+              }[acao]
+              return (
+                <div key={acao} className={`rounded-xl border ${cfg.cor} p-3`}>
+                  <p className={`text-sm font-bold ${cfg.txt}`}>{cfg.label}</p>
+                  <div className="mt-2 space-y-1.5">
+                    {itens.map((r) => (
+                      <div key={r.vertical} className="flex items-baseline justify-between text-sm">
+                        <span className="truncate text-zinc-200">{r.vertical}</span>
+                        <span className="ml-2 shrink-0 text-xs text-zinc-500">{n(r.mediaPorVideo)}/v</span>
+                      </div>
+                    ))}
+                    {itens.length === 0 && <p className="text-xs text-zinc-600">—</p>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 4) Mesmo vídeo entre redes */}
+        <div className="glass overflow-hidden rounded-2xl border border-zinc-800/50">
+          <div className="flex items-center gap-2 p-6 pb-4">
+            <Grid3x3 className="h-5 w-5 text-cyan-400" />
+            <h2 className="text-lg font-semibold text-white">Mesmo vídeo entre redes</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800/50 text-left text-xs uppercase tracking-wider text-zinc-500">
+                  <th className="px-6 py-3">Vídeo</th>
+                  {matrizRedes.redes.map((r) => (
+                    <th key={r} className="px-3 py-3 text-right capitalize">{r}</th>
+                  ))}
+                  <th className="px-6 py-3 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {matrizRedes.linhas.slice(0, 12).map((l, i) => (
+                  <tr key={l.titulo + i} className="border-b border-zinc-800/30 hover:bg-zinc-900/40">
+                    <td className="max-w-xs truncate px-6 py-3 text-zinc-200" title={l.titulo}>{l.titulo}</td>
+                    {matrizRedes.redes.map((r) => (
+                      <td key={r} className="px-3 py-3 text-right tabular-nums text-zinc-400">
+                        {l.porRede[r] ? n(l.porRede[r]) : <span className="text-zinc-700">—</span>}
+                      </td>
+                    ))}
+                    <td className="px-6 py-3 text-right font-bold text-white">{n(l.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
