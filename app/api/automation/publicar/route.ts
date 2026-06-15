@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 /**
@@ -87,6 +88,8 @@ async function publicarFacebook(videoUrl: string, description: string, token: st
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await guardApi(request)
+  if (denied) return denied
   const payload = await request.json().catch(() => ({}))
   const { pipeline_id, video_url, caption, confirmar } = payload
   // Default SEM facebook: teste A/B 12/06 — reels FB via API nesta Página são

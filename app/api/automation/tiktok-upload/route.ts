@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 /**
@@ -8,6 +9,8 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
  * Payload: { video_url: string, confirmar: true }
  */
 export async function POST(request: NextRequest) {
+  const denied = await guardApi(request)
+  if (denied) return denied
   const { video_url, confirmar } = await request.json().catch(() => ({}))
   if (!confirmar) return NextResponse.json({ error: 'Envie confirmar: true (R-011)' }, { status: 400 })
   if (!video_url) return NextResponse.json({ error: 'video_url é obrigatório' }, { status: 400 })

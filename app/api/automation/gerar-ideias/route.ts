@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarIdeias } from '@/lib/automation/prompts'
@@ -13,10 +14,8 @@ import { buildPromptGerarIdeias } from '@/lib/automation/prompts'
  * o próximo canal na rotação.
  */
 export async function POST(request: NextRequest) {
-  const secret = request.headers.get('x-webhook-secret')
-  if (secret && secret !== process.env.WEBHOOK_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await guardApi(request)
+  if (denied) return denied
 
   const payload = await request.json()
   const quantidade = payload.quantidade || 5

@@ -16,6 +16,15 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
   no **cron diário** (10:50 UTC / 7:50 BRT, 10 min antes da coleta) — auto-sincroniza
   sem clique.
 
+### Adicionado
+- **Guard das rotas de API (`lib/auth/api-guard.ts`)** (14/06): as rotas de automação
+  (coletar-metricas, reconciliar, publicar, orchestrator, gerar-ideias/roteiro/audio,
+  relatorio, tiktok-upload) eram abertas (o middleware não cobre `/api`). Agora exigem
+  **sessão válida na allowlist** (UI logada) OU `Authorization: Bearer CRON_SECRET`
+  (Vercel Cron) OU `x-webhook-secret` (chamadas internas/externas). **Requer setar
+  `WEBHOOK_SECRET` (não-vazio) e `CRON_SECRET` na Vercel** — sem isso o cron e a cadeia
+  orchestrator→gerar-* quebram.
+
 ### Mudado
 - **Custos do molde atual (Seedance → Veo + mascote R$0)** (14/06): `lib/config/custos.ts`
   agora reflete o molde bolha — mascote lip-sync R$0 (sem Higgsfield) + B-roll Veo 3.1

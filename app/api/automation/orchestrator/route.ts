@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 /**
@@ -10,10 +11,8 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
  * chama o worker correspondente, e atualiza o resultado.
  */
 export async function POST(request: NextRequest) {
-  const secret = request.headers.get('x-webhook-secret')
-  if (secret && secret !== process.env.WEBHOOK_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await guardApi(request)
+  if (denied) return denied
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { guardApi } from '@/lib/auth/api-guard'
 
 /**
  * POST|GET /api/automation/coletar-metricas
@@ -22,10 +23,8 @@ interface LinhaPublicacao {
 }
 
 async function coletar(request: NextRequest) {
-  const secret = request.headers.get('x-webhook-secret')
-  if (process.env.WEBHOOK_SECRET && secret && secret !== process.env.WEBHOOK_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await guardApi(request)
+  if (denied) return denied
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
