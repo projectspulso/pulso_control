@@ -144,6 +144,25 @@ export async function POST(request: NextRequest) {
 
   for (const plataforma of plataformas) {
     try {
+      // IDEMPOTÊNCIA: se já existe publicação dessa plataforma pra esta ideia,
+      // NÃO republica (blinda contra double-fire do botão / retry / chamada dupla).
+      const { data: jaPublicado } = await supabase
+        .schema('pulso_content')
+        .from('metricas_publicacao')
+        .select('post_id, url_publicacao')
+        .eq('ideia_id', item.ideia_id)
+        .eq('plataforma', plataforma)
+        .limit(1)
+      if (jaPublicado && jaPublicado.length > 0) {
+        resultados.push({
+          plataforma,
+          status: 'JA_PUBLICADO',
+          url: jaPublicado[0].url_publicacao,
+          post_id: jaPublicado[0].post_id,
+        })
+        continue
+      }
+
       let res: { post_id: string; url: string }
       if (plataforma === 'instagram') {
         res = await publicarInstagram(video_url, legenda, token, igUserId)

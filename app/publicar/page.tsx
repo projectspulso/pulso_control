@@ -176,6 +176,7 @@ export default function PublicarPage() {
   }
 
   const confirmarPublicacaoAssistida = async () => {
+    if (publicando) return // trava re-entrada: impede double-fire do botão (duplicou 9x reels no IG 15/06)
     if (selecionados.size === 0) {
       setFeedback({
         tone: 'error',
@@ -644,10 +645,10 @@ export default function PublicarPage() {
                 <button
                   type="button"
                   onClick={confirmarPublicacaoAssistida}
-                  disabled={publicarAgora.isPending}
+                  disabled={publicando}
                   className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {publicarAgora.isPending ? 'Enviando...' : 'Confirmar envio'}
+                  {publicando ? 'Enviando...' : 'Confirmar envio'}
                 </button>
               </div>
             </div>
