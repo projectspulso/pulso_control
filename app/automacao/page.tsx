@@ -151,6 +151,34 @@ export default function AutomacaoPage() {
     }
   }
 
+  // Sincroniza publicações: descobre vídeos postados fora do app e auto-cadastra (âncora IG)
+  async function handleReconciliar() {
+    setActionLoading('RECONCILIAR')
+    try {
+      const res = await fetch('/api/automation/reconciliar-publicacoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Erro ${res.status}`)
+      const ins = data.inseridos ?? 0
+      const rev = data.revisar?.length ?? 0
+      toast.success(
+        ins > 0
+          ? `${ins} publicacao(oes) sincronizada(s)${rev ? ` - ${rev} pra revisar` : ''}`
+          : rev > 0
+            ? `Nenhuma nova - ${rev} pra revisar manual`
+            : 'Tudo ja sincronizado'
+      )
+      refetchQueue()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro desconhecido')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   // Filter queue items
   const queueFiltrada = queue?.filter(item => {
     const matchStatus = filtroStatus === 'TODOS' || item.status === filtroStatus
@@ -250,7 +278,7 @@ export default function AutomacaoPage() {
         {/* Quick Actions */}
         <div className="glass rounded-2xl p-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
           <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">Acoes Rapidas</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <QuickActionButton
               label="Gerar Ideias"
               icon={Lightbulb}
@@ -278,6 +306,13 @@ export default function AutomacaoPage() {
               color="from-teal-600 to-emerald-600"
               loading={actionLoading === 'RELATORIO_SEMANAL'}
               onClick={() => handleQuickAction('RELATORIO_SEMANAL')}
+            />
+            <QuickActionButton
+              label="Sincronizar Redes"
+              icon={RefreshCw}
+              color="from-fuchsia-600 to-pink-600"
+              loading={actionLoading === 'RECONCILIAR'}
+              onClick={handleReconciliar}
             />
           </div>
         </div>

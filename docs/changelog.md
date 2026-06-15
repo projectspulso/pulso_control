@@ -5,9 +5,19 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 ## [Não lançado]
 
 ### Adicionado
--
+- **Endpoint `/api/automation/reconciliar-publicacoes` + botão "Sincronizar Redes"**
+  (14/06): descobre vídeos postados FORA do app (FB manual, TikTok no celular, YT
+  Studio) que não estavam em `metricas_publicacao` e os auto-cadastra. A coleta de
+  métricas é só-update (nunca descobre vídeo novo), o que fazia o app subcontar — IG
+  ficava 15/15 (publica via API) mas FB/TikTok ficavam incompletos. Matching por
+  **âncora Instagram**: casa a legenda do órfão contra as legendas IG (que já têm
+  ideia_id) por Jaccard; só cadastra alta confiança (best≥0.30 e best−second≥0.15),
+  o resto vai pra "revisar" (nunca chuta). Insert-only e idempotente.
 
 ### Mudado
+- **`coletar-metricas` carimba `ultima_atualizacao`** (14/06): a coleta atualizava
+  views/likes mas não a data, fazendo o painel mostrar coleta velha (parecia rede
+  "não puxada" com dado correto). Agora carimba a cada coleta.
 - **Facebook fora da publicação via API** (12/06): teste A/B provou que reels FB
   publicados via Graph API na Página Pulso Projects são sufocados pelo algoritmo
   (4 reels API = 0-2 plays em 13h; mesmo vídeo repostado manual no Business Suite
