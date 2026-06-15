@@ -3,6 +3,7 @@ import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarIdeias } from '@/lib/automation/prompts'
+import { filtrarDuplicatas } from '@/lib/automation/dedup'
 
 /**
  * POST /api/automation/gerar-ideias
@@ -106,6 +107,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // TRAVA ANTI-DUPLICIDADE: barra ideias semelhantes a existentes (qualquer
+    // canal/status) e dedup intra-lote. Mary Celeste etc. nunca mais entram 2x.
+    const { data: existentesIdeias } = await supabase
+      .schema('pulso_content')
+      .from('ideias')
+      .select('titulo, descricao')
+    const { aceitas, ignoradas } = filtrarDuplicatas(
+      ideias as Array<{ titulo: string; descricao?: string | null }>,
+      existentesIdeias || []
+    )
+    ideias = aceitas
+
+    if (ideias.length === 0) {
+      return NextResponse.json({
+        success: true,
+        canal: canal.nome,
+        quantidade_gerada: 0,
+        ideias: [],
+        ignoradas_duplicidade: ignoradas,
+        aviso: 'Todas as ideias geradas já existiam (trava anti-duplicidade).',
+        tokens: usage,
+      })
+    }
+
     // Salvar ideias no banco
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ideiasParaSalvar = (ideias as any[]).map(
@@ -159,6 +184,7 @@ export async function POST(request: NextRequest) {
       canal: canal.nome,
       quantidade_gerada: saved?.length || 0,
       ideias: saved,
+      ignoradas_duplicidade: ignoradas,
       tokens: usage,
     })
   } catch (err) {
