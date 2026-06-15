@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     // Determinar voz baseado no canal
-    let voz = 'Daniel (ElevenLabs — voz oficial PULSO)'
+    let voz = 'PULSO (Voice Design)'
     if (vozConfig?.valor && roteiro.canal_id) {
       const { data: canal } = await supabase
         .from('vw_pulso_canais')
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         const vozes = typeof vozConfig.valor === 'string'
           ? JSON.parse(vozConfig.valor)
           : vozConfig.valor
-        voz = 'Daniel (ElevenLabs — voz oficial PULSO)'
+        voz = 'PULSO (Voice Design)'
       }
     }
 
@@ -171,7 +171,8 @@ export async function POST(request: NextRequest) {
           caracteres_total: textoLimpo.length,
           gerado_em: new Date().toISOString(),
           provider: 'elevenlabs',
-          voz: 'Daniel (oficial PULSO)',
+          voz: 'PULSO (Voice Design)',
+          voice_id: 'GmzLAnPHSUkxG3P5yfca',
           modelo: 'eleven_multilingual_v2',
         },
       })

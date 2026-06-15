@@ -60,8 +60,8 @@ export async function callOpenAI(
 
 
 /**
- * ElevenLabs TTS — voz oficial do PULSO (Daniel, harness §6).
- * A "receita E" (graves/compressão ffmpeg) é aplicada na montagem local.
+ * ElevenLabs TTS — voz oficial do PULSO (Voice Design, criada do zero 14/06/2026).
+ * voice_id GmzLAnPHSUkxG3P5yfca. A "receita E" (graves/compressão ffmpeg) é aplicada na montagem local.
  */
 export async function callElevenLabsTTS(
   text: string,
@@ -70,7 +70,7 @@ export async function callElevenLabsTTS(
   const apiKey = process.env.ELEVENLABS_API_KEY
   if (!apiKey) throw new Error('ELEVENLABS_API_KEY não configurada — voz oficial PULSO indisponível')
 
-  const voiceId = options?.voiceId || 'onwK4e9ZLuTAKqWW03F9' // Daniel
+  const voiceId = options?.voiceId || 'GmzLAnPHSUkxG3P5yfca' // PULSO (Voice Design 14/06)
   const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'xi-api-key': apiKey },
@@ -79,7 +79,7 @@ export async function callElevenLabsTTS(
       model_id: options?.modelId || 'eleven_multilingual_v2',
       // TRAVAS pt-BR (12/06): stability alta reduz deriva de sotaque; previous_text ancora
       // o modelo no português BRASILEIRO sem ser falado no áudio.
-      voice_settings: { stability: 0.7, similarity_boost: 0.8, style: 0 },
+      voice_settings: { stability: 0.45, similarity_boost: 0.8, style: 0.35 },
       previous_text:
         'Fala, pessoal! Aqui é o PULSO, direto do Brasil. A gente vai contar uma história incrível pra vocês agora.',
     }),

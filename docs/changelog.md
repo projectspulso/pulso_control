@@ -26,6 +26,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
   orchestrator→gerar-* quebram.
 
 ### Mudado
+- **Voz da geração de áudio = PULSO (Voice Design)** (15/06): `callElevenLabsTTS`
+  (`lib/automation/ai-clients.ts`) e a rota `gerar-audio` agora usam a voz oficial nova
+  do PULSO (`GmzLAnPHSUkxG3P5yfca`, criada do zero 14/06) no lugar da Daniel
+  (`onwK4e9ZLuTAKqWW03F9`). Settings da voz: stability 0.45 / similarity 0.8 / style 0.35.
+  Todo áudio gerado pelo app (Automações/Produção) passa a ter a cara nova do PULSO.
 - **Custos do molde atual (Seedance → Veo + mascote R$0)** (14/06): `lib/config/custos.ts`
   agora reflete o molde bolha — mascote lip-sync R$0 (sem Higgsfield) + B-roll Veo 3.1
   Lite (3 cenas × 12cr) = **R$ 11,18/vídeo** (era R$ 93,80 Seedance). `CUSTO_POR_CENA`:
