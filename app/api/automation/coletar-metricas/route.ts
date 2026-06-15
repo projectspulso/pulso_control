@@ -198,7 +198,7 @@ async function coletar(request: NextRequest) {
 
       // janelas: marca views_24h/7d/30d conforme idade da publicação
       const horas = (agora.getTime() - new Date(pub.data_publicacao).getTime()) / 36e5
-      const update: Record<string, unknown> = { ...metricas }
+      const update: Record<string, unknown> = { ...metricas, ultima_atualizacao: agora.toISOString() }
       if (horas <= 30) update.views_24h = metricas.views
       if (horas <= 7 * 24 + 6) update.views_7dias = metricas.views
       if (horas <= 30 * 24 + 6) update.views_30dias = metricas.views
