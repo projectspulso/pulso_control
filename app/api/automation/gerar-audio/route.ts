@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   if (denied) return denied
 
   const payload = await request.json()
-  const { roteiro_id } = payload
+  const { roteiro_id, force } = payload
 
   if (!roteiro_id) {
     return NextResponse.json({ error: 'roteiro_id é obrigatório' }, { status: 400 })
@@ -47,15 +47,20 @@ export async function POST(request: NextRequest) {
     const { data: existingAudio } = await supabase
       .schema('pulso_content')
       .from('audios')
-      .select('id')
+      .select('id, storage_path')
       .eq('roteiro_id', roteiro_id)
-      .limit(1)
 
     if (existingAudio?.length > 0) {
-      return NextResponse.json({
-        error: 'Áudio já existe para este roteiro',
-        audio_id: existingAudio[0].id,
-      }, { status: 409 })
+      if (!force) {
+        return NextResponse.json({
+          error: 'Áudio já existe para este roteiro (use force: true para regerar)',
+          audio_id: existingAudio[0].id,
+        }, { status: 409 })
+      }
+      // force: apaga storage + registros antigos antes de regerar
+      const paths = existingAudio.map((a: { storage_path?: string }) => a.storage_path).filter(Boolean)
+      if (paths.length) await supabase.storage.from('pulso-assets').remove(paths)
+      await supabase.schema('pulso_content').from('audios').delete().eq('roteiro_id', roteiro_id)
     }
 
     // Buscar config de voz
