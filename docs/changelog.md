@@ -17,6 +17,14 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
   sem clique.
 
 ### Mudado
+- **Custos do molde atual (Seedance → Veo + mascote R$0)** (14/06): `lib/config/custos.ts`
+  agora reflete o molde bolha — mascote lip-sync R$0 (sem Higgsfield) + B-roll Veo 3.1
+  Lite (3 cenas × 12cr) = **R$ 11,18/vídeo** (era R$ 93,80 Seedance). `CUSTO_POR_CENA`:
+  Veo 12cr (padrão), Kling 30cr (hero 4K), Seedance 45cr (legado). /financeiro e
+  /analytics mostram o custo novo + referência histórica. Custo real continua vindo do
+  ledger (dinâmico). Esteira da automação atualizada ("Mascote + B-roll Veo").
+- **Label "Desempenho por Tipo"**: era "(7 dias)" mas a view `vw_automation_stats` é
+  acumulada (all-time) — corrigido pra "(acumulado)".
 - **`coletar-metricas` carimba `ultima_atualizacao`** (14/06): a coleta atualizava
   views/likes mas não a data, fazendo o painel mostrar coleta velha (parecia rede
   "não puxada" com dado correto). Agora carimba a cada coleta.

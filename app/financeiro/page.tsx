@@ -208,8 +208,9 @@ export default function FinanceiroPage() {
             </p>
           </div>
           <p className="mt-3 text-xs text-zinc-500">
-            Custo real/vídeo (receita antiga): {brl(CUSTO_POR_VIDEO.totalBRL)} · Meta receita enxuta:{' '}
-            {brl(CUSTO_POR_VIDEO.metaBRL)} · Travas editáveis em pulso_core.configuracoes (orcamento_travas).
+            Custo/vídeo molde atual (mascote R$0 + B-roll Veo): {brl(CUSTO_POR_VIDEO.totalBRL)} · Meta enxuta:{' '}
+            {brl(CUSTO_POR_VIDEO.metaBRL)} · Histórico Seedance: {brl(CUSTO_POR_VIDEO.historicoBRL)} · Travas em
+            pulso_core.configuracoes (orcamento_travas).
           </p>
         </div>
 

@@ -566,7 +566,7 @@ export default function AnalyticsPage() {
                 <dd className="font-semibold text-white">{brl(resumo.custoPorVideo)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-zinc-500">Meta da receita enxuta (≤5 cenas + banco de clips)</dt>
+                <dt className="text-zinc-500">Meta enxuta (mascote R$0 + 2 cenas Veo + banco de clips)</dt>
                 <dd className="font-semibold text-zinc-400">{brl(CUSTO_POR_VIDEO.metaBRL)}</dd>
               </div>
               <div className="flex justify-between">

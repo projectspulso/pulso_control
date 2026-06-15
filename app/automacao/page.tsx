@@ -249,7 +249,7 @@ export default function AutomacaoPage() {
               { etapa: '1 · Ideias', quem: 'AI', detalhe: 'GPT gera por canal; você aprova a curadoria', cor: 'border-violet-500/30' },
               { etapa: '2 · Roteiro', quem: 'AI + você', detalhe: 'Harness pt-BR; aprovação humana obrigatória', cor: 'border-indigo-500/30' },
               { etapa: '3 · Áudio', quem: 'AI', detalhe: 'ElevenLabs voz PULSO (travas pt-BR + Receita E)', cor: 'border-cyan-500/30' },
-              { etapa: '4 · Vídeo', quem: 'AI assistida', detalhe: 'Cenas Seedance + montagem (cowork dirige)', cor: 'border-pink-500/30' },
+              { etapa: '4 · Vídeo', quem: 'AI assistida', detalhe: 'Mascote lip-sync (R$0) + B-roll Veo + montagem', cor: 'border-pink-500/30' },
               { etapa: '5 · Publicar', quem: 'misto', detalhe: 'IG: API direto · FB: Business Suite manual · TikTok: draft → celular · YT: Studio', cor: 'border-green-500/30' },
             ].map((e) => (
               <div key={e.etapa} className={`rounded-xl border ${e.cor} bg-zinc-900/50 p-4`}>
@@ -492,7 +492,7 @@ export default function AutomacaoPage() {
         {/* Per-type Stats */}
         {stats && stats.length > 0 && (
           <div className="glass rounded-2xl p-6 animate-fade-in" style={{ animationDelay: '500ms' }}>
-            <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">Desempenho por Tipo (7 dias)</h2>
+            <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">Desempenho por Tipo (acumulado)</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {stats.map((s) => (
                 <div key={s.tipo} className="glass rounded-xl p-4">
