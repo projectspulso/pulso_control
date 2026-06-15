@@ -12,7 +12,9 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
   ficava 15/15 (publica via API) mas FB/TikTok ficavam incompletos. Matching por
   **âncora Instagram**: casa a legenda do órfão contra as legendas IG (que já têm
   ideia_id) por Jaccard; só cadastra alta confiança (best≥0.30 e best−second≥0.15),
-  o resto vai pra "revisar" (nunca chuta). Insert-only e idempotente.
+  o resto vai pra "revisar" (nunca chuta). Insert-only e idempotente. Roda também
+  no **cron diário** (10:50 UTC / 7:50 BRT, 10 min antes da coleta) — auto-sincroniza
+  sem clique.
 
 ### Mudado
 - **`coletar-metricas` carimba `ultima_atualizacao`** (14/06): a coleta atualizava
