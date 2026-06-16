@@ -17,7 +17,7 @@ import {
   Wallet,
 } from 'lucide-react'
 
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useQuery } from '@tanstack/react-query'
 
 import { ErrorState } from '@/components/ui/error-state'
@@ -470,29 +470,66 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Curva diária */}
+        {/* 1) Ganho por dia (barras) — sua ideia: sobe ou cai? */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-green-400" />
             <h2 className="text-lg font-semibold text-white">Views ganhos por dia</h2>
           </div>
-          <p className="mt-1 text-xs text-zinc-500">Quanto de audiência entrou em cada dia (ganho = hoje − ontem) — pra ver se sobe ou cai.</p>
+          <p className="mt-1 text-xs text-zinc-500">Quanta audiência entrou em cada dia (ganho = hoje − ontem) — pra ver se sobe ou cai. Real a partir de 17/06 (2 coletas seguidas).</p>
           {data.serieDiaria.length === 0 ? (
             <p className="mt-4 text-sm text-zinc-500">
-              Ainda sem histórico no recorte — a curva nasce com as coletas diárias do cron (8h BRT).
+              Ainda sem histórico no recorte — nasce com as coletas diárias do cron (8h BRT).
             </p>
           ) : (
             <div className="mt-4 h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.serieDiaria} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                <BarChart data={data.serieDiaria} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                  <XAxis
+                    dataKey="data"
+                    tickFormatter={(v: string) => v.slice(5).split('-').reverse().join('/')}
+                    tick={{ fill: '#71717a', fontSize: 11 }}
+                    axisLine={{ stroke: '#3f3f46' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tickFormatter={(v: number) => n(v)}
+                    tick={{ fill: '#71717a', fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={48}
+                  />
+                  <Tooltip
+                    cursor={{ fill: '#ffffff08' }}
+                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12, color: '#fff' }}
+                    labelFormatter={(v: string) => new Date(v + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    formatter={(value: number, name: string) => [n(value), name === 'views' ? 'Views no dia' : 'Likes no dia']}
+                  />
+                  <Bar dataKey="views" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        {/* 2) Crescimento total (área) — a ideia inicial: acumulado */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-violet-400" />
+            <h2 className="text-lg font-semibold text-white">Crescimento total (acumulado)</h2>
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">O total de views somando tudo, dia a dia — a trajetória completa do canal (só sobe).</p>
+          {data.serieCumulativa.length === 0 ? (
+            <p className="mt-4 text-sm text-zinc-500">Sem histórico ainda.</p>
+          ) : (
+            <div className="mt-4 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data.serieCumulativa} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="gradViews" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.5} />
-                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.05} />
-                    </linearGradient>
-                    <linearGradient id="gradLikes" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#ec4899" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="#ec4899" stopOpacity={0.05} />
+                    <linearGradient id="gradCumul" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#a855f7" stopOpacity={0.55} />
+                      <stop offset="100%" stopColor="#a855f7" stopOpacity={0.04} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
@@ -513,10 +550,9 @@ export default function AnalyticsPage() {
                   <Tooltip
                     contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12, color: '#fff' }}
                     labelFormatter={(v: string) => new Date(v + 'T12:00:00').toLocaleDateString('pt-BR')}
-                    formatter={(value: number, name: string) => [n(value), name === 'views' ? 'Views' : 'Likes']}
+                    formatter={(value: number) => [n(value), 'Views acumulados']}
                   />
-                  <Area type="monotone" dataKey="views" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#gradViews)" />
-                  <Area type="monotone" dataKey="likes" stroke="#ec4899" strokeWidth={2} fill="url(#gradLikes)" />
+                  <Area type="monotone" dataKey="views" stroke="#a855f7" strokeWidth={2.5} fill="url(#gradCumul)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

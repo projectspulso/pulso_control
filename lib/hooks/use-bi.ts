@@ -32,7 +32,8 @@ export interface BiSerieDia {
 
 export interface BiSnapshot {
   publicacoes: BiPublicacao[]
-  serieDiaria: BiSerieDia[]
+  serieDiaria: BiSerieDia[] // ganho por dia (delta hoje−ontem)
+  serieCumulativa: BiSerieDia[] // crescimento total acumulado por dia
   canais: { id: string; nome: string }[]
   videosProduzidos: number
 }
@@ -102,6 +103,9 @@ export function useBi(filtros: BiFiltros) {
       // o porDia acumula o TOTAL de views/likes por dia. Pra "ganhamos ou perdemos
       // audiência?" o que importa é o GANHO no dia = hoje − ontem (delta diário).
       const cumul = [...porDia.values()].sort((a, b) => a.data.localeCompare(b.data))
+      // crescimento total acumulado (a curva que só sobe)
+      const serieCumulativa = cumul.slice(-14)
+      // ganho do dia = hoje − ontem (pra ver se sobe ou cai)
       let prevV = 0
       let prevL = 0
       const serieDiaria = cumul
@@ -119,6 +123,7 @@ export function useBi(filtros: BiFiltros) {
       return {
         publicacoes: publicacoes.sort((a, b) => b.views - a.views),
         serieDiaria,
+        serieCumulativa,
         canais: canaisQ.data || [],
         videosProduzidos,
       }
