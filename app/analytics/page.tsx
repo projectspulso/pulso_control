@@ -259,6 +259,9 @@ export default function AnalyticsPage() {
           </select>
           <span className="ml-auto text-xs text-zinc-500">
             {data.publicacoes.length} publicações · {data.videosProduzidos} vídeos no recorte
+            {data.ultimaColeta && (
+              <> · dados de {new Date(data.ultimaColeta).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</>
+            )}
           </span>
         </div>
 

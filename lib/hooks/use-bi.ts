@@ -36,6 +36,7 @@ export interface BiSnapshot {
   serieCumulativa: BiSerieDia[] // crescimento total acumulado por dia
   canais: { id: string; nome: string }[]
   videosProduzidos: number
+  ultimaColeta: string | null // hora da última coleta (ultima_atualizacao mais recente)
 }
 
 export function useBi(filtros: BiFiltros) {
@@ -120,12 +121,20 @@ export function useBi(filtros: BiFiltros) {
 
       const videosProduzidos = new Set(publicacoes.map((p) => p.ideia_id)).size
 
+      // hora da última coleta = ultima_atualizacao mais recente (mesma fonte dos KPIs)
+      let ultimaColeta: string | null = null
+      for (const m of metricasQ.data || []) {
+        const col = m.ultima_atualizacao
+        if (col && (!ultimaColeta || col > ultimaColeta)) ultimaColeta = col
+      }
+
       return {
         publicacoes: publicacoes.sort((a, b) => b.views - a.views),
         serieDiaria,
         serieCumulativa,
         canais: canaisQ.data || [],
         videosProduzidos,
+        ultimaColeta,
       }
     },
   })

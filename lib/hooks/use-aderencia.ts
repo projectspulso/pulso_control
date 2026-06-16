@@ -14,6 +14,7 @@ export interface PublicacaoMetrica {
   comentarios: number | null
   shares: number | null
   saves: number | null
+  ultima_atualizacao?: string | null
   updated_at?: string | null
 }
 
@@ -93,7 +94,10 @@ export function useAderencia() {
         porPlataforma[m.plataforma].views += m.views || 0
         porPlataforma[m.plataforma].likes += m.likes || 0
 
-        if (m.updated_at && (!ultimaColeta || m.updated_at > ultimaColeta)) ultimaColeta = m.updated_at
+        // ultima_atualizacao = hora real da coleta (o que o coletar-metricas grava).
+        // updated_at muda em qualquer alteração da linha — não é a coleta.
+        const col = m.ultima_atualizacao || m.updated_at
+        if (col && (!ultimaColeta || col > ultimaColeta)) ultimaColeta = col
       }
 
       const videos = [...porVideo.values()]
