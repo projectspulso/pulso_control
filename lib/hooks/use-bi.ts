@@ -64,12 +64,16 @@ export function useBi(filtros: BiFiltros) {
       const limite = filtros.periodoDias > 0 ? Date.now() - filtros.periodoDias * 864e5 : 0
 
       const publicacoes: BiPublicacao[] = []
+      let ultimaColeta: string | null = null
       for (const m of metricasQ.data || []) {
         const ideia = m.ideia_id ? ideias.get(m.ideia_id) : null
         if (!ideia) continue
         if (filtros.plataforma !== 'todas' && m.plataforma !== filtros.plataforma) continue
         if (filtros.canalId !== 'todos' && ideia.canal_id !== filtros.canalId) continue
         if (limite && new Date(m.data_publicacao).getTime() < limite) continue
+        // hora real da coleta (mesma fonte/campo das outras telas → número consistente)
+        const col = m.ultima_atualizacao
+        if (col && (!ultimaColeta || col > ultimaColeta)) ultimaColeta = col
         publicacoes.push({
           id: m.id,
           ideia_id: m.ideia_id,
@@ -120,13 +124,6 @@ export function useBi(filtros: BiFiltros) {
         .slice(-14)
 
       const videosProduzidos = new Set(publicacoes.map((p) => p.ideia_id)).size
-
-      // hora da última coleta = ultima_atualizacao mais recente (mesma fonte dos KPIs)
-      let ultimaColeta: string | null = null
-      for (const m of metricasQ.data || []) {
-        const col = m.ultima_atualizacao
-        if (col && (!ultimaColeta || col > ultimaColeta)) ultimaColeta = col
-      }
 
       return {
         publicacoes: publicacoes.sort((a, b) => b.views - a.views),
