@@ -50,7 +50,9 @@ export function useBi(filtros: BiFiltros) {
           .schema('pulso_analytics')
           .from('metricas_diarias')
           .select('data_ref, views, likes, metadata')
-          .gte('data_ref', '2026-06-10'), // início da operação real (ignora mock antigo)
+          // 16/06 = primeiro dia com foto completa das 65 publicações (todos os vídeos × redes).
+          // Antes disso só ~20 tinham espelho em posts → série parcial gerava salto falso. Corta o bruto/dia aqui.
+          .gte('data_ref', '2026-06-16'),
       ])
       if (metricasQ.error) throw metricasQ.error
       if (ideiasQ.error) throw ideiasQ.error
