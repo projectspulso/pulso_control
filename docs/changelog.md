@@ -4,6 +4,16 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (15-16/06)
+- **2 gráficos no `/analytics`**: "Views ganhos por dia" (barras, delta hoje−ontem — vê se ganha/perde audiência) + "Crescimento total" (área, acumulado). Hook `use-bi` retorna `serieDiaria` + `serieCumulativa`.
+- **Trava anti-duplicidade de ideias** (`lib/automation/dedup.ts`): Jaccard ≥0.45 título+descrição no `gerar-ideias`, dedup intra-lote, retorna `ignoradas` (sem descarte silencioso). Limite conhecido: não pega dup semântica reescrita (norte = embeddings).
+
+### Corrigido (15-16/06)
+- **Número consistente em todas as telas (fonte única + carimbo)**: os KPIs divergiam (24,1k num lugar, 25,4k em outro) por lerem fontes/momentos diferentes. Agora Dashboard, Validação e Analytics leem todos de `metricas_publicacao` (canônica) e mostram a **hora real da coleta** (`ultima_atualizacao`). Validação usava `updated_at` (muda em qualquer alteração da linha) → corrigido. Analytics ganhou o carimbo "dados de HH:MM". Regra: mesma hora = mesmo número por construção.
+- **Double-fire da publicação** (`/publicar`): o botão "Confirmar envio" travava com `publicarAgora.isPending` (nunca true, pois a função usa `fetch` direto) → duplicou **9× o reel do rubber-hand no IG**. Agora trava com estado `publicando` + re-entry guard, e o backend tem **idempotência por (ideia_id, plataforma)** (não republica a mesma rede).
+- **Coleta diária sub-contava** (`metricas_diarias`/gráfico): só 20 de 65 publicações tinham espelho em `pulso_distribution.posts` (FK do snapshot) → gráfico mostrava ~6,7k em vez de ~25k. Criados os 45 espelhos faltantes + histórico reconstruído em degraus pela data real de publicação. Coletas futuras incluem todas sozinhas.
+- **post_id do rubber-hand (IG/TikTok) apontava errado** → app mostrava 0 views. IG: a limpeza dos 9 dups manteve um `post_id` que o humano deletou no IG → reapontado pro reel vivo. TikTok: estava vazio (post manual) → preenchido via `video.list`.
+
 ### Adicionado
 - **Endpoint `/api/automation/reconciliar-publicacoes` + botão "Sincronizar Redes"**
   (14/06): descobre vídeos postados FORA do app (FB manual, TikTok no celular, YT
