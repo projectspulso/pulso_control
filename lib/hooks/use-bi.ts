@@ -99,7 +99,20 @@ export function useBi(filtros: BiFiltros) {
         acc.likes += d.likes || 0
         porDia.set(d.data_ref, acc)
       }
-      const serieDiaria = [...porDia.values()].sort((a, b) => a.data.localeCompare(b.data)).slice(-14)
+      // o porDia acumula o TOTAL de views/likes por dia. Pra "ganhamos ou perdemos
+      // audiência?" o que importa é o GANHO no dia = hoje − ontem (delta diário).
+      const cumul = [...porDia.values()].sort((a, b) => a.data.localeCompare(b.data))
+      let prevV = 0
+      let prevL = 0
+      const serieDiaria = cumul
+        .map((d) => {
+          const ganhoViews = Math.max(0, d.views - prevV) // max(0) evita negativo se um vídeo sumir
+          const ganhoLikes = Math.max(0, d.likes - prevL)
+          prevV = d.views
+          prevL = d.likes
+          return { data: d.data, views: ganhoViews, likes: ganhoLikes }
+        })
+        .slice(-14)
 
       const videosProduzidos = new Set(publicacoes.map((p) => p.ideia_id)).size
 

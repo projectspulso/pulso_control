@@ -474,8 +474,9 @@ export default function AnalyticsPage() {
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-green-400" />
-            <h2 className="text-lg font-semibold text-white">Views por dia (coleta diária)</h2>
+            <h2 className="text-lg font-semibold text-white">Views ganhos por dia</h2>
           </div>
+          <p className="mt-1 text-xs text-zinc-500">Quanto de audiência entrou em cada dia (ganho = hoje − ontem) — pra ver se sobe ou cai.</p>
           {data.serieDiaria.length === 0 ? (
             <p className="mt-4 text-sm text-zinc-500">
               Ainda sem histórico no recorte — a curva nasce com as coletas diárias do cron (8h BRT).
