@@ -85,3 +85,61 @@ export function filtrarDuplicatas<T extends DedupItem>(
 
   return { aceitas, ignoradas }
 }
+
+/**
+ * 2ª camada — duplicidade SEMÂNTICA via LLM. O Jaccard (acima) é lexical: pega
+ * "navio fantasma" vs "Mary Celeste" mas PERDE quando o mesmo tema é descrito com
+ * palavras totalmente diferentes ("seu cérebro acha que uma mão falsa é sua" ==
+ * "Efeito Rubber Hand"; "menino que sobreviveu a 2 desastres" == "mulher que
+ * sobreviveu a 2 desastres"). Aqui o próprio modelo julga se o ASSUNTO CENTRAL
+ * é o mesmo. Injetamos o `callLLM` pra não acoplar este módulo ao cliente de IA.
+ * Resiliente: se a IA falhar/!JSON, devolve tudo como aceito (não trava a geração).
+ */
+export async function filtrarDuplicatasSemantica<T extends DedupItem>(
+  candidatas: T[],
+  existentes: DedupItem[],
+  callLLM: (prompt: string) => Promise<string>
+): Promise<{ aceitas: T[]; ignoradas: DuplicataMatch[] }> {
+  const titulos = existentes.map((e) => e.titulo).filter(Boolean)
+  if (candidatas.length === 0 || titulos.length === 0) {
+    return { aceitas: candidatas, ignoradas: [] }
+  }
+
+  const prompt = [
+    'Você é curador de um canal de vídeos curtos de curiosidades/mistérios.',
+    'Tarefa: para cada IDEIA CANDIDATA, decidir se ela é, NO FUNDO, o MESMO tema/história/fenômeno de alguma IDEIA EXISTENTE — mesmo que escrita com palavras diferentes.',
+    'É duplicata (mesmo assunto central):',
+    '- "Seu cérebro acha que uma mão falsa é sua" ≡ "Efeito Rubber Hand"',
+    '- "O menino que sobreviveu a 2 desastres aéreos" ≡ "A mulher que sobreviveu a 2 desastres aéreos"',
+    '- "Voo 19: aviões somem no Triângulo" ≡ "5 aviões da Marinha desaparecem nas Bermudas em 1945"',
+    'NÃO é duplicata quando o fenômeno central é diferente (ex.: técnica Pomodoro vs aprender durante o sono são distintas).',
+    '',
+    'IDEIAS EXISTENTES:',
+    ...titulos.map((t, i) => `E${i + 1}. ${t}`),
+    '',
+    'IDEIAS CANDIDATAS:',
+    ...candidatas.map((c, i) => `C${i + 1}. ${c.titulo} — ${(c.descricao || '').slice(0, 140)}`),
+    '',
+    'Responda APENAS JSON: {"duplicatas":[{"candidata":<n de C>,"igual_a":"<titulo existente>","motivo":"<curto>"}]}.',
+    'Inclua só candidatas que são claramente o mesmo assunto central de alguma existente. Na dúvida, NÃO marque.',
+  ].join('\n')
+
+  let parsed: { duplicatas?: Array<{ candidata?: number; igual_a?: string }> }
+  try {
+    parsed = JSON.parse(await callLLM(prompt))
+  } catch {
+    return { aceitas: candidatas, ignoradas: [] }
+  }
+
+  const dup = new Map<number, string>()
+  for (const d of parsed.duplicatas || []) {
+    if (typeof d.candidata === 'number') dup.set(d.candidata - 1, d.igual_a || '(existente)')
+  }
+  const aceitas: T[] = []
+  const ignoradas: DuplicataMatch[] = []
+  candidatas.forEach((c, i) => {
+    if (dup.has(i)) ignoradas.push({ titulo: c.titulo, similar_a: dup.get(i)!, score: 1 })
+    else aceitas.push(c)
+  })
+  return { aceitas, ignoradas }
+}

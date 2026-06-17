@@ -32,7 +32,7 @@ Isso permite **isolar 2 efeitos** quando os 3 bolha tiverem dados:
 Engajamento 3.0% vs 3.8% (menor, mas n=1). Inconclusivo até os 3 bolha maturarem.
 
 ## Plano da semana
-1. **16-17/06:** publicar Pollock (#17) e Chuva (#18) → cohort bolha vira n=3.
+1. ✅ **17/06:** Pollock (#17) e Chuva (#18) publicados nas 4 redes → cohort bolha = n=3. **Os 3 da bolha já saem com o CTA do mascote** (regra PULSO-CTA) — o experimento agora carrega também o efeito "CTA animado", não só molde+voz. Muito novos (horas) pra comparar; ler 23/06 por `views_24h`.
 2. **Diário:** o cron coleta `views_24h`/`views_7dias` por vídeo (já automático).
 3. **23/06 (terça):** ler `views_24h` médio bolha vs antigo + isolar avatar vs voz.
 

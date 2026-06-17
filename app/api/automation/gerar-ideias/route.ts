@@ -3,7 +3,7 @@ import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarIdeias } from '@/lib/automation/prompts'
-import { filtrarDuplicatas } from '@/lib/automation/dedup'
+import { filtrarDuplicatas, filtrarDuplicatasSemantica } from '@/lib/automation/dedup'
 
 /**
  * POST /api/automation/gerar-ideias
@@ -117,7 +117,15 @@ export async function POST(request: NextRequest) {
       ideias as Array<{ titulo: string; descricao?: string | null }>,
       existentesIdeias || []
     )
-    ideias = aceitas
+    // 2ª camada: duplicidade SEMÂNTICA via LLM — pega o que o Jaccard lexical perde
+    // (ex.: "cérebro acha que mão falsa é sua" == "Efeito Rubber Hand"). Resiliente.
+    const semantica = await filtrarDuplicatasSemantica(
+      aceitas,
+      existentesIdeias || [],
+      (p) => callOpenAI(p, { json_mode: true, temperature: 0, max_tokens: 1200 }).then((r) => r.content)
+    )
+    ideias = semantica.aceitas
+    const ignoradasTotal = [...ignoradas, ...semantica.ignoradas]
 
     if (ideias.length === 0) {
       return NextResponse.json({
@@ -125,8 +133,8 @@ export async function POST(request: NextRequest) {
         canal: canal.nome,
         quantidade_gerada: 0,
         ideias: [],
-        ignoradas_duplicidade: ignoradas,
-        aviso: 'Todas as ideias geradas já existiam (trava anti-duplicidade).',
+        ignoradas_duplicidade: ignoradasTotal,
+        aviso: 'Todas as ideias geradas já existiam (trava anti-duplicidade lexical + semântica).',
         tokens: usage,
       })
     }
@@ -184,7 +192,7 @@ export async function POST(request: NextRequest) {
       canal: canal.nome,
       quantidade_gerada: saved?.length || 0,
       ideias: saved,
-      ignoradas_duplicidade: ignoradas,
+      ignoradas_duplicidade: ignoradasTotal,
       tokens: usage,
     })
   } catch (err) {

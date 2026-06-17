@@ -9,7 +9,7 @@
 ## Por etapa
 
 ### Ideias / Roteiros / Áudios (auto no app)
-1. **Trava de duplicidade semântica (embeddings)** — Jaccard lexical não pega "mesmo tema, palavras diferentes" (furou 3× com o Efeito Mandela em 15/06).
+1. ~~**Trava de duplicidade semântica**~~ ✅ **FEITO (17/06)** via LLM-judge (não embeddings): 2ª camada em `dedup.ts`/`gerar-ideias` julga se o assunto central é o mesmo de alguma ideia existente. Norte futuro ainda é embeddings+pgvector (mais barato que chamada LLM por lote), mas o LLM-judge já fecha o buraco do Jaccard lexical.
 2. **Monitor + trava de cota ElevenLabs** — estourou sem aviso em 15/06. Alerta antes de zerar + fallback/cache.
 3. **Alignment no pipeline** — gerar timestamps junto do áudio sempre (Whisper local ou ElevenLabs `/with-timestamps`), salvo no storage → lip-sync + legendas prontos.
 4. **Auto-curadoria de ideias** — usar `potencial_viral_ia` p/ auto-aprovar acima de threshold (31 rascunhos parados em 15/06).

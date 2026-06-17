@@ -4,6 +4,14 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (17/06)
+- **Trava anti-duplicidade 2ª camada — semântica via LLM** (`dedup.ts` `filtrarDuplicatasSemantica` + `gerar-ideias`): o Jaccard lexical perdia dups com palavras diferentes ("seu cérebro acha que uma mão falsa é sua" == "Efeito Rubber Hand"; "menino" vs "mulher que sobreviveu a 2 desastres"; "Voo 19" == "5 aviões nas Bermudas 1945"). Agora, após o pré-filtro lexical, o LLM (gpt-4o, temp 0, JSON) julga se o **assunto central** é o mesmo de alguma ideia existente. Resiliente: se a IA falhar, não trava a geração. Limpamos 5 dups que já tinham passado pela trava antiga.
+- **Regra PULSO-CTA embutida no molde (`make_video.py`)**: no trecho final em que a narração já diz "Segue o pulso…" (detectado por `rfind("segue")` no alignment), a bolha do canto some e entra o **mascote grande animado** (8 quadros transparentes de `cta_frames/`, extraídos de `pulso/avatar/1.png`), gesticulando (aponta/apresenta/joinha/pisca) + lip-sync na **própria narração original**. Texto "SEGUE O PULSO" + botão. **Sem áudio novo, sem tempo extra** — não depende da cota ElevenLabs. Um mascote por vez. Tentativa anterior (anexar CTA com voz própria) descartada por duplicar o CTA que já existe na narração.
+
+### Publicado (17/06)
+- **#17 Pollock + #18 Chuva de Sapos** (cohort bolha, com CTA) nas **4 redes**: Instagram (API), YouTube Shorts (assistido), TikTok (API → rascunho → publicado no app), Facebook (assistido, página Pulso Projects). 8 publicações registradas em `metricas_publicacao` (4 redes × 2 vídeos). Confirmado: contas pulsoprojects / @pulsohistorias / Pulso Projects (não Óticas).
+- ⚠️ **Estoque zerou** após estes 2 — `PRONTO_PUBLICACAO` = 0. Próximo gargalo: montar a fila (13 áudios prontos em `AUDIO_GERADO`).
+
 ### Adicionado (15-16/06)
 - **2 gráficos no `/analytics`**: "Views ganhos por dia" (barras, delta hoje−ontem — vê se ganha/perde audiência) + "Crescimento total" (área, acumulado). Hook `use-bi` retorna `serieDiaria` + `serieCumulativa`.
 - **Trava anti-duplicidade de ideias** (`lib/automation/dedup.ts`): Jaccard ≥0.45 título+descrição no `gerar-ideias`, dedup intra-lote, retorna `ignoradas` (sem descarte silencioso). Limite conhecido: não pega dup semântica reescrita (norte = embeddings).
