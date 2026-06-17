@@ -3,18 +3,13 @@
  * Automacao via banco, fila e API routes do app.
  */
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-let browserClient: SupabaseClient | null = null
+// Reusa o cliente anônimo compartilhado (lib/supabase/client.ts) — só DB, sem sessão.
+// Antes criava um GoTrueClient default (persistSession/auto-refresh) próprio na mesma
+// chave de sessão, colidindo com o de browser.ts (causa do 400 fantasma no kanban).
+import { supabase } from '@/lib/supabase/client'
 
 function getClient() {
-  if (!browserClient) {
-    browserClient = createClient(supabaseUrl, supabaseAnonKey)
-  }
-
-  return browserClient
+  return supabase
 }
 
 export type AutomationTipo =
