@@ -47,6 +47,11 @@ function CardConteudo({ conteudo }: CardProps) {
     >
       <div className="absolute inset-0 bg-linear-to-br from-violet-600/0 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
       <h4 className="text-sm font-medium text-white mb-2 line-clamp-2 relative z-10">
+        {conteudo.metadata?.numero != null && (
+          <span className="inline-block bg-violet-600/30 text-violet-300 border border-violet-500/40 rounded px-1.5 py-0.5 text-[10px] font-bold mr-1.5 align-middle">
+            #{String(conteudo.metadata.numero).padStart(3, '0')}
+          </span>
+        )}
         {conteudo.ideia || 'Sem título'}
       </h4>
       

@@ -168,7 +168,7 @@ export default function RoteirosPage() {
                   </div>
 
                   <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-violet-400 transition-colors line-clamp-2">
-                    {roteiro.titulo || 'Sem título'}
+                    {roteiro.metadata?.numero != null ? `#${String(roteiro.metadata.numero).padStart(3, '0')} — ` : ''}{roteiro.titulo || 'Sem título'}
                   </h3>
 
                   <p className="text-sm text-zinc-400 mb-4 line-clamp-3">

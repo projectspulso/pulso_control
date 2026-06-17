@@ -193,7 +193,7 @@ export default function IdeiasPage() {
                         className="hover:bg-zinc-800/50 transition-colors"
                       >
                         <td className="px-6 py-4">
-                          <div className="text-white font-medium">{ideia.titulo}</div>
+                          <div className="text-white font-medium">{ideia.metadata?.numero != null ? `#${String(ideia.metadata.numero).padStart(3, '0')} — ` : ''}{ideia.titulo}</div>
                           <div className="text-sm text-zinc-500 line-clamp-1">
                             {ideia.descricao}
                           </div>
