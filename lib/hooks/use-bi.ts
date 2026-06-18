@@ -91,8 +91,12 @@ export function useBi(filtros: BiFiltros) {
         })
       }
 
-      // série diária respeitando filtros (metadata tem plataforma + ideia_id)
-      const porDia = new Map<string, BiSerieDia>()
+      // ── séries: snapshot CUMULATIVO por post (ideia_id+plataforma) com CARRY-FORWARD ──
+      // metricas_diarias guarda, por linha, o total de views de UM post naquele dia. A cobertura
+      // é incompleta (nem todo post tem linha todo dia), então somar cru gera serrote e subconta.
+      // Carry-forward: cada post mantém seu último valor conhecido até aparecer snapshot novo.
+      const porPost = new Map<string, Map<string, { views: number; likes: number }>>()
+      const diasSet = new Set<string>()
       for (const d of diariasQ.data || []) {
         const meta = (d.metadata || {}) as { plataforma?: string; ideia_id?: string }
         if (filtros.plataforma !== 'todas' && meta.plataforma !== filtros.plataforma) continue
@@ -100,22 +104,50 @@ export function useBi(filtros: BiFiltros) {
           const ideia = meta.ideia_id ? ideias.get(meta.ideia_id) : null
           if (!ideia || ideia.canal_id !== filtros.canalId) continue
         }
-        const acc = porDia.get(d.data_ref) || { data: d.data_ref, views: 0, likes: 0 }
-        acc.views += d.views || 0
-        acc.likes += d.likes || 0
-        porDia.set(d.data_ref, acc)
+        const key = `${meta.ideia_id}|${meta.plataforma}`
+        if (!porPost.has(key)) porPost.set(key, new Map())
+        porPost.get(key)!.set(d.data_ref, { views: d.views || 0, likes: d.likes || 0 })
+        diasSet.add(d.data_ref)
       }
-      // o porDia acumula o TOTAL de views/likes por dia. Pra "ganhamos ou perdemos
-      // audiência?" o que importa é o GANHO no dia = hoje − ontem (delta diário).
-      const cumul = [...porDia.values()].sort((a, b) => a.data.localeCompare(b.data))
-      // crescimento total acumulado (a curva que só sobe)
+      const diasOrd = [...diasSet].sort()
+      const cumul: BiSerieDia[] = []
+      const ultimo = new Map<string, { views: number; likes: number }>()
+      for (const dia of diasOrd) {
+        for (const [key, serie] of porPost) {
+          const v = serie.get(dia)
+          if (v) ultimo.set(key, v) // só atualiza quem tem snapshot novo nesse dia
+        }
+        let views = 0
+        let likes = 0
+        for (const v of ultimo.values()) {
+          views += v.views
+          likes += v.likes
+        }
+        cumul.push({ data: dia, views, likes })
+      }
+      // acumulado NÃO pode cair (snapshot ruidoso às vezes vem menor) — força monotônico
+      for (let i = 1; i < cumul.length; i++) {
+        if (cumul[i].views < cumul[i - 1].views) cumul[i] = { ...cumul[i], views: cumul[i - 1].views }
+        if (cumul[i].likes < cumul[i - 1].likes) cumul[i] = { ...cumul[i], likes: cumul[i - 1].likes }
+      }
+      // ÂNCORA: o total de HOJE = fonte de verdade (metricas_publicacao, mesma do resumo do topo),
+      // pra a curva FECHAR com o número grande (a coleta diária pode estar incompleta/atrasada).
+      const totalRealV = publicacoes.reduce((a, p) => a + p.views, 0)
+      const totalRealL = publicacoes.reduce((a, p) => a + p.likes, 0)
+      if (cumul.length) {
+        cumul[cumul.length - 1] = { data: cumul[cumul.length - 1].data, views: totalRealV, likes: totalRealL }
+      } else {
+        cumul.push({ data: new Date().toISOString().slice(0, 10), views: totalRealV, likes: totalRealL })
+      }
+
+      // crescimento total acumulado (curva monotônica que fecha no total real)
       const serieCumulativa = cumul.slice(-14)
-      // ganho do dia = hoje − ontem (pra ver se sobe ou cai)
+      // ganho do dia = hoje − ontem (delta da curva acumulada)
       let prevV = 0
       let prevL = 0
       const serieDiaria = cumul
         .map((d) => {
-          const ganhoViews = Math.max(0, d.views - prevV) // max(0) evita negativo se um vídeo sumir
+          const ganhoViews = Math.max(0, d.views - prevV) // max(0) evita negativo se um post sumir
           const ganhoLikes = Math.max(0, d.likes - prevL)
           prevV = d.views
           prevL = d.likes
