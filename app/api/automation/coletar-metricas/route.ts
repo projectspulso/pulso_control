@@ -57,6 +57,43 @@ async function coletar(request: NextRequest) {
   if (!process.env.YOUTUBE_API_KEY) avisos.push('YOUTUBE_API_KEY ausente — YouTube ignorado')
   if (!process.env.INSTAGRAM_ACCESS_TOKEN) avisos.push('INSTAGRAM_ACCESS_TOKEN ausente — Instagram ignorado')
 
+  // RECONCILIAÇÃO FB: reels publicados manualmente entram com post_id placeholder (não-numérico),
+  // então o coletor não acha as views (0 no app apesar de ter views no Meta). Buscamos os reels reais
+  // da Página e casamos por palavra-chave da ideia (só match único = seguro) → corrige o post_id.
+  try {
+    const fbBad = publicacoes.filter((p) => p.plataforma === 'facebook' && !/^\d+$/.test(p.post_id || ''))
+    const fbToken = process.env.META_PAGE_ACCESS_TOKEN || process.env.INSTAGRAM_ACCESS_TOKEN
+    const fbPageId = process.env.META_PAGE_ID
+    if (fbBad.length > 0 && fbToken && fbPageId) {
+      const ideiaIds = [...new Set(fbBad.map((p) => p.ideia_id).filter(Boolean))]
+      const { data: ideiasFb } = await supabase
+        .schema('pulso_content').from('ideias').select('id, titulo').in('id', ideiaIds)
+      const tituloPorIdeia = new Map(
+        ((ideiasFb || []) as Array<{ id: string; titulo: string }>).map((i) => [i.id, i.titulo])
+      )
+      const reelsResp = await fetch(
+        `https://graph.facebook.com/v23.0/${fbPageId}/video_reels?fields=id,description&limit=30&access_token=${fbToken}`
+      ).then((x) => x.json())
+      const reels = (reelsResp.data || []) as Array<{ id: string; description?: string }>
+      const usados = new Set<string>()
+      for (const p of fbBad) {
+        const titulo = (tituloPorIdeia.get(p.ideia_id) || '').toLowerCase()
+        const tokens = titulo.split(/[^a-zà-ú0-9]+/i).filter((t) => t.length >= 5)
+        const cands = reels.filter((re) => !usados.has(re.id) && tokens.some((t) => (re.description || '').toLowerCase().includes(t)))
+        if (cands.length === 1) {
+          usados.add(cands[0].id)
+          await supabase.schema('pulso_content').from('metricas_publicacao')
+            .update({ post_id: cands[0].id, url_publicacao: `https://www.facebook.com/reel/${cands[0].id}` })
+            .eq('id', p.id)
+          p.post_id = cands[0].id
+          avisos.push(`FB reconciliado: ${(p.ideia_id || '').slice(0, 8)} -> reel ${cands[0].id}`)
+        }
+      }
+    }
+  } catch (e) {
+    avisos.push(`Reconciliação FB: ${e instanceof Error ? e.message : 'erro'}`)
+  }
+
   // YouTube em lote (1 chamada para todos os vídeos)
   const ytStats = new Map<string, { views: number; likes: number; comentarios: number }>()
   const ytIds = publicacoes.filter((p) => p.plataforma === 'youtube' && p.post_id).map((p) => p.post_id as string)
