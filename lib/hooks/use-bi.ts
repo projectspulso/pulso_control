@@ -50,9 +50,9 @@ export function useBi(filtros: BiFiltros) {
         supabase.schema('pulso_core').from('canais').select('id, nome').order('nome'),
         supabase
           .schema('pulso_analytics')
-          .from('metricas_diarias')
-          .select('data_ref, views, likes, metadata')
-          .gte('data_ref', '2026-06-10'), // início da operação real (ignora mock antigo)
+          .from('leituras_metricas')
+          .select('ideia_id, plataforma, data_ref, views, likes')
+          .gte('data_ref', '2026-06-10'), // série limpa: 1 leitura por post por dia (sem FK)
       ])
       if (metricasQ.error) throw metricasQ.error
       if (ideiasQ.error) throw ideiasQ.error
@@ -98,13 +98,12 @@ export function useBi(filtros: BiFiltros) {
       const porPost = new Map<string, Map<string, { views: number; likes: number }>>()
       const diasSet = new Set<string>()
       for (const d of diariasQ.data || []) {
-        const meta = (d.metadata || {}) as { plataforma?: string; ideia_id?: string }
-        if (filtros.plataforma !== 'todas' && meta.plataforma !== filtros.plataforma) continue
+        if (filtros.plataforma !== 'todas' && d.plataforma !== filtros.plataforma) continue
         if (filtros.canalId !== 'todos') {
-          const ideia = meta.ideia_id ? ideias.get(meta.ideia_id) : null
+          const ideia = d.ideia_id ? ideias.get(d.ideia_id) : null
           if (!ideia || ideia.canal_id !== filtros.canalId) continue
         }
-        const key = `${meta.ideia_id}|${meta.plataforma}`
+        const key = `${d.ideia_id}|${d.plataforma}`
         if (!porPost.has(key)) porPost.set(key, new Map())
         porPost.get(key)!.set(d.data_ref, { views: d.views || 0, likes: d.likes || 0 })
         diasSet.add(d.data_ref)
