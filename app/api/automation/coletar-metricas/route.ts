@@ -77,7 +77,7 @@ async function coletar(request: NextRequest) {
       const reels = (reelsResp.data || []) as Array<{ id: string; description?: string }>
       const usados = new Set<string>()
       for (const p of fbBad) {
-        const titulo = (tituloPorIdeia.get(p.ideia_id) || '').toLowerCase()
+        const titulo = (tituloPorIdeia.get(p.ideia_id || '') || '').toLowerCase()
         const tokens = titulo.split(/[^a-zà-ú0-9]+/i).filter((t) => t.length >= 5)
         const cands = reels.filter((re) => !usados.has(re.id) && tokens.some((t) => (re.description || '').toLowerCase().includes(t)))
         if (cands.length === 1) {
