@@ -214,6 +214,26 @@ async function coletar(request: NextRequest) {
         resultados.push({ id: pub.id, plataforma: pub.plataforma, status: 'SUCESSO', views: metricas.views })
       }
 
+      // LEITURA LIMPA: 1 registro por post por dia em pulso_analytics.leituras_metricas (SEM FK —
+      // captura TODOS os posts; crescimento = diferença entre leituras). Upsert no dia (latest do dia).
+      try {
+        const dataRef = agora.toISOString().slice(0, 10)
+        const leitura = {
+          ideia_id: pub.ideia_id, plataforma: pub.plataforma, post_id: pub.post_id,
+          data_ref: dataRef, coletado_em: agora.toISOString(),
+          views: metricas.views || 0, likes: metricas.likes || 0,
+          comentarios: metricas.comentarios || 0, compartilhamentos: metricas.shares || 0,
+        }
+        const { data: jaHoje } = await supabase
+          .schema('pulso_analytics').from('leituras_metricas')
+          .update(leitura)
+          .eq('ideia_id', pub.ideia_id).eq('plataforma', pub.plataforma).eq('data_ref', dataRef)
+          .select('id')
+        if (!jaHoje || jaHoje.length === 0) {
+          await supabase.schema('pulso_analytics').from('leituras_metricas').insert(leitura)
+        }
+      } catch { /* leitura é best-effort */ }
+
       // snapshot diário em pulso_analytics.metricas_diarias (alimenta /analytics e o histórico de aderência)
       const distPostId = postIdPorPub.get(pub.id)
       if (distPostId) {
