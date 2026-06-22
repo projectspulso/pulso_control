@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import {
+  AlertTriangle,
   BadgeDollarSign,
   BarChart3,
   Eye,
@@ -144,6 +145,32 @@ export default function AnalyticsPage() {
     return [...acc.values()].sort((a, b) => b.views - a.views)
   }, [data])
 
+  // 2) Desempenho por dia da semana (de publicação) — qual dia rende mais views/post
+  const porDiaSemana = useMemo(() => {
+    if (!data) return [] as { dia: string; views: number; posts: number; media: number }[]
+    const nomes = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+    const acc = new Map<number, { views: number; posts: number }>()
+    for (const p of data.publicacoes) {
+      if (!p.dataPublicacao) continue
+      const wd = new Date(p.dataPublicacao).getDay()
+      const v = acc.get(wd) || { views: 0, posts: 0 }
+      v.views += p.views
+      v.posts += 1
+      acc.set(wd, v)
+    }
+    const ordem = [1, 2, 3, 4, 5, 6, 0] // Seg → Dom
+    return ordem.map((wd) => {
+      const v = acc.get(wd) || { views: 0, posts: 0 }
+      return { dia: nomes[wd], views: v.views, posts: v.posts, media: v.posts ? Math.round(v.views / v.posts) : 0 }
+    })
+  }, [data])
+
+  const melhorDia = useMemo(() => {
+    const comDados = porDiaSemana.filter((d) => d.posts > 0)
+    if (!comDados.length) return null
+    return comDados.reduce((a, b) => (b.media > a.media ? b : a))
+  }, [porDiaSemana])
+
   // 3) Recomendação de produção: views/vídeo por vertical
   const recomendacao = useMemo(() => {
     if (!data) return []
@@ -179,6 +206,64 @@ export default function AnalyticsPage() {
     }
     return { redes, linhas: [...acc.values()].sort((a, b) => b.total - a.total) }
   }, [data])
+
+  // Sinais de atenção: distribuição quebrada (rede morta) + alcance inflado.
+  // Tudo derivado das publicações já carregadas — respeita o recorte dos filtros.
+  const alertas = useMemo(() => {
+    if (!data) return []
+    const agora = Date.now()
+    const idadeDias = (d: string) => (agora - new Date(d).getTime()) / 864e5
+
+    // mediana de views por rede (posts com ≥3 dias) = a "curva normal" daquela rede
+    const amostras = new Map<string, number[]>()
+    for (const p of data.publicacoes) {
+      if (idadeDias(p.dataPublicacao) < 3) continue
+      const arr = amostras.get(p.plataforma) || []
+      arr.push(p.views)
+      amostras.set(p.plataforma, arr)
+    }
+    const mediana = new Map<string, number>()
+    for (const [rede, arr] of amostras) {
+      const s = [...arr].sort((a, b) => a - b)
+      mediana.set(rede, s.length ? s[Math.floor(s.length / 2)] : 0)
+    }
+
+    type Alerta = {
+      id: string
+      severidade: 'alta' | 'media'
+      plataforma: string
+      titulo: string
+      vertical: string
+      views: number
+      dias: number
+      detalhe: string
+    }
+    const out: Alerta[] = []
+    for (const p of data.publicacoes) {
+      const dias = Math.floor(idadeDias(p.dataPublicacao))
+      if (dias < 2) continue // dá um respiro de 48h pra rede distribuir
+      const med = mediana.get(p.plataforma) || 0
+      const base = {
+        id: p.id,
+        plataforma: p.plataforma,
+        titulo: p.ideiaTitulo,
+        vertical: p.canalNome.replace(/^PULSO\s*/i, ''),
+        views: p.views,
+        dias,
+      }
+      if (p.views < 10) {
+        out.push({ ...base, severidade: 'alta', detalhe: `${p.views} views em ${dias}d — provável privado/"Somente eu" ou não distribuído` })
+      } else if (med >= 50 && p.views < med * 0.2) {
+        out.push({ ...base, severidade: 'media', detalhe: `${n(p.views)} views vs mediana ~${n(med)} da rede — fora da curva, conferir o upload` })
+      }
+    }
+    return out.sort((a, b) =>
+      a.severidade === b.severidade ? a.views - b.views : a.severidade === 'alta' ? -1 : 1
+    )
+  }, [data])
+
+  // redes que inflam alcance: muito share, mas ressonância quase nula (ex.: FB Reels plays)
+  const redesInfladas = useMemo(() => porRede.filter((r) => r.share >= 20 && r.ressonancia < 1), [porRede])
 
   if (isLoading) {
     return (
@@ -299,6 +384,54 @@ export default function AnalyticsPage() {
             </p>
           </div>
         </div>
+
+        {/* Sinais de atenção — distribuição quebrada + alcance inflado */}
+        {(alertas.length > 0 || redesInfladas.length > 0) && (
+          <div className="glass rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-400" />
+              <h2 className="text-lg font-semibold text-white">Sinais de atenção</h2>
+              <span className="ml-auto text-xs text-zinc-500">distribuição quebrada · alcance inflado</span>
+            </div>
+
+            {redesInfladas.length > 0 && (
+              <p className="mt-3 text-sm text-amber-200/90">
+                ⚠️ Alcance inflado em{' '}
+                <span className="font-semibold capitalize">
+                  {redesInfladas.map((r) => r.rede).join(', ')}
+                </span>
+                : muito play, engajamento quase nulo ({redesInfladas.map((r) => `${r.ressonancia.toFixed(1)}%`).join(' / ')}).
+                Pese YouTube + Instagram como sinal de qualidade.
+              </p>
+            )}
+
+            {alertas.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {alertas.slice(0, 8).map((a) => (
+                  <div key={a.id} className="flex items-center gap-3 rounded-xl bg-zinc-900/50 px-3 py-2">
+                    <span
+                      className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase ${
+                        a.severidade === 'alta' ? 'bg-red-500/15 text-red-300' : 'bg-amber-500/15 text-amber-300'
+                      }`}
+                    >
+                      {a.plataforma}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-zinc-200" title={a.titulo}>{a.titulo}</p>
+                      <p className="truncate text-xs text-zinc-500">
+                        {a.vertical} · {a.detalhe}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-right text-sm font-bold tabular-nums text-white">{n(a.views)}</span>
+                  </div>
+                ))}
+                {alertas.length > 8 && (
+                  <p className="text-xs text-zinc-500">+{alertas.length - 8} outras publicações fora da curva no recorte.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Rumo à monetização */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
@@ -557,6 +690,39 @@ export default function AnalyticsPage() {
                   />
                   <Area type="monotone" dataKey="views" stroke="#a855f7" strokeWidth={2.5} fill="url(#gradCumul)" />
                 </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        {/* Desempenho por dia da semana */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-cyan-400" />
+            <h2 className="text-lg font-semibold text-white">Desempenho por dia da semana</h2>
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">
+            Média de views por post, pelo dia da publicação — qual dia rende mais.
+            {melhorDia && melhorDia.media > 0 && (
+              <> Hoje o campeão é <span className="font-semibold text-cyan-400">{melhorDia.dia}</span> ({n(melhorDia.media)}/post).</>
+            )}
+          </p>
+          {porDiaSemana.every((d) => d.posts === 0) ? (
+            <p className="mt-4 text-sm text-zinc-500">Sem publicações no recorte.</p>
+          ) : (
+            <div className="mt-4 h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={porDiaSemana} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                  <XAxis dataKey="dia" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={{ stroke: '#3f3f46' }} tickLine={false} />
+                  <YAxis tickFormatter={(v: number) => n(v)} tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} width={48} />
+                  <Tooltip
+                    cursor={{ fill: '#ffffff08' }}
+                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12, color: '#fff' }}
+                    formatter={(value: number, _n: string, item: { payload?: { posts?: number } }) => [`${n(value)}/post · ${item?.payload?.posts ?? 0} posts`, 'Média']}
+                  />
+                  <Bar dataKey="media" fill="#22d3ee" radius={[4, 4, 0, 0]} maxBarSize={48} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           )}
