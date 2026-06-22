@@ -16,6 +16,25 @@ export default function RoteirosPage() {
   const [filtroCanal, setFiltroCanal] = useState<string>('TODOS')
   const [filtroHook, setFiltroHook] = useState<string>('TODOS')
   const [busca, setBusca] = useState('')
+  const [refazendoLote, setRefazendoLote] = useState(false)
+  const [loteMsg, setLoteMsg] = useState<string | null>(null)
+
+  const handleRefazerLote = async () => {
+    if (!confirm('Refazer o hook de TODOS os roteiros fracos (≤2)? Cada um tem a 1ª frase reescrita pela IA.')) return
+    setRefazendoLote(true)
+    setLoteMsg(null)
+    try {
+      const resp = await fetch('/api/roteiros/refazer-hooks-fracos', { method: 'POST' })
+      const data = await resp.json()
+      if (!resp.ok) throw new Error(data.error || 'Falha no lote')
+      setLoteMsg(`✅ ${data.melhorados}/${data.total} hooks melhorados (${data.falhas} falhas).`)
+      await refetch()
+    } catch (e) {
+      setLoteMsg(`❌ ${e instanceof Error ? e.message : 'erro'}`)
+    } finally {
+      setRefazendoLote(false)
+    }
+  }
 
   const roteirosFiltrados = roteiros?.filter(roteiro => {
     const matchStatus = filtroStatus === 'TODOS' || roteiro.status === filtroStatus
@@ -157,6 +176,24 @@ export default function RoteirosPage() {
             </div>
           </div>
         </div>
+
+        {/* Ação em lote — refazer hooks fracos */}
+        {filtroHook === 'FRACO' && roteirosFiltrados && roteirosFiltrados.length > 0 && (
+          <div className="glass flex flex-wrap items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4">
+            <span className="text-sm text-rose-200">
+              {roteirosFiltrados.length} roteiros com hook fraco (≤2). Refaça a 1ª frase de todos de uma vez.
+            </span>
+            <button
+              type="button"
+              onClick={handleRefazerLote}
+              disabled={refazendoLote}
+              className="ml-auto rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-500 disabled:opacity-50"
+            >
+              {refazendoLote ? 'Refazendo todos…' : `🪝 Refazer todos os hooks fracos (${roteirosFiltrados.length})`}
+            </button>
+            {loteMsg && <span className="w-full text-xs text-zinc-300">{loteMsg}</span>}
+          </div>
+        )}
 
         {/* Grid de Roteiros */}
         {roteirosFiltrados && roteirosFiltrados.length === 0 ? (

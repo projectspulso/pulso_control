@@ -13,6 +13,7 @@ import {
   type FeedbackTone,
   FeedbackBanner,
 } from '@/components/ui/feedback-banner'
+import { avaliarHook } from '@/lib/automation/hook-score'
 import { useAudioDoRoteiro } from '@/lib/hooks/use-assets'
 import { useCanais } from '@/lib/hooks/use-core'
 import {
@@ -96,6 +97,7 @@ export default function RoteiroDetalhesPage({
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [motivoRejeicao, setMotivoRejeicao] = useState('')
   const [isAprovando, setIsAprovando] = useState(false)
+  const [refazendoHook, setRefazendoHook] = useState(false)
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
 
   useEffect(() => {
@@ -130,6 +132,26 @@ export default function RoteiroDetalhesPage({
     } catch (error) {
       console.error('Erro ao atualizar roteiro:', error)
       registrarFeedback('error', 'Falha ao salvar', getErrorMessage(error))
+    }
+  }
+
+  const handleRefazerHook = async () => {
+    setRefazendoHook(true)
+    try {
+      const resp = await fetch(`/api/roteiros/${resolvedParams.id}/refazer-hook`, { method: 'POST' })
+      const data = await resp.json()
+      if (!resp.ok) throw new Error(data.error || 'Falha ao refazer hook')
+      await refetch()
+      queryClient.invalidateQueries({ queryKey: ['roteiros'] })
+      registrarFeedback(
+        'success',
+        `Hook refeito (nota ${data.antes} → ${data.depois})`,
+        `Nova 1ª frase: "${data.novaFrase}"`,
+      )
+    } catch (error) {
+      registrarFeedback('error', 'Falha ao refazer hook', getErrorMessage(error))
+    } finally {
+      setRefazendoHook(false)
     }
   }
 
@@ -378,21 +400,57 @@ export default function RoteiroDetalhesPage({
             </div>
 
             {!editando && (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditando(true)}
-                  className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-white transition-colors hover:bg-zinc-700"
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteDialog(true)}
-                  className="rounded-lg bg-red-600/20 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-600/30"
-                >
-                  Deletar
-                </button>
+              <div className="flex flex-col items-end gap-2">
+                {(() => {
+                  const nh = (roteiro as { nota_hook?: number | null }).nota_hook ?? null
+                  if (nh == null) return null
+                  const diag = roteiro.conteudo_md ? avaliarHook(roteiro.conteudo_md) : null
+                  const fraco = nh <= 2
+                  return (
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                          fraco ? 'bg-red-500/15 text-red-300 ring-1 ring-red-500/40' : nh === 3 ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'
+                        }`}
+                        title={diag?.motivos.join(' · ') || ''}
+                      >
+                        {fraco ? '⚠ ' : ''}Hook {nh}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleRefazerHook}
+                        disabled={refazendoHook}
+                        className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+                          fraco ? 'bg-rose-600 text-white hover:bg-rose-500' : 'bg-zinc-800 text-white hover:bg-zinc-700'
+                        }`}
+                      >
+                        {refazendoHook ? 'Refazendo…' : '🪝 Refazer hook'}
+                      </button>
+                    </div>
+                  )
+                })()}
+                {(() => {
+                  const nh = (roteiro as { nota_hook?: number | null }).nota_hook ?? null
+                  const diag = nh != null && nh <= 2 && roteiro.conteudo_md ? avaliarHook(roteiro.conteudo_md) : null
+                  if (!diag || diag.motivos.length === 0) return null
+                  return <p className="max-w-xs text-right text-[11px] text-red-300/80">Por quê: {diag.motivos.join(' · ')}</p>
+                })()}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditando(true)}
+                    className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-white transition-colors hover:bg-zinc-700"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="rounded-lg bg-red-600/20 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-600/30"
+                  >
+                    Deletar
+                  </button>
+                </div>
               </div>
             )}
           </div>

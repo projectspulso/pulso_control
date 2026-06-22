@@ -264,6 +264,21 @@ O primeiro frame NUNCA pode:
 Retorne APENAS o prompt de geração de imagem/vídeo em inglês (1 parágrafo), pronto pra mandar pro Veo/gerador, sem rostos legíveis, sem texto, sem logo. Comece NO pico, não na rampa.`
 }
 
+// ====== REFAZER HOOK (reescreve só a 1ª frase) ======
+
+export function buildPromptRefazerHook(titulo: string, roteiro: string): string {
+  return `Você é o roteirista-chefe do PULSO. O roteiro abaixo (vídeo curto faceless, pt-BR) tem um HOOK FRACO na primeira frase.
+
+TEMA: ${titulo}
+ROTEIRO:
+${roteiro}
+
+${TRAVA_3S}
+
+Sua tarefa: reescrever APENAS a primeira frase, seguindo a trava acima, mantendo o tema e o resto do roteiro intactos. Use fato concreto + número/nome/data ou contradição.
+Retorne SOMENTE a nova primeira frase (uma frase, no máximo ~14 palavras), em português do Brasil, sem aspas e sem nenhuma explicação.`
+}
+
 // ====== AVALIADOR DE HOOK (nota 1-5 + bloqueio ≤2) ======
 
 export function buildPromptAvaliarHook(primeiraFrase: string): string {
