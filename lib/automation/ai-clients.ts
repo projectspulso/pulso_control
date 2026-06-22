@@ -163,39 +163,6 @@ export async function callClaude(
   return { content: textBlock?.text || '' }
 }
 
-// ====== GEMINI CLIENT ======
-// Usado p/ tarefas curtas (ex.: refazer hook) — é a key de LLM que temos ativa.
-export async function callGemini(
-  prompt: string,
-  options?: { model?: string; temperature?: number; maxOutputTokens?: number }
-): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY não configurada')
-  const model = options?.model || 'gemini-flash-latest'
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: options?.temperature ?? 0.9,
-          maxOutputTokens: options?.maxOutputTokens ?? 256,
-          // gemini-flash-latest "pensa" por padrão e consome os tokens de saída
-          // (resposta saía truncada). thinkingBudget:0 = sem reasoning, tudo na resposta.
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      }),
-    }
-  )
-  if (!response.ok) {
-    throw new Error(`Gemini API error ${response.status}: ${(await response.text()).slice(0, 200)}`)
-  }
-  const data = await response.json()
-  return (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim()
-}
-
 // ====== HELPERS ======
 
 /**

@@ -1,4 +1,4 @@
-import { callGemini } from './ai-clients'
+import { callOpenAI } from './ai-clients'
 import { buildPromptRefazerHook } from './prompts'
 import { avaliarHook, primeiraFrase } from './hook-score'
 
@@ -40,7 +40,7 @@ export async function refazerHookRoteiro(supabase: any, roteiro: RoteiroParaRefa
       return { id: roteiro.id, ok: false, antes, depois: antes, erro: 'roteiro sem conteúdo' }
     }
     const prompt = buildPromptRefazerHook(roteiro.titulo, roteiro.conteudo_md)
-    const resposta = await callGemini(prompt)
+    const { content: resposta } = await callOpenAI(prompt, { temperature: 0.9, max_tokens: 120 })
     const nova = (resposta || '').split('\n').map((l) => l.trim()).filter(Boolean)[0] || ''
     if (nova.length < 8) {
       return { id: roteiro.id, ok: false, antes, depois: antes, erro: 'IA não retornou frase válida' }
