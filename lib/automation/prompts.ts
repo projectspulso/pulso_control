@@ -276,6 +276,9 @@ ${roteiro}
 ${TRAVA_3S}
 
 Sua tarefa: reescrever APENAS a primeira frase, seguindo a trava acima, mantendo o tema e o resto do roteiro intactos. Use fato concreto + número/nome/data ou contradição.
+
+EMENDA (importante): a nova frase precisa fluir naturalmente com a SEGUNDA frase do roteiro acima. NÃO repita informação que a 2ª frase já diz (não duplique o mesmo lugar/número/data). Se a 2ª frase for uma referência de volta ("Foi o que aconteceu...", "Isso..."), a nova 1ª frase deve dar o gancho sem redundância.
+
 Retorne SOMENTE a nova primeira frase (uma frase, no máximo ~14 palavras), em português do Brasil, sem aspas e sem nenhuma explicação.`
 }
 
