@@ -37,6 +37,9 @@ export interface BiSnapshot {
   canais: { id: string; nome: string }[]
   videosProduzidos: number
   ultimaColeta: string | null // hora da última coleta (ultima_atualizacao mais recente)
+  retencaoMedia: { t: number; pct: number }[] // curva média de retenção (FB), 41 pontos 0→fim
+  retencaoVideos: number // quantos vídeos entraram na média
+  retencao3s: number | null // % retido por volta dos 3s (queda inicial) — média
 }
 
 export function useBi(filtros: BiFiltros) {
@@ -44,7 +47,7 @@ export function useBi(filtros: BiFiltros) {
     queryKey: ['bi', filtros],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const [metricasQ, ideiasQ, canaisQ, diariasQ] = await Promise.all([
+      const [metricasQ, ideiasQ, canaisQ, diariasQ, retencaoQ] = await Promise.all([
         supabase.schema('pulso_content').from('metricas_publicacao').select('*'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
         supabase.schema('pulso_core').from('canais').select('id, nome').order('nome'),
@@ -53,11 +56,17 @@ export function useBi(filtros: BiFiltros) {
           .from('leituras_metricas')
           .select('ideia_id, plataforma, data_ref, views, likes')
           .gte('data_ref', '2026-06-10'), // série limpa: 1 leitura por post por dia (sem FK)
+        supabase
+          .schema('pulso_analytics')
+          .from('leituras_metricas')
+          .select('ideia_id, plataforma, data_ref, retention_graph')
+          .not('retention_graph', 'is', null), // curva de retenção (FB é a única API que entrega)
       ])
       if (metricasQ.error) throw metricasQ.error
       if (ideiasQ.error) throw ideiasQ.error
       if (canaisQ.error) throw canaisQ.error
       if (diariasQ.error) throw diariasQ.error
+      if (retencaoQ.error) throw retencaoQ.error
 
       const ideias = new Map((ideiasQ.data || []).map((i) => [i.id, i]))
       const canais = new Map((canaisQ.data || []).map((c) => [c.id, c.nome]))
@@ -156,6 +165,32 @@ export function useBi(filtros: BiFiltros) {
 
       const videosProduzidos = new Set(publicacoes.map((p) => p.ideia_id)).size
 
+      // ── CURVA DE RETENÇÃO MÉDIA (FB) ── 41 pontos (0→fim). Latest por vídeo, respeita filtros.
+      const retPorVideo = new Map<string, { data_ref: string; g: Record<string, number> }>()
+      for (const r of retencaoQ.data || []) {
+        if (filtros.plataforma !== 'todas' && r.plataforma !== filtros.plataforma) continue
+        if (filtros.canalId !== 'todos') {
+          const ideia = r.ideia_id ? ideias.get(r.ideia_id) : null
+          if (!ideia || ideia.canal_id !== filtros.canalId) continue
+        }
+        const g = r.retention_graph as Record<string, number> | null
+        if (!g || typeof g !== 'object') continue
+        const prev = retPorVideo.get(r.ideia_id)
+        if (!prev || r.data_ref > prev.data_ref) retPorVideo.set(r.ideia_id, { data_ref: r.data_ref, g })
+      }
+      const soma = new Array(41).fill(0)
+      const cont = new Array(41).fill(0)
+      for (const { g } of retPorVideo.values()) {
+        for (let t = 0; t <= 40; t++) {
+          const v = g[String(t)]
+          if (typeof v === 'number') { soma[t] += v; cont[t] += 1 }
+        }
+      }
+      const retencaoMedia = soma.map((s, t) => ({ t, pct: cont[t] ? (s / cont[t]) * 100 : 0 }))
+      const retencaoVideos = retPorVideo.size
+      // ~3s: vídeos ~50s / 40 segmentos ≈ 1,25s cada → ponto 2-3 ≈ 3s
+      const retencao3s = retencaoVideos > 0 ? retencaoMedia[3]?.pct ?? null : null
+
       return {
         publicacoes: publicacoes.sort((a, b) => b.views - a.views),
         serieDiaria,
@@ -163,6 +198,9 @@ export function useBi(filtros: BiFiltros) {
         canais: canaisQ.data || [],
         videosProduzidos,
         ultimaColeta,
+        retencaoMedia,
+        retencaoVideos,
+        retencao3s,
       }
     },
   })

@@ -164,6 +164,7 @@ async function coletar(request: NextRequest) {
   for (const pub of publicacoes) {
     try {
       let metricas: Record<string, number> | null = null
+      const extras: Record<string, unknown> = {} // retenção/watch-time → colunas novas (Kaizen)
 
       if (pub.plataforma === 'youtube') {
         const s = ytStats.get(pub.post_id as string)
@@ -179,7 +180,7 @@ async function coletar(request: NextRequest) {
 
         const insights: Record<string, number> = {}
         const insUrl = new URL(`https://graph.facebook.com/v23.0/${pub.post_id}/insights`)
-        insUrl.searchParams.set('metric', 'views,reach,saved,shares')
+        insUrl.searchParams.set('metric', 'views,reach,saved,shares,ig_reels_avg_watch_time,ig_reels_video_view_total_time,total_interactions')
         insUrl.searchParams.set('access_token', token)
         const insResp = await fetch(insUrl.toString())
         if (insResp.ok) {
@@ -194,6 +195,10 @@ async function coletar(request: NextRequest) {
           shares: insights.shares || 0,
           saves: insights.saved || 0,
         }
+        // watch-time + alcance (colunas novas) — IG manda em ms
+        if (insights.ig_reels_avg_watch_time) extras.avg_watch_ms = Math.round(insights.ig_reels_avg_watch_time)
+        if (insights.ig_reels_video_view_total_time) extras.view_time_ms = insights.ig_reels_video_view_total_time
+        if (insights.reach) extras.reach = insights.reach
       } else if (pub.plataforma === 'tiktok') {
         const s = ttStats.get(pub.post_id as string)
         if (s) {
@@ -222,6 +227,21 @@ async function coletar(request: NextRequest) {
           shares: social.SHARE || 0,
           saves: 0,
         }
+        // retenção (curva 40 pts) + watch-time + alcance — FB é a única API com a curva completa
+        try {
+          const retUrl = new URL(`https://graph.facebook.com/v23.0/${pub.post_id}/video_insights`)
+          retUrl.searchParams.set('metric', 'post_video_retention_graph,post_video_avg_time_watched,post_video_view_time')
+          retUrl.searchParams.set('access_token', token)
+          const retResp = await fetch(retUrl.toString())
+          if (retResp.ok) {
+            const ret = await retResp.json()
+            const rv: Record<string, unknown> = {}
+            for (const m of ret.data || []) rv[m.name] = m.values?.[0]?.value
+            if (rv.post_video_retention_graph) extras.retention_graph = rv.post_video_retention_graph
+            if (rv.post_video_avg_time_watched) extras.avg_watch_ms = Math.round(rv.post_video_avg_time_watched as number)
+            if (rv.post_video_view_time) extras.view_time_ms = rv.post_video_view_time
+          }
+        } catch { /* retenção é best-effort */ }
       } else {
         resultados.push({ id: pub.id, plataforma: pub.plataforma, status: 'MANUAL' })
         continue
@@ -234,7 +254,7 @@ async function coletar(request: NextRequest) {
 
       // janelas: marca views_24h/7d/30d conforme idade da publicação
       const horas = (agora.getTime() - new Date(pub.data_publicacao).getTime()) / 36e5
-      const update: Record<string, unknown> = { ...metricas, ultima_atualizacao: agora.toISOString() }
+      const update: Record<string, unknown> = { ...metricas, ...extras, ultima_atualizacao: agora.toISOString() }
       if (horas <= 30) update.views_24h = metricas.views
       if (horas <= 7 * 24 + 6) update.views_7dias = metricas.views
       if (horas <= 30 * 24 + 6) update.views_30dias = metricas.views
@@ -260,6 +280,7 @@ async function coletar(request: NextRequest) {
           data_ref: dataRef, coletado_em: agora.toISOString(),
           views: metricas.views || 0, likes: metricas.likes || 0,
           comentarios: metricas.comentarios || 0, compartilhamentos: metricas.shares || 0,
+          ...extras,
         }
         const { data: jaHoje } = await supabase
           .schema('pulso_analytics').from('leituras_metricas')

@@ -695,6 +695,58 @@ export default function AnalyticsPage() {
           )}
         </div>
 
+        {/* Curva de retenção (queda nos 3s) — FB */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-rose-400" />
+            <h2 className="text-lg font-semibold text-white">Curva de retenção · onde o público abandona</h2>
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">
+            % do público que continua assistindo do início ao fim (média de {data.retencaoVideos} vídeos no Facebook — única rede que entrega a curva).
+            {data.retencao3s != null && (
+              <> Por volta dos <span className="font-semibold text-rose-300">3s</span> ainda restam <span className="font-semibold text-rose-300">{data.retencao3s.toFixed(0)}%</span> — é onde o hook é decidido.</>
+            )}
+          </p>
+          {data.retencaoVideos === 0 ? (
+            <p className="mt-4 text-sm text-zinc-500">Sem curva ainda — nasce na próxima coleta (Facebook).</p>
+          ) : (
+            <div className="mt-4 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data.retencaoMedia} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradRet" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#fb7185" stopOpacity={0.5} />
+                      <stop offset="100%" stopColor="#fb7185" stopOpacity={0.04} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis
+                    dataKey="t"
+                    tickFormatter={(v: number) => `${Math.round((v / 40) * 100)}%`}
+                    tick={{ fill: '#71717a', fontSize: 11 }}
+                    axisLine={{ stroke: '#3f3f46' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tickFormatter={(v: number) => `${Math.round(v)}%`}
+                    domain={[0, 100]}
+                    tick={{ fill: '#71717a', fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={40}
+                  />
+                  <Tooltip
+                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12, color: '#fff' }}
+                    labelFormatter={(v: number) => `${Math.round((v / 40) * 100)}% do vídeo`}
+                    formatter={(value: number) => [`${value.toFixed(0)}%`, 'Retenção']}
+                  />
+                  <Area type="monotone" dataKey="pct" stroke="#fb7185" strokeWidth={2.5} fill="url(#gradRet)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
         {/* Desempenho por dia da semana */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-center gap-2">
