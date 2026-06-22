@@ -4,6 +4,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarRoteiro } from '@/lib/automation/prompts'
 import { validarRoteiro } from '@/lib/automation/ai-clients'
+import { avaliarHook } from '@/lib/automation/hook-score'
 
 /**
  * POST /api/automation/gerar-roteiro
@@ -109,9 +110,12 @@ export async function POST(request: NextRequest) {
       .eq('chave', 'auto_approve_roteiro')
       .single()
 
+    // TRAVA DE HOOK (Kaizen): nota 1-5 da 1ª frase. Hook <=2 NUNCA auto-aprova.
+    const hook = avaliarHook(roteiro)
+
     const autoApprove = autoApproveConfig?.valor === true || autoApproveConfig?.valor === 'true'
     const autoApproveThreshold = 80
-    const shouldAutoApprove = autoApprove && qualidade.score >= autoApproveThreshold
+    const shouldAutoApprove = autoApprove && qualidade.score >= autoApproveThreshold && hook.nota >= 3
 
     // Salvar roteiro
     const { data: saved, error: saveError } = await supabase
@@ -126,7 +130,9 @@ export async function POST(request: NextRequest) {
         duracao_estimado_segundos: qualidade.duracao_estimada,
         status: shouldAutoApprove ? 'APROVADO' : 'RASCUNHO',
         linguagem: canal.idioma,
+        nota_hook: hook.nota,
         metadata: {
+          hook_motivos: hook.motivos,
           ai_modelo: 'gpt-4o',
           gerado_em: new Date().toISOString(),
           gerado_via: 'automation',

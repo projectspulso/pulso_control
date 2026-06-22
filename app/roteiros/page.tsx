@@ -14,16 +14,22 @@ export default function RoteirosPage() {
   
   const [filtroStatus, setFiltroStatus] = useState<string>('TODOS')
   const [filtroCanal, setFiltroCanal] = useState<string>('TODOS')
+  const [filtroHook, setFiltroHook] = useState<string>('TODOS')
   const [busca, setBusca] = useState('')
 
   const roteirosFiltrados = roteiros?.filter(roteiro => {
     const matchStatus = filtroStatus === 'TODOS' || roteiro.status === filtroStatus
     const matchCanal = filtroCanal === 'TODOS' || roteiro.canal_id === filtroCanal
-    const matchBusca = !busca || 
+    const nh = (roteiro as { nota_hook?: number | null }).nota_hook ?? null
+    const matchHook =
+      filtroHook === 'TODOS' ||
+      (filtroHook === 'FRACO' && nh != null && nh <= 2) ||
+      (filtroHook === 'FORTE' && nh != null && nh >= 4)
+    const matchBusca = !busca ||
       roteiro.titulo?.toLowerCase().includes(busca.toLowerCase()) ||
       roteiro.conteudo_md?.toLowerCase().includes(busca.toLowerCase())
-    
-    return matchStatus && matchCanal && matchBusca
+
+    return matchStatus && matchCanal && matchHook && matchBusca
   })
 
   if (isLoading) {
@@ -89,7 +95,7 @@ export default function RoteirosPage() {
 
         {/* Filtros */}
         <div className="glass rounded-2xl p-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Busca */}
             <div>
               <label className="block text-sm text-zinc-400 mb-2">Buscar</label>
@@ -135,6 +141,20 @@ export default function RoteirosPage() {
                 ))}
               </select>
             </div>
+
+            {/* Filtro Hook */}
+            <div>
+              <label className="block text-sm text-zinc-400 mb-2">Hook (3s)</label>
+              <select
+                value={filtroHook}
+                onChange={(e) => setFiltroHook(e.target.value)}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-violet-500"
+              >
+                <option value="TODOS">Todos os hooks</option>
+                <option value="FRACO">⚠ Fraco (≤2) — refazer</option>
+                <option value="FORTE">Forte (≥4)</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -151,20 +171,22 @@ export default function RoteirosPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {roteirosFiltrados?.map((roteiro, idx) => {
               const canal = canais?.find(c => c.id === roteiro.canal_id)
-              
+              const nh = (roteiro as { nota_hook?: number | null }).nota_hook ?? null
+
               return (
                 <Link
                   key={roteiro.id}
                   href={`/roteiros/${roteiro.id}`}
-                  className="glass glass-hover rounded-2xl p-6 group cursor-pointer relative overflow-hidden animate-fade-in"
+                  className={`glass glass-hover rounded-2xl p-6 group cursor-pointer relative overflow-hidden animate-fade-in ${nh != null && nh <= 2 ? 'ring-1 ring-red-500/50' : ''}`}
                   style={{ animationDelay: `${300 + idx * 50}ms` }}
                 >
                   <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-600/20 blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
                   <div className="flex items-start justify-between mb-4">
                     <StatusBadge status={roteiro.status} />
-                    <span className="text-xs text-zinc-500">
-                      v{roteiro.versao || 1}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <HookBadge nota={nh} />
+                      <span className="text-xs text-zinc-500">v{roteiro.versao || 1}</span>
+                    </div>
                   </div>
 
                   <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-violet-400 transition-colors line-clamp-2">
@@ -219,6 +241,24 @@ function StatusBadge({ status }: { status: string | null }) {
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white ${config.color}`}>
       {config.label}
+    </span>
+  )
+}
+
+function HookBadge({ nota }: { nota: number | null }) {
+  if (nota == null) return null
+  const cfg =
+    nota <= 2
+      ? { cor: 'bg-red-500/15 text-red-300 ring-1 ring-red-500/40', alerta: true }
+      : nota === 3
+        ? { cor: 'bg-amber-500/15 text-amber-300', alerta: false }
+        : { cor: 'bg-emerald-500/15 text-emerald-300', alerta: false }
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${cfg.cor}`}
+      title="Nota do hook (1-5) — trava dos 3 segundos. ≤2 = refazer a primeira frase."
+    >
+      {cfg.alerta ? '⚠ ' : ''}Hook {nota}
     </span>
   )
 }
