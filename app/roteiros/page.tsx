@@ -18,6 +18,36 @@ export default function RoteirosPage() {
   const [busca, setBusca] = useState('')
   const [refazendoLote, setRefazendoLote] = useState(false)
   const [loteMsg, setLoteMsg] = useState<string | null>(null)
+  const [canalGerar, setCanalGerar] = useState<string>('')
+  const [qtdGerar, setQtdGerar] = useState<number>(3)
+  const [gerandoRot, setGerandoRot] = useState(false)
+  const [gerarRotMsg, setGerarRotMsg] = useState<string | null>(null)
+
+  const handleGerarRoteiros = async () => {
+    setGerandoRot(true)
+    setGerarRotMsg(null)
+    try {
+      const reqBody: { quantidade: number; canal_id?: string } = { quantidade: qtdGerar }
+      if (canalGerar) reqBody.canal_id = canalGerar
+      const resp = await fetch('/api/roteiros/gerar-lote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reqBody),
+      })
+      const data = await resp.json()
+      if (!resp.ok) throw new Error(data.error || 'Falha ao gerar roteiros')
+      if (data.elegiveis_total === 0) {
+        setGerarRotMsg('Nenhuma ideia aprovada sem roteiro nesse filtro — aprove ideias primeiro.')
+      } else {
+        setGerarRotMsg(`✅ ${data.processados} roteiro(s) gerado(s)${data.falhas ? ` · ${data.falhas} falha(s)` : ''}. Restam ${Math.max(0, data.elegiveis_total - data.processados)} ideia(s) aprovada(s) sem roteiro.`)
+      }
+      await refetch()
+    } catch (e) {
+      setGerarRotMsg(`❌ ${e instanceof Error ? e.message : 'erro'}`)
+    } finally {
+      setGerandoRot(false)
+    }
+  }
 
   const handleRefazerLote = async () => {
     if (!confirm('Refazer o hook de TODOS os roteiros fracos (≤2)? Cada um tem a 1ª frase reescrita pela IA.')) return
@@ -95,6 +125,45 @@ export default function RoteirosPage() {
         </div>
 
         <ModoFocoBanner detail="Roteiros fora do canal foco podem ser auditados, mas nao entram no lote atual." />
+
+        {/* Gerar roteiros — pra ideias aprovadas sem roteiro (trava de hook embutida) */}
+        <div className="glass flex flex-wrap items-end gap-3 rounded-2xl border border-blue-500/30 bg-blue-500/5 p-4 animate-fade-in">
+          <span className="text-xl">📝</span>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Gerar roteiros (ideias aprovadas sem roteiro)</label>
+            <select
+              value={canalGerar}
+              onChange={(e) => setCanalGerar(e.target.value)}
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">Todos os canais</option>
+              {canais?.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Qtd</label>
+            <select
+              value={qtdGerar}
+              onChange={(e) => setQtdGerar(Number(e.target.value))}
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+            >
+              {[1, 3, 5].map((nn) => (
+                <option key={nn} value={nn}>{nn}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={handleGerarRoteiros}
+            disabled={gerandoRot}
+            className="rounded-lg bg-linear-to-r from-blue-600 to-cyan-600 px-5 py-2 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-blue-500/20 disabled:opacity-50"
+          >
+            {gerandoRot ? '📝 Gerando…' : '📝 Gerar roteiros'}
+          </button>
+          {gerarRotMsg && <span className="w-full text-sm text-zinc-300">{gerarRotMsg}</span>}
+        </div>
 
         {/* Stats Cards */}
         {stats && stats.por_status && Object.keys(stats.por_status).length > 0 && (
