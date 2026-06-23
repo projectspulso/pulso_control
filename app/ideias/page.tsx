@@ -16,6 +16,34 @@ export default function IdeiasPage() {
   const [filtroCanal, setFiltroCanal] = useState<string>('TODOS')
   const [busca, setBusca] = useState('')
 
+  const [canalGerar, setCanalGerar] = useState<string>('')
+  const [qtdGerar, setQtdGerar] = useState<number>(5)
+  const [gerando, setGerando] = useState(false)
+  const [gerarMsg, setGerarMsg] = useState<string | null>(null)
+
+  const handleGerarIdeias = async () => {
+    setGerando(true)
+    setGerarMsg(null)
+    try {
+      const body: { quantidade: number; canal_id?: string } = { quantidade: qtdGerar }
+      if (canalGerar) body.canal_id = canalGerar
+      const res = await fetch('/api/automation/gerar-ideias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Erro ${res.status}`)
+      const ign = data.ignoradas_duplicidade?.length || 0
+      setGerarMsg(`✅ ${data.quantidade_gerada} ideia(s) gerada(s) em "${data.canal}"${ign ? ` · ${ign} ignorada(s) por duplicidade` : ''}.`)
+      await refetch()
+    } catch (e) {
+      setGerarMsg(`❌ ${e instanceof Error ? e.message : 'erro ao gerar'}`)
+    } finally {
+      setGerando(false)
+    }
+  }
+
   const ideiasFiltradas = ideias?.filter(ideia => {
     const matchStatus = filtroStatus === 'TODOS' || ideia.status === filtroStatus
     const matchCanal = filtroCanal === 'TODOS' || ideia.canal_id === filtroCanal
@@ -80,6 +108,45 @@ export default function IdeiasPage() {
         </div>
 
         <ModoFocoBanner detail="Ideias fora do canal foco ficam fora da operacao diaria ate o gate do MVP." />
+
+        {/* Gerar ideias com IA — escolhe o canal (travas de hook + gatilho embutidas) */}
+        <div className="glass flex flex-wrap items-end gap-3 rounded-2xl border border-violet-500/30 bg-violet-500/5 p-4 animate-fade-in">
+          <span className="text-xl">✨</span>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Gerar ideias para o canal</label>
+            <select
+              value={canalGerar}
+              onChange={(e) => setCanalGerar(e.target.value)}
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+            >
+              <option value="">🔄 Rotação automática (canal com menos ideias)</option>
+              {canais?.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Qtd</label>
+            <select
+              value={qtdGerar}
+              onChange={(e) => setQtdGerar(Number(e.target.value))}
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+            >
+              {[3, 5, 8, 10].map((nn) => (
+                <option key={nn} value={nn}>{nn}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={handleGerarIdeias}
+            disabled={gerando}
+            className="rounded-lg bg-linear-to-r from-violet-600 to-purple-600 px-5 py-2 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-violet-500/20 disabled:opacity-50"
+          >
+            {gerando ? '✨ Gerando…' : '✨ Gerar ideias com IA'}
+          </button>
+          {gerarMsg && <span className="w-full text-sm text-zinc-300">{gerarMsg}</span>}
+        </div>
 
         {/* Stats Cards */}
         {stats && (
