@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import {
   BarChart3,
+  CalendarDays,
   Wallet,
   Clapperboard,
   FileEdit,
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Roteiros', href: '/roteiros', icon: FileEdit, badge: null, soAdmin: false },
   { name: 'Producao', href: '/producao', icon: Clapperboard, badge: null, soAdmin: false },
   { name: 'Publicar', href: '/publicar', icon: Send, badge: null, soAdmin: false },
+  { name: 'Agenda', href: '/agenda', icon: CalendarDays, badge: null, soAdmin: false },
   { name: 'Automacao', href: '/automacao', icon: Zap, badge: 'ai', soAdmin: false },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null, soAdmin: false },
   { name: 'Financeiro', href: '/financeiro', icon: Wallet, badge: null, soAdmin: true },
