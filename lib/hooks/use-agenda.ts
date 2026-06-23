@@ -23,10 +23,20 @@ export interface AgendaSlot {
   producaoAte: string // D-2
 }
 
+export interface FunilCanal {
+  canalId: string
+  nome: string
+  ideia: number // aprovada, sem roteiro
+  roteiro: number // tem roteiro, sem áudio
+  audio: number // tem áudio, sem vídeo publicado
+  video: number // publicado / pronto
+}
+
 export interface AgendaSnapshot {
   slots: AgendaSlot[]
   canais: { id: string; nome: string }[]
-  estoque: { canalId: string; nome: string; ideias: number; roteiros: number; audios: number }[]
+  funil: FunilCanal[]
+  totais: { ideia: number; roteiro: number; audio: number; video: number }
 }
 
 function iso(d: Date) {
@@ -43,12 +53,13 @@ export function useAgenda(horizonteDias = 21) {
     queryKey: ['agenda', horizonteDias],
     refetchInterval: 10 * 60 * 1000,
     queryFn: async () => {
-      const [gradeQ, canaisQ, ideiasQ, roteirosQ, audiosQ] = await Promise.all([
+      const [gradeQ, canaisQ, ideiasQ, roteirosQ, audiosQ, metricasQ] = await Promise.all([
         supabase.from('vw_agenda_semanal').select('*').eq('ativo', true),
         supabase.schema('pulso_core').from('canais').select('id, nome').order('nome'),
-        supabase.schema('pulso_content').from('ideias').select('canal_id, status'),
-        supabase.schema('pulso_content').from('roteiros').select('canal_id, status'),
+        supabase.schema('pulso_content').from('ideias').select('id, canal_id, status'),
+        supabase.schema('pulso_content').from('roteiros').select('ideia_id'),
         supabase.schema('pulso_content').from('audios').select('ideia_id'),
+        supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id'),
       ])
       if (gradeQ.error) throw gradeQ.error
       if (canaisQ.error) throw canaisQ.error
@@ -81,25 +92,30 @@ export function useAgenda(horizonteDias = 21) {
         }
       }
 
-      // estoque por canal (proxy de prontidão)
+      // FUNIL por canal (trilha de trabalho): cada ideia contada no estágio MAIS AVANÇADO
+      // que alcançou — ideia → roteiro → áudio → vídeo (publicado).
       const nome = new Map(canais.map((c) => [c.id, c.nome.replace(/^PULSO\s*/i, '')]))
-      const estoqueMap = new Map<string, { ideias: number; roteiros: number; audios: number }>()
-      const garante = (id: string) => {
-        if (!estoqueMap.has(id)) estoqueMap.set(id, { ideias: 0, roteiros: 0, audios: 0 })
-        return estoqueMap.get(id)!
+      const comRoteiro = new Set((roteirosQ.data || []).map((r) => r.ideia_id).filter(Boolean))
+      const comAudio = new Set((audiosQ.data || []).map((a) => a.ideia_id).filter(Boolean))
+      const publicado = new Set((metricasQ.data || []).map((m) => m.ideia_id).filter(Boolean))
+
+      const funilMap = new Map<string, FunilCanal>()
+      const garante = (id: string): FunilCanal => {
+        if (!funilMap.has(id)) funilMap.set(id, { canalId: id, nome: nome.get(id) || '—', ideia: 0, roteiro: 0, audio: 0, video: 0 })
+        return funilMap.get(id)!
       }
-      for (const i of ideiasQ.data || []) if (i.canal_id && i.status === 'APROVADA') garante(i.canal_id).ideias++
-      for (const r of roteirosQ.data || []) if (r.canal_id && r.status === 'APROVADO') garante(r.canal_id).roteiros++
-      // audios via ideia->canal exigiria join; aproxima por roteiros prontos (proxy suficiente p/ step 2)
-      void audiosQ
+      const totais = { ideia: 0, roteiro: 0, audio: 0, video: 0 }
+      for (const i of ideiasQ.data || []) {
+        if (!i.canal_id) continue
+        const f = garante(i.canal_id)
+        if (publicado.has(i.id)) { f.video++; totais.video++ }
+        else if (comAudio.has(i.id)) { f.audio++; totais.audio++ }
+        else if (comRoteiro.has(i.id)) { f.roteiro++; totais.roteiro++ }
+        else if (i.status === 'APROVADA') { f.ideia++; totais.ideia++ }
+      }
+      const funil = [...funilMap.values()]
 
-      const estoque = [...estoqueMap.entries()].map(([canalId, v]) => ({
-        canalId,
-        nome: nome.get(canalId) || '—',
-        ...v,
-      }))
-
-      return { slots, canais, estoque }
+      return { slots, canais, funil, totais }
     },
   })
 }

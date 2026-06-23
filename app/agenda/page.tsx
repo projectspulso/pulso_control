@@ -165,18 +165,55 @@ export default function AgendaPage() {
           </div>
         )}
 
-        {/* Estoque por canal (proxy de prontidão) */}
+        {/* Trilha de trabalho — funil de produção (ideia → roteiro → áudio → vídeo) */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-5">
-          <h2 className="mb-3 text-sm font-semibold text-zinc-300">Estoque por canal (pronto pra encaixar)</h2>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {data.estoque.sort((a, b) => b.roteiros - a.roteiros).map((e) => (
-              <div key={e.canalId} className="flex items-center justify-between rounded-lg bg-zinc-900/50 px-3 py-2 text-sm">
-                <span className="truncate text-zinc-300">{e.nome}</span>
-                <span className="shrink-0 text-xs text-zinc-500">💡{e.ideias} · 📝{e.roteiros}</span>
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold text-zinc-300">Trilha de trabalho · funil de produção</h2>
+            <span className="text-xs text-zinc-500">cada vídeo no estágio mais avançado</span>
+          </div>
+          {/* totais (headline) */}
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {([
+              { k: 'ideia', label: '💡 Ideias', v: data.totais.ideia, cor: 'text-amber-300' },
+              { k: 'roteiro', label: '📝 Roteiros', v: data.totais.roteiro, cor: 'text-blue-300' },
+              { k: 'audio', label: '🎙️ Áudios', v: data.totais.audio, cor: 'text-emerald-300' },
+              { k: 'video', label: '🎬 Vídeos', v: data.totais.video, cor: 'text-violet-300' },
+            ] as const).map((s) => (
+              <div key={s.k} className="rounded-xl bg-zinc-900/60 p-3 text-center">
+                <div className={`text-2xl font-black tabular-nums ${s.cor}`}>{s.v}</div>
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500">{s.label}</div>
               </div>
             ))}
           </div>
-          <p className="mt-3 text-xs text-zinc-500">💡 ideias aprovadas · 📝 roteiros aprovados. Meta: estoque de 20 dias, enchendo em rampa (sempre o do dia + 2 dias/semana à frente).</p>
+          {/* por canal */}
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800/50 text-left text-[11px] uppercase tracking-wider text-zinc-500">
+                  <th className="py-2 pr-2">Canal</th>
+                  <th className="px-2 py-2 text-right">💡</th>
+                  <th className="px-2 py-2 text-right">📝</th>
+                  <th className="px-2 py-2 text-right">🎙️</th>
+                  <th className="px-2 py-2 text-right">🎬</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.funil
+                  .filter((f) => f.ideia + f.roteiro + f.audio + f.video > 0)
+                  .sort((a, b) => b.video + b.audio - (a.video + a.audio) || b.roteiro - a.roteiro)
+                  .map((f) => (
+                    <tr key={f.canalId} className="border-b border-zinc-800/30">
+                      <td className="py-2 pr-2 text-zinc-200">{f.nome}</td>
+                      <td className="px-2 py-2 text-right tabular-nums text-amber-300/80">{f.ideia || '—'}</td>
+                      <td className="px-2 py-2 text-right tabular-nums text-blue-300/80">{f.roteiro || '—'}</td>
+                      <td className="px-2 py-2 text-right tabular-nums text-emerald-300/80">{f.audio || '—'}</td>
+                      <td className="px-2 py-2 text-right tabular-nums font-bold text-violet-300">{f.video || '—'}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-xs text-zinc-500">Gargalo = onde os números caem. Meta: estoque de 20 dias, enchendo em rampa (sempre o do dia + 2 dias/semana à frente). Renderizar (🎙️→🎬) costuma ser o gargalo.</p>
         </div>
       </div>
     </div>
