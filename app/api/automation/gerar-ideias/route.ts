@@ -151,6 +151,7 @@ export async function POST(request: NextRequest) {
         prioridade?: number
         gancho_sugerido?: string
         emocao_ancora?: string
+        gatilho_psicologico?: string
       }) => ({
         canal_id: canal.id,
         serie_id: serie?.id || null,
@@ -161,6 +162,7 @@ export async function POST(request: NextRequest) {
         origem: 'IA',
         prioridade: ideia.prioridade || 5,
         status: 'RASCUNHO',
+        gatilho_psicologico: ideia.gatilho_psicologico || null,
         metadata: {
           ai_modelo: 'gpt-4o',
           gerado_em: new Date().toISOString(),
@@ -168,6 +170,7 @@ export async function POST(request: NextRequest) {
           tipo_formato: ideia.tipo_formato,
           gancho_sugerido: ideia.gancho_sugerido,
           emocao_ancora: ideia.emocao_ancora,
+          gatilho_psicologico: ideia.gatilho_psicologico,
           harness: 'HARNESS_ROTEIRO_PULSO.md',
           tokens_usados: usage,
         },

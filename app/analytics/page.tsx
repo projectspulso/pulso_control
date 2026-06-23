@@ -25,6 +25,7 @@ import { ErrorState } from '@/components/ui/error-state'
 import { ASSINATURAS_MENSAIS_BRL, CUSTO_POR_VIDEO } from '@/lib/config/custos'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
 import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
+import { useDecisao } from '@/lib/hooks/use-decisao'
 import { useFinanceiro } from '@/lib/hooks/use-financeiro'
 
 interface StatusContas {
@@ -70,6 +71,7 @@ export default function AnalyticsPage() {
   const [filtros, setFiltros] = useState<BiFiltros>({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 })
   const [paginaPubs, setPaginaPubs] = useState(1)
   const { data, isLoading, isError, refetch } = useBi(filtros)
+  const { data: decisao } = useDecisao()
   const { data: statusContas } = useStatusContas()
   const { data: fin } = useFinanceiro()
 
@@ -384,6 +386,87 @@ export default function AnalyticsPage() {
             </p>
           </div>
         </div>
+
+        {/* CAMADA DE DECISÃO — produção × desempenho (onde investir + o que publicar) */}
+        {decisao && (
+          <div className="glass rounded-2xl border border-violet-500/30 bg-violet-500/5 p-6">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-violet-300" />
+              <h2 className="text-lg font-semibold text-white">Decisão · onde investir e o que publicar</h2>
+              <span className="ml-auto text-xs text-zinc-500">cruza o que foi criado × o que rende</span>
+            </div>
+            {decisao.totalPublicados < 20 && (
+              <p className="mt-2 text-xs text-amber-300/80">
+                ⚠ Base ainda pequena ({decisao.totalPublicados} vídeos com métrica) — as recomendações ficam mais confiáveis conforme publicar mais.
+              </p>
+            )}
+
+            <div className="mt-4 grid gap-6 lg:grid-cols-2">
+              {/* Matriz por canal */}
+              <div className="overflow-x-auto">
+                <p className="mb-2 text-sm font-semibold text-zinc-300">Qual canal traz resultado</p>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-zinc-800/50 text-left text-[11px] uppercase tracking-wider text-zinc-500">
+                      <th className="py-2 pr-2">Canal</th>
+                      <th className="px-1 py-2 text-right" title="Ideias criadas">Crd</th>
+                      <th className="px-1 py-2 text-right" title="Roteiros prontos não publicados">Estq</th>
+                      <th className="px-1 py-2 text-right" title="Vídeos publicados">Pub</th>
+                      <th className="px-1 py-2 text-right">Méd/vídeo</th>
+                      <th className="px-1 py-2 text-right" title="Nota de hook média">Hook</th>
+                      <th className="py-2 pl-2 text-right">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {decisao.canais.map((c) => {
+                      const cor = { produzir: 'text-emerald-400', manter: 'text-zinc-300', segurar: 'text-red-300', testar: 'text-amber-300' }[c.acao]
+                      const label = { produzir: '🚀 produzir', manter: '➡️ manter', segurar: '🛑 segurar', testar: '🧪 testar' }[c.acao]
+                      return (
+                        <tr key={c.canalId} className="border-b border-zinc-800/30">
+                          <td className="py-2 pr-2 text-zinc-200">{c.nome}</td>
+                          <td className="px-1 py-2 text-right tabular-nums text-zinc-400">{c.ideias}</td>
+                          <td className="px-1 py-2 text-right tabular-nums text-zinc-400">{c.roteirosProntos}</td>
+                          <td className="px-1 py-2 text-right tabular-nums text-zinc-400">{c.publicados}</td>
+                          <td className="px-1 py-2 text-right font-semibold tabular-nums text-white">{c.publicados ? n(c.mediaViews) : '—'}</td>
+                          <td className="px-1 py-2 text-right tabular-nums text-zinc-400">{c.notaHookMedia ?? '—'}</td>
+                          <td className={`py-2 pl-2 text-right text-xs font-semibold ${cor}`}>{label}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Fila: o que publicar a seguir */}
+              <div>
+                <p className="mb-2 text-sm font-semibold text-zinc-300">O que publicar a seguir <span className="font-normal text-zinc-500">(estoque por potencial)</span></p>
+                {decisao.fila.length === 0 ? (
+                  <p className="text-sm text-zinc-500">Sem roteiros aprovados em estoque — gere/aprove mais.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {decisao.fila.slice(0, 10).map((f, i) => (
+                      <div key={f.roteiroId} className="flex items-center gap-2 rounded-lg bg-zinc-900/50 px-3 py-2">
+                        <span className="w-4 text-right font-mono text-xs text-zinc-600">{i + 1}</span>
+                        <span
+                          className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                            f.notaHook == null ? 'bg-zinc-700 text-zinc-300' : f.notaHook <= 2 ? 'bg-red-500/15 text-red-300' : f.notaHook === 3 ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'
+                          }`}
+                        >
+                          H{f.notaHook ?? '?'}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-sm text-zinc-200" title={f.titulo}>{f.titulo}</span>
+                        <span className="shrink-0 text-[11px] text-zinc-500">{f.canalNome}</span>
+                      </div>
+                    ))}
+                    {decisao.fila.length > 10 && (
+                      <p className="text-xs text-zinc-500">+{decisao.fila.length - 10} roteiros em estoque.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Sinais de atenção — distribuição quebrada + alcance inflado */}
         {(alertas.length > 0 || redesInfladas.length > 0) && (

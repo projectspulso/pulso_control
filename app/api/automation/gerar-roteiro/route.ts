@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
       gancho_sugerido: ideia.metadata?.gancho_sugerido,
       tipo_formato: ideia.metadata?.tipo_formato,
       emocao_ancora: ideia.metadata?.emocao_ancora,
+      gatilho_psicologico: ideia.gatilho_psicologico || ideia.metadata?.gatilho_psicologico,
       duracao_estimada: parseInt(ideia.metadata?.duracao_estimada) || 55,
     }
 
