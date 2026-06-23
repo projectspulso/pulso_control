@@ -4,15 +4,15 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 /**
  * POST /api/ideias/[id]/gerar-roteiro
- * Enfileira geração de roteiro manualmente (sem alterar status da ideia).
+ * Gera o roteiro DIRETO (reusa /api/automation/gerar-roteiro via GPT-4o).
+ * Antes só enfileirava na automation_queue, que dependia de um worker sem gatilho
+ * (n8n morto) — os jobs nunca rodavam e entupiam a fila. Agora gera na hora.
  * Ideia precisa estar APROVADA.
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  void request
-
   try {
     const { id } = await params
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54,37 +54,31 @@ export async function POST(
       )
     }
 
-    // Enfileira na automation_queue
-    const { error: queueError } = await supabase
-      .schema('pulso_automation')
-      .from('automation_queue')
-      .insert({
-        tipo: 'GERAR_ROTEIRO',
-        payload: { ideia_id: id, canal_id: ideia.canal_id },
-        referencia_id: id,
-        referencia_tipo: 'ideia',
-        origem: 'manual',
-      })
+    // Gera DIRETO reusando o gerador (GPT-4o + trava de hook + atualiza pipeline)
+    const origin = request.nextUrl.origin
+    const secret = process.env.CRON_SECRET || ''
+    const resp = await fetch(`${origin}/api/automation/gerar-roteiro`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` },
+      body: JSON.stringify({ ideia_id: id, canal_id: ideia.canal_id }),
+    })
+    const data = await resp.json().catch(() => ({}))
 
-    if (queueError) {
-      console.error('Erro ao enfileirar geração de roteiro:', queueError)
+    if (!resp.ok) {
       return NextResponse.json(
-        { error: 'Erro ao enfileirar geração de roteiro', details: queueError.message },
-        { status: 500 },
+        { error: data.error || 'Erro ao gerar roteiro', details: data },
+        { status: resp.status },
       )
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Geração de roteiro enfileirada',
-      ideia: {
-        id: ideia.id,
-        titulo: ideia.titulo,
-      },
-      automation: {
-        status: 'enqueued',
-        message: 'Geração de roteiro enfileirada na automation_queue',
-      },
+      message: 'Roteiro gerado',
+      ideia: { id: ideia.id, titulo: ideia.titulo },
+      roteiro_id: data.roteiro_id,
+      status: data.status,
+      quality_score: data.quality_score,
+      auto_aprovado: data.auto_aprovado,
     })
   } catch (error) {
     console.error('Erro geral ao processar geracao de roteiro:', error)
