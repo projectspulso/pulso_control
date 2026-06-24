@@ -939,20 +939,20 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {/* Curva de retenção (queda nos 3s) — FB */}
+        {/* Curva de retenção — Facebook + YouTube */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-rose-400" />
             <h2 className="text-lg font-semibold text-white">Curva de retenção · onde o público abandona</h2>
           </div>
           <p className="mt-1 text-xs text-zinc-500">
-            % do público que continua assistindo do início ao fim (média de {data.retencaoVideos} vídeos no Facebook — única rede que entrega a curva).
+            Quanto da audiência que <span className="text-zinc-300">começou</span> o vídeo ainda está assistindo em cada trecho, do <span className="text-zinc-300">início (0%)</span> ao <span className="text-zinc-300">fim (100%)</span>. Queda forte logo no comecinho = <span className="text-rose-300">hook fraco</span>; o ponto onde a linha despenca é onde você perde o público. Média de {data.retencaoVideos} vídeo(s) com dados de <span className="text-zinc-300">Facebook + YouTube</span> — são as redes que entregam a curva (Instagram e TikTok não dão).
             {data.retencao3s != null && (
-              <> Por volta dos <span className="font-semibold text-rose-300">3s</span> ainda restam <span className="font-semibold text-rose-300">{data.retencao3s.toFixed(0)}%</span> — é onde o hook é decidido.</>
+              <> Lá pelos <span className="font-semibold text-rose-300">3s</span> ainda restam <span className="font-semibold text-rose-300">{data.retencao3s.toFixed(0)}%</span> — é nesse trecho que o hook se decide.</>
             )}
           </p>
           {data.retencaoVideos === 0 ? (
-            <p className="mt-4 text-sm text-zinc-500">Sem curva ainda — nasce na próxima coleta (Facebook).</p>
+            <p className="mt-4 text-sm text-zinc-500">Sem curva ainda — nasce na coleta (Facebook + YouTube; só vídeos com views suficientes).</p>
           ) : (
             <div className="mt-4 h-64">
               <ResponsiveContainer width="100%" height="100%">
