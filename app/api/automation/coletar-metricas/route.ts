@@ -132,6 +132,7 @@ async function coletar(request: NextRequest) {
 
   // TikTok via Display API (video.list) — token OAuth guardado em pulso_core.configuracoes
   const ttStats = new Map<string, { views: number; likes: number; comentarios: number; shares: number }>()
+  const ttVideos: Array<{ id: string; title: string; view_count: number; like_count: number; comment_count: number; share_count: number; share_url: string }> = []
   try {
     const { data: cfg } = await supabase
       .schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'tiktok_oauth').single()
@@ -156,7 +157,7 @@ async function coletar(request: NextRequest) {
         }
       }
       const lista = await fetch(
-        'https://open.tiktokapis.com/v2/video/list/?fields=id,view_count,like_count,comment_count,share_count',
+        'https://open.tiktokapis.com/v2/video/list/?fields=id,title,view_count,like_count,comment_count,share_count,share_url',
         { method: 'POST', headers: { Authorization: `Bearer ${oauth.access_token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ max_count: 20 }) }
       ).then((x) => x.json())
@@ -165,10 +166,56 @@ async function coletar(request: NextRequest) {
           views: v.view_count || 0, likes: v.like_count || 0,
           comentarios: v.comment_count || 0, shares: v.share_count || 0,
         })
+        ttVideos.push({
+          id: String(v.id), title: v.title || '', view_count: v.view_count || 0,
+          like_count: v.like_count || 0, comment_count: v.comment_count || 0,
+          share_count: v.share_count || 0, share_url: v.share_url || '',
+        })
       }
     }
   } catch {
     avisos.push('TikTok video.list falhou — coleta manual nesta rodada')
+  }
+
+  // RECONCILIAÇÃO TIKTOK: o app empurra o vídeo pro RASCUNHO; ao finalizar no celular o TikTok gera
+  // um post_id NOVO que o app nunca soube → o vídeo fica órfão (sem linha no metricas) e o coletor
+  // (que só ATUALIZA por post_id) não o pega ("não aparece nada"). Aqui descobrimos os órfãos: vídeos
+  // do video.list não registrados, casados por palavra-chave com ideias que têm publicação em OUTRA
+  // rede mas SEM TikTok (match único = seguro) → cria a linha. Mesmo padrão da reconciliação do FB.
+  try {
+    if (ttVideos.length > 0) {
+      const ttIdsReg = new Set(publicacoes.filter((p) => p.plataforma === 'tiktok').map((p) => p.post_id))
+      const orfaos = ttVideos.filter((v) => !ttIdsReg.has(v.id))
+      const ideiasComTt = new Set(publicacoes.filter((p) => p.plataforma === 'tiktok').map((p) => p.ideia_id))
+      const candIds = [...new Set(
+        publicacoes.map((p) => p.ideia_id).filter((id): id is string => !!id && !ideiasComTt.has(id))
+      )]
+      if (orfaos.length > 0 && candIds.length > 0) {
+        const { data: candIdeias } = await supabase
+          .schema('pulso_content').from('ideias').select('id, titulo').in('id', candIds)
+        const cands = ((candIdeias || []) as Array<{ id: string; titulo: string }>).map((i) => ({
+          id: i.id,
+          tokens: (i.titulo || '').toLowerCase().split(/[^a-zà-ú0-9]+/i).filter((t) => t.length >= 4),
+        }))
+        const usadas = new Set<string>()
+        for (const v of orfaos) {
+          const cap = (v.title || '').toLowerCase()
+          const matches = cands.filter((c) => !usadas.has(c.id) && c.tokens.some((t) => cap.includes(t)))
+          if (matches.length === 1) {
+            const iid = matches[0].id
+            usadas.add(iid)
+            await supabase.schema('pulso_content').from('metricas_publicacao').insert({
+              ideia_id: iid, plataforma: 'tiktok', post_id: v.id, url_publicacao: v.share_url,
+              data_publicacao: new Date().toISOString(), views: v.view_count,
+              likes: v.like_count, comentarios: v.comment_count, shares: v.share_count,
+            })
+            avisos.push(`TikTok reconciliado: ${iid.slice(0, 8)} -> ${v.id} (${v.view_count} views)`)
+          }
+        }
+      }
+    }
+  } catch (e) {
+    avisos.push(`Reconciliação TikTok: ${e instanceof Error ? e.message : 'erro'}`)
   }
 
   const agora = new Date()
