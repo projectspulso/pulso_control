@@ -3,16 +3,19 @@
 import { useMemo, useState } from 'react'
 import {
   AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
   BadgeDollarSign,
   BarChart3,
+  CalendarDays,
+  Clock,
   Eye,
   Filter,
   Flame,
   Grid3x3,
   Heart,
   Lightbulb,
-  MessageCircle,
-  Share2,
+  Minus,
   TrendingUp,
   Trophy,
   Wallet,
@@ -286,6 +289,32 @@ export default function AnalyticsPage() {
     })
   }, [data])
 
+  // ── FAIXA EXECUTIVA (BI) ──
+  // tendência de views: ganho dos últimos 7 dias vs os 7 anteriores (da série diária)
+  const tendenciaViews = useMemo(() => {
+    const s = data?.serieDiaria || []
+    if (s.length < 8) return null
+    const ult = s.slice(-7).reduce((a, d) => a + d.views, 0)
+    const ant = s.slice(-14, -7).reduce((a, d) => a + d.views, 0)
+    if (ant <= 0) return null
+    return ((ult - ant) / ant) * 100
+  }, [data])
+
+  const sparkViews = useMemo(() => (data?.serieDiaria || []).map((d) => ({ v: d.views })), [data])
+
+  // Destaques automáticos — o "na cara": campeão, melhor dia, mais retém, atenção
+  const destaques = useMemo(() => {
+    const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+    const out: { icon: typeof Trophy; cor: string; soft: string; rotulo: string; valor: string; detalhe: string }[] = []
+    const camp = [...recomendacao].sort((a, b) => b.mediaPorVideo - a.mediaPorVideo)[0]
+    if (camp) out.push({ icon: Trophy, cor: 'text-amber-300', soft: 'bg-amber-500/10', rotulo: 'Canal campeão', valor: camp.vertical, detalhe: `${n(camp.mediaPorVideo)} views/vídeo` })
+    if (melhorDia && melhorDia.media > 0) out.push({ icon: CalendarDays, cor: 'text-emerald-300', soft: 'bg-emerald-500/10', rotulo: 'Melhor dia', valor: melhorDia.dia, detalhe: `${n(melhorDia.media)} views/post` })
+    const ret = [...tempoMedioPorRede].filter((r) => r.posts > 0).sort((a, b) => b.segundos - a.segundos)[0]
+    if (ret) out.push({ icon: Clock, cor: 'text-sky-300', soft: 'bg-sky-500/10', rotulo: 'Rede que mais retém', valor: cap(ret.rede), detalhe: `${ret.segundos}s assistidos` })
+    out.push({ icon: AlertTriangle, cor: alertas.length ? 'text-red-300' : 'text-zinc-400', soft: alertas.length ? 'bg-red-500/10' : 'bg-zinc-800/40', rotulo: 'Sinais de atenção', valor: String(alertas.length), detalhe: alertas.length ? 'fora da curva' : 'tudo na curva' })
+    return out
+  }, [recomendacao, melhorDia, tempoMedioPorRede, alertas])
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
@@ -368,39 +397,85 @@ export default function AnalyticsPage() {
           </span>
         </div>
 
-        {/* Cards */}
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="glass rounded-2xl border border-zinc-800/50 p-6">
-            <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              <Eye className="h-4 w-4" /> Views
-            </p>
-            <p className="mt-3 text-3xl font-bold text-white">{n(resumo.views)}</p>
+        {/* FAIXA EXECUTIVA — KPIs hero (resultado na cara) */}
+        <div className="grid gap-4 lg:grid-cols-4">
+          {/* Views — hero (2 col) com Δ vs 7 dias + sparkline */}
+          <div className="glass relative overflow-hidden rounded-2xl border border-cyan-500/25 bg-cyan-500/[0.04] p-6 lg:col-span-2">
+            <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-48 rounded-full bg-cyan-500/10 blur-2xl" />
+            <div className="relative flex items-start justify-between gap-3">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-300">
+                  <Eye className="h-4 w-4 text-cyan-300" /> Views totais
+                </p>
+                <p className="mt-2 text-5xl font-black tabular-nums text-white">{n(resumo.views)}</p>
+                {tendenciaViews != null ? (
+                  <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${tendenciaViews >= 0 ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`}>
+                    {tendenciaViews >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                    {Math.abs(tendenciaViews).toFixed(0)}% vs 7 dias antes
+                  </span>
+                ) : (
+                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-zinc-800/60 px-2.5 py-1 text-xs font-medium text-zinc-500">
+                    <Minus className="h-3.5 w-3.5" /> sem base p/ tendência ainda
+                  </span>
+                )}
+              </div>
+            </div>
+            {sparkViews.length > 1 && (
+              <div className="relative mt-3 h-16">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={sparkViews} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="sparkViews" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.45} />
+                        <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Tooltip
+                      contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 10, color: '#fff', fontSize: 12 }}
+                      labelFormatter={() => ''}
+                      formatter={(value: number) => [n(value), 'Views no dia']}
+                    />
+                    <Area type="monotone" dataKey="v" stroke="#22d3ee" strokeWidth={2} fill="url(#sparkViews)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
+          {/* Ressonância */}
           <div className="glass rounded-2xl border border-zinc-800/50 p-6">
             <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              <Heart className="h-4 w-4" /> Ressonância
+              <Heart className="h-4 w-4 text-pink-400" /> Ressonância
             </p>
             <p className="mt-3 text-3xl font-bold text-white">{resumo.ressonancia.toFixed(1)}%</p>
-            <p className="mt-1 text-sm text-zinc-500">{n(resumo.likes)} likes</p>
+            <p className="mt-1 text-sm text-zinc-500">{n(resumo.likes)} likes · {n(resumo.comentarios)} coment.</p>
           </div>
+          {/* Custo AI */}
           <div className="glass rounded-2xl border border-zinc-800/50 p-6">
             <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              <MessageCircle className="h-4 w-4" /> Conversa
-            </p>
-            <p className="mt-3 text-3xl font-bold text-white">{n(resumo.comentarios)}</p>
-            <p className="mt-1 flex items-center gap-1 text-sm text-zinc-500">
-              <Share2 className="h-3.5 w-3.5" /> {n(resumo.shares)} shares+saves
-            </p>
-          </div>
-          <div className="glass rounded-2xl border border-zinc-800/50 p-6">
-            <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              <Wallet className="h-4 w-4" /> Custo AI
+              <Wallet className="h-4 w-4 text-green-400" /> Custo AI
             </p>
             <p className="mt-3 text-3xl font-bold text-white">{brl(resumo.custoProducao)}</p>
             <p className="mt-1 text-sm text-zinc-500">
               {resumo.views > 0 ? `${brl(resumo.custoPorView)} por view` : 'estimativa por vídeo'}
             </p>
           </div>
+        </div>
+
+        {/* DESTAQUES — insights automáticos na cara */}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {destaques.map((d) => {
+            const Icon = d.icon
+            return (
+              <div key={d.rotulo} className="glass rounded-2xl border border-zinc-800/50 p-5">
+                <div className={`mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg ${d.soft}`}>
+                  <Icon className={`h-5 w-5 ${d.cor}`} />
+                </div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">{d.rotulo}</p>
+                <p className="mt-0.5 truncate text-lg font-bold text-white" title={d.valor}>{d.valor}</p>
+                <p className="text-xs text-zinc-500">{d.detalhe}</p>
+              </div>
+            )
+          })}
         </div>
 
         {/* CAMADA DE DECISÃO — produção × desempenho (onde investir + o que publicar) */}
