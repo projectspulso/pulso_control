@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { guardApi } from '@/lib/auth/api-guard'
+import { getYoutubeAccessToken } from '@/lib/youtube/oauth'
+import { fetchYoutubeRetention } from '@/lib/youtube/retention'
 
 /**
  * POST|GET /api/automation/coletar-metricas
@@ -117,6 +119,17 @@ async function coletar(request: NextRequest) {
     }
   }
 
+  // YouTube Analytics OAuth — token p/ retenção (audienceWatchRatio). null = não conectado.
+  let ytAnalyticsToken: string | null = null
+  try {
+    ytAnalyticsToken = await getYoutubeAccessToken()
+  } catch {
+    ytAnalyticsToken = null
+  }
+  if (!ytAnalyticsToken && ytIds.length > 0) {
+    avisos.push('YouTube OAuth ausente — retenção (curva) do YouTube ignorada')
+  }
+
   // TikTok via Display API (video.list) — token OAuth guardado em pulso_core.configuracoes
   const ttStats = new Map<string, { views: number; likes: number; comentarios: number; shares: number }>()
   try {
@@ -169,6 +182,13 @@ async function coletar(request: NextRequest) {
       if (pub.plataforma === 'youtube') {
         const s = ytStats.get(pub.post_id as string)
         if (s) metricas = { views: s.views, likes: s.likes, comentarios: s.comentarios }
+        // retenção (curva 41 pts) via YouTube Analytics API — mesma escala/coluna do FB
+        if (ytAnalyticsToken && pub.post_id) {
+          try {
+            const retGraph = await fetchYoutubeRetention(pub.post_id, ytAnalyticsToken)
+            if (retGraph) extras.retention_graph = retGraph
+          } catch { /* retenção é best-effort */ }
+        }
       } else if (pub.plataforma === 'instagram' && process.env.INSTAGRAM_ACCESS_TOKEN) {
         const token = process.env.INSTAGRAM_ACCESS_TOKEN
         const mediaUrl = new URL(`https://graph.facebook.com/v23.0/${pub.post_id}`)
