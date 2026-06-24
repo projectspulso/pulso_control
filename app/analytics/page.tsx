@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Trophy,
   Wallet,
+  X,
 } from 'lucide-react'
 
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -74,6 +75,7 @@ const PUBS_POR_PAGINA = 15
 export default function AnalyticsPage() {
   const [filtros, setFiltros] = useState<BiFiltros>({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 })
   const [paginaPubs, setPaginaPubs] = useState(1)
+  const [drill, setDrill] = useState<string | null>(null)
   const { data, isLoading, isError, refetch } = useBi(filtros)
   const { data: decisao } = useDecisao()
   const { data: statusContas } = useStatusContas()
@@ -315,6 +317,15 @@ export default function AnalyticsPage() {
     return out
   }, [recomendacao, melhorDia, tempoMedioPorRede, alertas])
 
+  useEffect(() => {
+    if (drill === null) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrill(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [drill])
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
@@ -396,6 +407,46 @@ export default function AnalyticsPage() {
             )}
           </span>
         </div>
+
+        {/* Filtros ativos (chips) — assinatura cross-filter */}
+        {(filtros.plataforma !== 'todas' || filtros.canalId !== 'todos' || filtros.periodoDias !== 0) && (
+          <div className="flex flex-wrap items-center gap-2 -mt-4">
+            <span className="text-xs text-zinc-500">Filtrando por:</span>
+            {filtros.plataforma !== 'todas' && (
+              <button
+                onClick={() => { setFiltros((f) => ({ ...f, plataforma: 'todas' })); setPaginaPubs(1) }}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-zinc-800 px-3 py-1 text-xs text-zinc-200 transition-colors hover:bg-zinc-700"
+              >
+                {filtros.plataforma.charAt(0).toUpperCase() + filtros.plataforma.slice(1)}
+                <X className="h-3 w-3 text-zinc-400" />
+              </button>
+            )}
+            {filtros.canalId !== 'todos' && (
+              <button
+                onClick={() => { setFiltros((f) => ({ ...f, canalId: 'todos' })); setPaginaPubs(1) }}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-zinc-800 px-3 py-1 text-xs text-zinc-200 transition-colors hover:bg-zinc-700"
+              >
+                {data.canais.find((c) => c.id === filtros.canalId)?.nome ?? 'Vertical'}
+                <X className="h-3 w-3 text-zinc-400" />
+              </button>
+            )}
+            {filtros.periodoDias !== 0 && (
+              <button
+                onClick={() => { setFiltros((f) => ({ ...f, periodoDias: 0 })); setPaginaPubs(1) }}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-zinc-800 px-3 py-1 text-xs text-zinc-200 transition-colors hover:bg-zinc-700"
+              >
+                Últimos {filtros.periodoDias} dias
+                <X className="h-3 w-3 text-zinc-400" />
+              </button>
+            )}
+            <button
+              onClick={() => { setFiltros({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 }); setPaginaPubs(1) }}
+              className="cursor-pointer text-xs font-medium text-cyan-400 transition-colors hover:text-cyan-300"
+            >
+              Limpar tudo
+            </button>
+          </div>
+        )}
 
         {/* FAIXA EXECUTIVA — KPIs hero (resultado na cara) */}
         <div className="grid gap-4 lg:grid-cols-4">
@@ -512,8 +563,13 @@ export default function AnalyticsPage() {
                     {decisao.canais.map((c) => {
                       const cor = { produzir: 'text-emerald-400', manter: 'text-zinc-300', segurar: 'text-red-300', testar: 'text-amber-300' }[c.acao]
                       const label = { produzir: '🚀 produzir', manter: '➡️ manter', segurar: '🛑 segurar', testar: '🧪 testar' }[c.acao]
+                      const ativo = filtros.canalId === c.canalId
                       return (
-                        <tr key={c.canalId} className="border-b border-zinc-800/30">
+                        <tr
+                          key={c.canalId}
+                          onClick={() => { setFiltros((f) => ({ ...f, canalId: f.canalId === c.canalId ? 'todos' : c.canalId })); setPaginaPubs(1) }}
+                          className={`cursor-pointer border-b border-zinc-800/30 transition-colors ${ativo ? 'bg-cyan-500/10' : 'hover:bg-zinc-900/40'}`}
+                        >
                           <td className="py-2 pr-2 text-zinc-200">{c.nome}</td>
                           <td className="px-1 py-2 text-right tabular-nums text-zinc-400">{c.ideias}</td>
                           <td className="px-1 py-2 text-right tabular-nums text-zinc-400">{c.roteirosProntos}</td>
@@ -656,8 +712,14 @@ export default function AnalyticsPage() {
             {porRede.map((r) => {
               const melhorEngajamento = Math.max(...porRede.map((x) => x.ressonancia))
               const ehTopEngaja = r.ressonancia === melhorEngajamento && r.ressonancia > 0
+              const ativo = filtros.plataforma === r.rede
               return (
-                <div key={r.rede} className={`rounded-xl p-4 ${ehTopEngaja ? 'bg-emerald-500/10 ring-1 ring-emerald-500/30' : 'bg-zinc-900/60'}`}>
+                <button
+                  key={r.rede}
+                  type="button"
+                  onClick={() => { setFiltros((f) => ({ ...f, plataforma: f.plataforma === r.rede ? 'todas' : r.rede })); setPaginaPubs(1) }}
+                  className={`cursor-pointer rounded-xl p-4 text-left transition-all hover:brightness-125 ${ativo ? 'ring-2 ring-cyan-500/40' : ''} ${ehTopEngaja ? 'bg-emerald-500/10 ring-1 ring-emerald-500/30' : 'bg-zinc-900/60'}`}
+                >
                   <div className="flex items-baseline justify-between">
                     <p className="text-sm font-semibold capitalize text-zinc-300">{r.rede}</p>
                     <p className="text-xs text-zinc-500">{r.posts} posts</p>
@@ -676,7 +738,7 @@ export default function AnalyticsPage() {
                       {r.ressonancia.toFixed(1)}% engaja
                     </span>
                   </p>
-                </div>
+                </button>
               )
             })}
           </div>
@@ -693,7 +755,11 @@ export default function AnalyticsPage() {
             {topConteudos.slice(0, 8).map((c, i) => {
               const max = topConteudos[0]?.views || 1
               return (
-                <div key={c.titulo + i} className="flex items-center gap-3">
+                <div
+                  key={c.titulo + i}
+                  onClick={() => setDrill(c.titulo)}
+                  className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-1 transition-colors hover:bg-zinc-900/50"
+                >
                   <span className="w-5 text-right font-mono text-sm text-zinc-500">{i + 1}º</span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm text-zinc-200">{c.titulo}</p>
@@ -765,7 +831,11 @@ export default function AnalyticsPage() {
               </thead>
               <tbody>
                 {matrizRedes.linhas.slice(0, 12).map((l, i) => (
-                  <tr key={l.titulo + i} className="border-b border-zinc-800/30 hover:bg-zinc-900/40">
+                  <tr
+                    key={l.titulo + i}
+                    onClick={() => setDrill(l.titulo)}
+                    className="cursor-pointer border-b border-zinc-800/30 transition-colors hover:bg-zinc-900/40"
+                  >
                     <td className="max-w-xs truncate px-6 py-3 text-zinc-200" title={l.titulo}>{l.titulo}</td>
                     {matrizRedes.redes.map((r) => (
                       <td key={r} className="px-3 py-3 text-right tabular-nums text-zinc-400">
@@ -1138,6 +1208,94 @@ export default function AnalyticsPage() {
             </div>
           )}
         </div>
+
+        {/* Drill-down por vídeo — modal cross-rede */}
+        {drill !== null && (() => {
+          const pubs = data.publicacoes
+            .filter((p) => p.ideiaTitulo === drill)
+            .sort((a, b) => b.views - a.views)
+            .map((p) => ({
+              rede: p.plataforma,
+              views: p.views,
+              likes: p.likes,
+              comentarios: p.comentarios,
+              engaja: p.shares + p.saves,
+              tempo: p.avgWatchMs ? `${(p.avgWatchMs / 1000).toFixed(1)}s` : '—',
+            }))
+          const total = pubs.reduce(
+            (a, p) => ({
+              views: a.views + p.views,
+              likes: a.likes + p.likes,
+              comentarios: a.comentarios + p.comentarios,
+              engaja: a.engaja + p.engaja,
+            }),
+            { views: 0, likes: 0, comentarios: 0, engaja: 0 }
+          )
+          return (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+              onClick={() => setDrill(null)}
+            >
+              <div
+                className="glass relative w-full max-w-lg rounded-2xl border border-zinc-700/60 p-6"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => setDrill(null)}
+                  className="absolute right-4 top-4 cursor-pointer rounded-lg p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+                  aria-label="Fechar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <div className="flex items-center gap-2 pr-8">
+                  <Grid3x3 className="h-5 w-5 shrink-0 text-cyan-400" />
+                  <h3 className="text-base font-semibold text-white" title={drill}>{drill}</h3>
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">Desempenho do mesmo vídeo em cada rede.</p>
+
+                {pubs.length === 0 ? (
+                  <p className="mt-6 text-sm text-zinc-500">Sem dados para este vídeo.</p>
+                ) : (
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-zinc-800/50 text-left text-[11px] uppercase tracking-wider text-zinc-500">
+                          <th className="py-2 pr-2">Rede</th>
+                          <th className="px-1 py-2 text-right">Views</th>
+                          <th className="px-1 py-2 text-right">Likes</th>
+                          <th className="px-1 py-2 text-right">Coment.</th>
+                          <th className="px-1 py-2 text-right">Sh+Sv</th>
+                          <th className="py-2 pl-1 text-right">Tempo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pubs.map((p, i) => (
+                          <tr key={p.rede + i} className="border-b border-zinc-800/30">
+                            <td className="py-2 pr-2 capitalize text-zinc-200">{p.rede}</td>
+                            <td className="px-1 py-2 text-right font-semibold tabular-nums text-white">{n(p.views)}</td>
+                            <td className="px-1 py-2 text-right tabular-nums text-zinc-400">{n(p.likes)}</td>
+                            <td className="px-1 py-2 text-right tabular-nums text-zinc-400">{n(p.comentarios)}</td>
+                            <td className="px-1 py-2 text-right tabular-nums text-zinc-400">{n(p.engaja)}</td>
+                            <td className="py-2 pl-1 text-right tabular-nums text-zinc-400">{p.tempo}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-zinc-700/60 font-semibold">
+                          <td className="py-2 pr-2 text-zinc-300">Total</td>
+                          <td className="px-1 py-2 text-right tabular-nums text-white">{n(total.views)}</td>
+                          <td className="px-1 py-2 text-right tabular-nums text-white">{n(total.likes)}</td>
+                          <td className="px-1 py-2 text-right tabular-nums text-white">{n(total.comentarios)}</td>
+                          <td className="px-1 py-2 text-right tabular-nums text-white">{n(total.engaja)}</td>
+                          <td className="py-2 pl-1 text-right text-zinc-600">—</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })()}
       </div>
     </div>
   )
