@@ -10,8 +10,8 @@ import {
 } from '@/lib/hooks/use-automation'
 import { type AutomationTipo, type AutomationStatus } from '@/lib/api/automation'
 import { ErrorState } from '@/components/ui/error-state'
+import { PageHeader } from '@/components/layout/page-header'
 import {
-  Zap,
   Lightbulb,
   ListChecks,
   BarChart3,
@@ -223,23 +223,10 @@ export default function AutomacaoPage() {
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* Header */}
-        <div className="animate-fade-in">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-xl bg-linear-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
-              <Zap className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black bg-linear-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-                Automações
-              </h1>
-            </div>
-          </div>
-          <p className="text-zinc-400 mt-1 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            A esteira do PULSO: o que roda sozinho, o que espera você
-          </p>
-        </div>
+        <PageHeader
+          titulo="Automações"
+          subtitulo="A esteira do PULSO: o que roda sozinho, o que espera você"
+        />
 
         {/* Mapa da esteira — quem faz o quê */}
         <div className="glass rounded-2xl p-6 animate-fade-in">

@@ -22,6 +22,7 @@ export interface BiPublicacao {
   comentarios: number
   shares: number
   saves: number
+  avgWatchMs: number | null // tempo médio assistido (FB + IG entregam; YT/TikTok não)
 }
 
 export interface BiSerieDia {
@@ -97,6 +98,7 @@ export function useBi(filtros: BiFiltros) {
           comentarios: m.comentarios || 0,
           shares: m.shares || 0,
           saves: m.saves || 0,
+          avgWatchMs: m.avg_watch_ms ?? null,
         })
       }
 

@@ -4,6 +4,7 @@ import { useIdeias, useIdeiasStats } from '@/lib/hooks/use-ideias'
 import { useCanais } from '@/lib/hooks/use-core'
 import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
+import { PageHeader } from '@/components/layout/page-header'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -84,28 +85,21 @@ export default function IdeiasPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between animate-fade-in">
-          <div>
-            <h1 className="text-4xl font-black bg-linear-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent flex items-center gap-3">
-              💡 Ideias
-            </h1>
-            <p className="text-zinc-400 mt-2 flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              {stats?.total || 0} ideias cadastradas
-            </p>
-          </div>
-          
-          <Link
-            href={`/ideias/nova`}
-            className="group glass glass-hover rounded-xl px-6 py-3 font-semibold bg-linear-to-r from-violet-600 to-purple-600 text-white border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/20 transition-all"
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-xl group-hover:scale-110 transition-transform">+</span>
-              Nova Ideia
-            </span>
-          </Link>
-        </div>
+        <PageHeader
+          titulo="Ideias"
+          subtitulo={`${stats?.total || 0} ideias cadastradas`}
+          acoes={
+            <Link
+              href={`/ideias/nova`}
+              className="group glass glass-hover rounded-xl px-6 py-3 font-semibold bg-linear-to-r from-violet-600 to-purple-600 text-white border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/20 transition-all"
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-xl group-hover:scale-110 transition-transform">+</span>
+                Nova Ideia
+              </span>
+            </Link>
+          }
+        />
 
         <ModoFocoBanner detail="Ideias fora do canal foco ficam fora da operacao diaria ate o gate do MVP." />
 

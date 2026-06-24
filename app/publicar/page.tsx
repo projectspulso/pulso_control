@@ -19,6 +19,7 @@ import { useState } from 'react'
 
 import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
+import { PageHeader } from '@/components/layout/page-header'
 import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { useConteudosProntos } from '@/lib/hooks/use-calendario'
 import { usePublicar } from '@/lib/hooks/use-automation'
@@ -335,47 +336,40 @@ export default function PublicarPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="mx-auto max-w-7xl space-y-8">
-        <div className="flex flex-col gap-4 animate-fade-in lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="flex items-center gap-3 bg-linear-to-r from-green-400 via-emerald-400 to-green-400 bg-clip-text text-4xl font-black text-transparent">
-              <Sparkles className="h-9 w-9 text-green-400" />
-              Publicacao Assistida
-            </h1>
-            <p className="mt-2 flex items-center gap-2 text-zinc-400">
-              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              {totalConteudos} conteudo(s) pronto(s) para envio a fila assistida
-            </p>
-          </div>
-
-          {selecionados.size > 0 && (
-            <div className="flex flex-wrap gap-3 animate-slide-in-right">
-              <button
-                type="button"
-                onClick={() => abrirAgendamento()}
-                disabled={agendarPublicacao.isPending}
-                className="glass glass-hover rounded-xl border-violet-500/50 bg-linear-to-r from-violet-600 to-purple-600 px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {agendarPublicacao.isPending
-                    ? 'Agendando fila...'
-                    : `Agendar ${selecionados.size}`}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => abrirPublicacaoAssistida()}
-                disabled={publicarAgora.isPending}
-                className="glass glass-hover rounded-xl border-green-500/50 bg-linear-to-r from-green-600 to-emerald-600 px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-green-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  {publicarAgora.isPending ? 'Enviando fila...' : 'Enviar agora'}
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
+        <PageHeader
+          titulo="Publicacao Assistida"
+          subtitulo={`${totalConteudos} conteudo(s) pronto(s) para envio a fila assistida`}
+          acoes={
+            selecionados.size > 0 ? (
+              <div className="flex flex-wrap gap-3 animate-slide-in-right">
+                <button
+                  type="button"
+                  onClick={() => abrirAgendamento()}
+                  disabled={agendarPublicacao.isPending}
+                  className="glass glass-hover rounded-xl border-violet-500/50 bg-linear-to-r from-violet-600 to-purple-600 px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    {agendarPublicacao.isPending
+                      ? 'Agendando fila...'
+                      : `Agendar ${selecionados.size}`}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => abrirPublicacaoAssistida()}
+                  disabled={publicarAgora.isPending}
+                  className="glass glass-hover rounded-xl border-green-500/50 bg-linear-to-r from-green-600 to-emerald-600 px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-green-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    {publicarAgora.isPending ? 'Enviando fila...' : 'Enviar agora'}
+                  </span>
+                </button>
+              </div>
+            ) : undefined
+          }
+        />
 
         <ModoFocoBanner detail="Publicacao assistida limitada ao canal foco. Outros canais ficam congelados ate o gate." />
 

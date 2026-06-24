@@ -8,6 +8,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
+import { PageHeader } from '@/components/layout/page-header'
 import { EstoqueBanner } from '@/components/estoque-banner'
 import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { Calendar, Clock, Film, User } from 'lucide-react'
@@ -240,31 +241,30 @@ export default function ProducaoPage() {
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-[1800px] mx-auto">
         <div className="mb-8 animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse-glow" />
-              <h1 className="text-4xl font-black bg-linear-to-r from-orange-400 via-red-400 to-orange-400 bg-clip-text text-transparent">
-                🎬 Pipeline de Produção
-              </h1>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/producao/higgsfield"
-                className="glass-hover px-5 py-3 text-white rounded-lg transition-all flex items-center gap-2 relative overflow-hidden group"
-              >
-                <div className="absolute inset-0 bg-linear-to-r from-orange-600 to-amber-600 opacity-100 group-hover:opacity-80 transition-opacity" />
-                <Film className="h-4 w-4 relative" />
-                <span className="relative">Kit Higgsfield</span>
-              </Link>
-              <Link
-                href="/calendario"
-                className="glass-hover px-5 py-3 text-white rounded-lg transition-all flex items-center gap-2 relative overflow-hidden group"
-              >
-                <div className="absolute inset-0 bg-linear-to-r from-teal-600 to-blue-600 opacity-100 group-hover:opacity-80 transition-opacity" />
-                <Calendar className="h-4 w-4 relative" />
-                <span className="relative">Ver Calendário</span>
-              </Link>
-            </div>
+          <div className="mb-4">
+            <PageHeader
+              titulo="Pipeline de Produção"
+              acoes={
+                <>
+                  <Link
+                    href="/producao/higgsfield"
+                    className="glass-hover px-5 py-3 text-white rounded-lg transition-all flex items-center gap-2 relative overflow-hidden group"
+                  >
+                    <div className="absolute inset-0 bg-linear-to-r from-orange-600 to-amber-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+                    <Film className="h-4 w-4 relative" />
+                    <span className="relative">Kit Higgsfield</span>
+                  </Link>
+                  <Link
+                    href="/calendario"
+                    className="glass-hover px-5 py-3 text-white rounded-lg transition-all flex items-center gap-2 relative overflow-hidden group"
+                  >
+                    <div className="absolute inset-0 bg-linear-to-r from-teal-600 to-blue-600 opacity-100 group-hover:opacity-80 transition-opacity" />
+                    <Calendar className="h-4 w-4 relative" />
+                    <span className="relative">Ver Calendário</span>
+                  </Link>
+                </>
+              }
+            />
           </div>
 
           <div className="mb-6">

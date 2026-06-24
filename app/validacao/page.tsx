@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 
 import { ErrorState } from '@/components/ui/error-state'
+import { PageHeader } from '@/components/layout/page-header'
 import { useAderencia, useColetarAgora, type VideoAderencia } from '@/lib/hooks/use-aderencia'
 
 const PLATAFORMA_LABEL: Record<string, string> = {
@@ -92,30 +93,23 @@ export default function ValidacaoPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="mx-auto max-w-7xl space-y-8">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Validação · Aderência</h1>
-            <p className="mt-1 text-zinc-400">
-              Números reais das 4 redes — todas coletadas automaticamente (YouTube, Instagram, Facebook e TikTok via
-              APIs oficiais).
-              {data.ultimaColeta && (
-                <span className="ml-2 text-zinc-500">
-                  Última coleta: {new Date(data.ultimaColeta).toLocaleString('pt-BR')}
-                </span>
-              )}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => coletar.mutate()}
-            disabled={coletar.isPending}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-violet-500/50 bg-linear-to-r from-violet-600 to-purple-600 px-5 py-2.5 font-semibold text-white transition-all hover:shadow-lg hover:shadow-violet-500/20 disabled:opacity-50"
-          >
-            <RefreshCw className={`h-4 w-4 ${coletar.isPending ? 'animate-spin' : ''}`} />
-            {coletar.isPending ? 'Coletando…' : 'Coletar agora'}
-          </button>
-        </div>
+        <PageHeader
+          titulo="Validação · Aderência"
+          subtitulo={`Números reais das 4 redes — todas coletadas automaticamente (YouTube, Instagram, Facebook e TikTok via APIs oficiais).${
+            data.ultimaColeta ? ` Última coleta: ${new Date(data.ultimaColeta).toLocaleString('pt-BR')}` : ''
+          }`}
+          acoes={
+            <button
+              type="button"
+              onClick={() => coletar.mutate()}
+              disabled={coletar.isPending}
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-violet-500/50 bg-linear-to-r from-violet-600 to-purple-600 px-5 py-2.5 font-semibold text-white transition-all hover:shadow-lg hover:shadow-violet-500/20 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${coletar.isPending ? 'animate-spin' : ''}`} />
+              {coletar.isPending ? 'Coletando…' : 'Coletar agora'}
+            </button>
+          }
+        />
 
         {/* Cards por plataforma */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

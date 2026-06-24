@@ -24,6 +24,7 @@ import {
 
 import { getSupabaseBrowser } from '@/lib/supabase/browser'
 import { useUsuario } from '@/lib/hooks/use-usuario'
+import { areaFor } from '@/lib/config/areas'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, badge: null, soAdmin: false },
@@ -48,6 +49,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
       {itens.map((item) => {
         const isActive = pathname === item.href
         const Icon = item.icon
+        const area = areaFor(item.href)
         return (
           <Link
             key={item.name}
@@ -55,12 +57,16 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             className={`group relative flex items-center justify-between gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ${
               isActive
-                ? 'bg-linear-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20'
+                ? `bg-linear-to-r ${area.navGradient} text-white shadow-lg ${area.navGlow}`
                 : 'text-zinc-400 hover:bg-zinc-900/50 hover:text-white'
             }`}
           >
+            {/* trilho de acento da área na borda esquerda (some quando ativo) */}
+            {!isActive && (
+              <span className={`absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-r-full ${area.dot} opacity-0 transition-all duration-300 group-hover:h-5 group-hover:opacity-100`} />
+            )}
             <div className="relative z-10 flex items-center gap-3">
-              <Icon className={`h-5 w-5 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+              <Icon className={`h-5 w-5 transition-transform duration-300 ${isActive ? 'scale-110' : `${area.text} group-hover:scale-110`}`} />
               <span>{item.name}</span>
             </div>
             {item.badge === 'ai' && (

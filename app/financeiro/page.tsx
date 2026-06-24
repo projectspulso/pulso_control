@@ -1,8 +1,9 @@
 'use client'
 
-import { AlertTriangle, Coins, Film, Lock, PiggyBank, ShieldCheck, TrendingDown, Wallet } from 'lucide-react'
+import { AlertTriangle, Coins, Film, Lock, PiggyBank, ShieldCheck, TrendingDown } from 'lucide-react'
 
 import { ErrorState } from '@/components/ui/error-state'
+import { PageHeader } from '@/components/layout/page-header'
 import { CUSTO_POR_VIDEO } from '@/lib/config/custos'
 import { useFinanceiro } from '@/lib/hooks/use-financeiro'
 
@@ -59,14 +60,10 @@ export default function FinanceiroPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="mx-auto max-w-7xl space-y-8">
-        <div>
-          <h1 className="flex items-center gap-3 text-3xl font-bold text-white">
-            <Wallet className="h-8 w-8 text-green-400" /> Financeiro
-          </h1>
-          <p className="mt-1 text-zinc-400">
-            Controle completo de custos de produção — com travas duras nos orquestradores.
-          </p>
-        </div>
+        <PageHeader
+          titulo="Financeiro"
+          subtitulo="Controle completo de custos de produção — com travas duras nos orquestradores."
+        />
 
         {/* Cards principais */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

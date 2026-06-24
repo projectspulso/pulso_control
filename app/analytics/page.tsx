@@ -22,6 +22,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { useQuery } from '@tanstack/react-query'
 
 import { ErrorState } from '@/components/ui/error-state'
+import { PageHeader } from '@/components/layout/page-header'
 import { ASSINATURAS_MENSAIS_BRL, CUSTO_POR_VIDEO } from '@/lib/config/custos'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
 import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
@@ -267,6 +268,24 @@ export default function AnalyticsPage() {
   // redes que inflam alcance: muito share, mas ressonância quase nula (ex.: FB Reels plays)
   const redesInfladas = useMemo(() => porRede.filter((r) => r.share >= 20 && r.ressonancia < 1), [porRede])
 
+  // Tempo médio assistido por rede (segundos) — proxy de retenção cross-rede até o YouTube OAuth.
+  // FB e IG entregam avg_watch; YouTube (precisa OAuth) e TikTok (sem API) ficam sem dado.
+  const tempoMedioPorRede = useMemo(() => {
+    if (!data) return [] as { rede: string; segundos: number; posts: number }[]
+    const acc = new Map<string, { soma: number; n: number }>()
+    for (const p of data.publicacoes) {
+      if (p.avgWatchMs == null || p.avgWatchMs <= 0) continue
+      const v = acc.get(p.plataforma) || { soma: 0, n: 0 }
+      v.soma += p.avgWatchMs
+      v.n += 1
+      acc.set(p.plataforma, v)
+    }
+    return ['facebook', 'instagram', 'youtube', 'tiktok'].map((rede) => {
+      const v = acc.get(rede)
+      return { rede, segundos: v ? Math.round((v.soma / v.n / 1000) * 10) / 10 : 0, posts: v?.n || 0 }
+    })
+  }, [data])
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8">
@@ -303,10 +322,7 @@ export default function AnalyticsPage() {
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Header + filtros */}
-        <div>
-          <h1 className="text-3xl font-bold text-white">Analytics · BI</h1>
-          <p className="mt-1 text-zinc-400">Decisões rápidas: alcance, ressonância, custo e curso por vertical.</p>
-        </div>
+        <PageHeader titulo="Analytics · BI" subtitulo="Decisões rápidas: alcance, ressonância, custo e curva por vertical." />
 
         <div className="glass flex flex-wrap items-center gap-3 rounded-2xl border border-zinc-800/50 p-4">
           <Filter className="h-4 w-4 text-violet-400" />
@@ -825,6 +841,47 @@ export default function AnalyticsPage() {
                   />
                   <Area type="monotone" dataKey="pct" stroke="#fb7185" strokeWidth={2.5} fill="url(#gradRet)" />
                 </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        {/* Tempo médio assistido por rede (cross-rede, stopgap até o YouTube OAuth) */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-sky-400" />
+            <h2 className="text-lg font-semibold text-white">Tempo médio assistido por rede</h2>
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">
+            Quantos segundos, em média, cada vídeo segura o público — comparável entre redes (proxy de retenção).
+            <span className="text-zinc-400"> Facebook</span> e <span className="text-zinc-400">Instagram</span> entregam esse dado;{' '}
+            <span className="text-zinc-400">YouTube</span> entra quando ligarmos o OAuth e <span className="text-zinc-400">TikTok</span> não expõe na API atual.
+          </p>
+          {tempoMedioPorRede.every((r) => r.posts === 0) ? (
+            <p className="mt-4 text-sm text-zinc-500">Sem tempo médio coletado ainda — nasce na próxima coleta (FB/IG).</p>
+          ) : (
+            <div className="mt-4 h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={tempoMedioPorRede} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                  <XAxis
+                    dataKey="rede"
+                    tickFormatter={(v: string) => v.charAt(0).toUpperCase() + v.slice(1)}
+                    tick={{ fill: '#71717a', fontSize: 12 }}
+                    axisLine={{ stroke: '#3f3f46' }}
+                    tickLine={false}
+                  />
+                  <YAxis tickFormatter={(v: number) => `${v}s`} tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} width={40} />
+                  <Tooltip
+                    cursor={{ fill: '#ffffff08' }}
+                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12, color: '#fff' }}
+                    formatter={(value: number, _n: string, item: { payload?: { posts?: number } }) => [
+                      item?.payload?.posts ? `${value}s · ${item.payload.posts} posts` : 'sem dado na API',
+                      'Tempo médio',
+                    ]}
+                  />
+                  <Bar dataKey="segundos" fill="#38bdf8" radius={[4, 4, 0, 0]} maxBarSize={64} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           )}

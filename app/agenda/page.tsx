@@ -1,9 +1,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight, Sparkles, Filter, LayoutGrid, List, Send, FileEdit, Lightbulb } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Sparkles, Filter, LayoutGrid, List, Send, FileEdit, Lightbulb } from 'lucide-react'
 
 import { ErrorState } from '@/components/ui/error-state'
+import { PageHeader } from '@/components/layout/page-header'
 import { useAgenda, type AgendaSlot } from '@/lib/hooks/use-agenda'
 
 const HORARIOS = ['12:00', '18:00', '21:00']
@@ -105,16 +106,15 @@ export default function AgendaPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-6">
       <div className="mx-auto max-w-7xl space-y-5">
-        <div className="flex flex-wrap items-center gap-3">
-          <CalendarDays className="h-7 w-7 text-violet-400" />
-          <div>
-            <h1 className="text-2xl font-bold text-white">Agenda de publicação</h1>
-            <p className="text-xs text-zinc-400">Calendário travado por canal · encaixado com o estoque · planejamento reverso (ideia D-7 → roteiro D-4 → produção D-2 → publica D).</p>
-          </div>
-          <button onClick={popular} disabled={populando} title="Auto-encaixe: preenche cada slot com o melhor ativo do canal (vídeo>áudio>roteiro>ideia), sem repetir nem sobrescrever o fixado. Slot sem estoque = vazio (produzir)." className="ml-auto flex items-center gap-2 rounded-lg bg-linear-to-r from-violet-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-violet-500/20 disabled:opacity-50">
-            <Sparkles className="h-4 w-4" /> {populando ? 'Encaixando…' : 'Popular com estoque'}
-          </button>
-        </div>
+        <PageHeader
+          titulo="Agenda de publicação"
+          subtitulo="Calendário travado por canal · encaixado com o estoque · planejamento reverso (ideia D-7 → roteiro D-4 → produção D-2 → publica D)."
+          acoes={
+            <button onClick={popular} disabled={populando} title="Auto-encaixe: preenche cada slot com o melhor ativo do canal (vídeo>áudio>roteiro>ideia), sem repetir nem sobrescrever o fixado. Slot sem estoque = vazio (produzir)." className="flex items-center gap-2 rounded-lg bg-linear-to-r from-violet-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-violet-500/20 disabled:opacity-50">
+              <Sparkles className="h-4 w-4" /> {populando ? 'Encaixando…' : 'Popular com estoque'}
+            </button>
+          }
+        />
         {msg && <p className="text-sm text-zinc-300">{msg}</p>}
 
         {/* controles: modo + filtros */}

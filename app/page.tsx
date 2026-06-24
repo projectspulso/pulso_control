@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import {
-  Activity,
   ArrowUpRight,
   CheckCircle2,
   Clapperboard,
@@ -13,12 +12,11 @@ import {
   Lightbulb,
   Music2,
   Rocket,
-  Sparkles,
   Youtube,
-  Zap,
 } from 'lucide-react'
 
 import { ErrorState } from '@/components/ui/error-state'
+import { PageHeader } from '@/components/layout/page-header'
 import { useDashboard } from '@/lib/hooks/use-dashboard'
 
 function n(value: number) {
@@ -115,28 +113,16 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-zinc-950 p-8">
       <div className="mx-auto max-w-7xl space-y-8">
-        {/* Header */}
-        <header className="flex items-center justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Zap className="h-9 w-9 text-purple-500" />
-                <Sparkles className="absolute -right-1 -top-1 h-4 w-4 text-yellow-400" />
-              </div>
-              <h1 className="bg-linear-to-r from-purple-400 via-pink-400 to-yellow-400 bg-clip-text text-4xl font-black text-transparent">
-                Centro de Comando
-              </h1>
+        <PageHeader
+          titulo="Centro de Comando"
+          subtitulo={`${n(data.viewsTotal)} views · ${data.publicacoesTotal} publicações nas 4 redes`}
+          acoes={
+            <div className="glass rounded-2xl px-5 py-3 text-right">
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Última coleta</p>
+              <p className="text-lg font-bold text-green-400">{tempoRelativo(data.ultimaColeta)}</p>
             </div>
-            <p className="ml-1 flex items-center gap-2 text-zinc-400">
-              <Activity className="h-4 w-4 text-green-500" />
-              {n(data.viewsTotal)} views · {data.publicacoesTotal} publicações nas 4 redes
-            </p>
-          </div>
-          <div className="glass rounded-2xl px-5 py-3 text-right">
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Última coleta</p>
-            <p className="text-lg font-bold text-green-400">{tempoRelativo(data.ultimaColeta)}</p>
-          </div>
-        </header>
+          }
+        />
 
         {/* Views por rede */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
