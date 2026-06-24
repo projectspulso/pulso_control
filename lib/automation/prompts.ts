@@ -167,6 +167,42 @@ Releia SUA primeira frase contra a TRAVA DOS 3 SEGUNDOS. Se ela violar qualquer 
 Retorne APENAS o roteiro em texto, sem títulos ou formatação markdown.`
 }
 
+// ====== PROMPT DE LEGENDAS DE PUBLICAÇÃO (multi-rede) ======
+
+/**
+ * Gera as legendas de publicação para todas as redes a partir do roteiro pronto.
+ * O /publicar lê legenda_ig_fb de pipeline_producao.metadata.caption.
+ */
+export function buildPromptLegendas(
+  canal: CanalContext,
+  ideia: IdeiaContext,
+  roteiroTexto: string
+): string {
+  return `Você é o social media do PULSO, operação de vídeos curtos faceless (curiosidades e histórias reais). Escreva as LEGENDAS de publicação deste vídeo para cada rede, no tom PULSO: curioso, direto, instigante, em PORTUGUÊS BRASILEIRO (nunca europeu). Sem inventar fatos.
+
+CANAL: ${canal.nome}
+TÍTULO: ${ideia.titulo}
+SOBRE: ${ideia.descricao}
+
+ROTEIRO NARRADO:
+${roteiroTexto}
+
+Gere os campos abaixo, cada um adaptado à sua rede:
+- legenda_ig_fb: 2 a 4 linhas que abrem uma lacuna de curiosidade (sem entregar o final), terminando com o CTA "Segue o Pulso" e 6 a 8 hashtags relevantes (mix popular + nicho) no fim.
+- titulo_yt: até 80 caracteres, com gancho de curiosidade, terminando com #shorts.
+- descricao_yt: 2 linhas curtas sobre o vídeo + algumas hashtags no fim.
+- legenda_tiktok: 1 linha curta e instigante + 4 a 5 hashtags incluindo #fyp.
+
+REGRAS:
+- PT-BR coloquial, segunda pessoa.
+- A legenda NUNCA entrega o final do vídeo — provoca o clique/assistir.
+- Hashtags em minúsculas, sem espaço, relevantes ao tema.
+- Nada de aspas envolvendo o texto, nada de markdown.
+
+Retorne SOMENTE um JSON exatamente neste formato:
+{"legenda_ig_fb": "...", "titulo_yt": "...", "descricao_yt": "...", "legenda_tiktok": "..."}`
+}
+
 // ====== PROMPTS DE METADADOS POR PLATAFORMA ======
 
 export function buildPromptMetadataPlataforma(

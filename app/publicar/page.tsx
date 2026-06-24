@@ -21,7 +21,7 @@ import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
 import { PageHeader } from '@/components/layout/page-header'
 import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
-import { useConteudosProntos } from '@/lib/hooks/use-calendario'
+import { useAgendarPublicacao, useConteudosProntos } from '@/lib/hooks/use-calendario'
 import { usePublicar } from '@/lib/hooks/use-automation'
 
 type FeedbackTone = 'success' | 'error' | 'info'
@@ -31,8 +31,6 @@ interface FeedbackState {
   title: string
   description: string
 }
-
-const PLATAFORMAS_ASSISTIDAS = ['instagram', 'facebook', 'tiktok', 'youtube']
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
@@ -66,7 +64,7 @@ function getFeedbackClasses(tone: FeedbackTone) {
 export default function PublicarPage() {
   const { data: conteudos, isLoading, isError, refetch } = useConteudosProntos()
   const publicarAgora = usePublicar()
-  const agendarPublicacao = usePublicar()
+  const agendarPublicacao = useAgendarPublicacao()
 
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [mostrarModalAgendar, setMostrarModalAgendar] = useState(false)
@@ -258,19 +256,20 @@ export default function PublicarPage() {
     const dataHora = `${dataAgendamento}T${horaAgendamento}:00`
 
     try {
-      for (const pipelineId of Array.from(selecionados)) {
-        await agendarPublicacao.mutateAsync({
-          pipelineIds: [pipelineId],
-          plataformas: PLATAFORMAS_ASSISTIDAS,
-        })
-      }
+      // Modo assistido: grava data/hora planejada no pipeline (lembrete/agenda).
+      // NAO enfileira PUBLICAR — a fila pulso_automation foi aposentada (worker
+      // desligado 23/06) e a publicacao no horario continua manual/assistida.
+      await agendarPublicacao.mutateAsync({
+        pipelineIds: Array.from(selecionados),
+        dataHora,
+      })
 
       setFeedback({
         tone: 'success',
-        title: 'Fila assistida agendada',
+        title: 'Agendado',
         description: `${selecionados.size} conteudo(s) agendado(s) para ${format(
           new Date(dataHora),
-          "dd/MM/yyyy 'as' HH:mm",
+          "dd/MM 'as' HH:mm",
           { locale: ptBR },
         )}.`,
       })

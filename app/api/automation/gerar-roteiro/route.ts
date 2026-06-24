@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
-import { buildPromptGerarRoteiro } from '@/lib/automation/prompts'
+import { buildPromptGerarRoteiro, buildPromptLegendas } from '@/lib/automation/prompts'
 import { validarRoteiro } from '@/lib/automation/ai-clients'
 import { avaliarHook } from '@/lib/automation/hook-score'
 
@@ -118,6 +118,28 @@ export async function POST(request: NextRequest) {
     const autoApproveThreshold = 80
     const shouldAutoApprove = autoApprove && qualidade.score >= autoApproveThreshold && hook.nota >= 3
 
+    // NUMERO AUTOMÁTICO: respeita o número já gravado na ideia; senão, próximo da sequência canônica.
+    let numero: number | null =
+      typeof ideia.metadata?.numero === 'number' ? ideia.metadata.numero : null
+    if (numero == null) {
+      try {
+        const { data: roteirosNum } = await supabase
+          .schema('pulso_content')
+          .from('roteiros')
+          .select('metadata')
+          .not('metadata->numero', 'is', null)
+        let maxNumero = 0
+        for (const r of (roteirosNum || [])) {
+          const n = Number(r?.metadata?.numero)
+          if (Number.isFinite(n) && n > maxNumero) maxNumero = n
+        }
+        numero = maxNumero + 1
+      } catch (e) {
+        console.error('[gerar-roteiro] falha ao calcular numero automático:', e)
+        numero = null
+      }
+    }
+
     // Salvar roteiro
     const { data: saved, error: saveError } = await supabase
       .schema('pulso_content')
@@ -133,6 +155,7 @@ export async function POST(request: NextRequest) {
         linguagem: canal.idioma,
         nota_hook: hook.nota,
         metadata: {
+          ...(numero != null ? { numero } : {}),
           hook_motivos: hook.motivos,
           ai_modelo: 'gpt-4o',
           gerado_em: new Date().toISOString(),
@@ -147,7 +170,7 @@ export async function POST(request: NextRequest) {
           tokens_usados: usage,
         },
       })
-      .select('id, titulo, status')
+      .select('id, titulo, status, metadata')
       .single()
 
     if (saveError) {
@@ -157,27 +180,90 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // NUMERO AUTOMÁTICO: denormaliza na ideia (sem sobrescrever se já existia)
+    if (numero != null && typeof ideia.metadata?.numero !== 'number') {
+      try {
+        await supabase
+          .schema('pulso_content')
+          .from('ideias')
+          .update({ metadata: { ...(ideia.metadata || {}), numero } })
+          .eq('id', ideia.id)
+      } catch (e) {
+        console.error('[gerar-roteiro] falha ao gravar numero na ideia:', e)
+      }
+    }
+
+    // LEGENDA AUTOMÁTICA (best-effort): gera legendas multi-rede e grava caption no pipeline.
+    // Falha aqui NUNCA quebra a criação do roteiro.
+    let legendas: {
+      legenda_ig_fb?: string
+      titulo_yt?: string
+      descricao_yt?: string
+      legenda_tiktok?: string
+    } | null = null
+    try {
+      const promptLeg = buildPromptLegendas(canal, ideiaCtx, roteiro)
+      const { content: legRaw } = await callOpenAI(promptLeg, {
+        temperature: 0.8,
+        max_tokens: 500,
+        json_mode: true,
+      })
+      const jsonStr = legRaw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '')
+      const parsed = JSON.parse(jsonStr)
+      if (parsed && typeof parsed === 'object') {
+        legendas = {
+          legenda_ig_fb: parsed.legenda_ig_fb || undefined,
+          titulo_yt: parsed.titulo_yt || undefined,
+          descricao_yt: parsed.descricao_yt || undefined,
+          legenda_tiktok: parsed.legenda_tiktok || undefined,
+        }
+      }
+    } catch (e) {
+      console.error('[gerar-roteiro] geração de legenda falhou (segue sem quebrar):', e)
+    }
+
+    // Persiste legendas no roteiro (metadata.legendas)
+    if (legendas) {
+      try {
+        await supabase
+          .schema('pulso_content')
+          .from('roteiros')
+          .update({ metadata: { ...(saved?.metadata || {}), legendas } })
+          .eq('id', saved.id)
+      } catch (e) {
+        console.error('[gerar-roteiro] falha ao salvar legendas no roteiro:', e)
+      }
+    }
+
     // mantém o kanban: garante entrada no pipeline (AGUARDANDO_ROTEIRO até aprovação; ROTEIRO_PRONTO se auto-aprovado)
+    // denormaliza numero + caption (lido pelo /publicar) no pipeline_producao.metadata
     {
       const { data: pipeExist } = await supabase
         .schema('pulso_content')
         .from('pipeline_producao')
-        .select('id')
+        .select('id, metadata')
         .eq('ideia_id', ideia.id)
         .limit(1)
       const statusPipe = shouldAutoApprove ? 'ROTEIRO_PRONTO' : 'AGUARDANDO_ROTEIRO'
+      const metaExtra: Record<string, unknown> = {}
+      if (numero != null) metaExtra.numero = numero
+      if (legendas?.legenda_ig_fb) metaExtra.caption = legendas.legenda_ig_fb
       if (pipeExist && pipeExist.length > 0) {
         await supabase
           .schema('pulso_content')
           .from('pipeline_producao')
-          .update({ roteiro_id: saved.id, status: statusPipe })
+          .update({
+            roteiro_id: saved.id,
+            status: statusPipe,
+            metadata: { ...(pipeExist[0].metadata || {}), ...metaExtra },
+          })
           .eq('id', pipeExist[0].id)
       } else {
         await supabase
           .schema('pulso_content')
           .from('pipeline_producao')
           .insert({ ideia_id: ideia.id, roteiro_id: saved.id, status: statusPipe, prioridade: 5,
-            metadata: { criado_por: 'automation' } })
+            metadata: { criado_por: 'automation', ...metaExtra } })
       }
     }
 

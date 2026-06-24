@@ -298,6 +298,40 @@ export function useConteudosPorSerie(serie: string) {
   })
 }
 
+// Hook para agendar publicacao (modo assistido): grava data/hora planejada
+// no pipeline. NAO enfileira nada — e lembrete/agenda; publicacao segue manual.
+export function useAgendarPublicacao() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      pipelineIds,
+      dataHora,
+    }: {
+      pipelineIds: string[]
+      dataHora: string
+    }) => {
+      const { data, error } = await supabase
+        .schema('pulso_content')
+        .from('pipeline_producao')
+        .update({ data_publicacao_planejada: dataHora })
+        .in('id', pipelineIds)
+        .select()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendario'] })
+      queryClient.invalidateQueries({ queryKey: ['calendario-dia'] })
+      queryClient.invalidateQueries({ queryKey: ['calendario-intervalo'] })
+      queryClient.invalidateQueries({ queryKey: ['conteudos-prontos'] })
+      queryClient.invalidateQueries({ queryKey: ['pipeline-status'] })
+      queryClient.invalidateQueries({ queryKey: ['pipelines-assets'] })
+    },
+  })
+}
+
 // Hook para atualizar status do pipeline
 export function useAtualizarStatusPipeline() {
   const queryClient = useQueryClient()
