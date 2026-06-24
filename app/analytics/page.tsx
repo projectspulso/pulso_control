@@ -22,7 +22,7 @@ import {
   X,
 } from 'lucide-react'
 
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useQuery } from '@tanstack/react-query'
 
 import { ErrorState } from '@/components/ui/error-state'
@@ -74,6 +74,7 @@ const PUBS_POR_PAGINA = 15
 
 export default function AnalyticsPage() {
   const [filtros, setFiltros] = useState<BiFiltros>({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 })
+  const [aba, setAba] = useState<'geral' | 'conteudo' | 'audiencia' | 'crescimento' | 'financeiro'>('geral')
   const [paginaPubs, setPaginaPubs] = useState(1)
   const [drill, setDrill] = useState<string | null>(null)
   const { data, isLoading, isError, refetch } = useBi(filtros)
@@ -291,6 +292,43 @@ export default function AnalyticsPage() {
     })
   }, [data])
 
+  // % médio assistido por rede = avg watch ÷ duração do vídeo (proxy de retenção onde não há curva)
+  const pctAssistidoPorRede = useMemo(() => {
+    if (!data) return [] as { rede: string; pct: number; posts: number }[]
+    const acc = new Map<string, { soma: number; n: number }>()
+    for (const p of data.publicacoes) {
+      if (p.avgWatchMs == null || p.avgWatchMs <= 0) continue
+      if (p.duracaoSeg == null || p.duracaoSeg <= 0) continue
+      const pct = (p.avgWatchMs / (p.duracaoSeg * 1000)) * 100
+      const v = acc.get(p.plataforma) || { soma: 0, n: 0 }
+      v.soma += pct
+      v.n += 1
+      acc.set(p.plataforma, v)
+    }
+    return ['facebook', 'instagram', 'youtube', 'tiktok'].map((rede) => {
+      const v = acc.get(rede)
+      return { rede, pct: v ? Math.round((v.soma / v.n) * 10) / 10 : 0, posts: v?.n || 0 }
+    })
+  }, [data])
+
+  // Engajamento por rede = (likes+coment+shares+saves) / views × 100 (interações por 100 views)
+  const engajamentoPorRede = useMemo(() => {
+    if (!data) return [] as { rede: string; pct: number; posts: number }[]
+    const acc = new Map<string, { soma: number; n: number }>()
+    for (const p of data.publicacoes) {
+      if (p.views <= 0) continue
+      const pct = ((p.likes + p.comentarios + p.shares + p.saves) / p.views) * 100
+      const v = acc.get(p.plataforma) || { soma: 0, n: 0 }
+      v.soma += pct
+      v.n += 1
+      acc.set(p.plataforma, v)
+    }
+    return ['facebook', 'instagram', 'youtube', 'tiktok'].map((rede) => {
+      const v = acc.get(rede)
+      return { rede, pct: v ? Math.round((v.soma / v.n) * 10) / 10 : 0, posts: v?.n || 0 }
+    })
+  }, [data])
+
   // ── FAIXA EXECUTIVA (BI) ──
   // tendência de views: ganho dos últimos 7 dias vs os 7 anteriores (da série diária)
   const tendenciaViews = useMemo(() => {
@@ -448,6 +486,35 @@ export default function AnalyticsPage() {
           </div>
         )}
 
+        {/* BARRA DE ABAS */}
+        <div className="flex flex-wrap gap-2">
+          {([
+            { id: 'geral', label: 'Visão Geral', icon: BarChart3 },
+            { id: 'conteudo', label: 'Conteúdo', icon: Flame },
+            { id: 'audiencia', label: 'Audiência', icon: Clock },
+            { id: 'crescimento', label: 'Crescimento', icon: TrendingUp },
+            { id: 'financeiro', label: 'Financeiro', icon: Wallet },
+          ] as const).map((t) => {
+            const Icon = t.icon
+            const ativo = aba === t.id
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setAba(t.id)}
+                className={`inline-flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+                  ativo ? 'bg-cyan-500/15 text-cyan-300 ring-1 ring-cyan-500/30' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* ABA: VISÃO GERAL */}
+        {aba === 'geral' && (<>
         {/* FAIXA EXECUTIVA — KPIs hero (resultado na cara) */}
         <div className="grid gap-4 lg:grid-cols-4">
           {/* Views — hero (2 col) com Δ vs 7 dias + sparkline */}
@@ -529,6 +596,10 @@ export default function AnalyticsPage() {
           })}
         </div>
 
+        </>)}
+
+        {/* ABA: CONTEÚDO — Decisão */}
+        {aba === 'conteudo' && (<>
         {/* CAMADA DE DECISÃO — produção × desempenho (onde investir + o que publicar) */}
         {decisao && (
           <div className="glass rounded-2xl border border-violet-500/30 bg-violet-500/5 p-6">
@@ -615,6 +686,10 @@ export default function AnalyticsPage() {
           </div>
         )}
 
+        </>)}
+
+        {/* ABA: VISÃO GERAL — Sinais de atenção */}
+        {aba === 'geral' && (<>
         {/* Sinais de atenção — distribuição quebrada + alcance inflado */}
         {(alertas.length > 0 || redesInfladas.length > 0) && (
           <div className="glass rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6">
@@ -663,6 +738,10 @@ export default function AnalyticsPage() {
           </div>
         )}
 
+        </>)}
+
+        {/* ABA: FINANCEIRO — Rumo à monetização */}
+        {aba === 'financeiro' && (<>
         {/* Rumo à monetização */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-baseline justify-between">
@@ -702,6 +781,10 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
+        </>)}
+
+        {/* ABA: VISÃO GERAL — Onde os views nascem */}
+        {aba === 'geral' && (<>
         {/* Share + ressonância por rede */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-baseline justify-between">
@@ -744,6 +827,10 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
+        </>)}
+
+        {/* ABA: CONTEÚDO — Top conteúdos + recomendação + matriz */}
+        {aba === 'conteudo' && (<>
         {/* 1) Top conteúdos (soma das redes) */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-center gap-2">
@@ -785,31 +872,48 @@ export default function AnalyticsPage() {
             <Lightbulb className="h-5 w-5 text-yellow-400" />
             <h2 className="text-lg font-semibold text-white">Recomendação de produção</h2>
           </div>
-          <p className="mt-1 text-xs text-zinc-500">Baseado em views por vídeo. O guia do próximo lote.</p>
-          <div className="mt-4 grid gap-2 md:grid-cols-3">
-            {(['produzir', 'manter', 'segurar'] as const).map((acao) => {
-              const itens = recomendacao.filter((r) => r.acao === acao)
-              const cfg = {
-                produzir: { label: '🚀 Produzir mais', cor: 'border-emerald-500/30 bg-emerald-500/5', txt: 'text-emerald-400' },
-                manter: { label: '➡️ Manter', cor: 'border-zinc-700/60 bg-zinc-900/40', txt: 'text-zinc-300' },
-                segurar: { label: '🛑 Segurar', cor: 'border-red-500/30 bg-red-500/5', txt: 'text-red-300' },
-              }[acao]
-              return (
-                <div key={acao} className={`rounded-xl border ${cfg.cor} p-3`}>
-                  <p className={`text-sm font-bold ${cfg.txt}`}>{cfg.label}</p>
-                  <div className="mt-2 space-y-1.5">
-                    {itens.map((r) => (
-                      <div key={r.vertical} className="flex items-baseline justify-between text-sm">
-                        <span className="truncate text-zinc-200">{r.vertical}</span>
-                        <span className="ml-2 shrink-0 text-xs text-zinc-500">{n(r.mediaPorVideo)}/v</span>
-                      </div>
+          <p className="mt-1 text-xs text-zinc-500">
+            Views por vídeo em cada vertical — o guia do próximo lote.{' '}
+            <span className="text-emerald-400">verde = produzir mais</span> ·{' '}
+            <span className="text-violet-300">violeta = manter</span> ·{' '}
+            <span className="text-red-300">vermelho = segurar</span>.
+          </p>
+          {recomendacao.length === 0 ? (
+            <p className="mt-4 text-sm text-zinc-500">Sem dados no recorte.</p>
+          ) : (
+            <div className="mt-4" style={{ height: Math.max(160, recomendacao.length * 44) }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={recomendacao} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
+                  <XAxis type="number" tickFormatter={(v: number) => n(v)} tick={{ fill: '#71717a', fontSize: 11 }} axisLine={{ stroke: '#3f3f46' }} tickLine={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="vertical"
+                    width={120}
+                    tick={{ fill: '#a1a1aa', fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    cursor={{ fill: '#ffffff08' }}
+                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12, color: '#fff' }}
+                    formatter={(value: number, _n: string, item: { payload?: { vertical?: string; videos?: number } }) => [
+                      `${n(value)} views/vídeo · ${item?.payload?.videos ?? 0} vídeos`,
+                      item?.payload?.vertical ?? 'Vertical',
+                    ]}
+                  />
+                  <Bar dataKey="mediaPorVideo" radius={[0, 4, 4, 0]} maxBarSize={28}>
+                    {recomendacao.map((r) => (
+                      <Cell
+                        key={r.vertical}
+                        fill={r.acao === 'produzir' ? '#34d399' : r.acao === 'segurar' ? '#f87171' : '#a78bfa'}
+                      />
                     ))}
-                    {itens.length === 0 && <p className="text-xs text-zinc-600">—</p>}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         {/* 4) Mesmo vídeo entre redes */}
@@ -850,6 +954,10 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
+        </>)}
+
+        {/* ABA: CRESCIMENTO */}
+        {aba === 'crescimento' && (<>
         {/* 1) Ganho por dia (barras) — sua ideia: sobe ou cai? */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-center gap-2">
@@ -939,6 +1047,10 @@ export default function AnalyticsPage() {
           )}
         </div>
 
+        </>)}
+
+        {/* ABA: AUDIÊNCIA */}
+        {aba === 'audiencia' && (<>
         {/* Curva de retenção — Facebook + YouTube */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-center gap-2">
@@ -1032,6 +1144,85 @@ export default function AnalyticsPage() {
           )}
         </div>
 
+        {/* % médio assistido por rede (proxy de retenção onde não há curva) */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-teal-400" />
+            <h2 className="text-lg font-semibold text-white">% médio assistido por rede</h2>
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">
+            Quanto do vídeo, em média, o público assiste — <span className="text-zinc-400">tempo médio assistido ÷ duração</span>.
+            Proxy de retenção onde a curva não existe (Instagram/TikTok). Redes sem dado aparecem zeradas.
+          </p>
+          {pctAssistidoPorRede.every((r) => r.posts === 0) ? (
+            <p className="mt-4 text-sm text-zinc-500">Sem dado ainda — depende de tempo médio (FB/IG) e duração do áudio.</p>
+          ) : (
+            <div className="mt-4 h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={pctAssistidoPorRede} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                  <XAxis
+                    dataKey="rede"
+                    tickFormatter={(v: string) => v.charAt(0).toUpperCase() + v.slice(1)}
+                    tick={{ fill: '#71717a', fontSize: 12 }}
+                    axisLine={{ stroke: '#3f3f46' }}
+                    tickLine={false}
+                  />
+                  <YAxis tickFormatter={(v: number) => `${v}%`} tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} width={44} />
+                  <Tooltip
+                    cursor={{ fill: '#ffffff08' }}
+                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12, color: '#fff' }}
+                    formatter={(value: number, _n: string, item: { payload?: { posts?: number } }) => [
+                      item?.payload?.posts ? `${value}% · ${item.payload.posts} posts` : 'sem dado',
+                      '% assistido',
+                    ]}
+                  />
+                  <Bar dataKey="pct" fill="#2dd4bf" radius={[4, 4, 0, 0]} maxBarSize={64} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        {/* Engajamento por rede (interações por 100 views) */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex items-center gap-2">
+            <Heart className="h-5 w-5 text-pink-400" />
+            <h2 className="text-lg font-semibold text-white">Engajamento por rede</h2>
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">
+            Interações por 100 views — média de <span className="text-zinc-400">(likes + comentários + shares + saves) ÷ views</span> por post.
+          </p>
+          {engajamentoPorRede.every((r) => r.posts === 0) ? (
+            <p className="mt-4 text-sm text-zinc-500">Sem publicações com views no recorte.</p>
+          ) : (
+            <div className="mt-4 h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={engajamentoPorRede} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                  <XAxis
+                    dataKey="rede"
+                    tickFormatter={(v: string) => v.charAt(0).toUpperCase() + v.slice(1)}
+                    tick={{ fill: '#71717a', fontSize: 12 }}
+                    axisLine={{ stroke: '#3f3f46' }}
+                    tickLine={false}
+                  />
+                  <YAxis tickFormatter={(v: number) => `${v}%`} tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} width={44} />
+                  <Tooltip
+                    cursor={{ fill: '#ffffff08' }}
+                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12, color: '#fff' }}
+                    formatter={(value: number, _n: string, item: { payload?: { posts?: number } }) => [
+                      item?.payload?.posts ? `${value}% · ${item.payload.posts} posts` : 'sem dado',
+                      'Engajamento',
+                    ]}
+                  />
+                  <Bar dataKey="pct" fill="#ec4899" radius={[4, 4, 0, 0]} maxBarSize={64} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
         {/* Desempenho por dia da semana */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-center gap-2">
@@ -1065,8 +1256,10 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {/* Ranking vertical + financeiro */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        </>)}
+
+        {/* ABA: CONTEÚDO — Aderência por vertical */}
+        {aba === 'conteudo' && (
           <div className="glass rounded-2xl border border-zinc-800/50 p-6">
             <div className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-amber-400" />
@@ -1091,7 +1284,10 @@ export default function AnalyticsPage() {
               })}
             </div>
           </div>
+        )}
 
+        {/* ABA: FINANCEIRO — detalhamento de custos */}
+        {aba === 'financeiro' && (
           <div className="glass rounded-2xl border border-zinc-800/50 p-6">
             <div className="flex items-center gap-2">
               <BadgeDollarSign className="h-5 w-5 text-green-400" />
@@ -1124,9 +1320,10 @@ export default function AnalyticsPage() {
               </div>
             </dl>
           </div>
-        </div>
+        )}
 
-        {/* Tabela de publicações */}
+        {/* ABA: CONTEÚDO — Publicações no recorte */}
+        {aba === 'conteudo' && (
         <div className="glass overflow-hidden rounded-2xl border border-zinc-800/50">
           <div className="flex items-center gap-2 border-b border-zinc-800/50 p-6 pb-4">
             <BarChart3 className="h-5 w-5 text-violet-400" />
@@ -1208,8 +1405,9 @@ export default function AnalyticsPage() {
             </div>
           )}
         </div>
+        )}
 
-        {/* Drill-down por vídeo — modal cross-rede */}
+        {/* Drill-down por vídeo — modal cross-rede (global, vale em qualquer aba) */}
         {drill !== null && (() => {
           const pubs = data.publicacoes
             .filter((p) => p.ideiaTitulo === drill)

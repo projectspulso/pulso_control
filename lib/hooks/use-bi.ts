@@ -23,6 +23,7 @@ export interface BiPublicacao {
   shares: number
   saves: number
   avgWatchMs: number | null // tempo médio assistido (FB + IG entregam; YT/TikTok não)
+  duracaoSeg: number | null // duração do vídeo (do áudio da ideia) — pro % assistido
 }
 
 export interface BiSerieDia {
@@ -48,10 +49,11 @@ export function useBi(filtros: BiFiltros) {
     queryKey: ['bi', filtros],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const [metricasQ, ideiasQ, canaisQ, diariasQ, retencaoQ] = await Promise.all([
+      const [metricasQ, ideiasQ, canaisQ, audiosQ, diariasQ, retencaoQ] = await Promise.all([
         supabase.schema('pulso_content').from('metricas_publicacao').select('*'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
         supabase.schema('pulso_core').from('canais').select('id, nome').order('nome'),
+        supabase.schema('pulso_content').from('audios').select('ideia_id, duracao_segundos'),
         supabase
           .schema('pulso_analytics')
           .from('leituras_metricas')
@@ -66,11 +68,18 @@ export function useBi(filtros: BiFiltros) {
       if (metricasQ.error) throw metricasQ.error
       if (ideiasQ.error) throw ideiasQ.error
       if (canaisQ.error) throw canaisQ.error
+      if (audiosQ.error) throw audiosQ.error
       if (diariasQ.error) throw diariasQ.error
       if (retencaoQ.error) throw retencaoQ.error
 
       const ideias = new Map((ideiasQ.data || []).map((i) => [i.id, i]))
       const canais = new Map((canaisQ.data || []).map((c) => [c.id, c.nome]))
+      const duracaoPorIdeia = new Map<string, number>()
+      for (const a of audiosQ.data || []) {
+        if (a.ideia_id && a.duracao_segundos != null && !duracaoPorIdeia.has(a.ideia_id)) {
+          duracaoPorIdeia.set(a.ideia_id, a.duracao_segundos)
+        }
+      }
       const limite = filtros.periodoDias > 0 ? Date.now() - filtros.periodoDias * 864e5 : 0
 
       const publicacoes: BiPublicacao[] = []
@@ -99,6 +108,7 @@ export function useBi(filtros: BiFiltros) {
           shares: m.shares || 0,
           saves: m.saves || 0,
           avgWatchMs: m.avg_watch_ms ?? null,
+          duracaoSeg: m.ideia_id ? duracaoPorIdeia.get(m.ideia_id) ?? null : null,
         })
       }
 
