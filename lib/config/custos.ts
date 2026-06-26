@@ -1,8 +1,9 @@
 // Custos REAIS de produção por vídeo — calibrados 12/06/2026 na tela de Usage do Higgsfield.
-// Oficial: $1 = 20 créditos (US$ 0,05/cr) · câmbio ~5,40 → R$ 0,27/crédito.
+// Câmbio USD→BRL conferido 25/06/2026 (Investing.com ~5,20). Pack atual: $1 = ~20 cr (US$ 0,049/cr).
 // Auto-refill (US$50 = 1.000 cr quando saldo < 100) foi DESATIVADO em 12/06 — trava-mestra.
 // Travas: pulso_core.configuracoes (orcamento_travas) + guard D:/tmp/pulso_guard.py + /financeiro.
-export const CREDITO_HIGGSFIELD_BRL = 0.27
+export const CAMBIO_USD_BRL = 5.2
+export const CREDITO_HIGGSFIELD_BRL = 0.25 // US$ 0,049/cr × 5,20
 
 // Custo por cena de B-roll (decidido 14/06 após teste de qualidade lado a lado).
 export const CUSTO_POR_CENA = {
@@ -26,8 +27,20 @@ export const CUSTO_POR_VIDEO = {
   metaBRL: 6.66,
 } as const
 
+// AUDITADO nos sites em 25/06/2026 (login do dono). Câmbio 5,20.
+export const ASSINATURAS = [
+  { servico: 'Higgsfield', plano: 'Plus · 1.000 cr/mês', usd: 49, brl: 254.8, renova: 'mensal', uso: 'vídeo (Veo)' },
+  { servico: 'ElevenLabs', plano: 'Creator · 121k cr/mês', usd: 22, brl: 114.4, renova: 'dia 5', uso: 'voz / TTS' },
+  { servico: 'OpenAI', plano: 'Pay-as-you-go', usd: 0.8, brl: 4.16, renova: 'por uso', uso: 'GPT (roteiro/legenda)' },
+  { servico: 'Supabase', plano: 'Free · 1 projeto', usd: 0, brl: 0, renova: '—', uso: 'backend / DB' },
+  { servico: 'Vercel', plano: 'Hobby (free)', usd: 0, brl: 0, renova: '—', uso: 'hospedagem' },
+] as const
+
+export const ASSINATURAS_TOTAL_BRL = ASSINATURAS.reduce((a, s) => a + s.brl, 0) // ~R$ 373/mês
+
+// compat (analytics soma este mapa) — valores reais auditados 25/06
 export const ASSINATURAS_MENSAIS_BRL = {
-  higgsfield: 265.0, // plano Plus ~US$49/mês (inclui 1.000 cr/mês + modelos unlimited VIA SITE)
-  elevenlabs: 119.0, // Creator US$22/mês · 131k créditos/mês · renova dia 5
-  openai: 0, // pay-as-you-go (~R$ 3/mês; budget nativo US$120/mês na org pulso control)
+  higgsfield: 254.8, // Plus US$49/mês (1.000 cr + modelos unlimited via site)
+  elevenlabs: 114.4, // Creator US$22/mês · renova dia 5
+  openai: 4.16, // pay-as-you-go (~US$0,80 em junho; teto US$120/mês)
 } as const

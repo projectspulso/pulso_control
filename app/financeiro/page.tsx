@@ -1,10 +1,11 @@
 'use client'
 
-import { AlertTriangle, Coins, Film, Lock, PiggyBank, ShieldCheck, TrendingDown } from 'lucide-react'
+import { AlertTriangle, Coins, Film, FileDown, Lock, PiggyBank, Receipt, Repeat, ShieldCheck, TrendingDown } from 'lucide-react'
 
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
-import { CUSTO_POR_VIDEO } from '@/lib/config/custos'
+import { ASSINATURAS, ASSINATURAS_TOTAL_BRL, CUSTO_POR_VIDEO } from '@/lib/config/custos'
+import { EMPRESA } from '@/lib/config/empresa'
 import { useFinanceiro } from '@/lib/hooks/use-financeiro'
 
 function brl(value: number) {
@@ -57,6 +58,49 @@ export default function FinanceiroPage() {
   const estourouDia = data.gastoHojeCreditos > tetoDia
   const estourouMes = data.gastoMesBRL > tetoMes
 
+  // Fechamento contábil do mês corrente — só CAIXA REAL (assinaturas + top-ups), categorizado.
+  // (O consumo de crédito por vídeo é gerencial e NÃO entra aqui pra não duplicar caixa.)
+  const mesAtual = new Date().toISOString().slice(0, 7)
+  const mesLabel = new Date(mesAtual + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  const fechamento: { data: string; fornecedor: string; categoria: string; descricao: string; usd: number | null; brl: number }[] = [
+    ...ASSINATURAS.filter((s) => s.brl > 0).map((s) => ({
+      data: 'recorrente',
+      fornecedor: s.servico,
+      categoria: 'Software / Serviços de TI',
+      descricao: `${s.plano} (renova ${s.renova})`,
+      usd: s.usd,
+      brl: s.brl,
+    })),
+    ...data.lancamentos
+      .filter((l) => l.servico === 'topup' && l.data.startsWith(mesAtual))
+      .map((l) => ({
+        data: l.data.slice(5).split('-').reverse().join('/'),
+        fornecedor: 'Higgsfield',
+        categoria: 'Créditos de produção (insumo)',
+        descricao: l.descricao,
+        usd: null,
+        brl: l.brl,
+      })),
+  ]
+  const fechamentoTotal = fechamento.reduce((a, l) => a + l.brl, 0)
+
+  function exportarFechamentoCSV() {
+    const linhas = [
+      `Fechamento Contábil;${EMPRESA.razaoSocial};CNPJ ${EMPRESA.cnpj};${EMPRESA.regimeTributario} Anexo ${EMPRESA.simplesAnexo};${mesLabel}`,
+      EMPRESA.notaPagamento,
+      '',
+      'Data;Fornecedor;Categoria;Descricao;USD;BRL',
+      ...fechamento.map((l) => `${l.data};${l.fornecedor};${l.categoria};"${l.descricao}";${l.usd ?? ''};${l.brl.toFixed(2)}`),
+      `;;;;TOTAL;${fechamentoTotal.toFixed(2)}`,
+    ].join('\n')
+    const blob = new Blob(['﻿' + linhas], { type: 'text/csv;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `fechamento-${EMPRESA.nomeFantasia}-${mesAtual}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="mx-auto max-w-7xl space-y-8">
@@ -64,6 +108,23 @@ export default function FinanceiroPage() {
           titulo="Financeiro"
           subtitulo="Controle completo de custos de produção — com travas duras nos orquestradores."
         />
+
+        {/* Identidade contábil da empresa */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Despesas da empresa</p>
+              <p className="mt-1 text-lg font-bold text-white">{EMPRESA.razaoSocial}</p>
+              <p className="text-sm text-zinc-400">
+                CNPJ {EMPRESA.cnpj} · {EMPRESA.regimeTributario} (Anexo {EMPRESA.simplesAnexo}) · {EMPRESA.cidade}/
+                {EMPRESA.uf}
+              </p>
+            </div>
+            <div className="rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-300/90 ring-1 ring-amber-500/20">
+              ⚠️ {EMPRESA.notaPagamento}
+            </div>
+          </div>
+        </div>
 
         {/* Cards principais */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -101,6 +162,117 @@ export default function FinanceiroPage() {
               cenas pagas reutilizáveis (≈ {brl(data.clipsNoBanco * 45 * (t?.credito_brl ?? 0.27))} já investidos)
             </p>
           </div>
+        </div>
+
+        {/* Assinaturas mensais (custo fixo recorrente) */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex items-baseline justify-between">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+              <Repeat className="h-5 w-5 text-violet-400" /> Assinaturas mensais (custo fixo)
+            </h2>
+            <span className="text-xs text-zinc-500">auditado nos sites em 25/06/2026 · câmbio 5,20</span>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800/50 text-left text-xs uppercase tracking-wider text-zinc-500">
+                  <th className="px-3 py-2">Serviço</th>
+                  <th className="px-3 py-2">Plano</th>
+                  <th className="px-3 py-2">Uso</th>
+                  <th className="px-3 py-2 text-right">US$/mês</th>
+                  <th className="px-3 py-2 text-right">R$/mês</th>
+                  <th className="px-3 py-2 text-right">Renova</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ASSINATURAS.map((s) => (
+                  <tr key={s.servico} className="border-b border-zinc-800/30">
+                    <td className="px-3 py-3 font-semibold text-zinc-100">{s.servico}</td>
+                    <td className="px-3 py-3 text-zinc-400">{s.plano}</td>
+                    <td className="px-3 py-3 text-zinc-500">{s.uso}</td>
+                    <td className="px-3 py-3 text-right text-zinc-400">{s.usd ? `$${s.usd}` : '—'}</td>
+                    <td className={`px-3 py-3 text-right font-semibold ${s.brl ? 'text-white' : 'text-zinc-600'}`}>
+                      {s.brl ? brl(s.brl) : 'grátis'}
+                    </td>
+                    <td className="px-3 py-3 text-right text-xs text-zinc-500">{s.renova}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td className="px-3 py-3 font-bold text-zinc-200" colSpan={4}>
+                    Total fixo / mês
+                  </td>
+                  <td className="px-3 py-3 text-right text-lg font-black text-violet-300">{brl(ASSINATURAS_TOTAL_BRL)}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p className="mt-3 text-xs text-zinc-500">
+            Custo fixo recorrente (independe da produção). Higgsfield + ElevenLabs pagos; OpenAI é pay-as-you-go (uso de
+            junho); Supabase + Vercel no plano grátis. Top-ups de crédito aparecem como caixa nos lançamentos.
+          </p>
+        </div>
+
+        {/* Fechamento contábil do mês (caixa real, pronto pro contador) */}
+        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+                <Receipt className="h-5 w-5 text-green-400" /> Fechamento contábil · <span className="capitalize">{mesLabel}</span>
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Só caixa real (assinaturas + top-ups), categorizado · {EMPRESA.razaoSocial} · CNPJ {EMPRESA.cnpj}
+              </p>
+            </div>
+            <button
+              onClick={exportarFechamentoCSV}
+              className="flex items-center gap-2 rounded-lg bg-green-600/90 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/20"
+            >
+              <FileDown className="h-4 w-4" /> Exportar CSV
+            </button>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800/50 text-left text-xs uppercase tracking-wider text-zinc-500">
+                  <th className="px-3 py-2">Data</th>
+                  <th className="px-3 py-2">Fornecedor</th>
+                  <th className="px-3 py-2">Categoria</th>
+                  <th className="px-3 py-2">Descrição</th>
+                  <th className="px-3 py-2 text-right">US$</th>
+                  <th className="px-3 py-2 text-right">R$</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fechamento.map((l, i) => (
+                  <tr key={i} className="border-b border-zinc-800/30">
+                    <td className="px-3 py-2.5 text-xs text-zinc-500">{l.data}</td>
+                    <td className="px-3 py-2.5 font-semibold text-zinc-100">{l.fornecedor}</td>
+                    <td className="px-3 py-2.5 text-zinc-400">{l.categoria}</td>
+                    <td className="px-3 py-2.5 text-zinc-500" title={l.descricao}>
+                      <span className="line-clamp-1 max-w-[280px]">{l.descricao}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-zinc-400">{l.usd ? `$${l.usd}` : '—'}</td>
+                    <td className="px-3 py-2.5 text-right font-semibold text-white">{brl(l.brl)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td className="px-3 py-3 font-bold text-zinc-200" colSpan={5}>
+                    Total caixa do mês
+                  </td>
+                  <td className="px-3 py-3 text-right text-lg font-black text-green-300">{brl(fechamentoTotal)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p className="mt-3 text-xs text-zinc-500">
+            ⚠️ {EMPRESA.notaPagamento} · Valores em US$ do fornecedor × câmbio; a fatura do cartão pode variar (IOF +
+            spread). O consumo de crédito por vídeo é gerencial e não entra aqui (não é saída de caixa).
+          </p>
         </div>
 
         {/* Controle mês a mês */}
