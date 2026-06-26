@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Sparkles, Filter, LayoutGrid, List, Send, FileEdit, Lightbulb } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Sparkles, Filter, LayoutGrid, List, Send, FileEdit, Lightbulb, ArrowRight } from 'lucide-react'
 
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
@@ -116,6 +117,49 @@ export default function AgendaPage() {
           }
         />
         {msg && <p className="text-sm text-zinc-300">{msg}</p>}
+
+        {/* OPERAÇÃO DE HOJE — checklist do ciclo diário */}
+        <div className="glass rounded-2xl border border-violet-500/20 p-5">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-bold text-white">⚡ Operação de hoje</h2>
+            <span className="text-xs text-zinc-500">alimenta o topo (ideias) · processa o meio (aprova → áudio → render) · publica o fundo (prontos de ontem)</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              { n: 1, icon: '📝', href: '/ideias', titulo: 'Criar ideias', valor: `${data.operacao.ideiasHoje}/${data.operacao.ideiasMeta}`, sub: 'temas vencedores', ok: data.operacao.ideiasHoje >= data.operacao.ideiasMeta },
+              { n: 2, icon: '✅', href: '/roteiros', titulo: 'Aprovar roteiros', valor: String(data.operacao.aprovarPendentes), sub: 'pendentes', ok: data.operacao.aprovarPendentes === 0 },
+              { n: 3, icon: '🎙️', href: '/producao', titulo: 'Gerar áudios', valor: String(data.operacao.audiosAFazer), sub: 'a gerar', ok: data.operacao.audiosAFazer === 0 },
+              { n: 4, icon: '🎬', href: '/producao', titulo: 'Renderizar', valor: String(data.operacao.renderAFazer), sub: 'pra amanhã', ok: data.operacao.renderAFazer === 0 },
+              { n: 5, icon: '📤', href: '/publicar', titulo: 'Publicar hoje', valor: String(data.operacao.publicarProntos), sub: '4 redes juntas', hot: data.operacao.publicarProntos > 0 },
+              { n: 6, icon: '📊', href: '/analytics', titulo: 'Analisar', valor: '', sub: 'ver os KPIs' },
+            ].map((c) => (
+              <Link key={c.n} href={c.href} className={`group relative rounded-xl border p-3 transition-all hover:-translate-y-0.5 ${c.hot ? 'border-violet-500/50 bg-violet-500/10' : c.ok ? 'border-emerald-500/25 bg-emerald-500/5' : 'border-zinc-800/60 bg-zinc-900/50 hover:border-zinc-700'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-lg">{c.icon}</span>
+                  <span className="text-[9px] font-bold text-zinc-600">{c.n}</span>
+                </div>
+                {c.valor !== '' && <div className={`mt-1 text-2xl font-black tabular-nums ${c.hot ? 'text-violet-300' : c.ok ? 'text-emerald-300' : 'text-zinc-200'}`}>{c.valor}</div>}
+                <div className={`${c.valor === '' ? 'mt-4' : 'mt-0.5'} text-[11px] font-semibold text-zinc-300`}>{c.titulo}</div>
+                <div className="text-[10px] text-zinc-500">{c.sub}</div>
+                <ArrowRight className="absolute bottom-2 right-2 h-3 w-3 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100" />
+              </Link>
+            ))}
+          </div>
+          {/* TRAVA: Story dos melhores — a cada 2 dias, reaproveita o vídeo de maior alcance */}
+          <div className={`mt-3 flex items-center gap-3 rounded-xl border p-3 ${data.operacao.storyHoje ? 'border-pink-500/40 bg-pink-500/10' : 'border-zinc-800/60 bg-zinc-900/40'}`}>
+            <span className="text-lg">📲</span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-semibold text-zinc-200">Story dos melhores <span className="font-normal text-zinc-500">· trava: a cada 2 dias (IG + FB)</span></div>
+              <div className="truncate text-[10px] text-zinc-500">
+                {data.operacao.storyHoje
+                  ? <>Hoje é dia! Postar story de: <b className="text-pink-300">{data.operacao.storyMelhorTitulo || '—'}</b>{data.operacao.storyMelhorViews ? ` · ${data.operacao.storyMelhorViews.toLocaleString('pt-BR')} views` : ''}</>
+                  : 'Sem story hoje — próximo na cadência de 2 dias.'}
+              </div>
+            </div>
+            {data.operacao.storyHoje && <span className="shrink-0 rounded-full bg-pink-500/20 px-2 py-0.5 text-[10px] font-bold text-pink-300">HOJE</span>}
+          </div>
+          <p className="mt-3 text-[11px] text-zinc-500">Verde = etapa em dia · número = quanto falta fazer. Foco: <b className="text-zinc-400">curiosidade / mistério / psicologia</b> (os temas que mais rendem no YouTube).</p>
+        </div>
 
         {/* controles: modo + filtros */}
         <div className="glass flex flex-wrap items-center gap-3 rounded-2xl border border-zinc-800/50 p-4">

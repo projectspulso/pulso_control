@@ -13,7 +13,9 @@ import { guardApi } from '@/lib/auth/api-guard'
  * Matching: âncora Instagram. O IG é publicado via Graph API (auto-registrado),
  * então cada media IG tem ideia_id. Casa a legenda do órfão (TikTok/FB/YT) contra
  * as legendas IG por similaridade de tokens (Jaccard). Aceita só alta confiança
- * (best>=0.30 E best-second>=0.15); o resto vai pra "revisar" (nunca chuta).
+ * (best>=0.25 E best-second>=0.15 — a margem evita casar ambíguo); o resto vai
+ * pra "revisar" (nunca chuta). Órfão SEM legenda (FB manual sem texto) nunca casa
+ * por aqui — registrar na mão. Lição: ao publicar manual, sempre colar a legenda.
  *
  * INSERT-ONLY e idempotente: pula post_id já cadastrado, nunca apaga/altera.
  * Fontes: TikTok video.list · Facebook /videos · YouTube uploads do canal.
@@ -168,7 +170,7 @@ async function reconciliar(request: NextRequest) {
   const revisar: Array<{ plataforma: string; post_id: string; caption: string; best: number }> = []
   for (const o of orfaos) {
     const { ideia_id, best, second } = casar(o.caption)
-    if (ideia_id && best >= 0.3 && best - second >= 0.15) {
+    if (ideia_id && best >= 0.25 && best - second >= 0.15) {
       registrar.push({
         ideia_id, roteiro_id: roteiroDeIdeia.get(ideia_id) ?? null, plataforma: o.plataforma,
         url_publicacao: o.url, post_id: o.post_id, data_publicacao: o.data,

@@ -45,11 +45,26 @@ export interface FunilCanal {
   video: number
 }
 
+export interface OperacaoHoje {
+  ideiasHoje: number
+  ideiasMeta: number
+  ideiasRascunho: number
+  aprovarPendentes: number // roteiros em rascunho
+  aprovarMeta: number
+  audiosAFazer: number // pipeline ROTEIRO_PRONTO (tem roteiro, falta áudio)
+  renderAFazer: number // pipeline AUDIO_GERADO (tem áudio, falta vídeo) — produzir pra amanhã
+  publicarProntos: number // pipeline PRONTO_PUBLICACAO — publicar hoje
+  storyHoje: boolean // trava: Story dos melhores a cada 2 dias (IG + FB)
+  storyMelhorTitulo: string | null // vídeo de maior alcance pra reaproveitar como story
+  storyMelhorViews: number
+}
+
 export interface AgendaSnapshot {
   slots: AgendaSlot[]
   canais: { id: string; nome: string }[]
   funil: FunilCanal[]
   totais: { ideia: number; roteiro: number; audio: number; video: number }
+  operacao: OperacaoHoje
   atribuicoes: Record<string, Atribuicao> // chave 'data|horario'
   estoqueDisponivel: Record<string, EstoqueItem[]> // canalId -> itens não publicados
 }
@@ -71,10 +86,10 @@ export function useAgenda(horizonteDias = 21) {
       const [gradeQ, canaisQ, ideiasQ, roteirosQ, audiosQ, metricasQ, pipeQ, atribQ] = await Promise.all([
         supabase.from('vw_agenda_semanal').select('*').eq('ativo', true),
         supabase.schema('pulso_core').from('canais').select('id, nome').order('nome'),
-        supabase.schema('pulso_content').from('ideias').select('id, canal_id, status, titulo'),
-        supabase.schema('pulso_content').from('roteiros').select('ideia_id'),
+        supabase.schema('pulso_content').from('ideias').select('id, canal_id, status, titulo, created_at'),
+        supabase.schema('pulso_content').from('roteiros').select('ideia_id, status'),
         supabase.schema('pulso_content').from('audios').select('ideia_id'),
-        supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id'),
+        supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, views'),
         supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status'),
         supabase.from('vw_agenda_atribuicoes').select('*'),
       ])
@@ -150,6 +165,40 @@ export function useAgenda(horizonteDias = 21) {
       for (const arr of Object.values(estoqueDisponivel)) arr.sort((a, b) => (RANK[b.estagio] || 0) - (RANK[a.estagio] || 0))
       const funil = [...funilMap.values()]
 
+      // operação de hoje (checklist do ciclo diário)
+      const pipe = pipeQ.data || []
+      const ps = (s: string) => pipe.filter((p) => p.status === s).length
+      const inicioHoje = new Date()
+      inicioHoje.setHours(0, 0, 0, 0)
+      const inicioHojeIso = inicioHoje.toISOString()
+      // STORY DOS MELHORES — trava: a cada 2 dias, reaproveita o vídeo de maior alcance como story (IG + FB)
+      const STORY_ANCHOR = Date.UTC(2026, 5, 26) // 26/06/2026 é dia de story; depois 28, 30, 02/07…
+      const hojeUTC = Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
+      const storyHoje = Math.floor((hojeUTC - STORY_ANCHOR) / 86_400_000) % 2 === 0
+      const viewsPorIdeia = new Map<string, number>()
+      for (const m of metricasQ.data || []) {
+        if (!m.ideia_id) continue
+        viewsPorIdeia.set(m.ideia_id, (viewsPorIdeia.get(m.ideia_id) || 0) + (m.views || 0))
+      }
+      let melhorId: string | null = null
+      let melhorViews = 0
+      for (const [id, v] of viewsPorIdeia) if (v > melhorViews) { melhorViews = v; melhorId = id }
+      const tituloDe = new Map((ideiasQ.data || []).map((i) => [i.id, i.titulo]))
+
+      const operacao: OperacaoHoje = {
+        ideiasHoje: (ideiasQ.data || []).filter((i) => (i.created_at || '') >= inicioHojeIso).length,
+        ideiasMeta: 5,
+        ideiasRascunho: (ideiasQ.data || []).filter((i) => i.status === 'RASCUNHO').length,
+        aprovarPendentes: (roteirosQ.data || []).filter((r) => r.status === 'RASCUNHO').length,
+        aprovarMeta: 4,
+        audiosAFazer: ps('ROTEIRO_PRONTO'),
+        renderAFazer: ps('AUDIO_GERADO'),
+        publicarProntos: ps('PRONTO_PUBLICACAO'),
+        storyHoje,
+        storyMelhorTitulo: melhorId ? (tituloDe.get(melhorId) ?? null) : null,
+        storyMelhorViews: melhorViews,
+      }
+
       // atribuições por slot
       const atribuicoes: Record<string, Atribuicao> = {}
       for (const a of atribQ.data || []) {
@@ -161,7 +210,7 @@ export function useAgenda(horizonteDias = 21) {
         }
       }
 
-      return { slots, canais, funil, totais, atribuicoes, estoqueDisponivel }
+      return { slots, canais, funil, totais, operacao, atribuicoes, estoqueDisponivel }
     },
   })
 }
