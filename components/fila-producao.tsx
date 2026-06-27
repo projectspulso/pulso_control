@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ListOrdered, Film, Mic, FileText, ChevronDown, ChevronUp } from 'lucide-react'
+import { ListOrdered, Film, Mic, FileText, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 
 import { useFilaProducao, type EtapaProducao } from '@/lib/hooks/use-fila-producao'
 
@@ -18,6 +18,7 @@ export function FilaProducao() {
 
   if (isLoading || !data) return null
   const top = aberto ? data.fila.slice(0, 12) : data.fila.slice(0, 4)
+  const deficitando = data.deficits.filter((d) => d.deficit > 0)
 
   return (
     <div className="glass rounded-2xl border border-violet-500/20 p-5">
@@ -26,7 +27,7 @@ export function FilaProducao() {
           <ListOrdered className="h-4 w-4 text-violet-300" />
           <h2 className="text-sm font-bold text-white">Produzir na sequência</h2>
         </div>
-        <span className="text-xs text-zinc-500">vencedores primeiro · o mais perto de pronto antes</span>
+        <span className="text-xs text-zinc-500">o que a agenda precisa primeiro · próximos {data.horizonteDias} dias</span>
         <div className="ml-auto flex items-center gap-2 text-[11px]">
           <span className="rounded-full bg-violet-500/15 px-2 py-0.5 font-semibold text-violet-300">{data.porEtapa.render} renderizar</span>
           <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-300">{data.porEtapa.audio} áudio</span>
@@ -34,6 +35,18 @@ export function FilaProducao() {
           <span className="rounded-full bg-green-500/15 px-2 py-0.5 font-semibold text-green-300">{data.prontos} prontos</span>
         </div>
       </div>
+
+      {/* DEMANDA DA AGENDA: déficit por canal (o que vai furar) */}
+      {deficitando.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5 rounded-xl border border-amber-500/25 bg-amber-500/5 p-2.5">
+          <span className="mr-1 text-[11px] font-semibold text-amber-300">Agenda precisa:</span>
+          {deficitando.map((d) => (
+            <span key={d.canal} className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-200" title={`demanda ${d.demanda} · estoque ${d.estoque}`}>
+              {d.canal} <b>+{d.deficit}</b>
+            </span>
+          ))}
+        </div>
+      )}
 
       {data.fila.length === 0 ? (
         <p className="text-sm text-zinc-500">Nada na fila — pipeline vazio ou tudo pronto. 🎉</p>
@@ -49,11 +62,19 @@ export function FilaProducao() {
                 <span className={`inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold ring-1 ${e.cls}`}>
                   <Ic className="h-3 w-3" /> {item.acaoLabel}
                 </span>
-                <span className="w-40 shrink-0 truncate text-xs text-zinc-400">{item.canal}</span>
+                <span className="flex w-44 shrink-0 items-center gap-1 truncate text-xs text-zinc-400">
+                  {item.canal}
+                  {item.deficit > 0 && <span className="rounded bg-amber-500/15 px-1 text-[9px] font-bold text-amber-300">+{item.deficit}</span>}
+                </span>
                 <span className="min-w-0 flex-1 truncate text-sm text-zinc-200">
                   {item.numero != null && <span className="text-zinc-500">#{item.numero} </span>}
                   {item.titulo}
                 </span>
+                {item.semCenas && (
+                  <span className="flex shrink-0 items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold text-red-300" title="sem cenas — gere o áudio no app pra criar as cenas, senão o worker trava">
+                    <AlertTriangle className="h-3 w-3" /> sem cenas
+                  </span>
+                )}
               </li>
             )
           })}
@@ -65,7 +86,7 @@ export function FilaProducao() {
           {aberto ? <><ChevronUp className="h-3 w-3" /> ver menos</> : <><ChevronDown className="h-3 w-3" /> ver os {Math.min(data.fila.length, 12)} próximos ({data.fila.length} na fila)</>}
         </button>
       )}
-      <p className="mt-2 text-[11px] text-zinc-500">🟡 vencedor · ⚪ neutro · ⬛ rebaixado. <b className="text-zinc-400">Renderizar</b> = falta o vídeo · <b className="text-zinc-400">áudio/roteiro</b> = gerar no kanban abaixo.</p>
+      <p className="mt-2 text-[11px] text-zinc-500">Ordem = <b className="text-amber-300">déficit da agenda</b> → mais perto de pronto → vencedor. 🟡 vencedor · ⚪ neutro · ⬛ rebaixado · <span className="text-red-300">sem cenas</span> = gerar áudio no app primeiro.</p>
     </div>
   )
 }
