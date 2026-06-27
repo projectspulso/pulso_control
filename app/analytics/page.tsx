@@ -125,17 +125,19 @@ export default function AnalyticsPage() {
 
   const porRede = useMemo(() => {
     if (!data) return []
-    const acc = new Map<string, { views: number; likes: number; posts: number }>()
+    // posts = VÍDEOS DISTINTOS por rede (re-publicação do mesmo vídeo não conta 2×);
+    // views/likes somam todas as linhas (view real de cada post conta).
+    const acc = new Map<string, { views: number; likes: number; videos: Set<string> }>()
     for (const p of data.publicacoes) {
-      const v = acc.get(p.plataforma) || { views: 0, likes: 0, posts: 0 }
+      const v = acc.get(p.plataforma) || { views: 0, likes: 0, videos: new Set<string>() }
       v.views += p.views
       v.likes += p.likes
-      v.posts += 1
+      v.videos.add(p.ideia_id || p.id)
       acc.set(p.plataforma, v)
     }
     const total = [...acc.values()].reduce((a, v) => a + v.views, 0) || 1
     return [...acc.entries()]
-      .map(([rede, v]) => ({ rede, ...v, share: (v.views / total) * 100, ressonancia: v.views ? (v.likes / v.views) * 100 : 0 }))
+      .map(([rede, v]) => ({ rede, views: v.views, likes: v.likes, posts: v.videos.size, share: (v.views / total) * 100, ressonancia: v.views ? (v.likes / v.views) * 100 : 0 }))
       .sort((a, b) => b.views - a.views)
   }, [data])
 
