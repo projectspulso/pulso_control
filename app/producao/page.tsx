@@ -253,7 +253,7 @@ export default function ProducaoPage() {
                   >
                     <div className="absolute inset-0 bg-linear-to-r from-orange-600 to-amber-600 opacity-100 group-hover:opacity-80 transition-opacity" />
                     <Film className="h-4 w-4 relative" />
-                    <span className="relative">Kit Higgsfield</span>
+                    <span className="relative">Motor de Produção</span>
                   </Link>
                   <Link
                     href="/calendario"
