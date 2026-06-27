@@ -61,7 +61,7 @@ export default function WorkflowsPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <div className="glass border border-zinc-800/50 rounded-xl p-6 hover:border-purple-500/30 transition-all group relative overflow-hidden animate-fade-in">
             <div className="absolute inset-0 bg-purple-600/10 blur-xl opacity-0 group-hover:opacity-100 transition-all duration-300" />
             <div className="flex items-center gap-3 mb-2 relative z-10">

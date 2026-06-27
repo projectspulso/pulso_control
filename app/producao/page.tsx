@@ -273,7 +273,7 @@ export default function ProducaoPage() {
             <div className="mt-3"><EstoqueBanner /></div>
           </div>
           
-          <div className="grid grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {COLUNAS.map((coluna, idx) => {
               const count = conteudoPorStatus(coluna.id).length
               return (
@@ -301,7 +301,7 @@ export default function ProducaoPage() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {COLUNAS.map(coluna => (
               <ColunaKanban
                 key={coluna.id}

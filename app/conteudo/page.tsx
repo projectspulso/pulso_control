@@ -180,7 +180,7 @@ export default function ConteudoPage() {
             Funil de Produção
           </h2>
           
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-3xl font-bold text-purple-400 mb-1">{totalIdeias}</div>
               <div className="text-sm text-zinc-400">Ideias</div>

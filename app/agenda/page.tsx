@@ -300,7 +300,7 @@ export default function AgendaPage() {
         {/* Funil de produção */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-5">
           <h2 className="mb-3 text-sm font-semibold text-zinc-300">Trilha de trabalho · funil de produção</h2>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {([
               { label: '💡 Ideias', v: data.totais.ideia, cor: 'text-amber-300' },
               { label: '📝 Roteiros', v: data.totais.roteiro, cor: 'text-blue-300' },
