@@ -27,6 +27,8 @@ import { useQuery } from '@tanstack/react-query'
 
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
+import { AuditPanel } from '@/components/audit-panel'
+import { HorariosPanel } from '@/components/horarios-panel'
 import { ASSINATURAS_MENSAIS_BRL, CUSTO_POR_VIDEO } from '@/lib/config/custos'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
 import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
@@ -403,6 +405,9 @@ export default function AnalyticsPage() {
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Header + filtros */}
         <PageHeader titulo="Analytics · BI" subtitulo="Decisões rápidas: alcance, ressonância, custo e curva por vertical." />
+
+        {/* Saúde dos dados (audit de coerência) — rede de segurança sempre visível */}
+        <AuditPanel />
 
         <div className="glass flex flex-wrap items-center gap-3 rounded-2xl border border-zinc-800/50 p-4">
           <Filter className="h-4 w-4 text-violet-400" />
@@ -1053,6 +1058,8 @@ export default function AnalyticsPage() {
 
         {/* ABA: AUDIÊNCIA */}
         {aba === 'audiencia' && (<>
+        {/* Onde os views nascem — por hora de publicação (real) */}
+        <HorariosPanel />
         {/* Curva de retenção — Facebook + YouTube */}
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-center gap-2">

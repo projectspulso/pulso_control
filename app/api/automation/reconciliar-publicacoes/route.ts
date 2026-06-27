@@ -165,15 +165,26 @@ async function reconciliar(request: NextRequest) {
     } else avisos.push('YOUTUBE_API_KEY ausente — YouTube ignorado')
   } catch (e) { avisos.push(`YouTube falhou: ${e instanceof Error ? e.message : 'erro'}`) }
 
+  // hora real de publicação (Brasília, UTC-3) a partir do timestamp da rede → alimenta o painel de horários
+  const horaBRT = (iso: string): { hora: string; dia: number; data: string } | null => {
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return null
+    const br = new Date(d.getTime() - 3 * 3600_000)
+    const dia = br.getUTCDay() === 0 ? 7 : br.getUTCDay() // 1=Seg..7=Dom
+    return { hora: br.toISOString().slice(11, 19), dia, data: br.toISOString().slice(0, 10) }
+  }
+
   // 4) casa cada órfão e cadastra os de alta confiança
   const registrar: Array<Record<string, unknown>> = []
   const revisar: Array<{ plataforma: string; post_id: string; caption: string; best: number }> = []
   for (const o of orfaos) {
     const { ideia_id, best, second } = casar(o.caption)
     if (ideia_id && best >= 0.25 && best - second >= 0.15) {
+      const h = horaBRT(o.data)
       registrar.push({
         ideia_id, roteiro_id: roteiroDeIdeia.get(ideia_id) ?? null, plataforma: o.plataforma,
         url_publicacao: o.url, post_id: o.post_id, data_publicacao: o.data,
+        ...(h ? { hora_publicacao: h.hora, dia_semana: h.dia } : {}),
       })
     } else {
       revisar.push({ plataforma: o.plataforma, post_id: o.post_id, caption: o.caption.slice(0, 60), best: Number(best.toFixed(2)) })
