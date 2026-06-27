@@ -20,6 +20,7 @@ import { useState } from 'react'
 import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
 import { PageHeader } from '@/components/layout/page-header'
+import { KitPublicacao } from '@/components/kit-publicacao'
 import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { useAgendarPublicacao, useConteudosProntos } from '@/lib/hooks/use-calendario'
 import { usePublicar } from '@/lib/hooks/use-automation'
@@ -371,6 +372,9 @@ export default function PublicarPage() {
         />
 
         <ModoFocoBanner detail="Publicacao assistida limitada ao canal foco. Outros canais ficam congelados ate o gate." />
+
+        {/* Kit de publicação manual — legenda + passo a passo por rede (YT/FB manuais) */}
+        <KitPublicacao />
 
         {feedback && (
           <div className={`rounded-2xl border p-4 ${getFeedbackClasses(feedback.tone)}`}>
