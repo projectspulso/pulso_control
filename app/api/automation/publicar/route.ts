@@ -140,6 +140,10 @@ export async function POST(request: NextRequest) {
 
   const legenda = caption || `${ideia?.titulo || 'PULSO'} 👁️ Segue o PULSO.`
   const agora = new Date().toISOString()
+  // hora real (Brasília, UTC-3) — alimenta o painel de horários do analytics
+  const _br = new Date(Date.now() - 3 * 3600_000)
+  const horaPub = _br.toISOString().slice(11, 19)
+  const diaSemPub = _br.getUTCDay() === 0 ? 7 : _br.getUTCDay()
   const resultados: Array<{ plataforma: string; status: string; url?: string; post_id?: string; erro?: string }> = []
 
   for (const plataforma of plataformas) {
@@ -181,6 +185,8 @@ export async function POST(request: NextRequest) {
         url_publicacao: res.url,
         post_id: res.post_id,
         data_publicacao: agora,
+        hora_publicacao: horaPub,
+        dia_semana: diaSemPub,
       })
 
       resultados.push({ plataforma, status: 'PUBLICADO', url: res.url, post_id: res.post_id })
