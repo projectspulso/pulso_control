@@ -69,8 +69,10 @@ async function reconciliar(request: NextRequest) {
     }
   }
 
-  // 2) âncora IG: ideia_id -> tokens(legenda)
+  // 2) âncora: ideia_id -> tokens. Duas fontes por ideia (caption IG + TÍTULO da ideia),
+  //    pra o título curto do YouTube casar forte (a legenda IG sozinha casava mal).
   const ancora: Array<{ ideia_id: string; toks: Set<string> }> = []
+  const idsAlvo = [...new Set(igRows.map((x) => x.ideia_id))]
   if (token && igUserId) {
     const r = await fetch(`${GRAPH}/${igUserId}/media?fields=id,caption&limit=50&access_token=${token}`).then((x) => x.json()).catch(() => null)
     const byId = new Map(igRows.map((x) => [x.post_id, x.ideia_id]))
@@ -79,12 +81,22 @@ async function reconciliar(request: NextRequest) {
       if (iid) ancora.push({ ideia_id: iid, toks: tokens(m.caption || '') })
     }
   }
+  if (idsAlvo.length) {
+    const { data: ideias } = await supabase.schema('pulso_content').from('ideias').select('id, titulo').in('id', idsAlvo)
+    for (const i of ideias || []) if (i.titulo) ancora.push({ ideia_id: i.id, toks: tokens(i.titulo) })
+  }
   function casar(caption: string): { ideia_id: string | null; best: number; second: number } {
     const t = tokens(caption)
-    let best = 0, second = 0, ideia_id: string | null = null
+    // melhor score POR IDEIA (uma ideia tem 2 âncoras: caption + título)
+    const porIdeia = new Map<string, number>()
     for (const a of ancora) {
       const s = jaccard(t, a.toks)
-      if (s > best) { second = best; best = s; ideia_id = a.ideia_id }
+      if (s > (porIdeia.get(a.ideia_id) ?? 0)) porIdeia.set(a.ideia_id, s)
+    }
+    // best/second entre IDEIAS DISTINTAS (margem não conta a 2ª âncora da mesma ideia)
+    let best = 0, second = 0, ideia_id: string | null = null
+    for (const [id, s] of porIdeia) {
+      if (s > best) { second = best; best = s; ideia_id = id }
       else if (s > second) second = s
     }
     return { ideia_id, best, second }
