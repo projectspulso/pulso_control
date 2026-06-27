@@ -18,6 +18,9 @@ import {
   Settings,
   Sparkles,
   Target,
+  Tv,
+  Plug,
+  Library,
   X,
   Zap,
 } from 'lucide-react'
@@ -37,6 +40,9 @@ const navigation = [
   { name: 'Automacao', href: '/automacao', icon: Zap, badge: 'ai', soAdmin: false },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null, soAdmin: false },
   { name: 'Financeiro', href: '/financeiro', icon: Wallet, badge: null, soAdmin: true },
+  { name: 'Canais', href: '/canais', icon: Tv, badge: null, soAdmin: false },
+  { name: 'Integracoes', href: '/integracoes', icon: Plug, badge: null, soAdmin: false },
+  { name: 'Assets', href: '/assets', icon: Library, badge: null, soAdmin: false },
 ]
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
