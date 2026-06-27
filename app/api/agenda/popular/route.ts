@@ -12,6 +12,11 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
  */
 const RANK: Record<string, number> = { video: 4, audio: 3, roteiro: 2, ideia: 1 }
 
+// Cron do Vercel chama via GET — reusa o mesmo fluxo (auto-encaixe diário = agenda viva)
+export async function GET(request: NextRequest) {
+  return POST(request)
+}
+
 export async function POST(request: NextRequest) {
   const denied = await guardApi(request)
   if (denied) return denied

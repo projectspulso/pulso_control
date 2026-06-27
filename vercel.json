@@ -11,6 +11,10 @@
     {
       "path": "/api/automation/auto-funil",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/agenda/popular",
+      "schedule": "30 12 * * *"
     }
   ]
 }

@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Sparkles, Filter, LayoutGrid, List, Send, Fi
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { useAgenda, type AgendaSlot } from '@/lib/hooks/use-agenda'
+import { useHorarios } from '@/lib/hooks/use-horarios'
 
 const HORARIOS = ['12:00', '18:00', '21:00']
 const DIAS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
@@ -35,6 +36,7 @@ function fmtBR(iso: string) {
 export default function AgendaPage() {
   const [horizonte, setHorizonte] = useState(28)
   const { data, isLoading, isError, refetch } = useAgenda(horizonte)
+  const { data: horarios } = useHorarios()
   const [modo, setModo] = useState<'calendario' | 'lista'>('calendario')
   const [camada, setCamada] = useState<Camada>('publicacao')
   const [filtroCanal, setFiltroCanal] = useState('todos')
@@ -158,6 +160,20 @@ export default function AgendaPage() {
             </div>
             {data.operacao.storyHoje && <span className="shrink-0 rounded-full bg-pink-500/20 px-2 py-0.5 text-[10px] font-bold text-pink-300">HOJE</span>}
           </div>
+
+          {/* MELHORES HORAS (dado real) — de postador a acertador */}
+          {horarios && horarios.melhores.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-cyan-500/25 bg-cyan-500/5 p-3">
+              <span className="text-lg">🎯</span>
+              <span className="text-[11px] font-semibold text-zinc-200">Publique nas horas que mais rendem:</span>
+              {horarios.melhores.map((h) => (
+                <span key={h.hora} className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-semibold text-cyan-200">
+                  {String(h.hora).padStart(2, '0')}h · {h.media} média
+                </span>
+              ))}
+              <span className="text-[10px] text-zinc-500">({horarios.comHora} posts com hora real)</span>
+            </div>
+          )}
           <p className="mt-3 text-[11px] text-zinc-500">Verde = etapa em dia · número = quanto falta fazer. Foco: <b className="text-zinc-400">curiosidade / mistério / psicologia</b> (os temas que mais rendem no YouTube).</p>
         </div>
 
