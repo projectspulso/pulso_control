@@ -10,6 +10,7 @@ import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
 import { PageHeader } from '@/components/layout/page-header'
 import { EstoqueBanner } from '@/components/estoque-banner'
+import { FilaProducao } from '@/components/fila-producao'
 import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { Calendar, Clock, Film, User } from 'lucide-react'
 import Link from 'next/link'
@@ -287,6 +288,10 @@ export default function ProducaoPage() {
                 </div>
               )
             })}
+          </div>
+
+          <div className="mt-6">
+            <FilaProducao />
           </div>
         </div>
 

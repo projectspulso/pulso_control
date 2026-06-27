@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callElevenLabsTTS, limparParaTTS, splitTextForTTS } from '@/lib/automation/ai-clients'
+import { gerarCenas } from '@/lib/automation/gerar-cenas'
 
 /**
  * POST /api/automation/gerar-audio
@@ -198,6 +199,14 @@ export async function POST(request: NextRequest) {
       .from('pipeline_producao')
       .update({ status: 'AUDIO_GERADO' })
       .eq('ideia_id', roteiro.ideia_id)
+
+    // CÉREBRO do worker: gera as cenas visuais já aqui (best-effort), pra o item chegar
+    // em AUDIO_GERADO com metadata.cenas pronto. Falha NUNCA quebra a geração do áudio.
+    try {
+      await gerarCenas(supabase, { roteiro_id: roteiro.id })
+    } catch (e) {
+      console.error('[gerar-audio] gerar-cenas best-effort falhou (segue):', e)
+    }
 
     return NextResponse.json({
       success: true,
