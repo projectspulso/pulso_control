@@ -233,11 +233,11 @@ export default function AutomacaoPage() {
           <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">Mapa da esteira</h2>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             {[
-              { etapa: '1 · Ideias', quem: 'AI', detalhe: 'GPT gera por canal; você aprova a curadoria', cor: 'border-violet-500/30' },
-              { etapa: '2 · Roteiro', quem: 'AI + você', detalhe: 'Harness pt-BR; aprovação humana obrigatória', cor: 'border-indigo-500/30' },
-              { etapa: '3 · Áudio', quem: 'AI', detalhe: 'ElevenLabs voz PULSO (travas pt-BR + Receita E)', cor: 'border-cyan-500/30' },
-              { etapa: '4 · Vídeo', quem: 'AI assistida', detalhe: 'Mascote lip-sync (R$0) + B-roll Veo + montagem', cor: 'border-pink-500/30' },
-              { etapa: '5 · Publicar', quem: 'misto', detalhe: 'IG: API direto · FB: Business Suite manual · TikTok: draft → celular · YT: Studio', cor: 'border-green-500/30' },
+              { etapa: '1 · Ideias', quem: 'AI + você', detalhe: 'GPT gera por canal; você aprova a curadoria (gate)', cor: 'border-violet-500/30' },
+              { etapa: '2 · Roteiro', quem: 'AI + você', detalhe: 'Auto-funil gera p/ ideia aprovada (déficit-aware); você aprova o roteiro (gate)', cor: 'border-indigo-500/30' },
+              { etapa: '3 · Áudio + cenas', quem: 'AI', detalhe: 'ElevenLabs voz PULSO + cérebro escreve ~10 cenas e a legenda', cor: 'border-cyan-500/30' },
+              { etapa: '4 · Render', quem: 'Worker autônomo', detalhe: 'Veo 3.1 Lite + ffmpeg + CTA do mascote + QC; agendado 3×/dia', cor: 'border-pink-500/30' },
+              { etapa: '5 · Publicar', quem: 'misto + você', detalhe: 'IG: API · TikTok: draft → cel · YT/FB: navegador (kit). Só com seu OK (gate)', cor: 'border-green-500/30' },
             ].map((e) => (
               <div key={e.etapa} className={`rounded-xl border ${e.cor} bg-zinc-900/50 p-4`}>
                 <p className="text-sm font-bold text-white">{e.etapa}</p>
@@ -247,8 +247,9 @@ export default function AutomacaoPage() {
             ))}
           </div>
           <p className="mt-4 text-xs text-zinc-500">
-            Coleta de métricas: automática todo dia às 8h BRT (cron Vercel) nas 4 redes — dispare manualmente em
-            &quot;Coletar Métricas&quot; abaixo. Gate humano (R-011): nada é publicado sem clique seu.
+            Relógio diário (BRT): reconciliar 07:50 · coletar métricas 08:00 · auto-funil 09:00 · agenda viva 09:30 (crons Vercel) ·
+            worker de render 08:00/16:00/23:00 (máquina local). Custo travado pelo guard (600cr/dia) + QC barra vídeo ruim.
+            Gate humano (R-011): nada é publicado sem clique seu.
           </p>
         </div>
 
