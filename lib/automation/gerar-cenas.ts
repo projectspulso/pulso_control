@@ -10,10 +10,11 @@ import { callOpenAI } from '@/lib/automation/ai-clients'
 const SYSTEM = `Você é diretor de arte de vídeos curtos verticais (9:16) do canal PULSO (curiosidades, mistérios, psicologia, história). Sua tarefa: transformar a NARRAÇÃO em um roteiro VISUAL de b-roll para o gerador de vídeo Veo.
 
 Responda APENAS um JSON válido no formato:
-{"slug":"<slug_curto_sem_espacos>","base":"<frase de estilo que prefixa toda cena>","scenes":[{"name":"s1_xxx","prompt":"<descrição visual em inglês>"}, ... ]}
+{"slug":"<slug_curto_sem_espacos>","base":"<frase de estilo que prefixa toda cena>","caption":"<legenda pronta pra Instagram/Facebook em PT-BR>","scenes":[{"name":"s1_xxx","prompt":"<descrição visual em inglês>"}, ... ]}
 
 REGRAS DURAS (obrigatórias):
 - Exatamente 10 cenas, nomes s1_... até s10_..., a última DEVE ser "s10_cta".
+- "caption" = legenda pronta pra postar (PT-BR): 1ª linha = gancho curto com 1 emoji; 2-3 frases explicando o fato; depois a linha "Segue o Pulso pra mais [curiosidades/mistérios/insights] que ninguém te conta. ⚡"; por fim 5-6 hashtags relevantes minúsculas começando com # (inclua #pulso #fyp). Não use texto fora do JSON.
 - prompts em INGLÊS, cinematográficos, descritivos, terminando com "slow" ou movimento de câmera lento.
 - As 10 cenas seguem a NARRAÇÃO na ordem, cobrindo do início ao fim (cada cena ~1/10 da história).
 - s10_cta = cena calma e convidativa, com "wide empty space at the top" (espaço pro mascote) e "slow pull-back".
@@ -27,6 +28,7 @@ const PROIBIDO = /\b(kid|kids|child|children|american football|helmet|gridiron)\
 export interface CenasResult {
   slug: string
   base: string
+  caption: string
   scenes: { name: string; prompt: string }[]
 }
 
@@ -77,6 +79,7 @@ export async function gerarCenas(supabase: any, opts: { ideia_id?: string; rotei
   const result: CenasResult = {
     slug: String(parsed.slug).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 40),
     base: String(parsed.base),
+    caption: String(parsed.caption || '').trim(),
     scenes: scenes.map((s: { name: string; prompt: string }) => ({ name: String(s.name), prompt: String(s.prompt) })),
   }
 
