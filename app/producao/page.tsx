@@ -256,12 +256,12 @@ export default function ProducaoPage() {
                     <span className="relative">Motor de Produção</span>
                   </Link>
                   <Link
-                    href="/calendario"
+                    href="/agenda"
                     className="glass-hover px-5 py-3 text-white rounded-lg transition-all flex items-center gap-2 relative overflow-hidden group"
                   >
                     <div className="absolute inset-0 bg-linear-to-r from-teal-600 to-blue-600 opacity-100 group-hover:opacity-80 transition-opacity" />
                     <Calendar className="h-4 w-4 relative" />
-                    <span className="relative">Ver Calendário</span>
+                    <span className="relative">Ver Agenda</span>
                   </Link>
                 </>
               }

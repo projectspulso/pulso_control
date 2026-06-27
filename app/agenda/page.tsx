@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Sparkles, Filter, LayoutGrid, List, Send, FileEdit, Lightbulb, ArrowRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Sparkles, Filter, LayoutGrid, List, Send, FileEdit, Lightbulb, ArrowRight, CalendarDays } from 'lucide-react'
 
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { useAgenda, type AgendaSlot } from '@/lib/hooks/use-agenda'
 import { useHorarios } from '@/lib/hooks/use-horarios'
+import { AgendaMes } from '@/components/agenda-mes'
 
 const HORARIOS = ['12:00', '18:00', '21:00']
 const DIAS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
@@ -37,7 +38,7 @@ export default function AgendaPage() {
   const [horizonte, setHorizonte] = useState(28)
   const { data, isLoading, isError, refetch } = useAgenda(horizonte)
   const { data: horarios } = useHorarios()
-  const [modo, setModo] = useState<'calendario' | 'lista'>('calendario')
+  const [modo, setModo] = useState<'calendario' | 'lista' | 'mes'>('calendario')
   const [camada, setCamada] = useState<Camada>('publicacao')
   const [filtroCanal, setFiltroCanal] = useState('todos')
   const [filtroFaixa, setFiltroFaixa] = useState('todas')
@@ -182,6 +183,7 @@ export default function AgendaPage() {
           <div className="flex gap-1 rounded-lg bg-zinc-900/60 p-1">
             <button onClick={() => setModo('calendario')} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${modo === 'calendario' ? 'bg-violet-600 text-white' : 'text-zinc-400'}`}><LayoutGrid className="h-4 w-4" /> Calendário</button>
             <button onClick={() => setModo('lista')} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${modo === 'lista' ? 'bg-violet-600 text-white' : 'text-zinc-400'}`}><List className="h-4 w-4" /> Lista</button>
+            <button onClick={() => setModo('mes')} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${modo === 'mes' ? 'bg-violet-600 text-white' : 'text-zinc-400'}`}><CalendarDays className="h-4 w-4" /> Mês</button>
           </div>
           <Filter className="ml-2 h-4 w-4 text-violet-400" />
           <select value={filtroCanal} onChange={(e) => setFiltroCanal(e.target.value)} className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none">
@@ -294,6 +296,13 @@ export default function AgendaPage() {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {/* MÊS — todos os conteúdos do pipeline na data (consolidado da antiga /calendario) */}
+        {modo === 'mes' && (
+          <div className="glass rounded-2xl border border-zinc-800/50 p-5">
+            <AgendaMes />
           </div>
         )}
 

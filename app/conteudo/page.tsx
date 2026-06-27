@@ -73,7 +73,7 @@ export default function ConteudoPage() {
       icon: Calendar,
       color: 'cyan',
       description: 'Publicações agendadas',
-      link: '/calendario'
+      link: '/agenda'
     },
     {
       title: 'Vídeos',
@@ -259,7 +259,7 @@ export default function ConteudoPage() {
           </Link>
 
           <Link
-            href="/calendario"
+            href="/agenda"
             className="bg-linear-to-br from-green-600/20 to-green-600/5 border border-green-600/30 rounded-lg p-6 hover:border-green-600/50 transition-all group"
           >
             <Calendar className="h-8 w-8 text-green-400 mb-3 group-hover:scale-110 transition-transform" />
