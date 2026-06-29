@@ -44,7 +44,7 @@ export default async function HubPage() {
       <div className="relative mx-auto max-w-5xl px-5 py-14">
         {/* HERO */}
         <header className="flex flex-col items-center text-center">
-          <Image src="/pulso/logo.png" alt="PULSO" width={84} height={84} className="rounded-2xl shadow-lg shadow-purple-900/40" priority />
+          <Image src="/pulso/avatar/exp_feliz.png" alt="PULSO" width={122} height={172} className="h-44 w-auto drop-shadow-[0_10px_35px_rgba(168,85,247,0.5)]" priority />
           <h1 className="mt-5 bg-linear-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-5xl font-black tracking-tight text-transparent sm:text-6xl">PULSO</h1>
           <p className="mt-3 max-w-md text-lg text-zinc-300">Histórias, mistérios e curiosidades que <span className="text-white">ninguém te conta</span>. ⚡</p>
 

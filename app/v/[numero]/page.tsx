@@ -54,7 +54,7 @@ export default async function VideoPage({ params }: { params: Promise<{ numero: 
       {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />}
       <div className="mx-auto max-w-xl">
         <Link href="/hub" className="mb-8 flex items-center gap-2">
-          <Image src="/pulso/logo.png" alt="PULSO" width={36} height={36} className="rounded-lg" />
+          <Image src="/pulso/avatar/exp_feliz.png" alt="PULSO" width={32} height={45} className="h-10 w-auto drop-shadow-[0_4px_12px_rgba(168,85,247,0.4)]" />
           <span className="bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-xl font-black text-transparent">PULSO</span>
         </Link>
 
