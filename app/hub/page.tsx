@@ -36,7 +36,7 @@ export default async function HubPage() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-zinc-950 text-white">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       {/* glows de fundo */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-purple-600/20 blur-[120px]" />
       <div className="pointer-events-none absolute top-40 right-0 h-72 w-72 rounded-full bg-pink-600/10 blur-[120px]" />
