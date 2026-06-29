@@ -33,6 +33,7 @@ export function FilaProducao() {
           <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-300">{data.porEtapa.audio} áudio</span>
           <span className="rounded-full bg-blue-500/15 px-2 py-0.5 font-semibold text-blue-300">{data.porEtapa.roteiro} roteiro</span>
           <span className="rounded-full bg-green-500/15 px-2 py-0.5 font-semibold text-green-300">{data.prontos} prontos</span>
+          {data.rebaixadosOcultos > 0 && <span className="rounded-full bg-zinc-700/40 px-2 py-0.5 font-semibold text-zinc-500" title="canais rebaixados (Copa/games) — fora da fila, não vão sair">{data.rebaixadosOcultos} rebaixados ocultos</span>}
         </div>
       </div>
 
@@ -86,7 +87,7 @@ export function FilaProducao() {
           {aberto ? <><ChevronUp className="h-3 w-3" /> ver menos</> : <><ChevronDown className="h-3 w-3" /> ver os {Math.min(data.fila.length, 12)} próximos ({data.fila.length} na fila)</>}
         </button>
       )}
-      <p className="mt-2 text-[11px] text-zinc-500">Ordem = <b className="text-amber-300">déficit da agenda</b> → mais perto de pronto → vencedor. 🟡 vencedor · ⚪ neutro · ⬛ rebaixado · <span className="text-red-300">sem cenas</span> = gerar áudio no app primeiro.</p>
+      <p className="mt-2 text-[11px] text-zinc-500">Só o que é <b className="text-zinc-300">pra produzir</b> (rebaixados ocultos). Ordem = <b className="text-amber-300">déficit da agenda</b> → mais perto de pronto → vencedor. 🟡 vencedor · ⚪ neutro · <span className="text-red-300">sem cenas</span> = gerar áudio no app primeiro.</p>
     </div>
   )
 }

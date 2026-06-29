@@ -63,6 +63,7 @@ export interface FilaProducaoSnapshot {
   fila: FilaItem[]
   porEtapa: { render: number; audio: number; roteiro: number }
   prontos: number
+  rebaixadosOcultos: number // canais rebaixados (Copa/games) fora da fila
   deficits: DeficitCanal[] // o que a agenda precisa, por canal (deficit desc)
   horizonteDias: number
 }
@@ -121,16 +122,18 @@ export function useFilaProducao(horizonteDias = 20) {
       }
       deficits.sort((a, b) => b.deficit - a.deficit || b.demanda - a.demanda)
 
-      // FILA
+      // FILA — só o que é PRA produzir: exclui rebaixados (Copa/games) e já publicados/prontos
       const fila: FilaItem[] = []
       const porEtapa = { render: 0, audio: 0, roteiro: 0 }
       let prontos = 0
+      let rebaixadosOcultos = 0
       for (const p of pipeQ.data || []) {
         if (p.status === 'PUBLICADO') continue
         if (p.status === 'PRONTO_PUBLICACAO') { prontos++; continue }
         const prox = PROXIMA[p.status]
         if (!prox) continue
         const canal = canalDoItem(p.ideia_id)
+        if (tierDoCanal(canal) === 3) { rebaixadosOcultos++; continue } // não entram na fila (não vão sair)
         porEtapa[prox.etapa]++
         fila.push({
           pipelineId: p.id,
@@ -153,7 +156,7 @@ export function useFilaProducao(horizonteDias = 20) {
         a.tier - b.tier ||
         (a.numero ?? 999) - (b.numero ?? 999),
       )
-      return { fila, porEtapa, prontos, deficits, horizonteDias }
+      return { fila, porEtapa, prontos, rebaixadosOcultos, deficits, horizonteDias }
     },
   })
 }
