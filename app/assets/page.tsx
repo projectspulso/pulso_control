@@ -11,6 +11,7 @@ import {
 
 import { ErrorState } from '@/components/ui/error-state'
 import { useAssetsPorTipo, useAudiosGerados } from '@/lib/hooks/use-assets'
+import { BancoClipsPanel } from '@/components/banco-clips-panel'
 
 const STORAGE_BASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 
@@ -124,6 +125,8 @@ export default function AssetsPage() {
             Biblioteca ligada a automacao nativa do app
           </div>
         </div>
+
+        <BancoClipsPanel />
 
         <div className="flex gap-2 overflow-x-auto pb-2 animate-fade-in">
           {tiposDisponiveis.map((tipo, idx) => {
