@@ -16,6 +16,7 @@ export interface HubVideo {
   descricao: string
   thumb: string | null
   data: string | null // uploadDate (ISO) p/ SEO
+  transcricao: string | null
   redes: RedeLink[]
 }
 export interface HubItem {
@@ -61,6 +62,7 @@ export async function getVideoPorNumero(numero: number): Promise<HubVideo | null
     descricao: (md.caption as string) || '',
     thumb: (md.thumb as string) || null,
     data: datas[0] || null,
+    transcricao: (md.transcricao as string) || null,
     redes: linksDe(mpQ.data || []),
   }
 }

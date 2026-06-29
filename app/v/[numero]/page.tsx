@@ -43,6 +43,7 @@ export default async function VideoPage({ params }: { params: Promise<{ numero: 
     description: resumo(v.descricao, 300) || v.titulo,
     ...(v.thumb ? { thumbnailUrl: v.thumb } : {}),
     ...(v.data ? { uploadDate: v.data } : {}),
+    ...(v.transcricao ? { transcript: v.transcricao } : {}),
     url: `${SITE_URL}/v/${v.numero}`,
     ...(v.redes.find((r) => r.plataforma === 'youtube') ? { contentUrl: v.redes.find((r) => r.plataforma === 'youtube')!.url } : {}),
     publisher: { '@type': 'Organization', name: 'PULSO', logo: { '@type': 'ImageObject', url: `${SITE_URL}/icons/icon-512.png` } },
@@ -86,6 +87,13 @@ export default async function VideoPage({ params }: { params: Promise<{ numero: 
                 <p className="text-sm text-zinc-500">Em breve nas redes.</p>
               )}
             </div>
+
+            {v.transcricao && (
+              <details className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-zinc-300">Transcrição completa</summary>
+                <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-zinc-400">{v.transcricao}</p>
+              </details>
+            )}
 
             <div className="mt-10 border-t border-zinc-800 pt-6 text-center">
               <Link href="/hub" className="text-sm font-semibold text-purple-400 hover:text-purple-300">⚡ Segue o Pulso — todos os canais</Link>
