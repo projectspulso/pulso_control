@@ -49,7 +49,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // tudo, EXCETO: api, _next, arquivos estáticos, termos/privacidade (TikTok), manifest/ícones
-    '/((?!api|_next/static|_next/image|favicon.ico|termos|privacidade|manifest.json|icons|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)',
+    // tudo, EXCETO: api, _next, estáticos, termos/privacidade (TikTok), hub público (v/ e hub), manifest/ícones
+    '/((?!api|_next/static|_next/image|favicon.ico|termos|privacidade|v/|hub|manifest.json|icons|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)',
   ],
 }
