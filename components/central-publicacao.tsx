@@ -51,6 +51,9 @@ function CartaoVideo({ video }: { video: VideoPub }) {
       <button onClick={() => setAberto((v) => !v)} className="flex w-full items-center gap-3 p-4 text-left">
         <span className="shrink-0 rounded bg-zinc-800 px-2 py-0.5 text-xs font-bold text-zinc-300">#{video.numero ?? '—'}</span>
         <span className="min-w-0 flex-1 truncate font-semibold text-white">{video.titulo}</span>
+        {!video.pronto && (
+          <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">a montar</span>
+        )}
         <div className="hidden shrink-0 gap-1 sm:flex">
           {REDES_PADRAO.map((r) => (
             <span key={r} title={r} className={`h-2 w-2 rounded-full ${video.publicadoEm.includes(r) ? 'bg-emerald-400' : 'bg-zinc-700'}`} />
@@ -61,6 +64,10 @@ function CartaoVideo({ video }: { video: VideoPub }) {
 
       {aberto && (
         <div className="space-y-4 border-t border-zinc-800/50 p-4">
+          {!video.pronto ? (
+            <p className="text-xs text-zinc-400">Vídeo <b className="text-amber-300">em produção</b> (status: {video.status}). A descrição por rede e o link do hub aparecem aqui quando ficar pronto.</p>
+          ) : (
+          <>
           {video.videoUrl && (
             <a href={video.videoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300">
               <ExternalLink className="h-3 w-3" /> arquivo do vídeo
@@ -110,6 +117,8 @@ function CartaoVideo({ video }: { video: VideoPub }) {
               <Save className="h-3 w-3" /> {salvar.isPending ? 'salvando…' : salvar.isSuccess ? 'salvo ✓' : 'salvar'}
             </button>
           </div>
+          </>
+          )}
         </div>
       )}
     </div>

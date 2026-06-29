@@ -11,6 +11,8 @@ export interface VideoPub {
   ideiaId: string
   numero: number | null
   titulo: string
+  status: string
+  pronto: boolean // PRONTO_PUBLICACAO ou PUBLICADO (tem vídeo + caption); senão está "a montar"
   videoUrl: string | null
   captionBase: string
   tituloCurto: string
@@ -37,7 +39,7 @@ export function useCentralPublicacao() {
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
       const [pipeQ, ideiasQ, mpQ] = await Promise.all([
-        supabase.schema('pulso_content').from('pipeline_producao').select('id, ideia_id, status, metadata').in('status', ['PRONTO_PUBLICACAO', 'PUBLICADO']),
+        supabase.schema('pulso_content').from('pipeline_producao').select('id, ideia_id, status, metadata'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo'),
         supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma'),
       ])
@@ -52,18 +54,21 @@ export function useCentralPublicacao() {
         const md = p.metadata || {}
         const caption = (md.caption as string) || ''
         const numero = (md.numero as number) ?? null
+        const pronto = p.status === 'PRONTO_PUBLICACAO' || p.status === 'PUBLICADO'
         return {
           pipelineId: p.id,
           ideiaId: p.ideia_id,
           numero,
           titulo: tit.get(p.ideia_id) || 'PULSO',
+          status: p.status,
+          pronto,
           videoUrl: (md.video_url as string) || null,
           captionBase: caption,
           tituloCurto: tituloCurto(caption, tit.get(p.ideia_id) || 'PULSO'),
           publicadoEm: Array.from(pubPorIdeia.get(p.ideia_id) || []),
           publicacao: (md.publicacao as Record<string, PubRede>) || {},
         }
-      }).sort((a, b) => (b.numero ?? 0) - (a.numero ?? 0))
+      }).sort((a, b) => Number(b.pronto) - Number(a.pronto) || (b.numero ?? 0) - (a.numero ?? 0))
     },
   })
 }
