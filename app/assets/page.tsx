@@ -12,6 +12,7 @@ import {
 import { ErrorState } from '@/components/ui/error-state'
 import { useAssetsPorTipo, useAudiosGerados } from '@/lib/hooks/use-assets'
 import { BancoClipsPanel } from '@/components/banco-clips-panel'
+import { CentralPublicacao } from '@/components/central-publicacao'
 
 const STORAGE_BASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 
@@ -125,6 +126,8 @@ export default function AssetsPage() {
             Biblioteca ligada a automacao nativa do app
           </div>
         </div>
+
+        <CentralPublicacao />
 
         <BancoClipsPanel />
 
