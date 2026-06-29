@@ -25,13 +25,17 @@ function CartaoVideo({ video }: { video: VideoPub }) {
   const [edits, setEdits] = useState<Record<string, PubRede>>(video.publicacao)
   const [novaRede, setNovaRede] = useState('')
 
-  const hubUrl = typeof window !== 'undefined' && video.numero != null ? `${window.location.origin}/v/${video.numero}` : ''
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const hubUrl = origin && video.numero != null ? `${origin}/v/${video.numero}` : ''
+  const hubHome = origin ? `${origin}/hub` : ''
   const redes = Array.from(new Set([...REDES_PADRAO, ...Object.keys(video.publicacao)]))
 
   function get(rede: string, campo: 'titulo' | 'legenda'): string {
     const salvo = edits[rede]?.[campo]
     if (salvo != null) return salvo
     if (campo === 'titulo') return rede === 'youtube' ? video.tituloCurto : ''
+    // só o YouTube ganha o link na descrição (IG/TikTok/FB ficam limpos — link só na bio)
+    if (rede === 'youtube' && hubHome) return `${video.captionBase}\n\n🔗 Mais histórias: ${hubHome}`
     return video.captionBase
   }
   function set(rede: string, campo: 'titulo' | 'legenda', valor: string) {
