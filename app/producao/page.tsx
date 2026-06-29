@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useConteudosProducao, useAtualizarStatusProducao, useEstatisticasProducao, type StatusProducao } from '@/lib/hooks/use-producao'
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, PointerSensor, useSensor, useSensors, DragOverEvent, useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -26,12 +26,17 @@ const COLUNAS: { id: StatusProducao; titulo: string; cor: string }[] = [
 
 interface CardProps {
   conteudo: any
+  destacado?: boolean
 }
 
-function CardConteudo({ conteudo }: CardProps) {
+function CardConteudo({ conteudo, destacado }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: conteudo.pipeline_id,
   })
+
+  useEffect(() => {
+    if (destacado) document.getElementById(`kbcard-${conteudo.pipeline_id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [destacado, conteudo.pipeline_id])
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -42,10 +47,11 @@ function CardConteudo({ conteudo }: CardProps) {
   return (
     <div
       ref={setNodeRef}
+      id={`kbcard-${conteudo.pipeline_id}`}
       style={style}
       {...attributes}
       {...listeners}
-      className="glass border border-zinc-800/50 rounded-xl p-4 cursor-move hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10 transition-all group relative overflow-hidden"
+      className={`glass rounded-xl p-4 cursor-move hover:shadow-lg hover:shadow-violet-500/10 transition-all group relative overflow-hidden border ${destacado ? 'border-amber-400 ring-2 ring-amber-400/60 shadow-lg shadow-amber-500/20' : 'border-zinc-800/50 hover:border-violet-500/50'}`}
     >
       <div className="absolute inset-0 bg-linear-to-br from-violet-600/0 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
       <h4 className="text-sm font-medium text-white mb-2 line-clamp-2 relative z-10">
@@ -107,9 +113,10 @@ interface ColunaProps {
   titulo: string
   cor: string
   conteudos: any[]
+  destaque?: string | null
 }
 
-function ColunaKanban({ status, titulo, cor, conteudos }: ColunaProps) {
+function ColunaKanban({ status, titulo, cor, conteudos, destaque }: ColunaProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
   })
@@ -132,7 +139,7 @@ function ColunaKanban({ status, titulo, cor, conteudos }: ColunaProps) {
       >
         <div className="space-y-3 min-h-[200px]">
           {conteudos.map(conteudo => (
-            <CardConteudo key={conteudo.pipeline_id} conteudo={conteudo} />
+            <CardConteudo key={conteudo.pipeline_id} conteudo={conteudo} destacado={destaque === conteudo.pipeline_id} />
           ))}
         </div>
       </SortableContext>
@@ -146,6 +153,7 @@ export default function ProducaoPage() {
   const atualizarStatus = useAtualizarStatusProducao()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeConteudo, setActiveConteudo] = useState<any>(null)
+  const [destaque, setDestaque] = useState<string | null>(null)
   const conteudosModoFoco = (MODO_FOCO_ATIVO ? conteudos?.filter((item) => item.canal === MODO_FOCO.canalNomeDb) : conteudos) ?? []
 
   const sensors = useSensors(
@@ -291,7 +299,7 @@ export default function ProducaoPage() {
           </div>
 
           <div className="mt-6">
-            <FilaProducao />
+            <FilaProducao onSelecionar={setDestaque} selecionado={destaque} />
           </div>
         </div>
 
@@ -309,6 +317,7 @@ export default function ProducaoPage() {
                 titulo={coluna.titulo}
                 cor={coluna.cor}
                 conteudos={conteudoPorStatus(coluna.id)}
+                destaque={destaque}
               />
             ))}
           </div>

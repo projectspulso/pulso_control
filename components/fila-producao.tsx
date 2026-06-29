@@ -12,7 +12,7 @@ const ETAPA: Record<EtapaProducao, { icon: typeof Film; cls: string }> = {
 }
 const TIER_DOT: Record<number, string> = { 1: 'bg-amber-400', 2: 'bg-zinc-500', 3: 'bg-zinc-700' }
 
-export function FilaProducao() {
+export function FilaProducao({ onSelecionar, selecionado }: { onSelecionar?: (pipelineId: string) => void; selecionado?: string | null }) {
   const { data, isLoading } = useFilaProducao()
   const [aberto, setAberto] = useState(true)
 
@@ -57,7 +57,12 @@ export function FilaProducao() {
             const e = ETAPA[item.etapa]
             const Ic = e.icon
             return (
-              <li key={item.pipelineId} className="flex items-center gap-3 rounded-lg bg-zinc-900/50 px-3 py-2">
+              <li
+                key={item.pipelineId}
+                onClick={() => onSelecionar?.(item.pipelineId)}
+                title="Clique pra achar o card no kanban (ele acende) e arraste pra próxima coluna"
+                className={`flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors ${selecionado === item.pipelineId ? 'bg-amber-500/10 ring-1 ring-amber-400/60' : 'bg-zinc-900/50 hover:bg-zinc-800/70'}`}
+              >
                 <span className="w-5 shrink-0 text-center text-xs font-bold tabular-nums text-zinc-500">{i + 1}</span>
                 <span className={`h-2 w-2 shrink-0 rounded-full ${TIER_DOT[item.tier] || TIER_DOT[2]}`} title={item.tier === 1 ? 'canal vencedor' : item.tier === 3 ? 'rebaixado' : 'neutro'} />
                 <span className={`inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold ring-1 ${e.cls}`}>
@@ -87,7 +92,7 @@ export function FilaProducao() {
           {aberto ? <><ChevronUp className="h-3 w-3" /> ver menos</> : <><ChevronDown className="h-3 w-3" /> ver os {Math.min(data.fila.length, 12)} próximos ({data.fila.length} na fila)</>}
         </button>
       )}
-      <p className="mt-2 text-[11px] text-zinc-500">Só o que é <b className="text-zinc-300">pra produzir</b> (rebaixados ocultos). Ordem = <b className="text-amber-300">déficit da agenda</b> → mais perto de pronto → vencedor. 🟡 vencedor · ⚪ neutro · <span className="text-red-300">sem cenas</span> = gerar áudio no app primeiro.</p>
+      <p className="mt-2 text-[11px] text-zinc-500"><b className="text-amber-300">Clique num item</b> → o card acende no kanban abaixo; arraste pra próxima coluna pra gerar. Só o que é <b className="text-zinc-300">pra produzir</b> (rebaixados ocultos). Ordem = déficit da agenda → mais perto de pronto → vencedor. 🟡 vencedor · ⚪ neutro · <span className="text-red-300">sem cenas</span> = gerar áudio primeiro.</p>
     </div>
   )
 }
