@@ -60,9 +60,9 @@ async function tagThumb(thumb: string, apiKey: string): Promise<Visao | null> {
 }
 
 export async function POST(request: Request) {
-  const secret = process.env.CRON_SECRET || ''
   const auth = request.headers.get('authorization') || ''
-  if (!secret || auth !== `Bearer ${secret}`) {
+  const aceitos = [process.env.CRON_SECRET, process.env.SUPABASE_SERVICE_ROLE_KEY].filter(Boolean).map((s) => `Bearer ${s}`)
+  if (!aceitos.includes(auth)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
   const apiKey = process.env.OPENAI_API_KEY

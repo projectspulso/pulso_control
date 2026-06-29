@@ -11,6 +11,7 @@ export interface HubVideo {
   numero: number | null
   titulo: string
   descricao: string
+  thumb: string | null
   redes: RedeLink[]
 }
 export interface HubItem {
@@ -51,6 +52,7 @@ export async function getVideoPorNumero(numero: number): Promise<HubVideo | null
     numero,
     titulo: (ideiaQ.data?.titulo as string) || 'PULSO',
     descricao: (md.caption as string) || '',
+    thumb: (md.thumb as string) || null,
     redes: linksDe(mpQ.data || []),
   }
 }

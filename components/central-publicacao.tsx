@@ -49,6 +49,12 @@ function CartaoVideo({ video }: { video: VideoPub }) {
   return (
     <div className="rounded-xl border border-zinc-800/50 bg-zinc-900/40">
       <button onClick={() => setAberto((v) => !v)} className="flex w-full items-center gap-3 p-4 text-left">
+        {video.thumb ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={video.thumb} alt="" className="h-12 w-8 shrink-0 rounded object-cover ring-1 ring-zinc-700" loading="lazy" />
+        ) : (
+          <span className="flex h-12 w-8 shrink-0 items-center justify-center rounded bg-zinc-800 text-[10px] text-zinc-600">🎬</span>
+        )}
         <span className="shrink-0 rounded bg-zinc-800 px-2 py-0.5 text-xs font-bold text-zinc-300">#{video.numero ?? '—'}</span>
         <span className="min-w-0 flex-1 truncate font-semibold text-white">{video.titulo}</span>
         {!video.pronto && (

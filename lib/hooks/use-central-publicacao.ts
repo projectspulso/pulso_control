@@ -13,6 +13,7 @@ export interface VideoPub {
   titulo: string
   status: string
   pronto: boolean // PRONTO_PUBLICACAO ou PUBLICADO (tem vídeo + caption); senão está "a montar"
+  thumb: string | null
   videoUrl: string | null
   captionBase: string
   tituloCurto: string
@@ -62,6 +63,7 @@ export function useCentralPublicacao() {
           titulo: tit.get(p.ideia_id) || 'PULSO',
           status: p.status,
           pronto,
+          thumb: (md.thumb as string) || null,
           videoUrl: (md.video_url as string) || null,
           captionBase: caption,
           tituloCurto: tituloCurto(caption, tit.get(p.ideia_id) || 'PULSO'),

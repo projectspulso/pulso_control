@@ -33,6 +33,7 @@ function isValidStorageValue(value?: string | null) {
 
 export default function AssetsPage() {
   const [tipoFiltro, setTipoFiltro] = useState<string>('')
+  const [aba, setAba] = useState<'videos' | 'acervo' | 'midias'>('videos')
   const { data: assets, isLoading, isError, refetch } = useAssetsPorTipo(
     tipoFiltro || undefined,
   )
@@ -128,21 +129,36 @@ export default function AssetsPage() {
           </div>
         </div>
 
-        <nav className="sticky top-0 z-20 -mx-8 flex gap-2 overflow-x-auto border-y border-zinc-800/50 bg-zinc-950/85 px-8 py-3 backdrop-blur-md">
-          <a href="#videos" className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800/60 hover:text-white">🎬 Vídeos</a>
-          <a href="#galeria" className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800/60 hover:text-white">🏛️ Acervo de clips</a>
-          <a href="#audios" className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800/60 hover:text-white">🎙️ Mídias</a>
-        </nav>
+        {/* ABAS (como no Analytics) */}
+        <div className="flex gap-2 overflow-x-auto border-b border-zinc-800/50 pb-2">
+          {([
+            { id: 'videos', label: 'Vídeos', icon: Film },
+            { id: 'acervo', label: 'Acervo de clips', icon: Layers },
+            { id: 'midias', label: 'Mídias', icon: Music },
+          ] as const).map((t) => {
+            const Icon = t.icon
+            const ativo = aba === t.id
+            return (
+              <button key={t.id} type="button" onClick={() => setAba(t.id)}
+                className={`inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all ${ativo ? 'bg-pink-500/15 text-pink-300 ring-1 ring-pink-500/30' : 'text-zinc-400 hover:text-white'}`}>
+                <Icon className="h-4 w-4" /> {t.label}
+              </button>
+            )
+          })}
+        </div>
 
-        <section id="videos" className="scroll-mt-24">
-          <CentralPublicacao />
-        </section>
+        {aba === 'videos' && <CentralPublicacao />}
 
-        <BancoClipsPanel />
+        {aba === 'acervo' && (
+          <>
+            <BancoClipsPanel />
+            <BancoClipsGaleria />
+          </>
+        )}
 
-        <BancoClipsGaleria />
-
-        <div id="audios" className="scroll-mt-24 flex gap-2 overflow-x-auto pb-2 animate-fade-in">
+        {aba === 'midias' && (
+        <>
+        <div className="flex gap-2 overflow-x-auto pb-2 animate-fade-in">
           {tiposDisponiveis.map((tipo, idx) => {
             const Icon = tipo.icon
             const ativo = tipoFiltro === tipo.valor
@@ -302,6 +318,8 @@ export default function AssetsPage() {
               </div>
             </div>
           </div>
+        )}
+        </>
         )}
       </div>
     </div>

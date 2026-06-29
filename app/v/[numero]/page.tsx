@@ -23,11 +23,12 @@ export async function generateMetadata({ params }: { params: Promise<{ numero: s
   const v = await getVideoPorNumero(Number(numero))
   if (!v) return { title: 'PULSO' }
   const desc = resumo(v.descricao) || 'Histórias e curiosidades que ninguém te conta. Segue o Pulso. ⚡'
+  const imgs = v.thumb ? [{ url: v.thumb }] : undefined
   return {
     title: `${v.titulo} | PULSO`,
     description: desc,
-    openGraph: { title: v.titulo, description: desc, type: 'video.other', siteName: 'PULSO' },
-    twitter: { card: 'summary_large_image', title: v.titulo, description: desc },
+    openGraph: { title: v.titulo, description: desc, type: 'video.other', siteName: 'PULSO', images: imgs },
+    twitter: { card: 'summary_large_image', title: v.titulo, description: desc, images: imgs },
   }
 }
 
@@ -50,6 +51,10 @@ export default async function VideoPage({ params }: { params: Promise<{ numero: 
           </div>
         ) : (
           <>
+            {v.thumb && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={v.thumb} alt={v.titulo} className="mb-6 aspect-9/16 max-h-[60vh] w-auto rounded-2xl object-cover ring-1 ring-zinc-800" />
+            )}
             <h1 className="text-2xl font-black leading-tight sm:text-3xl">{v.titulo}</h1>
             {v.descricao && <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-zinc-300">{v.descricao}</p>}
 
