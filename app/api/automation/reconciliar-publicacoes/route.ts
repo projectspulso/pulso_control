@@ -168,7 +168,11 @@ async function reconciliar(request: NextRequest) {
             for (const it of pl?.items || []) {
               const id = it?.contentDetails?.videoId
               if (!id || registrados.has(String(id))) continue
-              orfaos.push({ plataforma: 'youtube', post_id: String(id), caption: it?.snippet?.title || '',
+              // casa pela DESCRIÇÃO (legenda PULSO completa, ~igual ao IG) + título — o título do Short
+              // costuma ser reescrito (ex.: "1513/Antártida" no lugar de "Piri Reis") e sozinho não casa.
+              const ytDesc = it?.snippet?.description || ''
+              const ytTitle = it?.snippet?.title || ''
+              orfaos.push({ plataforma: 'youtube', post_id: String(id), caption: `${ytDesc} ${ytTitle}`.trim(),
                 url: `https://youtube.com/shorts/${id}`, data: it?.contentDetails?.videoPublishedAt || new Date().toISOString() })
             }
           }
