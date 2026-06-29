@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase/client'
 
 export interface BancoClipsStats {
   clips: number
@@ -26,20 +25,10 @@ export function useBancoClipsCatalogo() {
     queryKey: ['banco-clips-catalogo'],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .schema('pulso_core')
-        .from('configuracoes')
-        .select('valor')
-        .eq('chave', 'banco_clips_catalogo')
-        .maybeSingle()
-      if (error) throw error
-      if (!data?.valor) return []
-      try {
-        const arr = JSON.parse(data.valor) as ClipCatalogo[]
-        return arr.map((c) => ({ ...c, dur: Number(c.dur) || 0, usos: Number(c.usos) || 0, tags: c.tags || [] }))
-      } catch {
-        return []
-      }
+      const r = await fetch('/api/banco-clips')
+      if (!r.ok) return []
+      const { catalogo } = (await r.json()) as { catalogo: ClipCatalogo[] }
+      return (catalogo || []).map((c) => ({ ...c, dur: Number(c.dur) || 0, usos: Number(c.usos) || 0, tags: c.tags || [] }))
     },
   })
 }
@@ -50,19 +39,10 @@ export function useBancoClips() {
     queryKey: ['banco-clips-stats'],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .schema('pulso_core')
-        .from('configuracoes')
-        .select('valor')
-        .eq('chave', 'banco_clips_stats')
-        .maybeSingle()
-      if (error) throw error
-      if (!data?.valor) return null
-      try {
-        return JSON.parse(data.valor) as BancoClipsStats
-      } catch {
-        return null
-      }
+      const r = await fetch('/api/banco-clips')
+      if (!r.ok) return null
+      const { stats } = (await r.json()) as { stats: BancoClipsStats | null }
+      return stats
     },
   })
 }
