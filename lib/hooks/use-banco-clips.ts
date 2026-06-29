@@ -9,6 +9,14 @@ export interface BancoClipsStats {
   atualizado: string
 }
 
+export interface ClipVisao {
+  descricao?: string
+  objetos?: string[]
+  cenario?: string
+  clima?: string[]
+  paleta?: string[]
+  busca?: string[]
+}
 export interface ClipCatalogo {
   id: string
   prompt: string
@@ -17,6 +25,8 @@ export interface ClipCatalogo {
   dur: number
   usos: number
   thumb: string
+  visao?: ClipVisao
+  vtags?: string[]
 }
 
 // Catálogo navegável (1 thumb por clip) pra galeria buscável no Assets.

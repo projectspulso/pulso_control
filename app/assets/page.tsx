@@ -128,13 +128,21 @@ export default function AssetsPage() {
           </div>
         </div>
 
-        <CentralPublicacao />
+        <nav className="sticky top-0 z-20 -mx-8 flex gap-2 overflow-x-auto border-y border-zinc-800/50 bg-zinc-950/85 px-8 py-3 backdrop-blur-md">
+          <a href="#videos" className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800/60 hover:text-white">🎬 Vídeos</a>
+          <a href="#galeria" className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800/60 hover:text-white">🏛️ Acervo de clips</a>
+          <a href="#audios" className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800/60 hover:text-white">🎙️ Mídias</a>
+        </nav>
+
+        <section id="videos" className="scroll-mt-24">
+          <CentralPublicacao />
+        </section>
 
         <BancoClipsPanel />
 
         <BancoClipsGaleria />
 
-        <div className="flex gap-2 overflow-x-auto pb-2 animate-fade-in">
+        <div id="audios" className="scroll-mt-24 flex gap-2 overflow-x-auto pb-2 animate-fade-in">
           {tiposDisponiveis.map((tipo, idx) => {
             const Icon = tipo.icon
             const ativo = tipoFiltro === tipo.valor
