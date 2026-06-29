@@ -25,6 +25,7 @@ function CartaoVideo({ video }: { video: VideoPub }) {
   const [edits, setEdits] = useState<Record<string, PubRede>>(video.publicacao)
   const [novaRede, setNovaRede] = useState('')
 
+  const hubUrl = typeof window !== 'undefined' && video.numero != null ? `${window.location.origin}/v/${video.numero}` : ''
   const redes = Array.from(new Set([...REDES_PADRAO, ...Object.keys(video.publicacao)]))
 
   function get(rede: string, campo: 'titulo' | 'legenda'): string {
@@ -64,6 +65,20 @@ function CartaoVideo({ video }: { video: VideoPub }) {
             <a href={video.videoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300">
               <ExternalLink className="h-3 w-3" /> arquivo do vídeo
             </a>
+          )}
+
+          {video.numero != null && (
+            <div className="rounded-lg bg-cyan-500/5 p-3 ring-1 ring-cyan-500/20">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Link do hub (cross-rede / SEO)</span>
+                <BotaoCopiar texto={hubUrl} />
+              </div>
+              <code className="block break-all text-xs text-zinc-300">{hubUrl}</code>
+              <p className="mt-1.5 text-[10px] leading-relaxed text-zinc-500">
+                ✅ Cole na <b className="text-zinc-300">descrição do YouTube</b> e use o <b className="text-zinc-300">/hub na bio</b> das redes.
+                ❌ Não cole em legenda de IG/TikTok/FB — não vira clicável e <b className="text-zinc-300">derruba o alcance</b> (manda pra fora da rede).
+              </p>
+            </div>
           )}
           {redes.map((rede) => (
             <div key={rede} className="rounded-lg bg-zinc-900/60 p-3">
