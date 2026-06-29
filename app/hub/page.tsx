@@ -20,44 +20,73 @@ const COR: Record<string, string> = {
 }
 
 export default async function HubPage() {
-  const videos = await getVideosRecentes(40)
+  const videos = await getVideosRecentes(60)
+  const comCapa = videos.filter((v) => v.thumb)
+  const destaque = comCapa[0] || videos[0]
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-5 py-12 text-white">
-      <div className="mx-auto max-w-xl">
-        <div className="flex flex-col items-center text-center">
-          <Image src="/pulso/logo.png" alt="PULSO" width={72} height={72} className="rounded-2xl" priority />
-          <h1 className="mt-4 bg-linear-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-3xl font-black text-transparent">PULSO</h1>
-          <p className="mt-2 text-sm text-zinc-400">Histórias e curiosidades que ninguém te conta. ⚡</p>
-        </div>
+    <main className="relative min-h-screen overflow-hidden bg-zinc-950 text-white">
+      {/* glows de fundo */}
+      <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-purple-600/20 blur-[120px]" />
+      <div className="pointer-events-none absolute top-40 right-0 h-72 w-72 rounded-full bg-pink-600/10 blur-[120px]" />
 
-        <div className="mt-8 grid gap-3">
-          {CONTAS.map((c) => (
-            <a key={c.plataforma} href={c.url} target="_blank" rel="noreferrer"
-              className={`flex items-center justify-between rounded-xl px-5 py-3.5 text-sm font-bold text-white transition-all ${COR[c.plataforma] || 'bg-zinc-800'}`}>
-              <span>{c.nome}</span>
-              <span className="text-xs font-normal opacity-80">{c.handle}</span>
-            </a>
-          ))}
-        </div>
+      <div className="relative mx-auto max-w-5xl px-5 py-14">
+        {/* HERO */}
+        <header className="flex flex-col items-center text-center">
+          <Image src="/pulso/logo.png" alt="PULSO" width={84} height={84} className="rounded-2xl shadow-lg shadow-purple-900/40" priority />
+          <h1 className="mt-5 bg-linear-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-5xl font-black tracking-tight text-transparent sm:text-6xl">PULSO</h1>
+          <p className="mt-3 max-w-md text-lg text-zinc-300">Histórias, mistérios e curiosidades que <span className="text-white">ninguém te conta</span>. ⚡</p>
 
-        {videos.length > 0 && (
-          <div className="mt-10">
-            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-zinc-500">Últimos vídeos</p>
-            <div className="grid gap-2">
-              {videos.map((v) => (
-                <Link key={v.numero} href={`/v/${v.numero}`}
-                  className="flex items-center gap-3 rounded-lg border border-zinc-800/60 bg-zinc-900/40 px-4 py-3 transition-colors hover:border-purple-500/40 hover:bg-zinc-900">
-                  <span className="shrink-0 text-xs font-bold text-zinc-600">#{v.numero}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-zinc-200">{v.titulo}</span>
-                  <span className="shrink-0 text-zinc-600">→</span>
-                </Link>
-              ))}
-            </div>
+          {/* canais */}
+          <div className="mt-7 flex flex-wrap justify-center gap-2.5">
+            {CONTAS.map((c) => (
+              <a key={c.plataforma} href={c.url} target="_blank" rel="noreferrer"
+                className={`rounded-full px-5 py-2.5 text-sm font-bold text-white transition-all hover:scale-105 ${COR[c.plataforma] || 'bg-zinc-800'}`}>
+                {c.nome}
+              </a>
+            ))}
           </div>
+          <p className="mt-3 text-xs text-zinc-500">@pulsohistorias · @pulsoprojects</p>
+        </header>
+
+        {/* DESTAQUE */}
+        {destaque?.thumb && (
+          <Link href={`/v/${destaque.numero}`} className="group mt-12 block">
+            <div className="relative overflow-hidden rounded-3xl ring-1 ring-zinc-800">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={destaque.thumb} alt={destaque.titulo} className="max-h-[420px] w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-linear-to-t from-black via-black/40 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-6">
+                <span className="rounded-full bg-pink-600/90 px-3 py-1 text-[11px] font-bold uppercase tracking-wider">Em alta</span>
+                <h2 className="mt-2 max-w-2xl text-2xl font-bold sm:text-3xl">{destaque.titulo}</h2>
+              </div>
+            </div>
+          </Link>
         )}
 
-        <p className="mt-10 text-center text-[11px] text-zinc-600">© PULSO · pulsoprojects</p>
+        {/* GRADE DE VÍDEOS */}
+        <section className="mt-12">
+          <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-zinc-400">Todos os vídeos</h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {videos.map((v) => (
+              <Link key={v.numero} href={`/v/${v.numero}`} className="group relative overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-zinc-800 transition-all hover:ring-purple-500/50">
+                {v.thumb ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={v.thumb} alt={v.titulo} loading="lazy" className="aspect-9/16 w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                ) : (
+                  <div className="flex aspect-9/16 w-full items-center justify-center bg-zinc-900 p-3 text-center text-xs text-zinc-500">{v.titulo}</div>
+                )}
+                <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/95 via-black/50 to-transparent p-2.5">
+                  <p className="line-clamp-2 text-[11px] font-medium leading-tight text-zinc-100">{v.titulo}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <footer className="mt-16 text-center text-[11px] text-zinc-600">
+          © PULSO · Histórias que ninguém te conta
+        </footer>
       </div>
     </main>
   )

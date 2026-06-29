@@ -17,6 +17,7 @@ export interface HubVideo {
 export interface HubItem {
   numero: number
   titulo: string
+  thumb: string | null
 }
 
 export const REDE_NOME: Record<string, string> = {
@@ -70,7 +71,7 @@ export async function getVideosRecentes(limite = 40): Promise<HubItem[]> {
     .map((p) => {
       const md = (p.metadata || {}) as Record<string, unknown>
       const numero = (md.numero as number) ?? null
-      return numero != null ? { numero, titulo: tit.get(p.ideia_id) || 'PULSO' } : null
+      return numero != null ? { numero, titulo: tit.get(p.ideia_id) || 'PULSO', thumb: (md.thumb as string) || null } : null
     })
     .filter((x): x is HubItem => x !== null)
     .sort((a, b) => b.numero - a.numero)
