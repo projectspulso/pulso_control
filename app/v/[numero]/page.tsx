@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 
-import { getVideoPorNumero } from '@/lib/hub/data'
+import { getVideoPorNumero, SITE_URL } from '@/lib/hub/data'
 
 export const revalidate = 600 // ISR: regenera a cada 10min
 
@@ -36,8 +36,21 @@ export default async function VideoPage({ params }: { params: Promise<{ numero: 
   const { numero } = await params
   const v = await getVideoPorNumero(Number(numero))
 
+  const jsonLd = v && {
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    name: v.titulo,
+    description: resumo(v.descricao, 300) || v.titulo,
+    ...(v.thumb ? { thumbnailUrl: v.thumb } : {}),
+    ...(v.data ? { uploadDate: v.data } : {}),
+    url: `${SITE_URL}/v/${v.numero}`,
+    ...(v.redes.find((r) => r.plataforma === 'youtube') ? { contentUrl: v.redes.find((r) => r.plataforma === 'youtube')!.url } : {}),
+    publisher: { '@type': 'Organization', name: 'PULSO', logo: { '@type': 'ImageObject', url: `${SITE_URL}/icons/icon-512.png` } },
+  }
+
   return (
     <main className="min-h-screen bg-zinc-950 px-5 py-12 text-white">
+      {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />}
       <div className="mx-auto max-w-xl">
         <Link href="/hub" className="mb-8 flex items-center gap-2">
           <Image src="/pulso/logo.png" alt="PULSO" width={36} height={36} className="rounded-lg" />

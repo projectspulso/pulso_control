@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 
-import { getVideosRecentes, CONTAS } from '@/lib/hub/data'
+import { getVideosRecentes, CONTAS, SITE_URL } from '@/lib/hub/data'
 
 export const revalidate = 600
 
@@ -24,8 +24,19 @@ export default async function HubPage() {
   const comCapa = videos.filter((v) => v.thumb)
   const destaque = comCapa[0] || videos[0]
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'PULSO',
+    url: `${SITE_URL}/hub`,
+    logo: `${SITE_URL}/icons/icon-512.png`,
+    description: 'Histórias, mistérios e curiosidades que ninguém te conta, em vídeos curtos.',
+    sameAs: CONTAS.map((c) => c.url),
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-zinc-950 text-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* glows de fundo */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-purple-600/20 blur-[120px]" />
       <div className="pointer-events-none absolute top-40 right-0 h-72 w-72 rounded-full bg-pink-600/10 blur-[120px]" />

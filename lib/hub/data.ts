@@ -2,6 +2,9 @@ import 'server-only'
 
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
+// URL pública do site (troca por env quando tiver domínio próprio)
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://pulsoprojects.vercel.app').replace(/\/$/, '')
+
 export interface RedeLink {
   plataforma: string
   nome: string
@@ -12,6 +15,7 @@ export interface HubVideo {
   titulo: string
   descricao: string
   thumb: string | null
+  data: string | null // uploadDate (ISO) p/ SEO
   redes: RedeLink[]
 }
 export interface HubItem {
@@ -46,14 +50,17 @@ export async function getVideoPorNumero(numero: number): Promise<HubVideo | null
 
   const [ideiaQ, mpQ] = await Promise.all([
     sb.schema('pulso_content').from('ideias').select('titulo').eq('id', pipe.ideia_id).single(),
-    sb.schema('pulso_content').from('metricas_publicacao').select('plataforma, url_publicacao').eq('ideia_id', pipe.ideia_id),
+    sb.schema('pulso_content').from('metricas_publicacao').select('plataforma, url_publicacao, data_publicacao').eq('ideia_id', pipe.ideia_id),
   ])
+
+  const datas = (mpQ.data || []).map((m) => m.data_publicacao as string).filter(Boolean).sort()
 
   return {
     numero,
     titulo: (ideiaQ.data?.titulo as string) || 'PULSO',
     descricao: (md.caption as string) || '',
     thumb: (md.thumb as string) || null,
+    data: datas[0] || null,
     redes: linksDe(mpQ.data || []),
   }
 }
