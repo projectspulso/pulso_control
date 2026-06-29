@@ -8,7 +8,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 export const dynamic = 'force-dynamic'
 
 const MAX_USOS = 3
-const THRESH = 0.6 // estrito p/ qualidade — só reusa se for de fato semelhante (dim 1024)
+const THRESH = 0.57 // calibrado (dim 1024): match real ~0.58+, não-relacionado ~0.55 fica de fora
 
 interface Clip { id: string; dur: number; usos: number; tema: string; emb?: number[]; visao?: { descricao?: string } }
 
