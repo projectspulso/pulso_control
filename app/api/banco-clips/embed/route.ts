@@ -34,14 +34,14 @@ export async function POST(request: Request) {
   let cat: Clip[] = []
   try { cat = JSON.parse(data?.valor || '[]') } catch { cat = [] }
 
-  const pend = cat.filter((c) => !c.emb || c.emb.length === 0)
+  const pend = cat.filter((c) => !c.emb || c.emb.length !== 1024)
   const lote = pend.slice(0, limit)
   if (!lote.length) return NextResponse.json({ processados: 0, restantes: 0, total: cat.length })
 
   const r = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: 'text-embedding-3-small', dimensions: 256, input: lote.map(textoDe) }),
+    body: JSON.stringify({ model: 'text-embedding-3-small', dimensions: 1024, input: lote.map(textoDe) }),
   })
   if (!r.ok) return NextResponse.json({ error: 'embeddings falhou', detalhe: (await r.text()).slice(0, 120) }, { status: 502 })
   const emb = (await r.json()).data as { embedding: number[] }[]

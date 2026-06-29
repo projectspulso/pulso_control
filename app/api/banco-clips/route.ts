@@ -23,9 +23,12 @@ export async function GET() {
       .select('chave, valor')
       .in('chave', ['banco_clips_stats', 'banco_clips_catalogo'])
     const byKey = new Map((data || []).map((r) => [r.chave as string, r.valor as string]))
+    const catRaw = (parse(byKey.get('banco_clips_catalogo')) || []) as Record<string, unknown>[]
+    // tira os embeddings da resposta (a galeria não precisa; seriam MBs à toa)
+    const catalogo = catRaw.map(({ emb, ...resto }) => { void emb; return resto })
     return NextResponse.json({
       stats: parse(byKey.get('banco_clips_stats')),
-      catalogo: parse(byKey.get('banco_clips_catalogo')) || [],
+      catalogo,
     })
   } catch {
     return NextResponse.json({ stats: null, catalogo: [] })

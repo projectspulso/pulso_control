@@ -8,7 +8,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 export const dynamic = 'force-dynamic'
 
 const MAX_USOS = 3
-const THRESH = 0.58 // estrito p/ qualidade — só reusa se for de fato semelhante
+const THRESH = 0.6 // estrito p/ qualidade — só reusa se for de fato semelhante (dim 1024)
 
 interface Clip { id: string; dur: number; usos: number; tema: string; emb?: number[]; visao?: { descricao?: string } }
 
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   const r = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: 'text-embedding-3-small', dimensions: 256, input: prompt }),
+    body: JSON.stringify({ model: 'text-embedding-3-small', dimensions: 1024, input: prompt }),
   })
   if (!r.ok) return NextResponse.json({ match: null, erro: 'embed falhou' }, { status: 502 })
   const q = (await r.json()).data?.[0]?.embedding as number[]
