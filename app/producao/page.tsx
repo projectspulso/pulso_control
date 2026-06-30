@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useConteudosProducao, useAtualizarStatusProducao, useEstatisticasProducao, type StatusProducao } from '@/lib/hooks/use-producao'
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, PointerSensor, useSensor, useSensors, DragOverEvent, useDroppable } from '@dnd-kit/core'
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCorners, PointerSensor, useSensor, useSensors, DragOverEvent, useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -196,6 +196,15 @@ export default function ProducaoPage() {
       }
     }
 
+    // BLOQUEIO: esses status são AUTOMÁTICOS (o render seta PRONTO_PUBLICACAO; a
+    // publicação seta PUBLICADO). Arrastar pra cá pularia o render → "pronto" sem vídeo.
+    if (novoStatus === 'PRONTO_PUBLICACAO' || novoStatus === 'PUBLICADO') {
+      alert('Essa coluna é automática:\n\n• "Pronto p/ Publicar" vem do RENDER\n• "Publicado" vem da publicação\n\nPra produzir o vídeo, arraste só até "Em Edição".')
+      setActiveId(null)
+      setActiveConteudo(null)
+      return
+    }
+
     // Só atualiza se mudou de coluna
     const conteudo = conteudosModoFoco.find(c => c.pipeline_id === conteudoId)
     if (conteudo && conteudo.pipeline_status !== novoStatus) {
@@ -322,7 +331,7 @@ export default function ProducaoPage() {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={closestCorners}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
