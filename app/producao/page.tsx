@@ -27,9 +27,11 @@ const COLUNAS: { id: StatusProducao; titulo: string; cor: string }[] = [
 interface CardProps {
   conteudo: any
   destacado?: boolean
+  onAcao?: (c: any) => void
+  processando?: boolean
 }
 
-function CardConteudo({ conteudo, destacado }: CardProps) {
+function CardConteudo({ conteudo, destacado, onAcao, processando }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: conteudo.pipeline_id,
   })
@@ -104,6 +106,26 @@ function CardConteudo({ conteudo, destacado }: CardProps) {
           )}
         </div>
       </div>
+
+      {(() => {
+        const acoes: Record<string, string> = {
+          AGUARDANDO_ROTEIRO: 'Gerar roteiro',
+          ROTEIRO_PRONTO: 'Gerar áudio',
+          AUDIO_GERADO: 'Renderizar →',
+        }
+        const label = acoes[conteudo.pipeline_status]
+        if (!label || !onAcao) return null
+        return (
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onAcao(conteudo) }}
+            disabled={processando}
+            className="relative z-10 mt-3 w-full rounded-lg bg-linear-to-r from-orange-600 to-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {processando ? 'processando…' : label}
+          </button>
+        )
+      })()}
     </div>
   )
 }
@@ -114,9 +136,11 @@ interface ColunaProps {
   cor: string
   conteudos: any[]
   destaque?: string | null
+  onAcao?: (c: any) => void
+  processando?: Set<string>
 }
 
-function ColunaKanban({ status, titulo, cor, conteudos, destaque }: ColunaProps) {
+function ColunaKanban({ status, titulo, cor, conteudos, destaque, onAcao, processando }: ColunaProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
   })
@@ -139,7 +163,7 @@ function ColunaKanban({ status, titulo, cor, conteudos, destaque }: ColunaProps)
       >
         <div className="space-y-3 min-h-[200px]">
           {conteudos.map(conteudo => (
-            <CardConteudo key={conteudo.pipeline_id} conteudo={conteudo} destacado={destaque === conteudo.pipeline_id} />
+            <CardConteudo key={conteudo.pipeline_id} conteudo={conteudo} destacado={destaque === conteudo.pipeline_id} onAcao={onAcao} processando={processando?.has(conteudo.pipeline_id)} />
           ))}
         </div>
       </SortableContext>
@@ -155,6 +179,31 @@ export default function ProducaoPage() {
   const [activeConteudo, setActiveConteudo] = useState<any>(null)
   const [destaque, setDestaque] = useState<string | null>(null)
   const conteudosModoFoco = (MODO_FOCO_ATIVO ? conteudos?.filter((item) => item.canal === MODO_FOCO.canalNomeDb) : conteudos) ?? []
+  const [processandoCards, setProcessandoCards] = useState<Set<string>>(new Set())
+
+  // Avança o card pelo BOTÃO (clique confiável, não depende do arraste):
+  // Aguardando Roteiro → gera roteiro | Roteiro Pronto → gera áudio | Áudio Gerado → Em Edição (render).
+  const avancarCard = async (c: any) => {
+    if (processandoCards.has(c.pipeline_id)) return
+    setProcessandoCards((p) => new Set(p).add(c.pipeline_id))
+    try {
+      if (c.pipeline_status === 'AGUARDANDO_ROTEIRO' && !c.roteiro_id) {
+        const r = await fetch('/api/automation/gerar-roteiro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ideia_id: c.ideia_id }) })
+        if (!r.ok && r.status !== 409) throw new Error((await r.json()).error || `HTTP ${r.status}`)
+      } else if (c.pipeline_status === 'ROTEIRO_PRONTO' && c.roteiro_id) {
+        const r = await fetch('/api/automation/gerar-audio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ roteiro_id: c.roteiro_id }) })
+        if (!r.ok && r.status !== 409) throw new Error((await r.json()).error || `HTTP ${r.status}`)
+      } else if (c.pipeline_status === 'AUDIO_GERADO') {
+        const r = await fetch('/api/producao/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.pipeline_id, status: 'EM_EDICAO' }) })
+        if (!r.ok) throw new Error((await r.json()).error || `HTTP ${r.status}`)
+      }
+      await refetch()
+    } catch (e) {
+      alert('Falha: ' + (e instanceof Error ? e.message : 'erro'))
+    } finally {
+      setProcessandoCards((p) => { const n = new Set(p); n.delete(c.pipeline_id); return n })
+    }
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -344,6 +393,8 @@ export default function ProducaoPage() {
                 cor={coluna.cor}
                 conteudos={conteudoPorStatus(coluna.id)}
                 destaque={destaque}
+                onAcao={avancarCard}
+                processando={processandoCards}
               />
             ))}
           </div>
