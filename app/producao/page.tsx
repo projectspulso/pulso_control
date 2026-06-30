@@ -209,6 +209,10 @@ export default function ProducaoPage() {
         disparar('/api/automation/gerar-roteiro', { ideia_id: conteudo.ideia_id }, 'roteiro')
       } else if (novoStatus === 'AUDIO_GERADO' && conteudo.roteiro_id) {
         disparar('/api/automation/gerar-audio', { roteiro_id: conteudo.roteiro_id }, 'áudio (voz PULSO)')
+      } else if (novoStatus === 'EM_EDICAO') {
+        // GATE DE RENDER: arrastar pra "Em Edição" autoriza o vídeo (passo caro/Veo).
+        // O render roda no worker LOCAL (08/16/23h), não na hora.
+        alert('✅ Enviado pra renderizar!\n\nO render é o passo caro (Veo) — o worker local gera o vídeo na próxima rodada (08/16/23h). Os cards em "Áudio Gerado" ficam esperando até você arrastá-los pra cá.')
       }
     }
     
@@ -343,7 +347,11 @@ export default function ProducaoPage() {
           <ul className="text-sm text-zinc-400 space-y-2">
             <li className="flex items-start gap-2">
               <span className="text-violet-400 mt-0.5">•</span>
-              <span>Arraste os cards entre as colunas para atualizar o status</span>
+              <span>Arraste <b className="text-zinc-300">→ Áudio Gerado</b> = gera a voz PULSO. Arraste <b className="text-yellow-300">→ Em Edição</b> = autoriza o vídeo (render).</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-violet-400 mt-0.5">•</span>
+              <span><b className="text-zinc-300">Render é o passo caro (Veo)</b>: roda no worker local (08/16/23h). Áudio Gerado fica esperando até você mandar pra Em Edição.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-violet-400 mt-0.5">•</span>
