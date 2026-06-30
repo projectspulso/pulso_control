@@ -169,34 +169,26 @@ export async function getStats() {
   return stats
 }
 
+// Escrita via API server-side (service role) — o update client-side authenticated
+// na tabela pulso_content dá 400 (grant/schema). Ver app/api/producao/status.
 export async function updateStatus(id: string, novoStatus: string) {
-  const { data, error } = await supabase
-    .schema('pulso_content')
-    .from('pipeline_producao')
-    .update({ 
-      status: novoStatus,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', id)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
+  const r = await fetch('/api/producao/status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, status: novoStatus }),
+  })
+  const d = await r.json()
+  if (!r.ok) throw new Error(d.error || 'Falha ao atualizar status')
+  return d.item
 }
 
 export async function updateDataPrevista(id: string, novaData: Date) {
-  const { data, error } = await supabase
-    .schema('pulso_content')
-    .from('pipeline_producao')
-    .update({ 
-      data_prevista: novaData.toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', id)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
+  const r = await fetch('/api/producao/status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, data_prevista: novaData.toISOString() }),
+  })
+  const d = await r.json()
+  if (!r.ok) throw new Error(d.error || 'Falha ao atualizar data')
+  return d.item
 }
