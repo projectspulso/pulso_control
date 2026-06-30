@@ -198,24 +198,26 @@ export default function PublicarPage() {
           continue
         }
 
-        // TESTE: as 4 redes via API (IG/FB diretos, YouTube upload, TikTok rascunho).
-        // A rota /publicar trata todas. (FB/YT em teste A/B de alcance — ver resultado.)
-        const meta = await fetch('/api/automation/publicar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            pipeline_id: pipelineId,
-            video_url: videoUrl,
-            caption,
-            confirmar: true,
-            plataformas: ['instagram', 'facebook', 'youtube', 'tiktok'],
-          }),
-        }).then((r) => r.json())
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const linhas = (meta.resultados || []).map((r: any) =>
-          `${r.plataforma}: ${r.status}${r.erro ? ` (${String(r.erro).slice(0, 45)})` : ''}`,
-        ).join(' · ')
-        resultadosMsg.push(`${conteudo?.ideia?.slice(0, 28) || pipelineId} → ${linhas || meta.error || 'sem resposta'}`)
+        // UMA REDE POR CHAMADA, em paralelo: publicar as 4 numa só chamada estoura o
+        // tempo do Vercel (Meta/YT lentos). Cada rede = função separada, cabe no limite.
+        const REDES = ['instagram', 'facebook', 'youtube', 'tiktok']
+        const linhasRede = await Promise.all(
+          REDES.map((rede) =>
+            fetch('/api/automation/publicar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pipeline_id: pipelineId, video_url: videoUrl, caption, confirmar: true, plataformas: [rede] }),
+            })
+              .then((r) => r.json())
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              .then((d: any) => {
+                const r0 = (d.resultados || [])[0]
+                return `${rede}: ${r0?.status || (d.error ? 'ERRO' : '?')}${r0?.erro ? ` (${String(r0.erro).slice(0, 40)})` : ''}`
+              })
+              .catch((e) => `${rede}: falhou (${e instanceof Error ? e.message : 'erro'})`),
+          ),
+        )
+        resultadosMsg.push(`${conteudo?.ideia?.slice(0, 28) || pipelineId} → ${linhasRede.join(' · ')}`)
       }
 
       setFeedback({

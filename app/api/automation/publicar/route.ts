@@ -64,22 +64,28 @@ async function publicarInstagram(videoUrl: string, caption: string, token: strin
 }
 
 async function publicarFacebook(videoUrl: string, description: string, token: string, pageId: string) {
+  // Postar vídeo NA PÁGINA exige PAGE ACCESS TOKEN — o token de usuário/system dá
+  // "(#200) Subject does not have permission to post videos on this target".
+  const ptRes = await fetch(`${GRAPH}/${pageId}?fields=access_token&access_token=${token}`).then((r) => r.json())
+  const pageToken = ptRes.access_token
+  if (!pageToken) throw new Error(`FB sem Page Access Token (assine a Página ao system user + pages_manage_posts): ${JSON.stringify(ptRes).slice(0, 160)}`)
+
   const start = await fetch(`${GRAPH}/${pageId}/video_reels`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ upload_phase: 'start', access_token: token }),
+    body: JSON.stringify({ upload_phase: 'start', access_token: pageToken }),
   }).then((r) => r.json())
   if (!start.video_id) throw new Error(`FB start: ${JSON.stringify(start)}`)
 
   const up = await fetch(`https://rupload.facebook.com/video_reels/${start.video_id}`, {
     method: 'POST',
-    headers: { Authorization: `OAuth ${token}`, file_url: videoUrl },
+    headers: { Authorization: `OAuth ${pageToken}`, file_url: videoUrl },
   }).then((r) => r.json())
   if (!up.success) throw new Error(`FB upload: ${JSON.stringify(up)}`)
 
   const fim = await fetch(
     `${GRAPH}/${pageId}/video_reels?upload_phase=finish&video_id=${start.video_id}` +
-      `&video_state=PUBLISHED&description=${encodeURIComponent(description)}&access_token=${token}`,
+      `&video_state=PUBLISHED&description=${encodeURIComponent(description)}&access_token=${pageToken}`,
     { method: 'POST' }
   ).then((r) => r.json())
   if (fim.success === false) throw new Error(`FB finish: ${JSON.stringify(fim)}`)
