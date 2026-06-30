@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AudioLines, RefreshCw, RotateCcw, Unlock, Loader2, AlertTriangle } from 'lucide-react'
+import { AudioLines, RefreshCw, RotateCcw, Clapperboard, Loader2, Info } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { ErrorState } from '@/components/ui/error-state'
 
@@ -20,11 +20,11 @@ interface AudioItem {
   numero?: number
 }
 
-// estágio do pipeline -> rótulo + cor + ordem (acionável primeiro) + se está travado
-const STATUS: Record<string, { label: string; cls: string; ord: number; travado?: boolean }> = {
-  EM_EDICAO: { label: 'Em edição (parado)', cls: 'text-amber-300 bg-amber-500/10 ring-amber-500/30', ord: 0, travado: true },
-  AUDIO_GERADO: { label: 'Na fila de edição', cls: 'text-emerald-300 bg-emerald-500/10 ring-emerald-500/30', ord: 1 },
-  PRONTO_PUBLICACAO: { label: 'Renderizado', cls: 'text-sky-300 bg-sky-500/10 ring-sky-500/30', ord: 2 },
+// estágio do pipeline -> rótulo + cor + ordem + se dá pra mandar renderizar
+const STATUS: Record<string, { label: string; cls: string; ord: number; renderizavel?: boolean }> = {
+  AUDIO_GERADO: { label: 'Áudio pronto — aguardando render', cls: 'text-emerald-300 bg-emerald-500/10 ring-emerald-500/30', ord: 0, renderizavel: true },
+  EM_EDICAO: { label: 'Na fila de render', cls: 'text-sky-300 bg-sky-500/10 ring-sky-500/30', ord: 1 },
+  PRONTO_PUBLICACAO: { label: 'Renderizado', cls: 'text-violet-300 bg-violet-500/10 ring-violet-500/30', ord: 2 },
   PUBLICADO: { label: 'Publicado', cls: 'text-zinc-400 bg-zinc-500/10 ring-zinc-500/30', ord: 3 },
 }
 const cfg = (s: string) => STATUS[s] || { label: s, cls: 'text-zinc-400 bg-zinc-500/10 ring-zinc-500/30', ord: 4 }
@@ -66,13 +66,15 @@ export default function AudiosPage() {
     refetchOnWindowFocus: false,
   })
 
-  const destravar = useMutation({
+  // mandar renderizar = AUDIO_GERADO -> EM_EDICAO (o gate de render; worker local consome EM_EDICAO)
+  const renderizar = useMutation({
     mutationFn: async (ideia_id: string) => {
-      await supabase
-        .schema('pulso_content')
-        .from('pipeline_producao')
-        .update({ status: 'AUDIO_GERADO' })
-        .eq('ideia_id', ideia_id)
+      const r = await fetch('/api/producao/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ideia_id, status: 'EM_EDICAO' }),
+      })
+      if (!r.ok) throw new Error((await r.json()).error || 'falha ao mandar renderizar')
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['audios'] }),
   })
@@ -98,7 +100,7 @@ export default function AudiosPage() {
     for (const a of audios) c[a.status] = (c[a.status] || 0) + 1
     return c
   }, [audios])
-  const travados = useMemo(() => audios.filter((a) => cfg(a.status).travado).length, [audios])
+  const aguardando = useMemo(() => audios.filter((a) => cfg(a.status).renderizavel).length, [audios])
 
   const filtrados = filtro === 'todos' ? audios : audios.filter((a) => a.status === filtro)
 
@@ -135,25 +137,25 @@ export default function AudiosPage() {
             </h1>
           </div>
           <p className="text-zinc-400">
-            Os áudios gerados, prontos pra revisar. A esteira renderiza automático — aqui você só ouve, refaz um ruim
-            antes de gastar render, e destrava o que ficou parado.
+            Os áudios gerados, prontos pra revisar. Ouça, refaça um ruim antes de gastar render, e clique{' '}
+            <b className="text-teal-300">Renderizar</b> pra mandar o vídeo (o passo caro só com seu OK).
           </p>
         </div>
 
-        {/* aviso de travados */}
-        {travados > 0 && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            {travados} áudio{travados > 1 ? 's' : ''} parado em edição (o render ignora EM_EDICAO) — clique{' '}
-            <span className="font-semibold">Destravar</span> pra renderizar.
+        {/* aguardando render */}
+        {aguardando > 0 && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-200">
+            <Info className="h-4 w-4 shrink-0" />
+            {aguardando} áudio{aguardando > 1 ? 's' : ''} pronto aguardando você mandar renderizar. O render roda no worker
+            local (08/16/23h).
           </div>
         )}
 
         {/* filtros */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Chip v="todos" label="Todos" n={audios.length} />
-          <Chip v="EM_EDICAO" label="⚠️ Parados" n={contagem.EM_EDICAO || 0} />
-          <Chip v="AUDIO_GERADO" label="🟢 Na fila" n={contagem.AUDIO_GERADO || 0} />
+          <Chip v="AUDIO_GERADO" label="🟢 Aguardando render" n={contagem.AUDIO_GERADO || 0} />
+          <Chip v="EM_EDICAO" label="🎬 Na fila de render" n={contagem.EM_EDICAO || 0} />
           <Chip v="PRONTO_PUBLICACAO" label="Renderizados" n={contagem.PRONTO_PUBLICACAO || 0} />
           <Chip v="PUBLICADO" label="Publicados" n={contagem.PUBLICADO || 0} />
           <button
@@ -180,7 +182,7 @@ export default function AudiosPage() {
               const c = cfg(a.status)
               const src = a.public_url || a.url || ''
               const refazendoEste = refazer.isPending && refazer.variables === a.roteiro_id
-              const destravandoEste = destravar.isPending && destravar.variables === a.ideia_id
+              const renderizandoEste = renderizar.isPending && renderizar.variables === a.ideia_id
               return (
                 <div
                   key={a.id}
@@ -204,14 +206,14 @@ export default function AudiosPage() {
                       <span className="text-sm text-zinc-600">sem arquivo de áudio</span>
                     )}
                     <div className="ml-auto flex items-center gap-2">
-                      {c.travado && (
+                      {c.renderizavel && (
                         <button
-                          onClick={() => destravar.mutate(a.ideia_id)}
-                          disabled={destravar.isPending}
+                          onClick={() => renderizar.mutate(a.ideia_id)}
+                          disabled={renderizar.isPending}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-1.5 text-sm font-medium text-teal-300 transition-colors hover:bg-teal-500/20 disabled:opacity-50"
                         >
-                          {destravandoEste ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlock className="h-4 w-4" />}
-                          Destravar
+                          {renderizandoEste ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clapperboard className="h-4 w-4" />}
+                          Renderizar
                         </button>
                       )}
                       {a.status !== 'PUBLICADO' && a.roteiro_id && (
