@@ -201,20 +201,24 @@ async function reconciliar(request: NextRequest) {
   const revisar: Array<{ plataforma: string; post_id: string; caption: string; best: number }> = []
   for (const o of orfaos) {
     const { ideia_id, best, second } = casar(o.caption)
+    const h = horaBRT(o.data)
+    const base = {
+      url_publicacao: o.url, post_id: o.post_id, data_publicacao: o.data,
+      ...(h ? { hora_publicacao: h.hora, dia_semana: h.dia } : {}),
+    }
+    const draftId = o.plataforma === 'tiktok' && ideia_id ? draftTikTok.get(ideia_id) : undefined
     if (ideia_id && best >= 0.25 && best - second >= 0.15) {
-      const h = horaBRT(o.data)
-      const base = {
-        url_publicacao: o.url, post_id: o.post_id, data_publicacao: o.data,
-        ...(h ? { hora_publicacao: h.hora, dia_semana: h.dia } : {}),
-      }
-      const draftId = o.plataforma === 'tiktok' ? draftTikTok.get(ideia_id) : undefined
       if (draftId) {
-        // PROMOVE o rascunho do TikTok pro vídeo público real (update, não duplica)
-        promover.push({ rowId: draftId, patch: base })
+        promover.push({ rowId: draftId, patch: base }) // promove rascunho TikTok → vídeo real
         draftTikTok.delete(ideia_id)
       } else {
         registrar.push({ ideia_id, roteiro_id: roteiroDeIdeia.get(ideia_id) ?? null, plataforma: o.plataforma, ...base })
       }
+    } else if (draftId && best >= 0.12) {
+      // RELAXADO: a ideia tem rascunho TikTok pendente (prior forte — nós mesmos subimos) +
+      // match razoável → promove o rascunho pro vídeo público real.
+      promover.push({ rowId: draftId, patch: base })
+      draftTikTok.delete(ideia_id)
     } else {
       revisar.push({ plataforma: o.plataforma, post_id: o.post_id, caption: o.caption.slice(0, 60), best: Number(best.toFixed(2)) })
     }
