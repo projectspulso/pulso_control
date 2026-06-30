@@ -122,9 +122,9 @@ function ColunaKanban({ status, titulo, cor, conteudos, destaque }: ColunaProps)
   })
 
   return (
-    <div 
+    <div
       ref={setNodeRef}
-      className={`glass border rounded-2xl p-4 transition-all ${isOver ? 'border-violet-500 bg-violet-500/10 shadow-xl shadow-violet-500/20' : 'border-zinc-800/50'}`}
+      className={`glass border rounded-2xl p-4 transition-all shrink-0 w-[80vw] sm:w-72 lg:w-auto ${isOver ? 'border-violet-500 bg-violet-500/10 shadow-xl shadow-violet-500/20' : 'border-zinc-800/50'}`}
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-white">{titulo}</h3>
@@ -335,7 +335,7 @@ export default function ProducaoPage() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="flex gap-4 overflow-x-auto pb-4 lg:grid lg:grid-cols-6 lg:overflow-x-visible lg:pb-0">
             {COLUNAS.map(coluna => (
               <ColunaKanban
                 key={coluna.id}
