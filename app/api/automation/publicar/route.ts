@@ -87,6 +87,103 @@ async function publicarFacebook(videoUrl: string, description: string, token: st
   return { post_id: start.video_id as string, url: `https://www.facebook.com/reel/${start.video_id}` }
 }
 
+// ---- YouTube (videos.insert via API) ----
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function tokenYoutube(supabase: any): Promise<string> {
+  const { data: cfg } = await supabase
+    .schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'youtube_oauth').single()
+  if (!cfg?.valor) throw new Error('YouTube não autorizado (rode o OAuth)')
+  let tok = JSON.parse(cfg.valor)
+  if (!String(tok.scope || '').includes('youtube.upload')) {
+    throw new Error('YouTube precisa re-autorizar com escopo de upload — abra /api/youtube/oauth/start')
+  }
+  if (Date.now() > (tok.expires_at || 0) - 60_000) {
+    const r = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.YOUTUBE_CLIENT_ID || '',
+        client_secret: process.env.YOUTUBE_CLIENT_SECRET || '',
+        grant_type: 'refresh_token',
+        refresh_token: tok.refresh_token,
+      }),
+    }).then((x) => x.json())
+    if (!r.access_token) throw new Error(`Refresh YT falhou: ${JSON.stringify(r).slice(0, 120)}`)
+    tok = { ...tok, access_token: r.access_token, expires_at: Date.now() + (r.expires_in || 3600) * 1000 }
+    await supabase.schema('pulso_core').from('configuracoes').update({ valor: JSON.stringify(tok) }).eq('chave', 'youtube_oauth')
+  }
+  return tok.access_token
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function publicarYouTube(videoUrl: string, titulo: string, descricao: string, supabase: any) {
+  const at = await tokenYoutube(supabase)
+  const vid = await fetch(videoUrl)
+  if (!vid.ok) throw new Error(`Não baixei o vídeo (${vid.status})`)
+  const buf = Buffer.from(await vid.arrayBuffer())
+  const meta = {
+    snippet: { title: titulo.slice(0, 100), description: descricao.slice(0, 4900), categoryId: '27' },
+    status: { privacyStatus: 'public', selfDeclaredMadeForKids: false },
+  }
+  const boundary = '----pulso' + Math.random().toString(16).slice(2)
+  const pre = Buffer.from(
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: video/mp4\r\n\r\n`,
+  )
+  const post = Buffer.from(`\r\n--${boundary}--\r\n`)
+  const body = Buffer.concat([pre, buf, post])
+  const r = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=multipart&part=snippet,status', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${at}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body,
+  })
+  const d = await r.json()
+  if (!r.ok || !d.id) throw new Error(`YT upload: ${d?.error?.message || r.status}`)
+  return { post_id: d.id as string, url: `https://youtube.com/shorts/${d.id}` }
+}
+
+// ---- TikTok (inbox/rascunho via Content Posting API) ----
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function publicarTikTok(videoUrl: string, supabase: any) {
+  const { data: cfg } = await supabase
+    .schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'tiktok_oauth').single()
+  if (!cfg?.valor) throw new Error('TikTok não autorizado (rode o OAuth)')
+  let oauth = JSON.parse(cfg.valor)
+  if (Date.now() > oauth.expires_at - 60_000) {
+    const r = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_key: (process.env.TIKTOK_SANDBOX_KEY || process.env.TIKTOK_CLIENT_KEY) || '',
+        client_secret: (process.env.TIKTOK_SANDBOX_SECRET || process.env.TIKTOK_CLIENT_SECRET) || '',
+        grant_type: 'refresh_token',
+        refresh_token: oauth.refresh_token,
+      }),
+    }).then((x) => x.json())
+    if (!r.access_token) throw new Error(`Refresh TikTok falhou: ${JSON.stringify(r).slice(0, 120)}`)
+    oauth = { ...oauth, access_token: r.access_token, refresh_token: r.refresh_token, expires_at: Date.now() + (r.expires_in || 86400) * 1000 }
+    await supabase.schema('pulso_core').from('configuracoes').update({ valor: JSON.stringify(oauth) }).eq('chave', 'tiktok_oauth')
+  }
+  const vid = await fetch(videoUrl)
+  if (!vid.ok) throw new Error(`Não baixei o vídeo (${vid.status})`)
+  const buf = Buffer.from(await vid.arrayBuffer())
+  const init = await fetch('https://open.tiktokapis.com/v2/post/publish/inbox/video/init/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${oauth.access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ source_info: { source: 'FILE_UPLOAD', video_size: buf.length, chunk_size: buf.length, total_chunk_count: 1 } }),
+  }).then((x) => x.json())
+  const uploadUrl = init?.data?.upload_url
+  if (!uploadUrl) throw new Error(`TikTok init: ${JSON.stringify(init).slice(0, 150)}`)
+  const put = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'video/mp4', 'Content-Length': String(buf.length), 'Content-Range': `bytes 0-${buf.length - 1}/${buf.length}` },
+    body: buf,
+  })
+  if (!put.ok) throw new Error(`TikTok upload (${put.status})`)
+  return { post_id: init.data.publish_id as string, url: 'rascunho no app TikTok (finalize no celular)' }
+}
+
+export const maxDuration = 60
+
 export async function POST(request: NextRequest) {
   const denied = await guardApi(request)
   if (denied) return denied
@@ -172,6 +269,10 @@ export async function POST(request: NextRequest) {
         res = await publicarInstagram(video_url, legenda, token, igUserId)
       } else if (plataforma === 'facebook') {
         res = await publicarFacebook(video_url, legenda, token, pageId)
+      } else if (plataforma === 'youtube') {
+        res = await publicarYouTube(video_url, ideia?.titulo || 'PULSO', legenda, supabase)
+      } else if (plataforma === 'tiktok') {
+        res = await publicarTikTok(video_url, supabase)
       } else {
         resultados.push({ plataforma, status: 'MANUAL', erro: 'Plataforma sem API direta (usar kit + navegador)' })
         continue

@@ -198,26 +198,24 @@ export default function PublicarPage() {
           continue
         }
 
-        // IG direto via Meta API (o clique neste modal É a confirmacao humana).
-        // FB fica MANUAL via Business Suite: teste A/B 12/06 provou que reels FB
-        // publicados via API nesta Página são sufocados pelo algoritmo (0-2 plays
-        // em 13h vs 232 em 40min do mesmo vídeo postado manual).
+        // TESTE: as 4 redes via API (IG/FB diretos, YouTube upload, TikTok rascunho).
+        // A rota /publicar trata todas. (FB/YT em teste A/B de alcance — ver resultado.)
         const meta = await fetch('/api/automation/publicar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pipeline_id: pipelineId, video_url: videoUrl, caption, confirmar: true, plataformas: ['instagram'] }),
+          body: JSON.stringify({
+            pipeline_id: pipelineId,
+            video_url: videoUrl,
+            caption,
+            confirmar: true,
+            plataformas: ['instagram', 'facebook', 'youtube', 'tiktok'],
+          }),
         }).then((r) => r.json())
-        resultadosMsg.push(
-          `${conteudo?.ideia?.slice(0, 30) || pipelineId}: IG ${meta.publicados ?? 0} publicada(s), ${meta.erros ?? 0} erros — FB: postar manual no Business Suite`
-        )
-
-        // TikTok: manda pros rascunhos (publicacao nativa pelo celular)
-        const tt = await fetch('/api/automation/tiktok-upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ video_url: videoUrl, confirmar: true }),
-        }).then((r) => r.json())
-        resultadosMsg.push(tt.success ? '  TikTok: rascunho enviado pro celular' : `  TikTok: ${tt.error || 'falhou'}`)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const linhas = (meta.resultados || []).map((r: any) =>
+          `${r.plataforma}: ${r.status}${r.erro ? ` (${String(r.erro).slice(0, 45)})` : ''}`,
+        ).join(' · ')
+        resultadosMsg.push(`${conteudo?.ideia?.slice(0, 28) || pipelineId} → ${linhas || meta.error || 'sem resposta'}`)
       }
 
       setFeedback({
