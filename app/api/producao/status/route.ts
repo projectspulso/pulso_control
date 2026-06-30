@@ -16,6 +16,12 @@ export async function POST(request: NextRequest) {
   const { id, ideia_id, status, data_prevista } = await request.json()
   if (!id && !ideia_id) return NextResponse.json({ error: 'id ou ideia_id é obrigatório' }, { status: 400 })
 
+  // blindagem: só status válidos (evita gravar lixo — ex.: um uuid de card vindo do dnd)
+  const STATUS_VALIDOS = ['AGUARDANDO_ROTEIRO', 'ROTEIRO_PRONTO', 'AUDIO_GERADO', 'EM_EDICAO', 'PRONTO_PUBLICACAO', 'PUBLICADO']
+  if (status && !STATUS_VALIDOS.includes(status)) {
+    return NextResponse.json({ error: `status inválido: ${status}` }, { status: 400 })
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const patch: Record<string, any> = { updated_at: new Date().toISOString() }
   if (status) patch.status = status

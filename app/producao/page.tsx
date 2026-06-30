@@ -181,8 +181,21 @@ export default function ProducaoPage() {
     }
     
     const conteudoId = active.id as string
-    const novoStatus = over.id as StatusProducao
-    
+    // over.id pode ser a COLUNA (status) OU outro CARD (pipeline_id, uuid). Resolve o status real:
+    // se caiu sobre um card, usa o status da coluna desse card.
+    const STATUS_COLUNAS = COLUNAS.map(c => c.id) as string[]
+    let novoStatus = over.id as StatusProducao
+    if (!STATUS_COLUNAS.includes(novoStatus as string)) {
+      const sobreCard = conteudosModoFoco.find(c => c.pipeline_id === over.id)
+      if (sobreCard) {
+        novoStatus = sobreCard.pipeline_status as StatusProducao
+      } else {
+        setActiveId(null)
+        setActiveConteudo(null)
+        return
+      }
+    }
+
     // Só atualiza se mudou de coluna
     const conteudo = conteudosModoFoco.find(c => c.pipeline_id === conteudoId)
     if (conteudo && conteudo.pipeline_status !== novoStatus) {
