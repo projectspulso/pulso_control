@@ -7,6 +7,7 @@ import {
   Lightbulb,
   Send,
   Target,
+  TrendingUp,
   Wallet,
   Zap,
   type LucideIcon,
@@ -73,6 +74,10 @@ export const AREAS: Area[] = [
     navGradient: 'from-green-600 to-emerald-600', navGlow: 'shadow-green-500/25',
     text: 'text-green-300', dot: 'bg-green-500', ring: 'ring-green-500/30', soft: 'bg-green-500/10',
     headerGlow: 'from-green-600/20 via-emerald-600/5 to-transparent', iconBox: 'from-green-500 to-emerald-500' },
+  { href: '/trends', nome: 'Trend Tops', icon: TrendingUp,
+    navGradient: 'from-rose-600 to-red-600', navGlow: 'shadow-rose-500/25',
+    text: 'text-rose-300', dot: 'bg-rose-500', ring: 'ring-rose-500/30', soft: 'bg-rose-500/10',
+    headerGlow: 'from-rose-600/20 via-red-600/5 to-transparent', iconBox: 'from-rose-500 to-red-500' },
 ]
 
 const DASHBOARD = AREAS[0]
