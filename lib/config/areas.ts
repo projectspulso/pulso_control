@@ -1,4 +1,5 @@
 import {
+  AudioLines,
   BarChart3,
   CalendarDays,
   Clapperboard,
@@ -50,6 +51,10 @@ export const AREAS: Area[] = [
     navGradient: 'from-sky-600 to-indigo-600', navGlow: 'shadow-sky-500/25',
     text: 'text-sky-300', dot: 'bg-sky-500', ring: 'ring-sky-500/30', soft: 'bg-sky-500/10',
     headerGlow: 'from-sky-600/20 via-indigo-600/5 to-transparent', iconBox: 'from-sky-500 to-indigo-500' },
+  { href: '/audios', nome: 'Áudios', icon: AudioLines,
+    navGradient: 'from-teal-600 to-cyan-600', navGlow: 'shadow-teal-500/25',
+    text: 'text-teal-300', dot: 'bg-teal-500', ring: 'ring-teal-500/30', soft: 'bg-teal-500/10',
+    headerGlow: 'from-teal-600/20 via-cyan-600/5 to-transparent', iconBox: 'from-teal-500 to-cyan-500' },
   { href: '/producao', nome: 'Produção', icon: Clapperboard,
     navGradient: 'from-violet-600 to-fuchsia-600', navGlow: 'shadow-fuchsia-500/25',
     text: 'text-fuchsia-300', dot: 'bg-fuchsia-500', ring: 'ring-fuchsia-500/30', soft: 'bg-fuchsia-500/10',

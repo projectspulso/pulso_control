@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import {
+  AudioLines,
   BarChart3,
   CalendarDays,
   Wallet,
@@ -36,6 +37,7 @@ const navigation = [
   { name: 'Ideias', href: '/ideias', icon: Lightbulb, badge: null, soAdmin: false },
   { name: 'Trend Tops', href: '/trends', icon: TrendingUp, badge: 'ai', soAdmin: false },
   { name: 'Roteiros', href: '/roteiros', icon: FileEdit, badge: null, soAdmin: false },
+  { name: 'Áudios', href: '/audios', icon: AudioLines, badge: null, soAdmin: false },
   { name: 'Producao', href: '/producao', icon: Clapperboard, badge: null, soAdmin: false },
   { name: 'Publicar', href: '/publicar', icon: Send, badge: null, soAdmin: false },
   { name: 'Agenda', href: '/agenda', icon: CalendarDays, badge: null, soAdmin: false },
