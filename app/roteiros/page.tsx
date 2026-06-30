@@ -84,7 +84,7 @@ export default function RoteirosPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="glass rounded-2xl p-8 text-center space-y-4">
             <div className="skeleton h-8 w-32 mx-auto" />
@@ -97,7 +97,7 @@ export default function RoteirosPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <ErrorState
             title="Erro ao carregar roteiros"
@@ -110,7 +110,7 @@ export default function RoteirosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <PageHeader titulo="Roteiros" subtitulo={`${stats?.total || 0} roteiros gerados`} />
 

@@ -282,7 +282,7 @@ export default function IdeiaDetalhesPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-4xl text-zinc-400">Carregando ideia...</div>
       </div>
     )
@@ -290,7 +290,7 @@ export default function IdeiaDetalhesPage({
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-4xl">
           <ErrorState
             title="Erro ao carregar ideia"
@@ -309,7 +309,7 @@ export default function IdeiaDetalhesPage({
 
   if (!ideia) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-4xl">
           <p className="text-zinc-400">Ideia nao encontrada.</p>
           <Link href="/ideias" className="text-violet-400 hover:text-violet-300">
@@ -325,7 +325,7 @@ export default function IdeiaDetalhesPage({
   const hasRoteiro = roteirosRelacionados.length > 0
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <Link

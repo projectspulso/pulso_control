@@ -101,8 +101,8 @@ export default function AgendaPage() {
     await refetch()
   }
 
-  if (isLoading) return <div className="min-h-screen bg-zinc-950 p-8"><div className="mx-auto max-w-7xl space-y-4"><div className="skeleton h-10 w-48" /><div className="skeleton h-96 w-full" /></div></div>
-  if (isError || !data) return <div className="min-h-screen bg-zinc-950 p-8"><div className="mx-auto max-w-7xl"><ErrorState title="Erro ao carregar a agenda" message="Não foi possível montar a agenda." onRetry={() => refetch()} /></div></div>
+  if (isLoading) return <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8"><div className="mx-auto max-w-7xl space-y-4"><div className="skeleton h-10 w-48" /><div className="skeleton h-96 w-full" /></div></div>
+  if (isError || !data) return <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8"><div className="mx-auto max-w-7xl"><ErrorState title="Erro ao carregar a agenda" message="Não foi possível montar a agenda." onRetry={() => refetch()} /></div></div>
 
   const horariosVisiveis = filtroFaixa === 'sazonal' ? ['12:00'] : filtroFaixa === 'perene' ? ['18:00', '21:00'] : HORARIOS
   const intervalo = `${fmtBR(isoLocal(diasSemana[0]))} – ${fmtBR(isoLocal(diasSemana[6]))}`

@@ -23,7 +23,7 @@ export default function IntegracoesPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-5xl">
           <ErrorState title="Erro ao carregar integrações" message="Não foi possível checar as integrações." onRetry={() => refetch()} />
         </div>
@@ -34,12 +34,12 @@ export default function IntegracoesPage() {
   const cats = Object.keys(CAT) as Integracao['categoria'][]
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-5xl">
         <div className="mb-8">
           <div className="mb-2 flex items-center gap-3">
             <Plug className="h-7 w-7 text-cyan-400" />
-            <h1 className="bg-linear-to-r from-cyan-400 to-blue-400 bg-clip-text text-4xl font-black text-transparent">Integrações</h1>
+            <h1 className="bg-linear-to-r from-cyan-400 to-blue-400 bg-clip-text text-3xl sm:text-4xl font-black text-transparent">Integrações</h1>
           </div>
           <p className="text-zinc-400">Os serviços que fazem o PULSO rodar — pra que cada um serve e se está saudável.</p>
         </div>

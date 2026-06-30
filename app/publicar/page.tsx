@@ -308,7 +308,7 @@ export default function PublicarPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">
           <div className="glass rounded-2xl p-8 text-center space-y-4">
             <div className="skeleton h-8 w-48 mx-auto" />
@@ -321,7 +321,7 @@ export default function PublicarPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">
           <ErrorState
             title="Erro ao carregar conteudos"
@@ -334,7 +334,7 @@ export default function PublicarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-8">
         <PageHeader
           titulo="Publicacao Assistida"

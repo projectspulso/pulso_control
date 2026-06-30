@@ -133,7 +133,7 @@ export default function CanalPage() {
 
   if (!canal) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         <p className="text-zinc-400">Canal nao encontrado.</p>
         <Link
           href="/canais"
@@ -146,7 +146,7 @@ export default function CanalPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-8">
         <Link
           href="/canais"
@@ -156,7 +156,7 @@ export default function CanalPage() {
           Voltar para canais
         </Link>
 
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="mb-2 text-3xl font-bold text-white">{canal.nome}</h1>
             {canal.descricao && (

@@ -31,7 +31,7 @@ export default function CanaisPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">
           <ErrorState title="Erro ao carregar canais" message="Nao foi possivel listar os canais." onRetry={() => refetch()} />
         </div>
@@ -49,18 +49,18 @@ export default function CanaisPage() {
   }, {} as Record<string, number>)
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
           <div className="mb-2 flex items-center gap-3">
             <div className="h-2 w-2 rounded-full bg-pink-500 animate-pulse" />
-            <h1 className="bg-linear-to-r from-pink-400 via-rose-400 to-pink-400 bg-clip-text text-4xl font-black text-transparent">Canais</h1>
+            <h1 className="bg-linear-to-r from-pink-400 via-rose-400 to-pink-400 bg-clip-text text-3xl sm:text-4xl font-black text-transparent">Canais</h1>
           </div>
           <p className="text-zinc-400">Desempenho real das 4 contas + verticais de conteúdo.</p>
         </div>
 
         {/* totais reais */}
-        <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="rounded-xl border border-zinc-800/50 bg-zinc-900/40 p-5">
             <div className="flex items-center gap-2 text-xs text-zinc-500"><Eye className="h-3.5 w-3.5" /> Views totais</div>
             <p className="mt-1 text-3xl font-bold text-white tabular-nums">{fmt(totalViews)}</p>

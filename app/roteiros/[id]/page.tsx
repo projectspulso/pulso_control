@@ -243,7 +243,7 @@ export default function RoteiroDetalhesPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-4xl text-zinc-400">Carregando roteiro...</div>
       </div>
     )
@@ -251,7 +251,7 @@ export default function RoteiroDetalhesPage({
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-4xl">
           <ErrorState
             title="Erro ao carregar roteiro"
@@ -270,7 +270,7 @@ export default function RoteiroDetalhesPage({
 
   if (!roteiro) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-4xl">
           <p className="text-zinc-400">Roteiro nao encontrado.</p>
           <Link href="/roteiros" className="text-violet-400 hover:text-violet-300">
@@ -297,7 +297,7 @@ export default function RoteiroDetalhesPage({
     : []
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-5xl space-y-6">
         <div>
           <Link

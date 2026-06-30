@@ -193,7 +193,7 @@ export default function AutomacaoPage() {
   // Loading state
   if (queueLoading && statsLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="glass rounded-2xl p-8 text-center">
             <div className="skeleton h-8 w-48 mx-auto mb-2" />
@@ -207,7 +207,7 @@ export default function AutomacaoPage() {
   // Error state
   if (queueError && statsError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <ErrorState
             title="Erro ao carregar automacao"
@@ -220,7 +220,7 @@ export default function AutomacaoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
 
         <PageHeader

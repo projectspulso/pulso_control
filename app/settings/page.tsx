@@ -15,7 +15,7 @@ export default function SettingsPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <ErrorState
             title="Erro ao carregar configurações"
@@ -28,12 +28,12 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 animate-fade-in">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-2 h-2 rounded-full bg-zinc-500 animate-pulse-glow" />
-            <h1 className="text-4xl font-black bg-linear-to-r from-zinc-400 via-gray-400 to-zinc-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl font-black bg-linear-to-r from-zinc-400 via-gray-400 to-zinc-400 bg-clip-text text-transparent">
               ⚙️ Configurações
             </h1>
           </div>

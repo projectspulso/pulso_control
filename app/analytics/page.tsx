@@ -370,7 +370,7 @@ export default function AnalyticsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
           <div className="skeleton h-10 w-56" />
           <div className="grid gap-4 md:grid-cols-4">
@@ -388,7 +388,7 @@ export default function AnalyticsPage() {
 
   if (isError || !data || !resumo) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">
           <ErrorState
             title="Erro ao carregar o BI"
@@ -401,7 +401,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Header + filtros */}
         <PageHeader titulo="Analytics · BI" subtitulo="Decisões rápidas: alcance, ressonância, custo e curva por vertical." />
@@ -532,7 +532,7 @@ export default function AnalyticsPage() {
                 <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-300">
                   <Eye className="h-4 w-4 text-cyan-300" /> Views totais
                 </p>
-                <p className="mt-2 text-5xl font-black tabular-nums text-white">{n(resumo.views)}</p>
+                <p className="mt-2 text-3xl sm:text-5xl font-black tabular-nums text-white">{n(resumo.views)}</p>
                 {tendenciaViews != null ? (
                   <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${tendenciaViews >= 0 ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`}>
                     {tendenciaViews >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}

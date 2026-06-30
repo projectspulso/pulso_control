@@ -149,7 +149,7 @@ function NovaIdeiaPageContent() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">
           <ErrorState
             title="Erro ao carregar dados"
@@ -162,7 +162,7 @@ function NovaIdeiaPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 animate-fade-in">
           <Link
@@ -173,7 +173,7 @@ function NovaIdeiaPageContent() {
           </Link>
           <div className="mb-2 flex items-center gap-3">
             <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse-glow" />
-            <h1 className="text-4xl font-black bg-linear-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl font-black bg-linear-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">
               Nova Ideia
             </h1>
           </div>
@@ -405,7 +405,7 @@ function NovaIdeiaPageContent() {
 
 function LoadingState() {
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-5xl">
         <div className="h-10 w-64 animate-pulse rounded bg-zinc-800" />
       </div>
