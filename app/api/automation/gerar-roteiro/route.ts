@@ -85,8 +85,22 @@ export async function POST(request: NextRequest) {
       duracao_estimada: parseInt(ideia.metadata?.duracao_estimada) || 55,
     }
 
+    // Aprendizado da audiência (loop fechado): ganchos campeões + tema×rede
+    let aprendizado: string | undefined
+    try {
+      const { data: ap } = await supabase
+        .schema('pulso_core')
+        .from('configuracoes')
+        .select('valor')
+        .eq('chave', 'aprendizado_cerebro')
+        .maybeSingle()
+      if (ap?.valor) aprendizado = JSON.parse(ap.valor).texto
+    } catch {
+      /* aprendizado é opcional */
+    }
+
     // Gerar roteiro via GPT
-    const prompt = buildPromptGerarRoteiro(canal, ideiaCtx)
+    const prompt = buildPromptGerarRoteiro(canal, ideiaCtx, undefined, aprendizado)
     const { content: roteiro, usage } = await callOpenAI(prompt, {
       temperature: 0.7,
       max_tokens: 2048,

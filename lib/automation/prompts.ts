@@ -40,7 +40,17 @@ export const ABERTURAS_PROIBIDAS = [
 export const GATILHOS_PSICOLOGICOS = [
   'open_loop', 'curiosity_gap', 'pattern_interrupt', 'especificidade',
   'stakes', 'o_x_que_y', 'in_media_res', 'contradicao',
+  'prova_social', 'autoridade', 'negatividade', 'novidade',
 ]
+
+// Tipos de hook (estado da arte short-form faceless 2024-26) — escolhe 1 por roteiro.
+export const TIPOS_HOOK = `TIPOS DE HOOK (escolha 1 e combine com 2 gatilhos psicológicos):
+- bold_claim: afirmação ousada/contraintuitiva logo de cara ("A maioria usa o carregador errado a vida toda")
+- curiosity_gap: lacuna de conhecimento que o cérebro precisa fechar ("Tem um motivo de você esquecer sonhos em 5 minutos")
+- micro_historia: começa no meio da ação, in media res ("Em 1845 um navio sumiu — 170 anos depois acharam")
+- pergunta_identificadora: o espectador se reconhece ("Você também faz isso sem perceber?")
+- promessa_especifica: resultado mensurável e concreto ("Esse detalhe de 5 segundos mudou tudo")
+- pattern_interrupt: quebra de expectativa / estatística absurda no frame 1`
 
 // ====== HARNESS EDITORIAL "DO MOMENTO" (raia de atualidades com guardrails) ======
 // Surfa o assunto em alta pelo ângulo educativo/histórico/científico — nunca a desgraça.
@@ -69,18 +79,22 @@ A primeira frase NUNCA pode:
 - Ser pergunta retórica morna nem preâmbulo de contexto.
 - Repetir o título com outras palavras.
 - Adiar o impacto pro segundo período (o choque é na frase 1).
-TESTE: se a pessoa lesse SÓ a frase 1, ela já teria que querer ver o resto.`
+JANELA REAL: o espectador decide continuar em <2 segundos — o gancho falado tem que CABER em ~2,5s (frase curta). 50-60% saem nos 3 primeiros segundos; a meta é segurar 70%+.
+FUNCIONA MUDO: 60%+ assistem sem som — a frase 1 precisa fazer sentido lida na legenda, sozinha, sem áudio.
+TESTE: se a pessoa lesse SÓ a frase 1 (sem som), ela já teria que querer ver o resto.`
 
 // ====== PROMPTS DE GERAÇÃO DE IDEIAS ======
 
 export function buildPromptGerarIdeias(
   canal: CanalContext,
   serie: SerieContext | null,
-  quantidade: number
+  quantidade: number,
+  aprendizado?: string
 ): string {
   const serieCtx = serie
     ? `\nSérie atual: ${serie.nome} - ${serie.descricao}`
     : ''
+  const aprendizadoCtx = aprendizado ? `\n\n${aprendizado}` : ''
 
   return `Você é o editor-chefe do PULSO, operação de vídeos curtos faceless. Segue o HARNESS editorial do projeto: cada vídeo tem UMA emoção-âncora, hook que prende em ≤2 segundos, lacuna de curiosidade que só fecha no final, e fatos reais verificáveis (nunca inventar).
 
@@ -99,9 +113,12 @@ Para cada ideia, retorne um JSON com:
 - tipo_formato: string (curiosidade_rapida|psicologia|storytelling|misterio|motivacional|caso_real)
 - prioridade: number (1-10, potencial de retenção + compartilhamento STEPPS)
 - gatilho_psicologico: string (escolha UM da lista: ${GATILHOS_PSICOLOGICOS.join(' | ')})
-- gancho_sugerido: string (primeira frase falada — DEVE respeitar a TRAVA DOS 3 SEGUNDOS abaixo e usar o gatilho_psicologico escolhido)
+- tipo_hook: string (escolha UM tipo: bold_claim|curiosity_gap|micro_historia|pergunta_identificadora|promessa_especifica|pattern_interrupt)
+- gancho_sugerido: string (primeira frase falada — DEVE respeitar a TRAVA DOS 3 SEGUNDOS, usar o tipo_hook e combinar 2 gatilhos psicológicos)
 
 ${TRAVA_3S}
+
+${TIPOS_HOOK}${aprendizadoCtx}
 
 GATILHOS PSICOLÓGICOS (escolha 1 e construa o gancho em cima dele):
 - open_loop: abre uma tarefa mental inacabada ("…e ninguém percebeu por anos")
@@ -167,13 +184,17 @@ Se NÃO houver um ângulo educativo/atemporal seguro pra esse assunto (ex.: só 
 export function buildPromptGerarRoteiro(
   canal: CanalContext,
   ideia: IdeiaContext,
-  plataformas: string[] = ['youtube_shorts', 'tiktok', 'instagram_reels']
+  plataformas: string[] = ['youtube_shorts', 'tiktok', 'instagram_reels'],
+  aprendizado?: string
 ): string {
   const duracaoAlvo = ideia.duracao_estimada || 35
   const palavrasAlvo = Math.round(duracaoAlvo * 2.5) // ~2.5 palavras/segundo pt-BR
 
   const emocao = (ideia as { emocao_ancora?: string }).emocao_ancora
   const gatilho = ideia.gatilho_psicologico
+  const aprendizadoCtx = aprendizado ? `\n\n${aprendizado}` : ''
+  // promessa de série pra o CTA = o tema do canal (motivo concreto pra seguir)
+  const promessaSerie = canal.nome.replace(/^PULSO\s*/i, '').trim() || 'histórias que ninguém te conta'
 
   return `Você é o roteirista-chefe do PULSO e segue o HARNESS editorial do projeto (Atenção → Lacuna → Dopamina): o hook prende em ≤2 segundos, abre uma lacuna de curiosidade que SÓ fecha no final, e tudo é fato real verificável — nunca invente.
 
@@ -188,20 +209,24 @@ ${ideia.tipo_formato ? `TIPO: ${ideia.tipo_formato}` : ''}
 
 Escreva um roteiro completo em texto corrido (NÃO use marcações de tempo).
 
-ESTRUTURA OBRIGATÓRIA (harness):
+ESTRUTURA OBRIGATÓRIA (Hook → Body → Payoff — estado da arte short-form):
 
-1. HOOK (primeira frase falada) — ${TRAVA_3S}
+1. HOOK (primeira frase falada, 1-3s) — ${TRAVA_3S}
 
-2. DESENVOLVIMENTO (corpo, ~70% do tempo):
+2. BODY (desenvolvimento, ~70-80% do tempo):
    - Fatos com número, nome e data quando existirem; comparações concretas ("do tamanho de...")
-   - Ritmo acelerado: cada frase puxa a próxima (loops abertos pequenos)
-   - Sustente a emoção-âncora${emocao ? ` (${emocao})` : ''} do início ao fim — uma só
+   - RE-HOOK a cada 5-7 segundos: uma frase de transição que reabre tensão ("Mas tem uma coisa...", "E aí que fica estranho..."), um mini open-loop, ou um marcador de progresso. NUNCA deixe um trecho longo morno.
+   - Cada frase puxa a próxima; sustente UMA emoção-âncora${emocao ? ` (${emocao})` : ''} do início ao fim
+   - Mantenha o open-loop do hook ABERTO — não entregue a resposta aqui (efeito Zeigarnik)
 
-3. FECHO DA LACUNA (clímax, perto do fim):
-   - A revelação que o hook prometeu — só aqui
+3. PAYOFF (clímax, ~10-20% final):
+   - A revelação que o hook prometeu — só aqui, e que valha a espera
+   - FECHE EM LOOP: a última frase deve ecoar/responder o gancho de um jeito que dá vontade de rever o começo (replay impulsiona distribuição)
 
-4. CTA (últimos 3-5 segundos, 1 frase):
-   - Natural e curto: variações de "Segue o PULSO", "Comenta o que você faria", "Manda pra alguém"
+4. CTA (1 frase, atrelado a promessa de série — NÃO um "tchau"):
+   - UM só CTA de seguir, com MOTIVO concreto e promessa do canal: ex. "Segue o PULSO pra mais ${promessaSerie} que ninguém te conta."
+   - O CTA dá uma razão pra voltar (a série continua), não uma despedida genérica
+   - PROIBIDO engagement bait (penalizado pelas redes): nada de "comenta SIM", "comenta uma palavra/emoji", "marca 3 amigos", cliffhanger oco só pra forçar comentário
 
 REGRAS DURAS:
 - Escreva em PORTUGUÊS BRASILEIRO coloquial (NUNCA português europeu): use "você" e gerúndio ("está fazendo" — JAMAIS "está a fazer"), vocabulário BR ("celular", "ônibus", "café da manhã") e NENHUMA construção lusitana
@@ -212,6 +237,8 @@ REGRAS DURAS:
 - O texto será narrado por TTS (voz do PULSO): frases curtas, sem parênteses
 - Cada parágrafo = uma pausa natural na narração
 - Termine com CTA mencionando "PULSO"
+
+${aprendizadoCtx}
 
 AUTO-CHECAGEM ANTES DE RESPONDER (obrigatória):
 Releia SUA primeira frase contra a TRAVA DOS 3 SEGUNDOS. Se ela violar qualquer ponto (abertura proibida, sem número/nome/contradição, >14 palavras, repete o título, ou adia o impacto), REESCREVA a primeira frase antes de entregar. Não entregue um roteiro com hook fraco.

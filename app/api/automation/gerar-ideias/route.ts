@@ -79,8 +79,22 @@ export async function POST(request: NextRequest) {
 
     const serie = series?.[0] || null
 
+    // Aprendizado da audiência (loop fechado): ganchos campeões + tema×rede
+    let aprendizado: string | undefined
+    try {
+      const { data: ap } = await supabase
+        .schema('pulso_core')
+        .from('configuracoes')
+        .select('valor')
+        .eq('chave', 'aprendizado_cerebro')
+        .maybeSingle()
+      if (ap?.valor) aprendizado = JSON.parse(ap.valor).texto
+    } catch {
+      /* aprendizado é opcional — segue sem ele */
+    }
+
     // Gerar ideias via GPT
-    const prompt = buildPromptGerarIdeias(canal, serie, quantidade)
+    const prompt = buildPromptGerarIdeias(canal, serie, quantidade, aprendizado)
     const { content, usage } = await callOpenAI(prompt, {
       temperature: 0.8,
       json_mode: true,
@@ -152,6 +166,7 @@ export async function POST(request: NextRequest) {
         gancho_sugerido?: string
         emocao_ancora?: string
         gatilho_psicologico?: string
+        tipo_hook?: string
       }) => ({
         canal_id: canal.id,
         serie_id: serie?.id || null,
@@ -171,6 +186,7 @@ export async function POST(request: NextRequest) {
           gancho_sugerido: ideia.gancho_sugerido,
           emocao_ancora: ideia.emocao_ancora,
           gatilho_psicologico: ideia.gatilho_psicologico,
+          tipo_hook: ideia.tipo_hook,
           harness: 'HARNESS_ROTEIRO_PULSO.md',
           tokens_usados: usage,
         },
