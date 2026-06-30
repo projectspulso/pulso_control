@@ -52,12 +52,14 @@ async function reconciliar(request: NextRequest) {
   const { data: pubs, error: pErr } = await supabase
     .schema('pulso_content')
     .from('metricas_publicacao')
-    .select('post_id, ideia_id, roteiro_id, plataforma, url_publicacao')
+    .select('id, post_id, ideia_id, roteiro_id, plataforma, url_publicacao')
   if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 })
 
   const registrados = new Set<string>()
   const roteiroDeIdeia = new Map<string, string | null>()
   const igRows: Array<{ post_id: string; ideia_id: string }> = []
+  // rascunhos do TikTok (post_id v_inbox_file~...): ideia_id -> row id, p/ PROMOVER quando o vídeo público aparecer
+  const draftTikTok = new Map<string, string>()
   let ttHandle = 'pulsohistorias'
   for (const p of pubs || []) {
     if (p.post_id) registrados.add(String(p.post_id))
@@ -66,6 +68,9 @@ async function reconciliar(request: NextRequest) {
     if (p.plataforma === 'tiktok' && p.url_publicacao) {
       const m = String(p.url_publicacao).match(/@([\w.]+)/)
       if (m) ttHandle = m[1]
+    }
+    if (p.plataforma === 'tiktok' && p.ideia_id && String(p.post_id || '').startsWith('v_inbox_file') && p.id) {
+      draftTikTok.set(p.ideia_id, String(p.id))
     }
   }
 
@@ -192,16 +197,24 @@ async function reconciliar(request: NextRequest) {
 
   // 4) casa cada órfão e cadastra os de alta confiança
   const registrar: Array<Record<string, unknown>> = []
+  const promover: Array<{ rowId: string; patch: Record<string, unknown> }> = []
   const revisar: Array<{ plataforma: string; post_id: string; caption: string; best: number }> = []
   for (const o of orfaos) {
     const { ideia_id, best, second } = casar(o.caption)
     if (ideia_id && best >= 0.25 && best - second >= 0.15) {
       const h = horaBRT(o.data)
-      registrar.push({
-        ideia_id, roteiro_id: roteiroDeIdeia.get(ideia_id) ?? null, plataforma: o.plataforma,
+      const base = {
         url_publicacao: o.url, post_id: o.post_id, data_publicacao: o.data,
         ...(h ? { hora_publicacao: h.hora, dia_semana: h.dia } : {}),
-      })
+      }
+      const draftId = o.plataforma === 'tiktok' ? draftTikTok.get(ideia_id) : undefined
+      if (draftId) {
+        // PROMOVE o rascunho do TikTok pro vídeo público real (update, não duplica)
+        promover.push({ rowId: draftId, patch: base })
+        draftTikTok.delete(ideia_id)
+      } else {
+        registrar.push({ ideia_id, roteiro_id: roteiroDeIdeia.get(ideia_id) ?? null, plataforma: o.plataforma, ...base })
+      }
     } else {
       revisar.push({ plataforma: o.plataforma, post_id: o.post_id, caption: o.caption.slice(0, 60), best: Number(best.toFixed(2)) })
     }
@@ -214,6 +227,12 @@ async function reconciliar(request: NextRequest) {
     inseridos = registrar.length
   }
 
+  let promovidos = 0
+  for (const pr of promover) {
+    const { error: upErr } = await supabase.schema('pulso_content').from('metricas_publicacao').update(pr.patch).eq('id', pr.rowId)
+    if (!upErr) promovidos++
+  }
+
   const porRede: Record<string, number> = {}
   for (const r of registrar) porRede[r.plataforma as string] = (porRede[r.plataforma as string] || 0) + 1
 
@@ -221,6 +240,7 @@ async function reconciliar(request: NextRequest) {
     success: true,
     orfaos_encontrados: orfaos.length,
     inseridos,
+    promovidos,
     por_rede: porRede,
     revisar,
     avisos: avisos.length ? avisos : undefined,
