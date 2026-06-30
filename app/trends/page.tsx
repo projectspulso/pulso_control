@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase/client'
 import {
   TrendingUp,
   RefreshCw,
@@ -50,6 +51,9 @@ function nivelDe(n: number): Exclude<NivelEncaixe, 'todos'> {
   return 'baixo'
 }
 
+const norm = (s: string) =>
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+
 // acento por nível de encaixe (borda + badge)
 const ACENTO = {
   alto: { borda: 'border-l-emerald-500', badge: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30', rotulo: 'Alto encaixe' },
@@ -91,8 +95,37 @@ export default function TrendsPage() {
       setResultados((p) => ({ ...p, [assunto]: { error: e instanceof Error ? e.message : 'Erro' } })),
   })
 
+  // #1 — assuntos que JÁ viraram ideia do-momento (pra não regenerar)
+  const { data: usados } = useQuery({
+    queryKey: ['do-momento-usados'],
+    queryFn: async (): Promise<string[]> => {
+      const { data: ideias } = await supabase
+        .schema('pulso_content')
+        .from('ideias')
+        .select('metadata')
+        .eq('origem', 'IA_DO_MOMENTO')
+      const set = new Set<string>()
+      for (const i of ideias || []) {
+        const a = (i.metadata as { assunto_origem?: string } | null)?.assunto_origem
+        if (a) set.add(norm(a))
+      }
+      return [...set]
+    },
+    staleTime: 1000 * 60 * 5,
+  })
+  const usadosSet = useMemo(() => new Set(usados || []), [usados])
+
   const trends = useMemo(() => data || [], [data])
   const fontes = useMemo(() => Array.from(new Set(trends.map((t) => t.fonte))), [trends])
+
+  // #2 — ao carregar, abre já filtrado em "Alto 7+" (se houver algum); senão fica em Todos
+  const autoNivel = useRef(false)
+  useEffect(() => {
+    if (!autoNivel.current && trends.length) {
+      autoNivel.current = true
+      if (trends.some((t) => t.encaixe >= 7)) setNivel('alto')
+    }
+  }, [trends])
 
   const contagem = useMemo(
     () => ({
@@ -276,6 +309,7 @@ export default function TrendsPage() {
             {filtrados.map((t) => {
               const res = resultados[t.topico]
               const gerandoEste = gerar.isPending && gerar.variables === t.topico
+              const jaUsado = !!res?.ideia || usadosSet.has(norm(t.topico))
               const nv = nivelDe(t.encaixe)
               const ac = ACENTO[nv]
               return (
@@ -291,6 +325,11 @@ export default function TrendsPage() {
                         <AlertTriangle className="h-3 w-3" /> revisão
                       </span>
                     )}
+                    {jaUsado && !res?.ideia && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-300 ring-1 ring-emerald-500/30">
+                        <CheckCircle2 className="h-3 w-3" /> já virou ideia
+                      </span>
+                    )}
                     <span className="ml-auto text-[10px] uppercase tracking-wider text-zinc-600">
                       {FONTE_LABEL[t.fonte] || t.fonte}
                     </span>
@@ -300,11 +339,11 @@ export default function TrendsPage() {
                   {res && <ResultadoBox res={res} />}
                   <button
                     onClick={() => gerar.mutate(t.topico)}
-                    disabled={gerar.isPending || !!res?.ideia}
+                    disabled={gerar.isPending || jaUsado}
                     className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-sm font-medium text-rose-300 transition-colors hover:bg-rose-500/20 disabled:opacity-50"
                   >
                     {gerandoEste ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                    {res?.ideia ? 'Ideia criada' : 'Gerar ideia'}
+                    {jaUsado ? 'Ideia criada' : 'Gerar ideia'}
                   </button>
                 </div>
               )
