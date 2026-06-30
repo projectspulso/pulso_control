@@ -97,11 +97,18 @@ function CartaoVideo({ video }: { video: VideoPub }) {
               </p>
             </div>
           )}
-          {redes.map((rede) => (
-            <div key={rede} className="rounded-lg bg-zinc-900/60 p-3">
-              <div className="mb-2 flex items-center justify-between">
+          {redes.map((rede) => {
+            const jaPub = video.publicadoEm.includes(rede)
+            const dataPub = video.publicadoDatas[rede]
+            return (
+            <div key={rede} className={`rounded-lg p-3 ${jaPub ? 'bg-amber-500/5 ring-1 ring-amber-500/40' : 'bg-zinc-900/60'}`}>
+              <div className="mb-2 flex items-center justify-between gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">{rede}</span>
-                {video.publicadoEm.includes(rede) && <span className="text-[10px] font-semibold text-emerald-400">já publicado</span>}
+                {jaPub && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300 ring-1 ring-amber-500/40">
+                    ⚠️ já publicado{dataPub ? ` em ${dataPub}` : ''} — não repostar
+                  </span>
+                )}
               </div>
               {usaTitulo(rede) && (
                 <div className="mb-2">
@@ -116,7 +123,8 @@ function CartaoVideo({ video }: { video: VideoPub }) {
                   className="w-full resize-y rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm text-zinc-200 focus:border-cyan-500 focus:outline-none" />
               </div>
             </div>
-          ))}
+            )
+          })}
 
           <div className="flex flex-wrap items-center gap-2">
             <input value={novaRede} onChange={(e) => setNovaRede(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addRede()}

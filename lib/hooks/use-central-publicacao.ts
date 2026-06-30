@@ -18,6 +18,7 @@ export interface VideoPub {
   captionBase: string
   tituloCurto: string
   publicadoEm: string[] // redes que já subiram (de metricas_publicacao)
+  publicadoDatas: Record<string, string> // rede -> data (DD/MM) da 1ª publicação
   publicacao: Record<string, PubRede> // overrides salvos por rede
 }
 
@@ -42,14 +43,24 @@ export function useCentralPublicacao() {
       const [pipeQ, ideiasQ, mpQ] = await Promise.all([
         supabase.schema('pulso_content').from('pipeline_producao').select('id, ideia_id, status, metadata'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo'),
-        supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma'),
+        supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma, data_publicacao'),
       ])
       if (pipeQ.error) throw pipeQ.error
       const tit = new Map((ideiasQ.data || []).map((i) => [i.id, i.titulo as string]))
       const pubPorIdeia = new Map<string, Set<string>>()
+      const rawDatas = new Map<string, Record<string, string>>() // ideia -> rede -> ISO mais antigo
       for (const m of mpQ.data || []) {
         if (!pubPorIdeia.has(m.ideia_id)) pubPorIdeia.set(m.ideia_id, new Set())
         pubPorIdeia.get(m.ideia_id)!.add(m.plataforma)
+        if (m.data_publicacao) {
+          if (!rawDatas.has(m.ideia_id)) rawDatas.set(m.ideia_id, {})
+          const d = rawDatas.get(m.ideia_id)!
+          if (!d[m.plataforma] || m.data_publicacao < d[m.plataforma]) d[m.plataforma] = m.data_publicacao
+        }
+      }
+      const fmtData = (iso: string) => {
+        const dt = new Date(iso)
+        return `${String(dt.getUTCDate()).padStart(2, '0')}/${String(dt.getUTCMonth() + 1).padStart(2, '0')}`
       }
       return (pipeQ.data || []).map((p) => {
         const md = p.metadata || {}
@@ -68,6 +79,9 @@ export function useCentralPublicacao() {
           captionBase: caption,
           tituloCurto: tituloCurto(caption, tit.get(p.ideia_id) || 'PULSO'),
           publicadoEm: Array.from(pubPorIdeia.get(p.ideia_id) || []),
+          publicadoDatas: Object.fromEntries(
+            Object.entries(rawDatas.get(p.ideia_id) || {}).map(([rede, iso]) => [rede, fmtData(iso)]),
+          ),
           publicacao: (md.publicacao as Record<string, PubRede>) || {},
         }
       }).sort((a, b) => Number(b.pronto) - Number(a.pronto) || (b.numero ?? 0) - (a.numero ?? 0))
