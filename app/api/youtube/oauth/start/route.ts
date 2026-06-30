@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   url.searchParams.set('access_type', 'offline')
   url.searchParams.set('prompt', 'consent')
   url.searchParams.set('include_granted_scopes', 'true')
-  url.searchParams.set('scope', 'https://www.googleapis.com/auth/yt-analytics.readonly')
+  url.searchParams.set('scope', 'https://www.googleapis.com/auth/yt-analytics.readonly https://www.googleapis.com/auth/youtube')
 
   return NextResponse.redirect(url.toString())
 }
