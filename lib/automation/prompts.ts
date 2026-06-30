@@ -42,6 +42,21 @@ export const GATILHOS_PSICOLOGICOS = [
   'stakes', 'o_x_que_y', 'in_media_res', 'contradicao',
 ]
 
+// ====== HARNESS EDITORIAL "DO MOMENTO" (raia de atualidades com guardrails) ======
+// Surfa o assunto em alta pelo ângulo educativo/histórico/científico — nunca a desgraça.
+export const HARNESS_DO_MOMENTO = `HARNESS EDITORIAL "DO MOMENTO" (raia de atualidades — regra dura, sem exceção):
+O PULSO surfa o ASSUNTO em alta, mas NUNCA a desgraça. O ângulo é SEMPRE educativo: o "porquê", a ciência, a história por trás do que está no noticiário.
+PODE:
+- Explicar o fenômeno por trás da notícia (terremoto → por que o Círculo de Fogo treme, relação com o El Niño; tensão geopolítica → a raiz histórica milenar do conflito).
+- Trazer contexto histórico, científico, geográfico ou cultural — sempre fato consolidado e verificável.
+- Conectar o evento atual a uma curiosidade atemporal (a parte "que ninguém te conta").
+NUNCA:
+- Surfar tragédia / morte / sofrimento como espetáculo: nada de contagem de vítimas, imagem chocante, tom sensacionalista ou apelo mórbido.
+- Tomar posição política, partidária ou religiosa: sem "lado certo", sem opinião — só o histórico/factual neutro.
+- Inventar, especular como se fosse fato, usar boato ou notícia não confirmada. Dado não verificável → NÃO usa.
+- Prever desdobramentos, dar conselho, ou parecer que está "cobrindo a notícia" — o PULSO não é jornal, é o "porquê" por trás.
+VERIFICAÇÃO: todo número, nome, data e afirmação histórica precisa ser fato consolidado. Na dúvida, escolha o ângulo mais atemporal e seguro (a história/ciência), não o evento quente em si.`
+
 const TRAVA_3S = `TRAVA DOS 3 SEGUNDOS (primeira frase falada — regra dura, sem exceção):
 A primeira frase DEVE:
 - Afirmar um fato concreto, chocante ou impossível logo na primeira ideia (sujeito + verbo + algo absurdo).
@@ -108,6 +123,43 @@ REGRAS DURAS (harness):
 
 Retorne um OBJETO JSON exatamente neste formato, com TODAS as ${quantidade} ideias dentro do array:
 {"ideias": [ { ...ideia 1... }, { ...ideia 2... } ]}`
+}
+
+// ====== PROMPT "DO MOMENTO" (assunto em alta → ideia no DNA PULSO, com guardrails) ======
+
+/**
+ * Transforma um ASSUNTO EM ALTA num vídeo PULSO pelo ângulo educativo/atemporal.
+ * Saída no mesmo shape de buildPromptGerarIdeias (flui pro pipeline de roteiro),
+ * + campo precisa_revisao pra travar revisão humana em tema sensível.
+ */
+export function buildPromptDoMomento(assunto: string, canal: CanalContext): string {
+  return `Você é o editor-chefe do PULSO na raia "DO MOMENTO". Recebeu um ASSUNTO EM ALTA e precisa transformá-lo num vídeo curto faceless no DNA do PULSO: curiosidade / história / ciência — o "porquê" por trás, NUNCA a manchete.
+
+ASSUNTO EM ALTA: ${assunto}
+CANAL: ${canal.nome}
+FORMATO: Shorts/Reels/TikTok vertical 9:16 (40-70s), pt-BR.
+
+${HARNESS_DO_MOMENTO}
+
+Sua tarefa: achar O ÂNGULO ATEMPORAL desse assunto (o fenômeno, a origem histórica, a ciência) e gerar UMA ideia de vídeo em cima dele — não sobre a notícia, sobre o "porquê" que ela desperta.
+
+Retorne APENAS um JSON:
+- titulo: string (max 80 — abre lacuna de curiosidade que o espectador PRECISA fechar)
+- angulo: string (1 frase: qual história/ciência/"porquê" vamos contar — explicitamente o ângulo atemporal, NÃO a notícia)
+- descricao: string (1-2 frases: o fato real + por que prende)
+- emocao_ancora: string (awe|suspense|nostalgia|identificacao|catarse — EVITE indignacao em tema sensível)
+- tags: string[] (3-5)
+- duracao_estimada: number (40-70)
+- tipo_formato: string (curiosidade_rapida|misterio|storytelling|caso_real|psicologia)
+- prioridade: number (1-10)
+- gatilho_psicologico: string (UM da lista: ${GATILHOS_PSICOLOGICOS.join(' | ')})
+- gancho_sugerido: string (primeira frase falada — respeita a TRAVA DOS 3 SEGUNDOS abaixo)
+- precisa_revisao: boolean (true se o assunto tocar guerra ativa, desastre recente, religião ou política — exige revisão humana antes de publicar)
+- motivo_revisao: string (se precisa_revisao=true, 1 frase do porquê; senão "")
+
+${TRAVA_3S}
+
+Se NÃO houver um ângulo educativo/atemporal seguro pra esse assunto (ex.: só faz sentido falando da tragédia em si), retorne {"descartar": true, "motivo": "..."} em vez da ideia.`
 }
 
 // ====== PROMPTS DE GERAÇÃO DE ROTEIRO ======
