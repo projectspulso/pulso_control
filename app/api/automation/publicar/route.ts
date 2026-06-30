@@ -77,7 +77,9 @@ async function publicarFacebook(videoUrl: string, description: string, token: st
   }).then((r) => r.json())
   if (!start.video_id) throw new Error(`FB start: ${JSON.stringify(start)}`)
 
-  const up = await fetch(`https://rupload.facebook.com/video_reels/${start.video_id}`, {
+  // usar o upload_url que o start retorna (.../video-upload/vXX/{id}); construir
+  // /video_reels/{id} dá "Endpoint doesn't exist".
+  const up = await fetch(start.upload_url || `https://rupload.facebook.com/video_reels/${start.video_id}`, {
     method: 'POST',
     headers: { Authorization: `OAuth ${pageToken}`, file_url: videoUrl },
   }).then((r) => r.json())
