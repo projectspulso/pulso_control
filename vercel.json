@@ -15,6 +15,10 @@
     {
       "path": "/api/agenda/popular",
       "schedule": "30 12 * * *"
+    },
+    {
+      "path": "/api/automation/aprender",
+      "schedule": "30 11 * * 1"
     }
   ]
 }
