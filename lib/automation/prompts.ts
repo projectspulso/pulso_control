@@ -142,6 +142,29 @@ Retorne um OBJETO JSON exatamente neste formato, com TODAS as ${quantidade} idei
 {"ideias": [ { ...ideia 1... }, { ...ideia 2... } ]}`
 }
 
+// ====== PROMPT DE TRIAGEM DE TRENDS (Trend Tops PULSO) ======
+
+/**
+ * Pontua uma lista de assuntos em alta pelo ENCAIXE PULSO (tem ângulo
+ * educativo/atemporal?) e marca os sensíveis. Football score → nota baixa;
+ * fenômeno com ciência/história por trás → nota alta.
+ */
+export function buildPromptTriarTrends(topicos: string[]): string {
+  return `Você é o curador de pauta do PULSO (vídeos curtos faceless de curiosidade/história/ciência — o "porquê" por trás das coisas, fato verificável). Recebeu assuntos EM ALTA no Brasil e precisa dizer quais têm ENCAIXE PULSO.
+
+ASSUNTOS:
+${topicos.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+
+Para CADA assunto, avalie se dá pra fazer um vídeo PULSO pelo ângulo atemporal (a ciência, a história, o fenômeno por trás) — NÃO a notícia em si.
+- encaixe ALTO (7-10): tem um "porquê" rico de curiosidade (ex.: terremoto → placas tectônicas; eclipse → órbita; figura histórica → vida bizarra).
+- encaixe BAIXO (0-4): só placar de futebol, fofoca, resultado de jogo, polêmica passageira sem fenômeno por trás.
+- sensivel=true: guerra ativa, desastre/morte recente, religião, política partidária (exige revisão humana e ângulo cuidadoso).
+
+Retorne SOMENTE um JSON:
+{"trends": [{"topico": "...", "encaixe": 0-10, "angulo": "1 frase do ângulo atemporal, ou '' se encaixe baixo", "sensivel": true|false}]}
+Ordene do maior encaixe pro menor. Não invente assuntos fora da lista.`
+}
+
 // ====== PROMPT "DO MOMENTO" (assunto em alta → ideia no DNA PULSO, com guardrails) ======
 
 /**
