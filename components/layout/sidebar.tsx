@@ -18,6 +18,7 @@ import {
   Send,
   Settings,
   Sparkles,
+  Sun,
   Target,
   TrendingUp,
   Tv,
@@ -32,6 +33,7 @@ import { useUsuario } from '@/lib/hooks/use-usuario'
 import { areaFor } from '@/lib/config/areas'
 
 const navigation = [
+  { name: 'Hoje', href: '/hoje', icon: Sun, badge: 'ai', soAdmin: false },
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, badge: null, soAdmin: false },
   { name: 'Validacao', href: '/validacao', icon: Target, badge: 'mvp', soAdmin: false },
   { name: 'Ideias', href: '/ideias', icon: Lightbulb, badge: null, soAdmin: false },
