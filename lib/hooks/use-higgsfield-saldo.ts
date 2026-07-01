@@ -27,8 +27,9 @@ export interface HiggsfieldSaldo {
 export function useHiggsfieldSaldo() {
   return useQuery<HiggsfieldSaldo | null>({
     queryKey: ['higgsfield-saldo'],
-    staleTime: 1000 * 60 * 10,
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5,
+    refetchInterval: 1000 * 60 * 5, // pega as atualizações do worker sem recarregar a página
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data } = await supabase
         .schema('pulso_core')
