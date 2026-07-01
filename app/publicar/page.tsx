@@ -200,11 +200,13 @@ export default function PublicarPage() {
           continue
         }
 
-        // UMA REDE POR CHAMADA, em paralelo: publicar as 4 numa só chamada estoura o
-        // tempo do Vercel (Meta/YT lentos). Cada rede = função separada, cabe no limite.
-        // FB FORA do auto: teste 30/06 provou supressão (1 view via API vs 346 TikTok) →
-        // Facebook volta pro MANUAL (Business Suite). Passar 'facebook' explícito ainda funciona.
-        const REDES = ['instagram', 'youtube', 'tiktok']
+        // POLÍTICA 01/07: TUDO manual, MENOS TikTok (rascunho via API). O alcance dos
+        // posts via API caiu em IG/YT (como já tinha caído no FB) → volta pro manual
+        // (Business Suite / upload nativo) pra pegar alcance cheio. As APIs seguem
+        // CONFIGURADAS (tokens ativos), só não postam. TikTok continua rascunho via API
+        // (é o único caminho público + escolhe o som trending no app). Reversível: é só
+        // recolocar as redes aqui.
+        const REDES = ['tiktok']
         const linhasRede = await Promise.all(
           REDES.map((rede) =>
             fetch('/api/automation/publicar', {
