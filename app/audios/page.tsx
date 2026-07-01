@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AudioLines, RefreshCw, RotateCcw, Clapperboard, Loader2, Info, ListOrdered, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { ErrorState } from '@/components/ui/error-state'
+import { AvisoCreditoRender } from '@/components/aviso-credito-render'
 import {
   useAprendizados,
   corNotaHook,
@@ -181,6 +182,8 @@ export default function AudiosPage() {
             <b className="text-teal-300">Renderizar</b> pra mandar o vídeo (o passo caro só com seu OK).
           </p>
         </div>
+
+        <AvisoCreditoRender />
 
         {/* aguardando render */}
         {aguardando > 0 && (

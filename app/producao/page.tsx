@@ -15,6 +15,7 @@ import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { Calendar, Clock, Film, User } from 'lucide-react'
 import Link from 'next/link'
 import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
+import { AvisoCreditoRender } from '@/components/aviso-credito-render'
 
 const COLUNAS: { id: StatusProducao; titulo: string; cor: string }[] = [
   { id: 'AGUARDANDO_ROTEIRO', titulo: 'Aguardando Roteiro', cor: 'bg-zinc-700' },
@@ -395,6 +396,7 @@ export default function ProducaoPage() {
           </div>
 
           <div className="mb-6">
+            <AvisoCreditoRender />
             <ModoFocoBanner detail="Pipeline filtrado para o canal foco. Os demais canais ficam fora da execucao do MVP." />
             <div className="mt-3"><EstoqueBanner /></div>
           </div>
