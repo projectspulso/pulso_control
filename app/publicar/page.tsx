@@ -200,7 +200,9 @@ export default function PublicarPage() {
 
         // UMA REDE POR CHAMADA, em paralelo: publicar as 4 numa só chamada estoura o
         // tempo do Vercel (Meta/YT lentos). Cada rede = função separada, cabe no limite.
-        const REDES = ['instagram', 'facebook', 'youtube', 'tiktok']
+        // FB FORA do auto: teste 30/06 provou supressão (1 view via API vs 346 TikTok) →
+        // Facebook volta pro MANUAL (Business Suite). Passar 'facebook' explícito ainda funciona.
+        const REDES = ['instagram', 'youtube', 'tiktok']
         const linhasRede = await Promise.all(
           REDES.map((rede) =>
             fetch('/api/automation/publicar', {
