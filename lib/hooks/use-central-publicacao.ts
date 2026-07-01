@@ -22,7 +22,7 @@ export interface VideoPub {
   publicacao: Record<string, PubRede> // overrides salvos por rede
 }
 
-export const REDES_PADRAO = ['youtube', 'instagram', 'tiktok', 'facebook'] as const
+export const REDES_PADRAO = ['youtube', 'instagram', 'tiktok', 'facebook', 'kwai'] as const
 
 function tituloCurto(caption: string, fallback: string): string {
   let t = (caption || '').split('\n')[0].trim() || fallback
@@ -86,6 +86,34 @@ export function useCentralPublicacao() {
         }
       }).sort((a, b) => Number(b.pronto) - Number(a.pronto) || (b.numero ?? 0) - (a.numero ?? 0))
     },
+  })
+}
+
+// Marca uma rede MANUAL (Kwai etc.) como publicada — cria a linha em metricas_publicacao
+// (rede sem API/coletor não tem como saber sozinha). Idempotente: não duplica se já existe.
+export function useMarcarPublicado() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ ideiaId, rede }: { ideiaId: string; rede: string }) => {
+      const { data: ja } = await supabase
+        .schema('pulso_content')
+        .from('metricas_publicacao')
+        .select('id')
+        .eq('ideia_id', ideiaId)
+        .eq('plataforma', rede)
+        .limit(1)
+      if (ja && ja.length) return
+      const { error } = await supabase.schema('pulso_content').from('metricas_publicacao').insert({
+        ideia_id: ideiaId,
+        plataforma: rede,
+        post_id: `manual_${rede}`,
+        url_publicacao: null,
+        data_publicacao: new Date().toISOString(),
+        views: 0,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['central-publicacao'] }),
   })
 }
 

@@ -1,9 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Check, ChevronDown, ChevronUp, Save, Plus, Send, ExternalLink } from 'lucide-react'
+import { Copy, Check, ChevronDown, ChevronUp, Save, Plus, Send, ExternalLink, CheckCircle2, Smartphone } from 'lucide-react'
 
-import { useCentralPublicacao, useSalvarPublicacao, REDES_PADRAO, type PubRede, type VideoPub } from '@/lib/hooks/use-central-publicacao'
+import { useCentralPublicacao, useSalvarPublicacao, useMarcarPublicado, REDES_PADRAO, type PubRede, type VideoPub } from '@/lib/hooks/use-central-publicacao'
+
+// Redes 100% manuais (sem API/coletor) — o "já publicado" só entra quando você marca no app.
+const REDES_MANUAIS = new Set(['kwai'])
+const HASHTAGS_KWAI = '#curiosidades #misterios #voceSabia #pulso #fyp #viral'
 
 function BotaoCopiar({ texto }: { texto: string }) {
   const [ok, setOk] = useState(false)
@@ -21,6 +25,7 @@ function BotaoCopiar({ texto }: { texto: string }) {
 function CartaoVideo({ video }: { video: VideoPub }) {
   const [aberto, setAberto] = useState(false)
   const salvar = useSalvarPublicacao()
+  const marcar = useMarcarPublicado()
   // estado editável: por rede { titulo, legenda }. inicia dos salvos ou defaults.
   const [edits, setEdits] = useState<Record<string, PubRede>>(video.publicacao)
   const [novaRede, setNovaRede] = useState('')
@@ -34,8 +39,10 @@ function CartaoVideo({ video }: { video: VideoPub }) {
     const salvo = edits[rede]?.[campo]
     if (salvo != null) return salvo
     if (campo === 'titulo') return rede === 'youtube' ? video.tituloCurto : ''
-    // só o YouTube ganha o link na descrição (IG/TikTok/FB ficam limpos — link só na bio)
+    // só o YouTube ganha o link na descrição (IG/TikTok/FB/Kwai ficam limpos — link só na bio)
     if (rede === 'youtube' && hubHome) return `${video.captionBase}\n\n🔗 Mais histórias: ${hubHome}`
+    // Kwai: legenda + hashtags do Kwai (mercado BR, curte hashtag)
+    if (rede === 'kwai') return `${video.captionBase}\n\n${HASHTAGS_KWAI}`
     return video.captionBase
   }
   function set(rede: string, campo: 'titulo' | 'legenda', valor: string) {
@@ -103,11 +110,27 @@ function CartaoVideo({ video }: { video: VideoPub }) {
             return (
             <div key={rede} className={`rounded-lg p-3 ${jaPub ? 'bg-amber-500/5 ring-1 ring-amber-500/40' : 'bg-zinc-900/60'}`}>
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">{rede}</span>
-                {jaPub && (
+                <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-zinc-300">
+                  {rede}
+                  {REDES_MANUAIS.has(rede) && (
+                    <span title="Rede manual — só posta pelo celular" className="inline-flex items-center gap-0.5 rounded bg-zinc-800 px-1 py-0.5 text-[9px] font-medium normal-case text-zinc-400">
+                      <Smartphone className="h-2.5 w-2.5" /> celular
+                    </span>
+                  )}
+                </span>
+                {jaPub ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300 ring-1 ring-amber-500/40">
                     ⚠️ já publicado{dataPub ? ` em ${dataPub}` : ''} — não repostar
                   </span>
+                ) : (
+                  <button
+                    onClick={() => marcar.mutate({ ideiaId: video.ideiaId, rede })}
+                    disabled={marcar.isPending}
+                    className="inline-flex items-center gap-1 rounded-md border border-emerald-600/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
+                    title="Marca como publicado (pra redes manuais como o Kwai)"
+                  >
+                    <CheckCircle2 className="h-3 w-3" /> marcar publicado
+                  </button>
                 )}
               </div>
               {usaTitulo(rede) && (
