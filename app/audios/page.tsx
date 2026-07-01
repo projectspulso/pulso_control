@@ -2,9 +2,17 @@
 
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AudioLines, RefreshCw, RotateCcw, Clapperboard, Loader2, Info } from 'lucide-react'
+import { AudioLines, RefreshCw, RotateCcw, Clapperboard, Loader2, Info, ListOrdered, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { ErrorState } from '@/components/ui/error-state'
+import {
+  useAprendizados,
+  corNotaHook,
+  extrairHook,
+  canalCurto,
+  REDE_LABEL,
+  REDE_EMOJI,
+} from '@/lib/hooks/use-aprendizados'
 
 interface AudioItem {
   id: string
@@ -18,6 +26,9 @@ interface AudioItem {
   titulo: string
   status: string
   numero?: number
+  canal_id: string | null
+  nota_hook: number | null
+  hook: string
 }
 
 // estágio do pipeline -> rótulo + cor + ordem + se dá pra mandar renderizar
@@ -36,29 +47,41 @@ export default function AudiosPage() {
   const qc = useQueryClient()
   const [filtro, setFiltro] = useState<string>('todos')
 
+  const apr = useAprendizados()
+
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['audios'],
     queryFn: async (): Promise<AudioItem[]> => {
-      const [au, id, pp] = await Promise.all([
+      const [au, id, pp, rot] = await Promise.all([
         supabase
           .schema('pulso_content')
           .from('audios')
           .select('id, ideia_id, roteiro_id, public_url, url, duracao_segundos, qualidade_voz_ia, created_at'),
-        supabase.schema('pulso_content').from('ideias').select('id, titulo'),
+        supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
         supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status, metadata'),
+        supabase.schema('pulso_content').from('roteiros').select('id, ideia_id, nota_hook, conteudo_md'),
       ])
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const idMap = new Map((id.data || []).map((i: any) => [i.id, i.titulo]))
+      const idMap = new Map((id.data || []).map((i: any) => [i.id, i]))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ppMap = new Map((pp.data || []).map((p: any) => [p.ideia_id, p]))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rotPorId = new Map((rot.data || []).map((r: any) => [r.id, r]))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rotPorIdeia = new Map((rot.data || []).map((r: any) => [r.ideia_id, r]))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (au.data || []).map((a: any) => {
         const p = ppMap.get(a.ideia_id)
+        const ideia = idMap.get(a.ideia_id)
+        const r = rotPorId.get(a.roteiro_id) || rotPorIdeia.get(a.ideia_id)
         return {
           ...a,
-          titulo: idMap.get(a.ideia_id) || '(sem título)',
+          titulo: ideia?.titulo || '(sem título)',
+          canal_id: ideia?.canal_id ?? null,
           status: p?.status || '—',
           numero: p?.metadata?.numero,
+          nota_hook: r?.nota_hook ?? null,
+          hook: extrairHook(r?.conteudo_md),
         }
       })
     },
@@ -101,6 +124,23 @@ export default function AudiosPage() {
     return c
   }, [audios])
   const aguardando = useMemo(() => audios.filter((a) => cfg(a.status).renderizavel).length, [audios])
+
+  // Sequência sugerida de postagem — gerada dos aprendizados: prioriza quem está
+  // mais perto de publicar e com gancho mais forte; sugere a rede que mais entrega
+  // pra aquele canal (dado real via useAprendizados). Não inclui já-publicados.
+  const PESO_STATUS: Record<string, number> = { PRONTO_PUBLICACAO: 3, EM_EDICAO: 2, AUDIO_GERADO: 1 }
+  const sequencia = useMemo(() => {
+    return audios
+      .filter((a) => PESO_STATUS[a.status] != null)
+      .map((a) => ({
+        ...a,
+        score: (PESO_STATUS[a.status] || 0) * 100 + (a.nota_hook ?? 0),
+        rede: apr.data?.redeRecomendada(a.canal_id) || 'youtube',
+        canalNome: canalCurto(apr.data?.nomeCanal(a.canal_id) || '—'),
+      }))
+      .sort((x, y) => y.score - x.score)
+      .slice(0, 8)
+  }, [audios, apr.data])
 
   const filtrados = filtro === 'todos' ? audios : audios.filter((a) => a.status === filtro)
 
@@ -151,6 +191,50 @@ export default function AudiosPage() {
           </div>
         )}
 
+        {/* sequência sugerida de postagem (gerada dos aprendizados) */}
+        {sequencia.length > 0 && (
+          <div className="mb-5 rounded-2xl border border-violet-500/25 bg-violet-500/5 p-4">
+            <div className="mb-1 flex items-center gap-2">
+              <ListOrdered className="h-4.5 w-4.5 text-violet-300" />
+              <h2 className="text-sm font-semibold text-violet-200">Sequência sugerida de postagem</h2>
+              <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold text-violet-300">
+                <Sparkles className="h-3 w-3" /> dos aprendizados
+              </span>
+            </div>
+            <p className="mb-3 text-xs text-zinc-500">
+              Ordem gerada por: quão perto de publicar + força do gancho. A rede é a que mais entrega pra cada canal (dado real).
+            </p>
+            <ol className="space-y-1.5">
+              {sequencia.map((s, i) => (
+                <li
+                  key={s.id}
+                  className="flex flex-wrap items-center gap-2 rounded-xl bg-zinc-900/50 px-3 py-2 text-sm"
+                >
+                  <span className="w-5 shrink-0 text-center font-mono text-xs font-bold text-violet-400">{i + 1}</span>
+                  {s.numero != null && <span className="text-[11px] font-bold text-zinc-600">#{s.numero}</span>}
+                  <span className="min-w-0 flex-1 truncate text-zinc-200" title={s.titulo}>
+                    {s.titulo}
+                  </span>
+                  <span className="shrink-0 rounded-md bg-zinc-800/70 px-1.5 py-0.5 text-[10px] text-zinc-400">
+                    {s.canalNome}
+                  </span>
+                  <span
+                    className="shrink-0 rounded-md bg-teal-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300 ring-1 ring-teal-500/25"
+                    title="Rede que mais entrega pra esse canal"
+                  >
+                    {REDE_EMOJI[s.rede]} {REDE_LABEL[s.rede]}
+                  </span>
+                  {s.nota_hook != null && (
+                    <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ring-1 ${corNotaHook(s.nota_hook)}`}>
+                      hook {s.nota_hook}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
         {/* filtros */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Chip v="todos" label="Todos" n={audios.length} />
@@ -191,6 +275,25 @@ export default function AudiosPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     {a.numero != null && <span className="text-xs font-bold text-zinc-500">#{a.numero}</span>}
                     <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ${c.cls}`}>{c.label}</span>
+                    {a.canal_id && (
+                      <span className="rounded-md bg-zinc-800/70 px-2 py-0.5 text-[11px] font-medium text-zinc-300">
+                        {canalCurto(apr.data?.nomeCanal(a.canal_id) || '—')}
+                      </span>
+                    )}
+                    {a.status !== 'PUBLICADO' && (
+                      <span
+                        className="rounded-md bg-teal-500/10 px-2 py-0.5 text-[11px] font-semibold text-teal-300 ring-1 ring-teal-500/25"
+                        title="Rede que mais entrega pra esse canal (aprendizados)"
+                      >
+                        {REDE_EMOJI[apr.data?.redeRecomendada(a.canal_id) || 'youtube']}{' '}
+                        {REDE_LABEL[apr.data?.redeRecomendada(a.canal_id) || 'youtube']}
+                      </span>
+                    )}
+                    {a.nota_hook != null && (
+                      <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ring-1 ${corNotaHook(a.nota_hook)}`}>
+                        hook {a.nota_hook}
+                      </span>
+                    )}
                     {a.qualidade_voz_ia != null && (
                       <span className="rounded-md bg-zinc-800/60 px-2 py-0.5 text-[11px] text-zinc-400">
                         qual. {a.qualidade_voz_ia}
@@ -199,6 +302,11 @@ export default function AudiosPage() {
                     <span className="text-[11px] text-zinc-600">{fmtDur(a.duracao_segundos)}</span>
                   </div>
                   <p className="mt-1.5 font-medium text-zinc-100">{a.titulo}</p>
+                  {a.hook && (
+                    <p className="mt-1 line-clamp-2 text-sm text-zinc-500" title={a.hook}>
+                      <span className="text-zinc-600">Gancho:</span> {a.hook}
+                    </p>
+                  )}
                   <div className="mt-2 flex flex-wrap items-center gap-3">
                     {src ? (
                       <audio controls preload="none" src={src} className="h-9 w-full max-w-sm" />

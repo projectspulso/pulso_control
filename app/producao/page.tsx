@@ -14,6 +14,7 @@ import { FilaProducao } from '@/components/fila-producao'
 import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { Calendar, Clock, Film, User } from 'lucide-react'
 import Link from 'next/link'
+import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
 
 const COLUNAS: { id: StatusProducao; titulo: string; cor: string }[] = [
   { id: 'AGUARDANDO_ROTEIRO', titulo: 'Aguardando Roteiro', cor: 'bg-zinc-700' },
@@ -32,6 +33,8 @@ interface CardProps {
 }
 
 function CardConteudo({ conteudo, destacado, onAcao, processando }: CardProps) {
+  const apr = useAprendizados()
+  const redeRec = apr.data?.redeRecomendadaNome(conteudo.canal)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: conteudo.pipeline_id,
   })
@@ -70,6 +73,14 @@ function CardConteudo({ conteudo, destacado, onAcao, processando }: CardProps) {
           <div className="flex items-center gap-1">
             <span className="text-zinc-500">📺</span>
             <span>{conteudo.canal}</span>
+            {redeRec && conteudo.pipeline_status !== 'PUBLICADO' && (
+              <span
+                className="ml-auto rounded bg-teal-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300 ring-1 ring-teal-500/25"
+                title="Rede que mais entrega pra esse canal (aprendizados)"
+              >
+                {REDE_EMOJI[redeRec]} {REDE_LABEL[redeRec]}
+              </span>
+            )}
           </div>
         )}
         

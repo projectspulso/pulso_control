@@ -24,6 +24,7 @@ import { KitPublicacao } from '@/components/kit-publicacao'
 import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { useAgendarPublicacao, useConteudosProntos } from '@/lib/hooks/use-calendario'
 import { usePublicar } from '@/lib/hooks/use-automation'
+import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
 
 type FeedbackTone = 'success' | 'error' | 'info'
 
@@ -66,6 +67,7 @@ export default function PublicarPage() {
   const { data: conteudos, isLoading, isError, refetch } = useConteudosProntos()
   const publicarAgora = usePublicar()
   const agendarPublicacao = useAgendarPublicacao()
+  const apr = useAprendizados()
 
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [mostrarModalAgendar, setMostrarModalAgendar] = useState(false)
@@ -519,11 +521,24 @@ export default function PublicarPage() {
                       )}
                     </div>
 
-                    <div className="col-span-2 flex items-center gap-2">
-                      {getIconePlataforma(conteudo.canal)}
-                      <span className="line-clamp-1 text-sm text-zinc-300">
-                        {conteudo.canal}
-                      </span>
+                    <div className="col-span-2 flex flex-col justify-center gap-1">
+                      <div className="flex items-center gap-2">
+                        {getIconePlataforma(conteudo.canal)}
+                        <span className="line-clamp-1 text-sm text-zinc-300">
+                          {conteudo.canal}
+                        </span>
+                      </div>
+                      {(() => {
+                        const r = apr.data?.redeRecomendadaNome(conteudo.canal)
+                        return r ? (
+                          <span
+                            className="w-fit rounded bg-teal-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300 ring-1 ring-teal-500/25"
+                            title="Poste primeiro aqui — rede que mais entrega pra esse canal"
+                          >
+                            {REDE_EMOJI[r]} priorizar {REDE_LABEL[r]}
+                          </span>
+                        ) : null
+                      })()}
                     </div>
 
                     <div className="col-span-2 flex items-center gap-2 text-sm text-zinc-400">

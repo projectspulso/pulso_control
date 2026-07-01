@@ -15,6 +15,7 @@ import {
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { useAderencia, useColetarAgora, type VideoAderencia } from '@/lib/hooks/use-aderencia'
+import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
 
 const PLATAFORMA_LABEL: Record<string, string> = {
   youtube: 'YouTube',
@@ -37,6 +38,7 @@ function verticalCurta(canalNome: string) {
 
 export default function ValidacaoPage() {
   const { data, isLoading, isError, refetch } = useAderencia()
+  const apr = useAprendizados()
   const coletar = useColetarAgora()
 
   const ranking = useMemo(() => {
@@ -209,7 +211,22 @@ export default function ValidacaoPage() {
                     <td className="max-w-xs truncate px-6 py-3 text-zinc-200" title={v.titulo}>
                       {v.titulo}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-zinc-400">{verticalCurta(v.canalNome)}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-zinc-400">
+                      <div className="flex items-center gap-1.5">
+                        <span>{verticalCurta(v.canalNome)}</span>
+                        {(() => {
+                          const r = apr.data?.redeRecomendadaNome(v.canalNome)
+                          return r ? (
+                            <span
+                              className="rounded bg-teal-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300 ring-1 ring-teal-500/25"
+                              title="Rede que mais entrega pra esse canal"
+                            >
+                              {REDE_EMOJI[r]} {REDE_LABEL[r]}
+                            </span>
+                          ) : null
+                        })()}
+                      </div>
+                    </td>
                     {ORDEM_PLATAFORMAS.map((p) => {
                       const m = v.plataformas[p]
                       return (
