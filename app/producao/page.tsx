@@ -32,9 +32,19 @@ interface CardProps {
   processando?: boolean
 }
 
+const RENDER_ESTADO: Record<string, { txt: string; cls: string }> = {
+  renderizando: { txt: '🎬 renderizando agora…', cls: 'bg-sky-500/10 text-sky-300 ring-sky-500/30 animate-pulse' },
+  erro: { txt: '⚠️ render falhou', cls: 'bg-red-500/10 text-red-300 ring-red-500/40' },
+  aguardando_cenas: { txt: '⏳ faltam as cenas', cls: 'bg-amber-500/10 text-amber-300 ring-amber-500/30' },
+}
+
 function CardConteudo({ conteudo, destacado, onAcao, processando }: CardProps) {
   const apr = useAprendizados()
   const redeRec = apr.data?.redeRecomendadaNome(conteudo.canal)
+  const emEdicao = conteudo.pipeline_status === 'EM_EDICAO'
+  const rs = conteudo.metadata?.render_status as
+    | { estado?: string; motivo?: string; quando?: string }
+    | undefined
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: conteudo.pipeline_id,
   })
@@ -116,6 +126,28 @@ function CardConteudo({ conteudo, destacado, onAcao, processando }: CardProps) {
             <span className="px-2 py-0.5 rounded text-xs bg-purple-600/20 text-purple-400">⭐ Piloto</span>
           )}
         </div>
+
+        {emEdicao && (
+          <div className="mt-2 rounded-lg border border-zinc-700/40 bg-zinc-900/50 px-2 py-1.5">
+            {rs?.estado && RENDER_ESTADO[rs.estado] ? (
+              <>
+                <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ${RENDER_ESTADO[rs.estado].cls}`}>
+                  {RENDER_ESTADO[rs.estado].txt}
+                </span>
+                {rs.motivo && rs.estado === 'erro' && (
+                  <p className="mt-1 text-[10px] leading-tight text-red-300/80">{rs.motivo}</p>
+                )}
+                {rs.quando && (
+                  <p className="mt-0.5 text-[10px] text-zinc-600">
+                    {new Date(rs.quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+              </>
+            ) : (
+              <span className="text-[10px] text-sky-300/80">🎬 na fila de render — worker local roda 08/16/23h</span>
+            )}
+          </div>
+        )}
       </div>
 
       {(() => {
