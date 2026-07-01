@@ -38,8 +38,9 @@ export function useHiggsfieldSaldo() {
         .eq('chave', 'higgsfield_saldo')
         .maybeSingle()
       if (!data?.valor) return null
+      // valor vem como string JSON no banco (configuracoes.valor) — parsear se preciso
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const v = data.valor as any
+      const v: any = typeof data.valor === 'string' ? JSON.parse(data.valor) : data.valor
       const creditos = Number(v.creditos) || 0
       const nivel: HiggsfieldSaldo['nivel'] =
         creditos < CUSTO_CENA ? 'critico' : creditos < CUSTO_VIDEO_APROX ? 'atencao' : 'ok'
