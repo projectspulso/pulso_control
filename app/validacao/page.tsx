@@ -22,8 +22,9 @@ const PLATAFORMA_LABEL: Record<string, string> = {
   instagram: 'Instagram',
   facebook: 'Facebook',
   tiktok: 'TikTok',
+  kwai: 'Kwai',
 }
-const ORDEM_PLATAFORMAS = ['youtube', 'instagram', 'facebook', 'tiktok']
+const ORDEM_PLATAFORMAS = ['youtube', 'instagram', 'facebook', 'tiktok', 'kwai']
 
 function n(value: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -114,7 +115,7 @@ export default function ValidacaoPage() {
         />
 
         {/* Cards por plataforma */}
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           {ORDEM_PLATAFORMAS.map((plat) => {
             const stats = data.porPlataforma[plat]
             return (

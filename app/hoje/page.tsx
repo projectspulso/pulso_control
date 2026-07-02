@@ -8,7 +8,7 @@ import { AvisoCreditoRender } from '@/components/aviso-credito-render'
 import { useHoje } from '@/lib/hooks/use-hoje'
 import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
 
-const REDE_ICON: Record<string, string> = { youtube: '▶️', instagram: '📸', facebook: '📘', tiktok: '🎵' }
+const REDE_ICON: Record<string, string> = { youtube: '▶️', instagram: '📸', facebook: '📘', tiktok: '🎵', kwai: '🧡' }
 
 export default function HojePage() {
   const { data, isLoading, isError, refetch } = useHoje()

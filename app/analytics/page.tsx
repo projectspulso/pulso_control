@@ -53,6 +53,7 @@ const PLATAFORMAS = [
   { value: 'instagram', label: 'Instagram' },
   { value: 'facebook', label: 'Facebook' },
   { value: 'tiktok', label: 'TikTok' },
+  { value: 'kwai', label: 'Kwai' },
 ]
 
 const PERIODOS = [
@@ -290,7 +291,7 @@ export default function AnalyticsPage() {
       v.n += 1
       acc.set(p.plataforma, v)
     }
-    return ['facebook', 'instagram', 'youtube', 'tiktok'].map((rede) => {
+    return ['facebook', 'instagram', 'youtube', 'tiktok', 'kwai'].map((rede) => {
       const v = acc.get(rede)
       return { rede, segundos: v ? Math.round((v.soma / v.n / 1000) * 10) / 10 : 0, posts: v?.n || 0 }
     })
@@ -309,7 +310,7 @@ export default function AnalyticsPage() {
       v.n += 1
       acc.set(p.plataforma, v)
     }
-    return ['facebook', 'instagram', 'youtube', 'tiktok'].map((rede) => {
+    return ['facebook', 'instagram', 'youtube', 'tiktok', 'kwai'].map((rede) => {
       const v = acc.get(rede)
       return { rede, pct: v ? Math.round((v.soma / v.n) * 10) / 10 : 0, posts: v?.n || 0 }
     })
@@ -327,7 +328,7 @@ export default function AnalyticsPage() {
       v.n += 1
       acc.set(p.plataforma, v)
     }
-    return ['facebook', 'instagram', 'youtube', 'tiktok'].map((rede) => {
+    return ['facebook', 'instagram', 'youtube', 'tiktok', 'kwai'].map((rede) => {
       const v = acc.get(rede)
       return { rede, pct: v ? Math.round((v.soma / v.n) * 10) / 10 : 0, posts: v?.n || 0 }
     })

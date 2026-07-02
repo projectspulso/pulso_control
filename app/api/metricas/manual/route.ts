@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   const { ideia_id, plataforma } = body
   if (!ideia_id || !plataforma) return NextResponse.json({ error: 'ideia_id e plataforma obrigatórios' }, { status: 400 })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const campos: Record<string, any> = {}
+  const campos: Record<string, any> = { ultima_atualizacao: new Date().toISOString() }
   if (body.views != null) campos.views = Number(body.views) || 0
   if (body.likes != null) campos.likes = Number(body.likes) || 0
 
@@ -76,11 +76,15 @@ export async function POST(request: NextRequest) {
   // pulso_analytics.leituras_metricas — 1/post/dia, upsert no dia, com a hora exata da
   // puxada (coletado_em). É daí que saem crescimento/curvas; o Kwai entra igual às outras.
   try {
+    // usa os valores FINAIS da linha (se salvou só likes, não zera as views da leitura)
+    const { data: atual } = await sb.schema('pulso_content').from('metricas_publicacao')
+      .select('views, likes').eq('ideia_id', ideia_id).eq('plataforma', plataforma).limit(1)
     const agora = new Date()
     const leitura = {
       ideia_id, plataforma, post_id: postId,
       data_ref: agora.toISOString().slice(0, 10), coletado_em: agora.toISOString(),
-      views: campos.views ?? 0, likes: campos.likes ?? 0, comentarios: 0, compartilhamentos: 0,
+      views: atual?.[0]?.views ?? campos.views ?? 0, likes: atual?.[0]?.likes ?? campos.likes ?? 0,
+      comentarios: 0, compartilhamentos: 0,
     }
     const { data: jaHoje } = await sb.schema('pulso_analytics').from('leituras_metricas')
       .update(leitura)

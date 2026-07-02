@@ -12,6 +12,7 @@ import {
   Lightbulb,
   Music2,
   Rocket,
+  Smartphone,
   Youtube,
 } from 'lucide-react'
 
@@ -31,6 +32,7 @@ const REDE_UI: Record<string, { label: string; icon: typeof Youtube; cor: string
   instagram: { label: 'Instagram', icon: Instagram, cor: 'text-pink-400', fluxo: 'API automática' },
   facebook: { label: 'Facebook', icon: Facebook, cor: 'text-blue-400', fluxo: 'Business Suite manual' },
   tiktok: { label: 'TikTok', icon: Music2, cor: 'text-cyan-400', fluxo: 'draft → celular' },
+  kwai: { label: 'Kwai', icon: Smartphone, cor: 'text-orange-400', fluxo: 'manual celular' },
 }
 
 const ETAPAS_PIPELINE = [

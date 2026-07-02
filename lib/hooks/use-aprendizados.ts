@@ -13,21 +13,23 @@ import { supabase } from '@/lib/supabase/client'
  * Mistérios, a recomendação muda sozinha na próxima coleta.
  */
 
-export type Rede = 'youtube' | 'instagram' | 'facebook' | 'tiktok'
+export type Rede = 'youtube' | 'instagram' | 'facebook' | 'tiktok' | 'kwai'
 
 export const REDE_LABEL: Record<Rede, string> = {
   youtube: 'YouTube',
   instagram: 'Instagram',
   facebook: 'Facebook',
   tiktok: 'TikTok',
+  kwai: 'Kwai',
 }
 export const REDE_EMOJI: Record<Rede, string> = {
   youtube: '▶️',
   instagram: '📸',
   facebook: '📘',
   tiktok: '🎵',
+  kwai: '🧡',
 }
-const REDES: Rede[] = ['youtube', 'instagram', 'facebook', 'tiktok']
+const REDES: Rede[] = ['youtube', 'instagram', 'facebook', 'tiktok', 'kwai']
 
 export interface CanalAprendizado {
   canalId: string
@@ -73,8 +75,8 @@ export function useAprendizados() {
         if (!canalId || !REDES.includes(rede)) continue
         if (!acc.has(canalId)) {
           acc.set(canalId, {
-            soma: { youtube: 0, instagram: 0, facebook: 0, tiktok: 0 },
-            cnt: { youtube: 0, instagram: 0, facebook: 0, tiktok: 0 },
+            soma: { youtube: 0, instagram: 0, facebook: 0, tiktok: 0, kwai: 0 },
+            cnt: { youtube: 0, instagram: 0, facebook: 0, tiktok: 0, kwai: 0 },
           })
         }
         const a = acc.get(canalId)!
@@ -84,7 +86,7 @@ export function useAprendizados() {
 
       const porCanal = new Map<string, CanalAprendizado>()
       for (const [canalId, a] of acc) {
-        const mediaPorRede: Record<Rede, number> = { youtube: 0, instagram: 0, facebook: 0, tiktok: 0 }
+        const mediaPorRede: Record<Rede, number> = { youtube: 0, instagram: 0, facebook: 0, tiktok: 0, kwai: 0 }
         let melhor: Rede | null = null
         let melhorVal = 0
         let amostras = 0

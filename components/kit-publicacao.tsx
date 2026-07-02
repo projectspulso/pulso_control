@@ -23,7 +23,8 @@ const PASSOS = {
   youtube: ['Studio → Criar → Enviar vídeos', 'Selecione o arquivo (OneDrive)', 'Cole o TÍTULO curto', 'Cole a DESCRIÇÃO (legenda)', '"Não é conteúdo para crianças"', 'Avançar ×3 → Público → Publicar'],
   facebook: ['Abra o composer da Pulso Projects (botão abaixo)', 'Adicionar vídeo → selecione o arquivo', '⚠️ DESMARQUE o Instagram (só Pulso Projects)', 'Cole a legenda', 'Avançar (sem música) → Avançar → Compartilhar'],
   tiktok: ['O app já criou o rascunho — abra o TikTok no celular', 'Cole a legenda', 'Publicar'],
-  instagram: ['Sai automático: tela /publicar → "Enviar agora"'],
+  instagram: ['MANUAL (política 01/07 — API suprime alcance)', 'App do IG no celular → + → Reel', 'Selecione o vídeo (galeria/OneDrive)', 'Cole a legenda', 'Compartilhar'],
+  kwai: ['📱 Só pelo celular (o vídeo do rascunho TikTok já está na galeria)', 'App Kwai → + → Álbum → selecione o vídeo', 'Cole a legenda (com as hashtags do Kwai)', 'Publicar', 'Depois: salve views/curtidas em /assets → Central de Publicação'],
 }
 
 function VideoCard({ v }: { v: KitVideo }) {
@@ -41,7 +42,7 @@ function VideoCard({ v }: { v: KitVideo }) {
       </div>
       <p className="mt-1 truncate text-[10px] text-zinc-500" title={v.arquivoOneDrive}>📁 {v.arquivoOneDrive}</p>
       <div className="mt-2 flex flex-wrap gap-1.5">
-        {(['youtube', 'facebook', 'tiktok', 'instagram'] as const).map((rede) => (
+        {(['youtube', 'facebook', 'tiktok', 'instagram', 'kwai'] as const).map((rede) => (
           <button key={rede} onClick={() => toggle(rede)} className={`flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold ${aberto === rede ? 'bg-violet-600 text-white' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'}`}>
             {aberto === rede ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />} {rede}
           </button>

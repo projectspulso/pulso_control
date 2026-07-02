@@ -37,6 +37,7 @@ export function useIntegracoes() {
       const ultMeta = rows.find((r: { plataforma: string }) => r.plataforma === 'instagram' || r.plataforma === 'facebook')?.ultima_atualizacao
       const ultYt = rows.find((r: { plataforma: string }) => r.plataforma === 'youtube')?.ultima_atualizacao
       const ultTk = rows.find((r: { plataforma: string }) => r.plataforma === 'tiktok')?.ultima_atualizacao
+      const ultKwai = rows.find((r: { plataforma: string }) => r.plataforma === 'kwai')?.ultima_atualizacao
       const ultAudio = audios.data?.[0]?.created_at
       const ultPronto = pronto.data?.[0]?.updated_at
       const chaves = new Set((configs.data || []).map((c: { chave: string }) => c.chave))
@@ -56,6 +57,7 @@ export function useIntegracoes() {
         { chave: 'meta', nome: 'Meta API (Instagram + Facebook)', para_que: 'Publica reels no Instagram via API e coleta métricas de IG e FB.', categoria: 'publicacao', status: recente(ultMeta), detalhe: `Última métrica IG/FB ${txtDias(ultMeta)}.` },
         { chave: 'youtube', nome: 'YouTube (Data + Analytics)', para_que: 'Coleta views/retenção dos Shorts e auto-captura as publicações pelo título/descrição.', categoria: 'publicacao', status: chaves.has('youtube_oauth') ? recente(ultYt) : 'atencao', detalhe: chaves.has('youtube_oauth') ? `OAuth ok · última métrica ${txtDias(ultYt)}.` : 'OAuth ausente — reautorizar.' },
         { chave: 'tiktok', nome: 'TikTok', para_que: 'Coleta a lista de vídeos pra reconciliar publicações feitas no celular.', categoria: 'publicacao', status: recente(ultTk, 14), detalhe: `Última métrica ${txtDias(ultTk)}.` },
+        { chave: 'kwai', nome: 'Kwai (manual)', para_que: 'Rede sem API — posta pelo celular e os números entram pela Central de Publicação (views/curtidas + perfil).', categoria: 'publicacao', status: recente(ultKwai, 3), detalhe: `Última atualização manual ${txtDias(ultKwai)}.` },
         { chave: 'openai', nome: 'OpenAI (cérebro)', para_que: 'Gera os roteiros e as cenas (prompts de vídeo) de cada ideia aprovada.', categoria: 'geracao', status: 'desconhecido', detalhe: 'Chave no servidor (Vercel) — roda no auto-funil e no gerar-cenas.' },
         { chave: 'elevenlabs', nome: 'ElevenLabs', para_que: 'Voz oficial do PULSO — narração de cada vídeo.', categoria: 'geracao', status: recente(ultAudio, 14), detalhe: `Último áudio gerado ${txtDias(ultAudio)}.` },
         { chave: 'higgsfield', nome: 'Higgsfield (Veo)', para_que: 'Gera os clips de vídeo das cenas. Teto de 600 créditos/dia + banco de clips reusáveis.', categoria: 'geracao', status: 'desconhecido', detalhe: 'CLI local — controlado pelo guard de custo.' },

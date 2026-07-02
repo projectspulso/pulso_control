@@ -31,7 +31,7 @@ export interface DashboardData {
   ultimasPublicacoes: TopVideo[]
 }
 
-const REDES = ['youtube', 'instagram', 'facebook', 'tiktok']
+const REDES = ['youtube', 'instagram', 'facebook', 'tiktok', 'kwai']
 
 export function useDashboard() {
   return useQuery<DashboardData>({
