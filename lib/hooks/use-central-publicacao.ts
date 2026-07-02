@@ -89,31 +89,47 @@ export function useCentralPublicacao() {
   })
 }
 
-// Marca uma rede MANUAL (Kwai etc.) como publicada — cria a linha em metricas_publicacao
-// (rede sem API/coletor não tem como saber sozinha). Idempotente: não duplica se já existe.
-export function useMarcarPublicado() {
+// Números MANUAIS por vídeo (Kwai etc.) via rota service-role (RLS bloqueia client).
+// Sem views/likes = só "marcar publicado" (cria a linha). Com números = atualiza.
+export function useAtualizarNumeros() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ ideiaId, rede }: { ideiaId: string; rede: string }) => {
-      const { data: ja } = await supabase
-        .schema('pulso_content')
-        .from('metricas_publicacao')
-        .select('id')
-        .eq('ideia_id', ideiaId)
-        .eq('plataforma', rede)
-        .limit(1)
-      if (ja && ja.length) return
-      const { error } = await supabase.schema('pulso_content').from('metricas_publicacao').insert({
-        ideia_id: ideiaId,
-        plataforma: rede,
-        post_id: `manual_${rede}`,
-        url_publicacao: null,
-        data_publicacao: new Date().toISOString(),
-        views: 0,
+    mutationFn: async ({ ideiaId, rede, views, likes }: { ideiaId: string; rede: string; views?: number; likes?: number }) => {
+      const r = await fetch('/api/metricas/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ideia_id: ideiaId, plataforma: rede, views, likes }),
       })
-      if (error) throw error
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'falha ao salvar números')
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['central-publicacao'] }),
+  })
+}
+
+// Perfil da conta (seguidores/curtidas) de uma rede manual — ex.: Kwai.
+export interface PerfilRede { seguidores: number; curtidas: number; quando: string | null }
+export function usePerfilRede(rede: string) {
+  return useQuery<PerfilRede>({
+    queryKey: ['perfil-rede', rede],
+    queryFn: async () => {
+      const r = await fetch(`/api/metricas/manual?perfil=${rede}`)
+      const d = await r.json()
+      return d.perfil as PerfilRede
+    },
+  })
+}
+export function useSalvarPerfilRede() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ rede, seguidores, curtidas }: { rede: string; seguidores: number; curtidas: number }) => {
+      const r = await fetch('/api/metricas/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ perfilRede: rede, seguidores, curtidas }),
+      })
+      if (!r.ok) throw new Error('falha ao salvar perfil')
+    },
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ['perfil-rede', v.rede] }),
   })
 }
 

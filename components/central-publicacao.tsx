@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Copy, Check, ChevronDown, ChevronUp, Save, Plus, Send, ExternalLink, CheckCircle2, Smartphone } from 'lucide-react'
 
-import { useCentralPublicacao, useSalvarPublicacao, useMarcarPublicado, REDES_PADRAO, type PubRede, type VideoPub } from '@/lib/hooks/use-central-publicacao'
+import { useCentralPublicacao, useSalvarPublicacao, useAtualizarNumeros, usePerfilRede, useSalvarPerfilRede, REDES_PADRAO, type PubRede, type VideoPub } from '@/lib/hooks/use-central-publicacao'
 
 // Redes 100% manuais (sem API/coletor) — o "já publicado" só entra quando você marca no app.
 const REDES_MANUAIS = new Set(['kwai'])
@@ -25,7 +25,15 @@ function BotaoCopiar({ texto }: { texto: string }) {
 function CartaoVideo({ video }: { video: VideoPub }) {
   const [aberto, setAberto] = useState(false)
   const salvar = useSalvarPublicacao()
-  const marcar = useMarcarPublicado()
+  const numeros = useAtualizarNumeros()
+  // números manuais por rede (views/likes) — só pra redes sem coletor (Kwai)
+  const [nums, setNums] = useState<Record<string, { views: string; likes: string }>>({})
+  const getNum = (rede: string, campo: 'views' | 'likes') => nums[rede]?.[campo] ?? ''
+  const setNum = (rede: string, campo: 'views' | 'likes', v: string) =>
+    setNums((n) => ({
+      ...n,
+      [rede]: { views: n[rede]?.views ?? '', likes: n[rede]?.likes ?? '', [campo]: v.replace(/\D/g, '') },
+    }))
   // estado editável: por rede { titulo, legenda }. inicia dos salvos ou defaults.
   const [edits, setEdits] = useState<Record<string, PubRede>>(video.publicacao)
   const [novaRede, setNovaRede] = useState('')
@@ -118,21 +126,29 @@ function CartaoVideo({ video }: { video: VideoPub }) {
                     </span>
                   )}
                 </span>
-                {jaPub ? (
+                {jaPub && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300 ring-1 ring-amber-500/40">
                     ⚠️ já publicado{dataPub ? ` em ${dataPub}` : ''} — não repostar
                   </span>
-                ) : (
-                  <button
-                    onClick={() => marcar.mutate({ ideiaId: video.ideiaId, rede })}
-                    disabled={marcar.isPending}
-                    className="inline-flex items-center gap-1 rounded-md border border-emerald-600/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
-                    title="Marca como publicado (pra redes manuais como o Kwai)"
-                  >
-                    <CheckCircle2 className="h-3 w-3" /> marcar publicado
-                  </button>
                 )}
               </div>
+              {REDES_MANUAIS.has(rede) && (
+                <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md bg-zinc-950/60 p-2">
+                  <input inputMode="numeric" value={getNum(rede, 'views')} onChange={(e) => setNum(rede, 'views', e.target.value)} placeholder="views"
+                    className="w-20 rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none" />
+                  <input inputMode="numeric" value={getNum(rede, 'likes')} onChange={(e) => setNum(rede, 'likes', e.target.value)} placeholder="curtidas"
+                    className="w-20 rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none" />
+                  <button
+                    onClick={() => numeros.mutate({ ideiaId: video.ideiaId, rede, views: getNum(rede, 'views') ? Number(getNum(rede, 'views')) : undefined, likes: getNum(rede, 'likes') ? Number(getNum(rede, 'likes')) : undefined })}
+                    disabled={numeros.isPending}
+                    className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
+                    title="Salva views/curtidas do app do Kwai (também marca como publicado)"
+                  >
+                    <CheckCircle2 className="h-3 w-3" /> {numeros.isPending ? 'salvando…' : 'salvar números'}
+                  </button>
+                  <span className="text-[10px] text-zinc-500">📱 números do app do Kwai</span>
+                </div>
+              )}
               {usaTitulo(rede) && (
                 <div className="mb-2">
                   <div className="mb-1 flex items-center justify-between"><label className="text-[10px] text-zinc-500">Título</label><BotaoCopiar texto={get(rede, 'titulo')} /></div>
@@ -166,6 +182,44 @@ function CartaoVideo({ video }: { video: VideoPub }) {
   )
 }
 
+function PerfilKwai() {
+  const { data } = usePerfilRede('kwai')
+  const salvar = useSalvarPerfilRede()
+  const [seg, setSeg] = useState('')
+  const [cur, setCur] = useState('')
+  // preenche com o salvo quando chega
+  const seguidores = seg !== '' ? seg : String(data?.seguidores ?? '')
+  const curtidas = cur !== '' ? cur : String(data?.curtidas ?? '')
+  const quando = data?.quando ? new Date(data.quando).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : null
+  return (
+    <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <Smartphone className="h-3.5 w-3.5 text-amber-300" />
+        <span className="text-xs font-bold uppercase tracking-wider text-amber-200">Perfil Kwai (conta)</span>
+        {quando && <span className="text-[10px] text-zinc-500">atualizado {quando}</span>}
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-[10px] text-zinc-400">Seguidores
+          <input inputMode="numeric" value={seguidores} onChange={(e) => setSeg(e.target.value.replace(/\D/g, ''))}
+            className="mt-0.5 block w-24 rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm text-zinc-200 focus:border-amber-500 focus:outline-none" />
+        </label>
+        <label className="text-[10px] text-zinc-400">Curtidas
+          <input inputMode="numeric" value={curtidas} onChange={(e) => setCur(e.target.value.replace(/\D/g, ''))}
+            className="mt-0.5 block w-24 rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm text-zinc-200 focus:border-amber-500 focus:outline-none" />
+        </label>
+        <button
+          onClick={() => salvar.mutate({ rede: 'kwai', seguidores: Number(seguidores) || 0, curtidas: Number(curtidas) || 0 })}
+          disabled={salvar.isPending}
+          className="inline-flex items-center gap-1 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-500 disabled:opacity-50"
+        >
+          <Save className="h-3 w-3" /> {salvar.isPending ? 'salvando…' : salvar.isSuccess ? 'salvo ✓' : 'salvar'}
+        </button>
+        <span className="text-[10px] text-zinc-500">📱 do app do Kwai (perfil)</span>
+      </div>
+    </div>
+  )
+}
+
 export function CentralPublicacao() {
   const { data, isLoading } = useCentralPublicacao()
   if (isLoading) return <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-14 animate-pulse rounded-xl bg-zinc-900/50" />)}</div>
@@ -177,7 +231,8 @@ export function CentralPublicacao() {
         <h2 className="text-sm font-bold text-white">Central de Publicação</h2>
         <span className="ml-auto text-[11px] text-zinc-500">{data.length} vídeos · título/legenda por rede</span>
       </div>
-      <p className="mb-4 text-[11px] text-zinc-500">A fonte das publicações manuais. Conteúdo por rede pra copiar; edite e <b className="text-zinc-300">salve</b> pra fixar; <b className="text-zinc-300">adicione redes novas</b> quando criar. 🟢 = já publicado.</p>
+      <p className="mb-4 text-[11px] text-zinc-500">A fonte das publicações manuais. Conteúdo por rede pra copiar; edite e <b className="text-zinc-300">salve</b> pra fixar; <b className="text-zinc-300">adicione redes novas</b> quando criar. 🟢 = já publicado. No <b className="text-amber-300">Kwai</b> (📱 celular): salve views/curtidas por vídeo e o perfil abaixo.</p>
+      <PerfilKwai />
       <div className="space-y-2">
         {data.map((v) => <CartaoVideo key={v.pipelineId} video={v} />)}
       </div>
