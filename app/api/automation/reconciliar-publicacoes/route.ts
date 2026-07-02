@@ -214,7 +214,7 @@ async function reconciliar(request: NextRequest) {
       } else {
         registrar.push({ ideia_id, roteiro_id: roteiroDeIdeia.get(ideia_id) ?? null, plataforma: o.plataforma, ...base })
       }
-    } else if (draftId && best >= 0.12) {
+    } else if (draftId && ideia_id && best >= 0.12) {
       // RELAXADO: a ideia tem rascunho TikTok pendente (prior forte — nós mesmos subimos) +
       // match razoável → promove o rascunho pro vídeo público real.
       promover.push({ rowId: draftId, patch: base })
