@@ -17,6 +17,7 @@ const COR: Record<string, string> = {
   instagram: 'from-pink-500/20 to-purple-600/5 border-pink-500/30 text-pink-400',
   tiktok: 'from-cyan-500/20 to-zinc-600/5 border-cyan-500/30 text-cyan-300',
   facebook: 'from-blue-500/20 to-blue-700/5 border-blue-500/30 text-blue-400',
+  kwai: 'from-orange-500/20 to-orange-600/5 border-orange-500/30 text-orange-400',
 }
 
 function fmt(n: number) {
@@ -77,7 +78,7 @@ export default function CanaisPage() {
 
         {/* 4 contas reais */}
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-zinc-400">Contas (desempenho real)</h2>
-        <div className="mb-10 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-10 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           {loadingReais && [1, 2, 3, 4].map((i) => <div key={i} className="h-52 animate-pulse rounded-xl bg-zinc-900/50" />)}
           {(reais ?? []).map((c) => (
             <a key={c.plataforma} href={c.url} target="_blank" rel="noreferrer"

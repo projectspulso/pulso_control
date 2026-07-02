@@ -341,7 +341,7 @@ export default function ProducaoPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="glass rounded-2xl p-8 text-center">
             <div className="text-zinc-400 animate-pulse">Carregando pipeline...</div>
@@ -353,7 +353,7 @@ export default function ProducaoPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <ErrorState
             title="Erro ao carregar pipeline"
@@ -366,7 +366,7 @@ export default function ProducaoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="max-w-[1800px] mx-auto">
         <div className="mb-8 animate-fade-in">
           <div className="mb-4">

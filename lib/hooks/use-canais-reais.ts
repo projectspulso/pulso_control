@@ -22,8 +22,9 @@ const REDES: Record<string, { nome: string; handle: string; url: string }> = {
   tiktok: { nome: 'TikTok', handle: '@pulsohistorias', url: 'https://tiktok.com/@pulsohistorias' },
   instagram: { nome: 'Instagram', handle: '@pulsoprojects', url: 'https://instagram.com/pulsoprojects' },
   facebook: { nome: 'Facebook', handle: 'Pulso Projects', url: 'https://facebook.com/pulsoprojects' },
+  kwai: { nome: 'Kwai', handle: 'Pulso Projects', url: 'https://www.kwai.com' },
 }
-const ORDEM = ['youtube', 'instagram', 'tiktok', 'facebook']
+const ORDEM = ['youtube', 'instagram', 'tiktok', 'facebook', 'kwai']
 
 // Agrega a performance REAL por rede social (de metricas_publicacao) — é o que "reflete a real".
 export function useCanaisReais() {

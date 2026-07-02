@@ -12,7 +12,7 @@ export default function AssetsPage() {
   const [aba, setAba] = useState<'videos' | 'acervo' | 'midias'>('videos')
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-8">
         <div>
           <h1 className="flex items-center gap-3 bg-linear-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-4xl font-black text-transparent">

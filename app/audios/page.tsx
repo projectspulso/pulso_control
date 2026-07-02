@@ -147,7 +147,7 @@ export default function AudiosPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-5xl">
           <ErrorState title="Erro ao carregar áudios" message="Não foi possível carregar os áudios." onRetry={() => refetch()} />
         </div>
@@ -167,7 +167,7 @@ export default function AudiosPage() {
   )
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8">
+    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-5xl">
         {/* header */}
         <div className="mb-6">
