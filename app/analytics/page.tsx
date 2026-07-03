@@ -28,6 +28,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { AuditPanel } from '@/components/audit-panel'
+import { Desafio100Dias } from '@/components/desafio-100-dias'
 import { HorariosPanel } from '@/components/horarios-panel'
 import { ASSINATURAS_MENSAIS_BRL, CUSTO_POR_VIDEO } from '@/lib/config/custos'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
@@ -406,6 +407,9 @@ export default function AnalyticsPage() {
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Header + filtros */}
         <PageHeader titulo="Analytics · BI" subtitulo="Decisões rápidas: alcance, ressonância, custo e curva por vertical." />
+
+        {/* DESAFIO DOS 100 DIAS — onde chegamos: consistência, sequência, evolução */}
+        <Desafio100Dias />
 
         {/* Saúde dos dados (audit de coerência) — rede de segurança sempre visível */}
         <AuditPanel />

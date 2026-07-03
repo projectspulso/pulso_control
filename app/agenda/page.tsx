@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { useAgenda, type AgendaSlot } from '@/lib/hooks/use-agenda'
 import { useHorarios } from '@/lib/hooks/use-horarios'
 import { AgendaMes } from '@/components/agenda-mes'
+import { Desafio100Dias } from '@/components/desafio-100-dias'
 
 const HORARIOS = ['12:00', '18:00', '21:00']
 const DIAS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
@@ -120,6 +121,9 @@ export default function AgendaPage() {
           }
         />
         {msg && <p className="text-sm text-zinc-300">{msg}</p>}
+
+        {/* DESAFIO DOS 100 DIAS — disciplina que constrói audiência e autoridade */}
+        <Desafio100Dias />
 
         {/* OPERAÇÃO DE HOJE — checklist do ciclo diário */}
         <div className="glass rounded-2xl border border-violet-500/20 p-5">
