@@ -5,6 +5,7 @@ import { Sun, Send, CheckCircle2, AlertTriangle, Clapperboard, PackageOpen, Arro
 
 import { ErrorState } from '@/components/ui/error-state'
 import { AvisoCreditoRender } from '@/components/aviso-credito-render'
+import { ProduzirDia } from '@/components/produzir-dia'
 import { useHoje } from '@/lib/hooks/use-hoje'
 import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
 
@@ -141,6 +142,9 @@ export default function HojePage() {
             </ul>
           </div>
         )}
+
+        {/* Produzir o dia — fecha o gap do render (1 clique autoriza, sem arrastar card) */}
+        <ProduzirDia />
 
         {/* Saúde da esteira */}
         {data && (
