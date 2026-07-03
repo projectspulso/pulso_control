@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Check, ChevronDown, ChevronUp, Save, Plus, Send, ExternalLink, CheckCircle2, Smartphone } from 'lucide-react'
+import { Copy, Check, ChevronDown, ChevronUp, Save, Plus, Send, ExternalLink, Smartphone, Camera } from 'lucide-react'
 
-import { useCentralPublicacao, useSalvarPublicacao, useAtualizarNumeros, usePerfilRede, useSalvarPerfilRede, REDES_PADRAO, type PubRede, type VideoPub } from '@/lib/hooks/use-central-publicacao'
+import { useCentralPublicacao, useSalvarPublicacao, usePerfilRede, useSalvarPerfilRede, REDES_PADRAO, type PubRede, type VideoPub } from '@/lib/hooks/use-central-publicacao'
 
 // Redes 100% manuais (sem API/coletor) — o "já publicado" só entra quando você marca no app.
 const REDES_MANUAIS = new Set(['kwai'])
@@ -25,15 +25,6 @@ function BotaoCopiar({ texto }: { texto: string }) {
 function CartaoVideo({ video }: { video: VideoPub }) {
   const [aberto, setAberto] = useState(false)
   const salvar = useSalvarPublicacao()
-  const numeros = useAtualizarNumeros()
-  // números manuais por rede (views/likes) — só pra redes sem coletor (Kwai)
-  const [nums, setNums] = useState<Record<string, { views: string; likes: string }>>({})
-  const getNum = (rede: string, campo: 'views' | 'likes') => nums[rede]?.[campo] ?? ''
-  const setNum = (rede: string, campo: 'views' | 'likes', v: string) =>
-    setNums((n) => ({
-      ...n,
-      [rede]: { views: n[rede]?.views ?? '', likes: n[rede]?.likes ?? '', [campo]: v.replace(/\D/g, '') },
-    }))
   // estado editável: por rede { titulo, legenda }. inicia dos salvos ou defaults.
   const [edits, setEdits] = useState<Record<string, PubRede>>(video.publicacao)
   const [novaRede, setNovaRede] = useState('')
@@ -133,20 +124,9 @@ function CartaoVideo({ video }: { video: VideoPub }) {
                 )}
               </div>
               {REDES_MANUAIS.has(rede) && (
-                <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md bg-zinc-950/60 p-2">
-                  <input inputMode="numeric" value={getNum(rede, 'views')} onChange={(e) => setNum(rede, 'views', e.target.value)} placeholder="views"
-                    className="w-20 rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none" />
-                  <input inputMode="numeric" value={getNum(rede, 'likes')} onChange={(e) => setNum(rede, 'likes', e.target.value)} placeholder="curtidas"
-                    className="w-20 rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none" />
-                  <button
-                    onClick={() => numeros.mutate({ ideiaId: video.ideiaId, rede, views: getNum(rede, 'views') ? Number(getNum(rede, 'views')) : undefined, likes: getNum(rede, 'likes') ? Number(getNum(rede, 'likes')) : undefined })}
-                    disabled={numeros.isPending}
-                    className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
-                    title="Salva views/curtidas do app do Kwai (também marca como publicado)"
-                  >
-                    <CheckCircle2 className="h-3 w-3" /> {numeros.isPending ? 'salvando…' : 'salvar números'}
-                  </button>
-                  <span className="text-[10px] text-zinc-500">📱 números do app do Kwai</span>
+                <div className="mb-2 flex items-center gap-2 rounded-md bg-cyan-500/5 p-2 text-[10px] text-cyan-200/80 ring-1 ring-cyan-500/20">
+                  <Camera className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+                  <span>Métricas por <b>foto</b>: mande o print da Central de Dados do Kwai pro Claude — ele lê vídeo por vídeo e atualiza o banco. Sem digitar número.</span>
                 </div>
               )}
               {usaTitulo(rede) && (
