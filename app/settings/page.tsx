@@ -1,14 +1,23 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { usePlataformasConectadas, useAtualizarConfiguracao, useDesconectarPlataforma } from '@/lib/hooks/use-plataformas'
 import { ErrorState } from '@/components/ui/error-state'
-import { Settings as SettingsIcon, Database, Key, Bell, Save, Check, X, Loader2, ExternalLink } from 'lucide-react'
+import { Settings as SettingsIcon, Database, Key, Bell, Save, Check, X, Loader2, ExternalLink, Tv, Plug, Zap, Wallet } from 'lucide-react'
+
+const GESTAO = [
+  { href: '/canais', icon: Tv, nome: 'Canais', desc: 'Contas e verticais de conteúdo' },
+  { href: '/integracoes', icon: Plug, nome: 'Integrações', desc: 'APIs, tokens e webhooks' },
+  { href: '/automacao', icon: Zap, nome: 'Automação', desc: 'Crons e pipeline AI' },
+  { href: '/financeiro', icon: Wallet, nome: 'Financeiro', desc: 'Custos e caminho da receita' },
+]
 
 export default function SettingsPage() {
   const { data: plataformas, isLoading: loadingPlataformas, isError, refetch } = usePlataformasConectadas()
   const atualizarConfig = useAtualizarConfiguracao()
   const desconectar = useDesconectarPlataforma()
+  const [aba, setAba] = useState<'gestao' | 'sistema'>('gestao')
 
   const plataformasConectadas = plataformas?.filter(p => p.tem_credenciais) || []
   const plataformasNaoConectadas = plataformas?.filter(p => !p.tem_credenciais) || []
@@ -37,9 +46,33 @@ export default function SettingsPage() {
               ⚙️ Configurações
             </h1>
           </div>
-          <p className="text-zinc-400">Gerencie integrações e preferências</p>
+          <p className="text-zinc-400">Gestão do PULSO + integrações e preferências</p>
         </div>
 
+        {/* Abas: Gestão × Sistema */}
+        <div className="mb-6 flex w-fit gap-1 rounded-xl bg-zinc-900/60 p-1">
+          <button type="button" onClick={() => setAba('gestao')} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${aba === 'gestao' ? 'bg-purple-600 text-white' : 'text-zinc-400 hover:text-white'}`}>🗂️ Gestão</button>
+          <button type="button" onClick={() => setAba('sistema')} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${aba === 'sistema' ? 'bg-purple-600 text-white' : 'text-zinc-400 hover:text-white'}`}>⚙️ Sistema</button>
+        </div>
+
+        {aba === 'gestao' && (
+        <div className="mb-2">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {GESTAO.map((c) => {
+              const Icon = c.icon
+              return (
+                <Link key={c.href} href={c.href} className="group glass rounded-xl border border-zinc-800/50 p-5 transition-all hover:-translate-y-0.5 hover:border-purple-500/40">
+                  <Icon className="h-6 w-6 text-purple-400" />
+                  <h3 className="mt-3 font-bold text-white group-hover:text-purple-300">{c.nome}</h3>
+                  <p className="text-xs text-zinc-500">{c.desc}</p>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+        )}
+
+        {aba === 'sistema' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Supabase */}
           <div className="glass border border-zinc-800/50 rounded-xl p-6 hover:border-purple-500/30 transition-all animate-fade-in">
@@ -147,6 +180,7 @@ export default function SettingsPage() {
           </span>
         </div>
       </div>
+        )}
       </div>
     </div>
   )

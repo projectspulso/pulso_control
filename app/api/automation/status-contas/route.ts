@@ -17,6 +17,7 @@ export async function GET() {
     instagram: { seguidores: null },
     facebook: { seguidores: null },
     tiktok: { seguidores: null },
+    kwai: { seguidores: null },
   }
   const avisos: string[] = []
 
@@ -102,6 +103,22 @@ export async function GET() {
     }
   } catch (e) {
     avisos.push(`tiktok: ${e instanceof Error ? e.message : 'erro'}`)
+  }
+
+  // Kwai — sem API pública; seguidores vêm do lançamento manual (config kwai_perfil)
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = getSupabaseAdminClient() as any
+    const { data: cfg } = await supabase
+      .schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'kwai_perfil').single()
+    if (cfg?.valor) {
+      const perfil = typeof cfg.valor === 'string' ? JSON.parse(cfg.valor) : cfg.valor
+      if (typeof perfil?.seguidores === 'number') {
+        contas.kwai = { seguidores: perfil.seguidores, detalhe: `${perfil.curtidas ?? 0} curtidas · manual` }
+      }
+    }
+  } catch (e) {
+    avisos.push(`kwai: ${e instanceof Error ? e.message : 'erro'}`)
   }
 
   return NextResponse.json({ contas, avisos, coletado_em: new Date().toISOString() })

@@ -21,6 +21,7 @@ import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
 import { PageHeader } from '@/components/layout/page-header'
 import { KitPublicacao } from '@/components/kit-publicacao'
+import { CockpitDia } from '@/components/cockpit-dia'
 import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { useAgendarPublicacao, useConteudosProntos } from '@/lib/hooks/use-calendario'
 import { usePublicar } from '@/lib/hooks/use-automation'
@@ -69,6 +70,7 @@ export default function PublicarPage() {
   const agendarPublicacao = useAgendarPublicacao()
   const apr = useAprendizados()
 
+  const [aba, setAba] = useState<'plano' | 'fila'>('plano')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [mostrarModalAgendar, setMostrarModalAgendar] = useState(false)
   const [mostrarModalPublicar, setMostrarModalPublicar] = useState(false)
@@ -341,9 +343,26 @@ export default function PublicarPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        {/* Header + abas: Plano do dia (cockpit) × Fila de publicação */}
+        <div>
+          <div className="mb-2 flex items-center gap-3">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-violet-500" />
+            <h1 className="bg-linear-to-r from-violet-400 to-purple-400 bg-clip-text text-3xl sm:text-4xl font-black text-transparent">Central de Publicação</h1>
+          </div>
+          <p className="text-zinc-400">Plano do dia e fila de publicação assistida.</p>
+        </div>
+        <div className="flex w-fit gap-1 rounded-xl bg-zinc-900/60 p-1">
+          <button type="button" onClick={() => setAba('plano')} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${aba === 'plano' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-white'}`}>📅 Plano do dia</button>
+          <button type="button" onClick={() => setAba('fila')} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${aba === 'fila' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-white'}`}>📤 Fila de publicação</button>
+        </div>
+
+        {aba === 'plano' && <CockpitDia mostrarLinkPublicar={false} />}
+
+        {aba === 'fila' && (
+        <div className="space-y-8">
         <PageHeader
-          titulo="Publicacao Assistida"
+          titulo="Fila de publicação"
           subtitulo={`${totalConteudos} conteudo(s) pronto(s) para envio a fila assistida`}
           acoes={
             selecionados.size > 0 ? (
@@ -733,6 +752,8 @@ export default function PublicarPage() {
               </div>
             </div>
           </div>
+        )}
+        </div>
         )}
       </div>
     </div>

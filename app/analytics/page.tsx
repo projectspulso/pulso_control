@@ -765,27 +765,72 @@ export default function AnalyticsPage() {
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {GATES_MONETIZACAO.map((g) => {
               const atual = statusContas?.contas?.[g.plataforma]?.seguidores ?? null
-              const pct = atual === null ? 0 : Math.min(100, (atual / g.metaSeguidores) * 100)
+              const pr = porRede.find((x) => x.rede === g.plataforma)
+              const media = pr && pr.posts ? Math.round(pr.views / pr.posts) : null
+              // gate efetivo = o atalho (ex.: Kwai Lives a 100) se ainda não batido, senão o principal
+              const usaAtalho = !!g.gateRapido && atual !== null && atual < g.gateRapido.meta
+              const metaEfetiva = usaAtalho ? g.gateRapido!.meta : g.metaSeguidores
+              const pct = atual === null ? 0 : Math.min(100, (atual / metaEfetiva) * 100)
+              const faltam = atual === null ? null : Math.max(0, metaEfetiva - atual)
+              const pctSec = g.metaSecundariaNum && pr ? Math.min(100, (pr.views / g.metaSecundariaNum) * 100) : null
               return (
-                <div key={g.plataforma} className="rounded-xl bg-zinc-900/60 p-4">
+                <div key={g.plataforma} className="rounded-xl border border-zinc-800/60 bg-zinc-900/60 p-4">
                   <div className="flex items-baseline justify-between">
                     <p className="text-sm font-semibold text-zinc-200">
-                      {g.label} <span className="font-normal text-zinc-500">· {g.programa}</span>
+                      {g.emoji} {g.label} <span className="font-normal text-zinc-500">· {g.programa}</span>
                     </p>
                     <p className="text-sm font-bold tabular-nums text-white">
                       {atual === null ? '—' : n(atual)}
-                      <span className="font-normal text-zinc-500"> / {n(g.metaSeguidores)}</span>
+                      <span className="font-normal text-zinc-500"> / {n(metaEfetiva)}</span>
                     </p>
                   </div>
-                  <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-zinc-800">
+
+                  {/* gate 1 — seguidores (ou atalho) */}
+                  <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-500">
+                    <span>{usaAtalho ? `⚡ ${g.gateRapido!.label}` : 'seguidores → 1º gate'}</span>
+                    <span className={pct >= 100 ? 'font-semibold text-emerald-400' : ''}>
+                      {pct >= 100 ? '✅ batido' : faltam !== null ? `faltam ${n(faltam)}` : '—'}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-zinc-800">
                     <div
-                      className={`h-full rounded-full ${pct >= 100 ? 'bg-linear-to-r from-green-500 to-emerald-400' : 'bg-linear-to-r from-amber-500 to-orange-500'}`}
+                      className={`h-full rounded-full ${pct >= 100 ? 'bg-linear-to-r from-green-500 to-emerald-400' : usaAtalho ? 'bg-linear-to-r from-orange-400 to-pink-500' : 'bg-linear-to-r from-amber-500 to-orange-500'}`}
                       style={{ width: `${Math.max(1.5, pct)}%` }}
                     />
                   </div>
-                  <p className="mt-2 text-xs text-zinc-500">
-                    {pct >= 100 ? '✅ gate de seguidores batido! ' : `${pct.toFixed(1)}% · `}
-                    {g.metaSecundaria} · <span className="text-zinc-400">{g.recompensa}</span>
+
+                  {/* gate 2 — meta secundária (progresso quando mensurável) */}
+                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-zinc-500">
+                    <span>2º gate: {g.metaSecundaria}</span>
+                    {pctSec !== null && <span>{pctSec.toFixed(1)}%</span>}
+                  </div>
+                  {pctSec !== null && (
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                      <div className="h-full rounded-full bg-linear-to-r from-sky-600 to-cyan-400" style={{ width: `${Math.max(1, pctSec)}%` }} />
+                    </div>
+                  )}
+
+                  {/* performance real da rede */}
+                  {pr && (
+                    <div className="mt-3 grid grid-cols-3 gap-2 border-t border-white/5 pt-3 text-center">
+                      <div>
+                        <div className="text-sm font-bold tabular-nums text-white">{n(pr.views)}</div>
+                        <div className="text-[10px] text-zinc-500">alcance</div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold tabular-nums text-white">{media !== null ? n(media) : '—'}</div>
+                        <div className="text-[10px] text-zinc-500">média/post</div>
+                      </div>
+                      <div>
+                        <div className={`text-sm font-bold tabular-nums ${pr.ressonancia >= 4 ? 'text-emerald-400' : 'text-white'}`}>{pr.ressonancia.toFixed(1)}%</div>
+                        <div className="text-[10px] text-zinc-500">engaja</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* alavanca — o que melhorar */}
+                  <p className="mt-3 rounded-lg bg-violet-500/5 p-2 text-[11px] leading-snug text-violet-200/90">
+                    ⚡ <b>Alavanca:</b> {g.alavanca}
                   </p>
                 </div>
               )

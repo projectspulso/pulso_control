@@ -97,8 +97,8 @@ export default function ValidacaoPage() {
     <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-8">
         <PageHeader
-          titulo="Validação · Aderência"
-          subtitulo={`Números reais das 4 redes — todas coletadas automaticamente (YouTube, Instagram, Facebook e TikTok via APIs oficiais).${
+          titulo="Aderência"
+          subtitulo={`Números reais das redes — coletados automaticamente (YouTube, Instagram, Facebook e TikTok via APIs oficiais).${
             data.ultimaColeta ? ` Última coleta: ${new Date(data.ultimaColeta).toLocaleString('pt-BR')}` : ''
           }`}
           acoes={

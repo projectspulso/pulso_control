@@ -8,9 +8,9 @@ import {
   AudioLines,
   BarChart3,
   CalendarDays,
-  Wallet,
   Clapperboard,
   FileEdit,
+  GraduationCap,
   LayoutDashboard,
   Lightbulb,
   LogOut,
@@ -18,14 +18,10 @@ import {
   Send,
   Settings,
   Sparkles,
-  Sun,
   Target,
   TrendingUp,
-  Tv,
-  Plug,
   Library,
   X,
-  Zap,
 } from 'lucide-react'
 
 import { getSupabaseBrowser } from '@/lib/supabase/browser'
@@ -33,22 +29,19 @@ import { useUsuario } from '@/lib/hooks/use-usuario'
 import { areaFor } from '@/lib/config/areas'
 
 const navigation = [
-  { name: 'Hoje', href: '/hoje', icon: Sun, badge: 'ai', soAdmin: false },
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, badge: null, soAdmin: false },
-  { name: 'Validacao', href: '/validacao', icon: Target, badge: 'mvp', soAdmin: false },
-  { name: 'Ideias', href: '/ideias', icon: Lightbulb, badge: null, soAdmin: false },
+  { name: 'Aderência', href: '/validacao', icon: Target, badge: 'mvp', soAdmin: false },
   { name: 'Trend Tops', href: '/trends', icon: TrendingUp, badge: 'ai', soAdmin: false },
+  { name: 'Ideias', href: '/ideias', icon: Lightbulb, badge: null, soAdmin: false },
   { name: 'Roteiros', href: '/roteiros', icon: FileEdit, badge: null, soAdmin: false },
   { name: 'Áudios', href: '/audios', icon: AudioLines, badge: null, soAdmin: false },
-  { name: 'Producao', href: '/producao', icon: Clapperboard, badge: null, soAdmin: false },
-  { name: 'Publicar', href: '/publicar', icon: Send, badge: null, soAdmin: false },
-  { name: 'Agenda', href: '/agenda', icon: CalendarDays, badge: null, soAdmin: false },
-  { name: 'Automacao', href: '/automacao', icon: Zap, badge: 'ai', soAdmin: false },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null, soAdmin: false },
-  { name: 'Financeiro', href: '/financeiro', icon: Wallet, badge: null, soAdmin: true },
-  { name: 'Canais', href: '/canais', icon: Tv, badge: null, soAdmin: false },
-  { name: 'Integracoes', href: '/integracoes', icon: Plug, badge: null, soAdmin: false },
   { name: 'Assets', href: '/assets', icon: Library, badge: null, soAdmin: false },
+  { name: 'Produção', href: '/producao', icon: Clapperboard, badge: null, soAdmin: false },
+  { name: 'Agenda', href: '/agenda', icon: CalendarDays, badge: null, soAdmin: false },
+  { name: 'Central de Publicação', href: '/publicar', icon: Send, badge: 'ai', soAdmin: false },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null, soAdmin: false },
+  { name: 'Aprendizado', href: '/aprendizado', icon: GraduationCap, badge: 'ai', soAdmin: false },
+  { name: 'Configurações', href: '/settings', icon: Settings, badge: null, soAdmin: false },
 ]
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
