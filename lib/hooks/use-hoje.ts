@@ -17,6 +17,7 @@ export interface ItemPronto {
   videoUrl: string | null
   pipelineId: string
   caption: string | null
+  notaHook: number | null
 }
 
 export interface PublicadoHoje {
@@ -43,7 +44,7 @@ export function useHoje() {
     queryKey: ['hoje'],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const [ppRes, ideiasRes, canaisRes, metRes] = await Promise.all([
+      const [ppRes, ideiasRes, canaisRes, metRes, rotRes] = await Promise.all([
         supabase.schema('pulso_content').from('pipeline_producao').select('id, ideia_id, status, metadata'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
         supabase.schema('pulso_core').from('canais').select('id, nome'),
@@ -52,12 +53,18 @@ export function useHoje() {
           .from('metricas_publicacao')
           .select('ideia_id, plataforma, data_publicacao')
           .gte('data_publicacao', HOJE_ISO()),
+        supabase.schema('pulso_content').from('roteiros').select('ideia_id, nota_hook'),
       ])
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ideiaMap = new Map<string, any>((ideiasRes.data || []).map((i: any) => [i.id, i]))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const canalNome = new Map<string, string>((canaisRes.data || []).map((c: any) => [c.id, c.nome]))
+      // nota_hook por ideia (a força do gancho segue do roteiro até a ordem de publicação)
+      const notaHookMap = new Map<string, number>()
+      for (const r of (rotRes.data || []) as { ideia_id: string; nota_hook: number | null }[]) {
+        if (r.ideia_id && typeof r.nota_hook === 'number' && !notaHookMap.has(r.ideia_id)) notaHookMap.set(r.ideia_id, r.nota_hook)
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pp = (ppRes.data || []) as any[]
 
@@ -74,9 +81,11 @@ export function useHoje() {
             videoUrl: p.metadata?.video_url ?? null,
             pipelineId: p.id,
             caption: p.metadata?.caption ?? null,
+            notaHook: notaHookMap.get(p.ideia_id) ?? null,
           }
         })
-        .sort((a, b) => (a.numero ?? 999) - (b.numero ?? 999))
+        // gancho mais forte publica primeiro; empate mantém a ordem do número
+        .sort((a, b) => (b.notaHook ?? 0) - (a.notaHook ?? 0) || (a.numero ?? 999) - (b.numero ?? 999))
 
       // já publicado hoje (agrupado por ideia)
       const porIdeia = new Map<string, Set<string>>()

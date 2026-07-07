@@ -14,7 +14,7 @@ import { FilaProducao } from '@/components/fila-producao'
 import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { Calendar, Clock, Film, User } from 'lucide-react'
 import Link from 'next/link'
-import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
+import { useAprendizados, REDE_LABEL, REDE_EMOJI, corNota5 } from '@/lib/hooks/use-aprendizados'
 import { AvisoCreditoRender } from '@/components/aviso-credito-render'
 
 const COLUNAS: { id: StatusProducao; titulo: string; cor: string }[] = [
@@ -118,7 +118,16 @@ function CardConteudo({ conteudo, destacado, onAcao, processando }: CardProps) {
           }`}>
             P{conteudo.prioridade}
           </span>
-          
+
+          {conteudo.nota_hook != null && (
+            <span
+              className={`px-2 py-0.5 rounded text-xs font-bold ring-1 ${corNota5(conteudo.nota_hook)}`}
+              title="Nota do gancho do roteiro (1-5) — segue do roteiro até a publicação"
+            >
+              ★{conteudo.nota_hook}
+            </span>
+          )}
+
           {conteudo.roteiro_status && (
             <span className="px-2 py-0.5 rounded text-xs bg-blue-600/20 text-blue-400">📝 {conteudo.roteiro_status}</span>
           )}

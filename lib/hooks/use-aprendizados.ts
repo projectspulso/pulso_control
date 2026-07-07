@@ -135,6 +135,14 @@ export function corNotaHook(nota: number | null | undefined): string {
   return 'bg-red-500/15 text-red-300 ring-red-500/40'
 }
 
+/** Cor do badge da nota de hook do roteiro (escala 1-5: 5 forte, 3 fraco). */
+export function corNota5(nota: number | null | undefined): string {
+  if (nota == null) return 'bg-zinc-800/60 text-zinc-500 ring-zinc-700/40'
+  if (nota >= 5) return 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30'
+  if (nota >= 4) return 'bg-amber-500/15 text-amber-300 ring-amber-500/30'
+  return 'bg-orange-500/15 text-orange-300 ring-orange-500/40'
+}
+
 /** Extrai o gancho (primeira frase) do markdown do roteiro. */
 export function extrairHook(conteudoMd: string | null | undefined): string {
   if (!conteudoMd) return ''

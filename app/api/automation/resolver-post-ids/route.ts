@@ -49,24 +49,29 @@ interface Item {
 // casa cada órfão com o melhor item disponível (guloso, sem reusar item — evita colisão)
 function casar(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  orfaos: { row: any; titulo: string }[],
+  orfaos: { row: any; texto: string }[],
   itens: Item[],
 ): { rowId: string; postId: string; url: string }[] {
   const usados = new Set<string>()
   const pares: { rowId: string; postId: string; url: string; sc: number }[] = []
   for (const o of orfaos) {
-    const toks = tokens(o.titulo)
+    const toks = tokens(o.texto)
     let melhor: Item | null = null
     let sc = 0
+    let segundo = 0 // 2º melhor score — usado pra exigir vitória CLARA (evita atribuir errado)
     for (const it of itens) {
       if (usados.has(it.id)) continue
       const s = overlap(toks, it.toks)
       if (s > sc) {
+        segundo = sc
         sc = s
         melhor = it
+      } else if (s > segundo) {
+        segundo = s
       }
     }
-    if (melhor && sc >= 2) {
+    // só casa com confiança: score forte E claramente à frente do 2º (senão deixa pro manual)
+    if (melhor && sc >= 4 && sc - segundo >= 3) {
       usados.add(melhor.id)
       pares.push({ rowId: o.row.id, postId: melhor.id, url: melhor.url, sc })
     }
@@ -136,11 +141,19 @@ async function resolver(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
 
-  const [{ data: ideias }, { data: linhas }] = await Promise.all([
+  const [{ data: ideias }, { data: linhas }, { data: roteiros }] = await Promise.all([
     supabase.schema('pulso_content').from('ideias').select('id, titulo'),
     supabase.schema('pulso_content').from('metricas_publicacao').select('id, ideia_id, plataforma, post_id, url_publicacao').in('plataforma', ['instagram', 'facebook', 'tiktok']),
+    supabase.schema('pulso_content').from('roteiros').select('ideia_id, conteudo_md'),
   ])
   const tituloDe = new Map<string, string>((ideias || []).map((i: { id: string; titulo: string }) => [i.id, i.titulo]))
+  // roteiro por ideia (conteúdo real do vídeo — de onde saem as legendas; casa muito melhor que só o título)
+  const roteiroDe = new Map<string, string>()
+  for (const r of (roteiros || []) as { ideia_id: string; conteudo_md: string }[]) {
+    if (r.ideia_id && r.conteudo_md && !roteiroDe.has(r.ideia_id)) roteiroDe.set(r.ideia_id, r.conteudo_md.slice(0, 400))
+  }
+  // texto de casamento = título + trecho do roteiro (cobre legendas reescritas na publicação manual)
+  const textoDe = (id: string) => `${tituloDe.get(id) || ''} ${roteiroDe.get(id) || ''}`
 
   // órfão = precisa de id. IG: sem post_id OU shortcode (não-numérico). FB/TikTok: sem post_id.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -151,7 +164,7 @@ async function resolver(request: NextRequest) {
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orfaos = (linhas || []).filter(precisa) as any[]
-  const porRede = (p: string) => orfaos.filter((l) => l.plataforma === p).map((row) => ({ row, titulo: tituloDe.get(row.ideia_id) || '' }))
+  const porRede = (p: string) => orfaos.filter((l) => l.plataforma === p).map((row) => ({ row, texto: textoDe(row.ideia_id) }))
 
   const igOrf = porRede('instagram')
   const fbOrf = porRede('facebook')

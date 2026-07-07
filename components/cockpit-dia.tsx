@@ -6,7 +6,7 @@ import { Send, CheckCircle2, AlertTriangle, Clapperboard, PackageOpen, ArrowRigh
 import { AvisoCreditoRender } from '@/components/aviso-credito-render'
 import { ProduzirDia } from '@/components/produzir-dia'
 import { useHoje } from '@/lib/hooks/use-hoje'
-import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
+import { useAprendizados, REDE_LABEL, REDE_EMOJI, corNota5 } from '@/lib/hooks/use-aprendizados'
 
 const REDE_ICON: Record<string, string> = { youtube: '▶️', instagram: '📸', facebook: '📘', tiktok: '🎵', kwai: '🧡' }
 
@@ -74,6 +74,14 @@ export function CockpitDia({ mostrarLinkPublicar = true }: { mostrarLinkPublicar
                   <span className="shrink-0 rounded-md bg-zinc-800/70 px-1.5 py-0.5 text-[10px] text-zinc-400">
                     {p.canalNome.replace(/^PULSO\s*/i, '')}
                   </span>
+                  {p.notaHook != null && (
+                    <span
+                      className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ${corNota5(p.notaHook)}`}
+                      title="Nota do gancho do roteiro (1-5)"
+                    >
+                      ★{p.notaHook}
+                    </span>
+                  )}
                   <span
                     className="shrink-0 rounded-md bg-teal-500/10 px-2 py-0.5 text-[11px] font-semibold text-teal-300 ring-1 ring-teal-500/25"
                     title="Rede que mais entrega pra esse canal"

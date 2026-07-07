@@ -30,6 +30,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { AuditPanel } from '@/components/audit-panel'
 import { Desafio100Dias } from '@/components/desafio-100-dias'
 import { HorariosPanel } from '@/components/horarios-panel'
+import { NotaVsViewsPanel } from '@/components/nota-vs-views-panel'
 import { ASSINATURAS_MENSAIS_BRL, CUSTO_POR_VIDEO } from '@/lib/config/custos'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
 import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
@@ -1344,6 +1345,9 @@ export default function AnalyticsPage() {
             </div>
           </div>
         )}
+
+        {/* ABA: CONTEÚDO — a nota do gancho prevê o viral? */}
+        {aba === 'conteudo' && <NotaVsViewsPanel />}
 
         {/* ABA: FINANCEIRO — detalhamento de custos */}
         {aba === 'financeiro' && (

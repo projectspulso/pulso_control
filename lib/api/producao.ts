@@ -24,6 +24,9 @@ export interface ConteudoProducao {
   data_prevista: string | null
   data_publicacao_planejada: string | null
   
+  // Qualidade
+  nota_hook: number | null
+
   // Prioridade e metadata
   prioridade: number
   metadata: any
@@ -51,7 +54,8 @@ export async function getAll() {
       roteiros:roteiro_id (
         id,
         titulo,
-        status
+        status,
+        nota_hook
       )
     `)
     .order('prioridade', { ascending: false })
@@ -71,6 +75,7 @@ export async function getAll() {
       
       ideia: ideiaData?.titulo || 'Sem título',
       roteiro: roteiroData?.titulo || null,
+      nota_hook: roteiroData?.nota_hook ?? null,
       canal: item.metadata?.canal_nome || 'Sem canal',
       serie: item.metadata?.serie_nome || '',
       
@@ -111,7 +116,8 @@ export async function getByStatus(status: string) {
       roteiros:roteiro_id (
         id,
         titulo,
-        status
+        status,
+        nota_hook
       )
     `)
     .eq('status', status)
@@ -130,6 +136,7 @@ export async function getByStatus(status: string) {
       
       ideia: ideiaData?.titulo || 'Sem título',
       roteiro: roteiroData?.titulo || null,
+      nota_hook: roteiroData?.nota_hook ?? null,
       canal: item.metadata?.canal_nome || 'Sem canal',
       serie: item.metadata?.serie_nome || '',
       

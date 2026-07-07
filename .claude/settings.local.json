@@ -4,7 +4,9 @@
       "Bash(npm view *)",
       "Bash(npx --yes skills@latest --help)",
       "Bash(npx --yes skills@latest add higgsfield-ai/skills -l)",
-      "Bash(npx --yes skills@latest add higgsfield-ai/skills --all)"
+      "Bash(npx --yes skills@latest add higgsfield-ai/skills --all)",
+      "mcp__90582afd-1ceb-4ebd-af94-0643a3ac3bd7__execute_sql",
+      "mcp__90582afd-1ceb-4ebd-af94-0643a3ac3bd7__list_projects"
     ]
   },
   "enableAllProjectMcpServers": true,

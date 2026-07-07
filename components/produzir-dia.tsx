@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Factory, AlertTriangle, CheckCircle2, Loader2, Clapperboard } from 'lucide-react'
+import { corNota5 } from '@/lib/hooks/use-aprendizados'
 
 interface Item {
   id: string
@@ -12,6 +13,7 @@ interface Item {
   canal: string
   tier: number
   cenas: number
+  notaHook: number | null
 }
 interface Preview {
   alvo: number
@@ -118,6 +120,9 @@ export function ProduzirDia() {
             {data.loteSugerido.map((c) => (
               <div key={c.id} className="flex items-center gap-2 rounded-lg bg-zinc-900/60 px-3 py-1.5 text-sm">
                 <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${c.tier === 1 ? 'bg-emerald-500/15 text-emerald-300' : c.tier === 3 ? 'bg-zinc-700/40 text-zinc-400' : 'bg-blue-500/15 text-blue-300'}`}>T{c.tier}</span>
+                {c.notaHook != null && (
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ring-1 ${corNota5(c.notaHook)}`} title="Nota do gancho (1-5) — define a ordem do render">★{c.notaHook}</span>
+                )}
                 <span className="shrink-0 text-xs text-zinc-500">{c.canal}</span>
                 <span className="truncate text-zinc-200">{c.titulo}</span>
                 <span className="ml-auto shrink-0 text-[11px] text-zinc-600">{c.cenas} cenas</span>

@@ -29,11 +29,14 @@ export interface ConteudoProducao {
   
   // Flags
   is_piloto: boolean
-  
+
   // Datas
   data_prevista: string | null
   data_publicacao_planejada: string | null
-  
+
+  // Qualidade
+  nota_hook: number | null
+
   // Prioridade e metadata
   prioridade: number
   metadata: any

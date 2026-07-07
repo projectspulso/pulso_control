@@ -42,20 +42,27 @@ interface Candidato {
   canal: string
   tier: number
   cenas: number
+  notaHook: number | null
 }
 
 async function levantar() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
-  const [{ data: pipe }, { data: ideias }, { data: canais }] = await Promise.all([
+  const [{ data: pipe }, { data: ideias }, { data: canais }, { data: roteiros }] = await Promise.all([
     supabase.schema('pulso_content').from('pipeline_producao').select('id, ideia_id, status, metadata'),
     supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
     supabase.schema('pulso_core').from('canais').select('id, nome'),
+    supabase.schema('pulso_content').from('roteiros').select('ideia_id, nota_hook'),
   ])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ide = new Map<string, any>((ideias || []).map((i: any) => [i.id, i]))
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cn = new Map<string, string>((canais || []).map((c: any) => [c.id, (c.nome || '').replace(/^PULSO\s*/i, '')]))
+  // nota_hook por ideia (a força do gancho viaja do roteiro até a decisão de render)
+  const nh = new Map<string, number>()
+  for (const r of (roteiros || []) as { ideia_id: string; nota_hook: number | null }[]) {
+    if (r.ideia_id && typeof r.nota_hook === 'number' && !nh.has(r.ideia_id)) nh.set(r.ideia_id, r.nota_hook)
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pp = (pipe || []) as any[]
 
@@ -70,10 +77,13 @@ async function levantar() {
       canal,
       tier: tier(canal),
       cenas: p.metadata?.cenas?.scenes?.length ?? 0,
+      notaHook: nh.get(p.ideia_id) ?? null,
     }
   }
 
-  const ordenar = (a: Candidato, b: Candidato) => a.tier - b.tier || (a.numero ?? 999) - (b.numero ?? 999)
+  // prioridade: gancho mais forte primeiro (nota_hook desc), depois tier do vertical, depois número
+  const ordenar = (a: Candidato, b: Candidato) =>
+    (b.notaHook ?? 0) - (a.notaHook ?? 0) || a.tier - b.tier || (a.numero ?? 999) - (b.numero ?? 999)
 
   const prontosParaAutorizar = pp.filter((p) => p.status === 'AUDIO_GERADO' && temCenas(p)).map(mapCand).sort(ordenar)
   const semCenas = pp.filter((p) => p.status === 'AUDIO_GERADO' && !temCenas(p)).map(mapCand).sort(ordenar)
