@@ -184,7 +184,7 @@ async function resolver(request: NextRequest) {
     const { error } = await supabase
       .schema('pulso_content')
       .from('metricas_publicacao')
-      .update({ post_id: p.postId, url_publicacao: p.url, updated_at: agora })
+      .update({ post_id: p.postId, url_publicacao: p.url, ultima_atualizacao: agora })
       .eq('id', p.rowId)
     if (!error) resolvidos++
   }

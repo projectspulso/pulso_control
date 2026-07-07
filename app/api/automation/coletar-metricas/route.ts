@@ -100,22 +100,26 @@ async function coletar(request: NextRequest) {
   const ytStats = new Map<string, { views: number; likes: number; comentarios: number }>()
   const ytIds = publicacoes.filter((p) => p.plataforma === 'youtube' && p.post_id).map((p) => p.post_id as string)
   if (ytIds.length > 0 && process.env.YOUTUBE_API_KEY) {
-    const url = new URL('https://www.googleapis.com/youtube/v3/videos')
-    url.searchParams.set('part', 'statistics')
-    url.searchParams.set('id', ytIds.join(','))
-    url.searchParams.set('key', process.env.YOUTUBE_API_KEY)
-    const resp = await fetch(url.toString())
-    if (resp.ok) {
-      const data = await resp.json()
-      for (const v of data.items || []) {
-        ytStats.set(v.id, {
-          views: parseInt(v.statistics?.viewCount || '0', 10),
-          likes: parseInt(v.statistics?.likeCount || '0', 10),
-          comentarios: parseInt(v.statistics?.commentCount || '0', 10),
-        })
+    // videos.list aceita no máx 50 ids por chamada — fatia em lotes (51+ dava 400 "invalid filter")
+    for (let i = 0; i < ytIds.length; i += 50) {
+      const lote = ytIds.slice(i, i + 50)
+      const url = new URL('https://www.googleapis.com/youtube/v3/videos')
+      url.searchParams.set('part', 'statistics')
+      url.searchParams.set('id', lote.join(','))
+      url.searchParams.set('key', process.env.YOUTUBE_API_KEY)
+      const resp = await fetch(url.toString())
+      if (resp.ok) {
+        const data = await resp.json()
+        for (const v of data.items || []) {
+          ytStats.set(v.id, {
+            views: parseInt(v.statistics?.viewCount || '0', 10),
+            likes: parseInt(v.statistics?.likeCount || '0', 10),
+            comentarios: parseInt(v.statistics?.commentCount || '0', 10),
+          })
+        }
+      } else {
+        avisos.push(`YouTube API ${resp.status}: ${(await resp.text()).slice(0, 200)}`)
       }
-    } else {
-      avisos.push(`YouTube API ${resp.status}: ${(await resp.text()).slice(0, 200)}`)
     }
   }
 
