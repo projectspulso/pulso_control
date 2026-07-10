@@ -25,6 +25,10 @@
       "schedule": "30 11 * * 1"
     },
     {
+      "path": "/api/automation/extrato-semanal",
+      "schedule": "15 11 * * 1"
+    },
+    {
       "path": "/api/automation/auto-audio",
       "schedule": "0 13 * * *"
     }

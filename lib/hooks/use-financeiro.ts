@@ -29,6 +29,26 @@ export interface MesResumo {
   videos?: number
 }
 
+export interface ExtratoAgente {
+  servico: string
+  agente: string
+  brl: number
+  creditos: number
+  lancamentos: number
+}
+export interface ExtratoSemana {
+  semana: string
+  periodo: string
+  gerado_em?: string
+  consumoTotalBRL: number
+  recargasBRL: number
+  assinaturasMensalBRL: number
+  videosProduzidos: number
+  custoMedioVideoBRL: number
+  saldoHiggsfield: { creditos: number; snapshot_em?: string } | null
+  porAgente: ExtratoAgente[]
+}
+
 export interface FinanceiroData {
   lancamentos: Lancamento[]
   travas: Travas | null
@@ -40,6 +60,22 @@ export interface FinanceiroData {
   caixaMesBRL: number
   gastoPorServico: { servico: string; brl: number }[]
   porMes: MesResumo[]
+  /** extratos semanais persistidos (gerados toda segunda pelo cron) */
+  extratoSemanal: ExtratoSemana[]
+  /** consumo da semana em curso, calculado ao vivo (parcial) */
+  semanaAtual: { periodo: string; consumoBRL: number; porAgente: { servico: string; brl: number }[] }
+}
+
+const AGENTE_LABEL: Record<string, string> = {
+  higgsfield: 'Higgsfield (vídeo/Veo)',
+  elevenlabs: 'ElevenLabs (voz)',
+  openai: 'OpenAI (roteiro/legenda)',
+}
+function segundaDaSemana(d: Date): string {
+  const x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+  const dow = x.getUTCDay() === 0 ? 7 : x.getUTCDay()
+  x.setUTCDate(x.getUTCDate() - (dow - 1))
+  return x.toISOString().slice(0, 10)
 }
 
 export function useFinanceiro() {
@@ -109,6 +145,23 @@ export function useFinanceiro() {
       }
       const porMes = [...meses.values()].sort((a, b) => a.mes.localeCompare(b.mes))
 
+      // semana em curso (ao vivo): consumo desde a segunda-feira desta semana
+      const segISO = segundaDaSemana(new Date())
+      const porAgSemana = new Map<string, number>()
+      for (const l of producao) {
+        if (l.data < segISO || l.data > hoje) continue
+        porAgSemana.set(l.servico, (porAgSemana.get(l.servico) || 0) + l.brl)
+      }
+      const semanaAtual = {
+        periodo: `${segISO} a ${hoje}`,
+        consumoBRL: [...porAgSemana.values()].reduce((a, b) => a + b, 0),
+        porAgente: [...porAgSemana.entries()]
+          .map(([servico, brl]) => ({ servico: AGENTE_LABEL[servico] || servico, brl: Math.round(brl * 100) / 100 }))
+          .sort((a, b) => b.brl - a.brl),
+      }
+
+      const extratoSemanal: ExtratoSemana[] = Array.isArray(cfgRes?.extratoSemanal) ? cfgRes.extratoSemanal : []
+
       return {
         lancamentos,
         travas,
@@ -119,6 +172,8 @@ export function useFinanceiro() {
         gastoMesBRL,
         caixaMesBRL,
         porMes,
+        extratoSemanal,
+        semanaAtual,
         gastoPorServico: [...porServico.entries()]
           .map(([servico, brl]) => ({ servico, brl }))
           .sort((a, b) => b.brl - a.brl),
