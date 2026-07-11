@@ -1,10 +1,8 @@
 import type { MetadataRoute } from 'next'
 
-import { SITE_URL } from '@/lib/hub/data'
-
+// App interno (login-gated). O hub público de vídeos foi pra fora: https://pulsohub.vercel.app
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [{ userAgent: '*', allow: ['/hub', '/v/'], disallow: ['/api/'] }],
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    rules: [{ userAgent: '*', disallow: '/' }],
   }
 }

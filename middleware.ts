@@ -49,7 +49,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // tudo, EXCETO: api, _next, estáticos, termos/privacidade (TikTok), hub público (v/ e hub), manifest/ícones
-    '/((?!api|_next/static|_next/image|favicon.ico|termos|privacidade|v/|hub|sitemap.xml|robots.txt|manifest.json|icons|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)',
+    // tudo, EXCETO: api, _next, estáticos, termos/privacidade (TikTok), robots, manifest/ícones
+    // (o hub público — /hub e /v/ — foi movido pra https://pulsohub.vercel.app)
+    '/((?!api|_next/static|_next/image|favicon.ico|termos|privacidade|robots.txt|manifest.json|icons|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)',
   ],
 }

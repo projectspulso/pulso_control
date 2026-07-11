@@ -29,9 +29,10 @@ function CartaoVideo({ video }: { video: VideoPub }) {
   const [edits, setEdits] = useState<Record<string, PubRede>>(video.publicacao)
   const [novaRede, setNovaRede] = useState('')
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const hubUrl = origin && video.numero != null ? `${origin}/v/${video.numero}` : ''
-  const hubHome = origin ? `${origin}/hub` : ''
+  // hub público (Netflix dos vídeos) mora fora do app agora:
+  const HUB_EXTERNO = 'https://pulsohub.vercel.app'
+  const hubUrl = video.numero != null ? `${HUB_EXTERNO}/v/${video.numero}` : HUB_EXTERNO
+  const hubHome = HUB_EXTERNO
   const redes = Array.from(new Set([...REDES_PADRAO, ...Object.keys(video.publicacao)]))
 
   function get(rede: string, campo: 'titulo' | 'legenda'): string {
@@ -98,7 +99,7 @@ function CartaoVideo({ video }: { video: VideoPub }) {
               </div>
               <code className="block break-all text-xs text-zinc-300">{hubUrl}</code>
               <p className="mt-1.5 text-[10px] leading-relaxed text-zinc-500">
-                ✅ Cole na <b className="text-zinc-300">descrição do YouTube</b> e use o <b className="text-zinc-300">/hub na bio</b> das redes.
+                ✅ Cole na <b className="text-zinc-300">descrição do YouTube</b> e use o <b className="text-zinc-300">link do hub na bio</b> das redes (pulsohub.vercel.app).
                 ❌ Não cole em legenda de IG/TikTok/FB — não vira clicável e <b className="text-zinc-300">derruba o alcance</b> (manda pra fora da rede).
               </p>
             </div>

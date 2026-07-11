@@ -5,12 +5,11 @@ import { usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 
 const SEM_SHELL = ['/login', '/registrar']
-const SEM_SHELL_PREFIXO = ['/v/', '/hub'] // hub público (SEO) — sem o chrome do app
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  if (SEM_SHELL.includes(pathname) || SEM_SHELL_PREFIXO.some((p) => pathname === p.replace(/\/$/, '') || pathname.startsWith(p))) {
+  if (SEM_SHELL.includes(pathname)) {
     return <>{children}</>
   }
 
