@@ -34,6 +34,15 @@ export interface Desafio100 {
 function isoLocal(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+// dia de Brasília (UTC-3) a partir de um timestamp UTC — publicamos em BRT, o banco grava UTC.
+// Sem isto, post das 21h BRT (00h UTC do dia seguinte) cai no dia errado e cria gap falso.
+function diaBR(iso: string): string {
+  if (!iso) return ''
+  const t = new Date(iso)
+  if (isNaN(t.getTime())) return iso.slice(0, 10)
+  const br = new Date(t.getTime() - 3 * 3_600_000)
+  return `${br.getUTCFullYear()}-${String(br.getUTCMonth() + 1).padStart(2, '0')}-${String(br.getUTCDate()).padStart(2, '0')}`
+}
 function addDias(iso: string, n: number) {
   const d = new Date(iso + 'T12:00:00')
   d.setDate(d.getDate() + n)
@@ -68,7 +77,7 @@ export function useDesafio100() {
       const inicio = cfg.inicio
       const metaDias = cfg.meta_dias ?? 100
       const alvoDia = cfg.publicacoes_dia_alvo ?? 3
-      const hoje = isoLocal(new Date())
+      const hoje = diaBR(new Date().toISOString()) // hoje em Brasília
 
       // vídeos únicos por dia (dentro da janela do desafio)
       const videosPorDia = new Map<string, Set<string>>()
@@ -77,7 +86,7 @@ export function useDesafio100() {
       for (const m of mpRes.data || []) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mm = m as any
-        const d = (mm.data_publicacao || '').slice(0, 10)
+        const d = diaBR(mm.data_publicacao || '') // dia de Brasília, não UTC
         if (!d || d < inicio || d > hoje) continue
         if (!videosPorDia.has(d)) videosPorDia.set(d, new Set())
         if (mm.ideia_id) {
@@ -102,9 +111,12 @@ export function useDesafio100() {
       const diasComPublicacao = serie.filter((s) => s.publicou).length
       const consistencia = diasCorridos ? diasComPublicacao / diasCorridos : 0
 
-      // sequência atual (a partir de hoje pra trás)
+      // sequência atual (a partir de hoje pra trás). Se HOJE ainda não postou, não quebra o
+      // streak — hoje está "em andamento": conta a partir de ontem. Só quebra se ontem falhou.
       let sequenciaAtual = 0
-      for (let i = serie.length - 1; i >= 0; i--) {
+      let ini = serie.length - 1
+      if (ini >= 0 && !serie[ini].publicou) ini-- // pula o dia de hoje se ainda vazio
+      for (let i = ini; i >= 0; i--) {
         if (serie[i].publicou) sequenciaAtual++
         else break
       }
