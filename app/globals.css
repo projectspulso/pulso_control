@@ -246,3 +246,23 @@ body {
   background-color: rgba(168, 85, 247, 0.3);
   color: #fff;
 }
+
+/* ================================
+   HUB PÚBLICO — trilhos estilo Netflix
+   ================================ */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hero-fade {
+  background: linear-gradient(
+      77deg,
+      rgba(9, 9, 11, 0.92) 0%,
+      rgba(9, 9, 11, 0.55) 42%,
+      rgba(9, 9, 11, 0) 72%
+    ),
+    linear-gradient(0deg, #09090b 2%, rgba(9, 9, 11, 0) 45%);
+}
