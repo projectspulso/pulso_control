@@ -286,7 +286,8 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // registra a publicação (fonte da coleta de métricas)
+      // registra a publicação (fonte da coleta de métricas). metodo=api pro teste de alcance
+      // (compara segunda com o baseline manual — quem publica manual grava metodo=manual).
       await supabase.schema('pulso_content').from('metricas_publicacao').insert({
         ideia_id: item.ideia_id,
         roteiro_id: item.roteiro_id,
@@ -296,6 +297,7 @@ export async function POST(request: NextRequest) {
         data_publicacao: agora,
         hora_publicacao: horaPub,
         dia_semana: diaSemPub,
+        metadata: { metodo: 'api' },
       })
 
       resultados.push({ plataforma, status: 'PUBLICADO', url: res.url, post_id: res.post_id })

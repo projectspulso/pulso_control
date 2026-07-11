@@ -202,13 +202,11 @@ export default function PublicarPage() {
           continue
         }
 
-        // POLÍTICA 01/07: TUDO manual, MENOS TikTok (rascunho via API). O alcance dos
-        // posts via API caiu em IG/YT (como já tinha caído no FB) → volta pro manual
-        // (Business Suite / upload nativo) pra pegar alcance cheio. As APIs seguem
-        // CONFIGURADAS (tokens ativos), só não postam. TikTok continua rascunho via API
-        // (é o único caminho público + escolhe o som trending no app). Reversível: é só
-        // recolocar as redes aqui.
-        const REDES = ['tiktok']
+        // TESTE DE ALCANCE 11/07: conta aquecida (~20 dias postando) — re-testar se a API
+        // ainda estrangula. TODAS as redes via API (tagueadas metodo=api no route), compara
+        // segunda com o baseline manual. Kwai não tem API (segue manual). Reversível: é só
+        // reduzir a lista aqui (ex.: voltar pra ['tiktok'] se a API sufocar de novo).
+        const REDES = ['youtube', 'instagram', 'facebook', 'tiktok']
         const linhasRede = await Promise.all(
           REDES.map((rede) =>
             fetch('/api/automation/publicar', {
