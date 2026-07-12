@@ -202,11 +202,13 @@ export default function PublicarPage() {
           continue
         }
 
-        // TESTE DE ALCANCE 11/07: conta aquecida (~20 dias postando) — re-testar se a API
-        // ainda estrangula. TODAS as redes via API (tagueadas metodo=api no route), compara
-        // segunda com o baseline manual. Kwai não tem API (segue manual). Reversível: é só
-        // reduzir a lista aqui (ex.: voltar pra ['tiktok'] se a API sufocar de novo).
-        const REDES = ['youtube', 'instagram', 'facebook', 'tiktok']
+        // RESULTADO DO TESTE 11/07: com conta aquecida (~20 dias), YouTube e Instagram via
+        // API entregam alcance normal (YT 281, IG 117-208), mas FACEBOOK via API deu 0 nos 3
+        // — mesma página, reels published:true, só o método difere (manual 234/265 vs API 0).
+        // É política de distribuição do FB pra reels não-nativos (o IG, mesma Graph API, não
+        // tem isso). Então: YT+IG+TikTok via API, FB volta pro MANUAL (Business Suite).
+        // Reversível: re-adicionar 'facebook' aqui quando descobrirmos o que destrava.
+        const REDES = ['youtube', 'instagram', 'tiktok']
         const linhasRede = await Promise.all(
           REDES.map((rede) =>
             fetch('/api/automation/publicar', {
