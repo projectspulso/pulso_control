@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
+
+const REDES = ['youtube', 'instagram', 'facebook', 'tiktok', 'kwai'] as const
 
 /**
  * GET /api/automation/status-contas
@@ -20,6 +23,7 @@ export async function GET() {
     kwai: { seguidores: null },
   }
   const avisos: string[] = []
+  let ytViewsCanal: number | null = null
 
   const token = process.env.INSTAGRAM_ACCESS_TOKEN
   const igUserId = process.env.META_IG_USER_ID || '17841478757082171'
@@ -35,6 +39,7 @@ export async function GET() {
       const j = await fetch(url).then((r) => r.json())
       const st = j?.items?.[0]?.statistics
       if (st) {
+        ytViewsCanal = Number(st.viewCount || 0)
         contas.youtube = {
           seguidores: Number(st.subscriberCount || 0),
           detalhe: `${st.viewCount} views totais no canal`,
@@ -121,5 +126,74 @@ export async function GET() {
     avisos.push(`kwai: ${e instanceof Error ? e.message : 'erro'}`)
   }
 
-  return NextResponse.json({ contas, avisos, coletado_em: new Date().toISOString() })
+  // ── snapshot diário de seguidores + ritmo/ETA ──────────────────────────────
+  // Histórico mora em pulso_core.configuracoes['seguidores_historico'] (sem tabela nova).
+  // 1 entrada por dia; ritmo = inclinação dos últimos ~28d; ETA = faltam / ritmo.
+  type Snap = { data: string; [k: string]: number | string | null }
+  const projecao: Record<string, { porSemana: number | null; etaSemanas: number | null; gate: number }> = {}
+  let historico: Snap[] = []
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = getSupabaseAdminClient() as any
+    const hoje = new Date().toISOString().slice(0, 10)
+    const { data: cfg } = await supabase
+      .schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'seguidores_historico').maybeSingle()
+    let hist: Snap[] = []
+    if (cfg?.valor) {
+      const v = typeof cfg.valor === 'string' ? JSON.parse(cfg.valor) : cfg.valor
+      if (Array.isArray(v?.historico)) hist = v.historico
+    }
+
+    const entradaHoje: Snap = { data: hoje }
+    for (const rede of REDES) {
+      const s = contas[rede]?.seguidores
+      entradaHoje[rede] = typeof s === 'number' ? s : null
+    }
+    entradaHoje.views_canal = ytViewsCanal
+
+    // só grava se houver ao menos 1 número real (evita zerar histórico se as APIs falharem)
+    const temDado = REDES.some((r) => typeof entradaHoje[r] === 'number')
+    if (temDado) {
+      hist = hist.filter((h) => h.data !== hoje)
+      hist.push(entradaHoje)
+      hist.sort((a, b) => (a.data < b.data ? -1 : 1))
+      hist = hist.slice(-180)
+      const payload = JSON.stringify({ historico: hist })
+      const { data: upd } = await supabase
+        .schema('pulso_core').from('configuracoes').update({ valor: payload }).eq('chave', 'seguidores_historico').select('chave')
+      if (!upd || upd.length === 0) {
+        await supabase.schema('pulso_core').from('configuracoes').insert({ chave: 'seguidores_historico', valor: payload })
+      }
+    }
+    historico = hist.slice(-60)
+
+    for (const g of GATES_MONETIZACAO) {
+      const pts = hist.filter((h) => typeof h[g.plataforma] === 'number')
+      let porSemana: number | null = null
+      if (pts.length >= 2) {
+        const recentes = pts.filter((h) => (Date.now() - new Date(h.data).getTime()) / 864e5 <= 28)
+        const use = recentes.length >= 2 ? recentes : pts
+        const a = use[0]
+        const b = use[use.length - 1]
+        const dias = Math.max(1, (new Date(b.data).getTime() - new Date(a.data).getTime()) / 864e5)
+        porSemana = (((b[g.plataforma] as number) - (a[g.plataforma] as number)) / dias) * 7
+      }
+      const atual = contas[g.plataforma]?.seguidores ?? null
+      const usaAtalho = !!g.gateRapido && atual !== null && atual < g.gateRapido.meta
+      const meta = usaAtalho ? g.gateRapido!.meta : g.metaSeguidores
+      let etaSemanas: number | null = null
+      if (porSemana !== null && porSemana > 0 && atual !== null) {
+        etaSemanas = Math.ceil(Math.max(0, meta - atual) / porSemana)
+      }
+      projecao[g.plataforma] = {
+        porSemana: porSemana === null ? null : Math.round(porSemana * 10) / 10,
+        etaSemanas,
+        gate: meta,
+      }
+    }
+  } catch (e) {
+    avisos.push(`projecao: ${e instanceof Error ? e.message : 'erro'}`)
+  }
+
+  return NextResponse.json({ contas, projecao, historico, avisos, coletado_em: new Date().toISOString() })
 }

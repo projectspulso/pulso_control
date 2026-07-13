@@ -38,8 +38,15 @@ import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
 import { useDecisao } from '@/lib/hooks/use-decisao'
 import { useFinanceiro } from '@/lib/hooks/use-financeiro'
 
+interface Projecao {
+  porSemana: number | null
+  etaSemanas: number | null
+  gate: number
+}
 interface StatusContas {
   contas: Record<string, { seguidores: number | null; detalhe?: string }>
+  projecao?: Record<string, Projecao>
+  historico?: Array<{ data: string; [k: string]: number | string | null }>
 }
 
 function useStatusContas() {
@@ -48,6 +55,16 @@ function useStatusContas() {
     refetchInterval: 60 * 60 * 1000,
     queryFn: () => fetch('/api/automation/status-contas').then((r) => r.json()),
   })
+}
+
+// ETA em semanas → texto humano
+function etaLabel(eta: number | null, porSemana: number | null): string {
+  if (porSemana === null) return 'medindo ritmo…'
+  if (porSemana <= 0) return 'parado — sem ganho'
+  if (eta === null) return '—'
+  if (eta <= 8) return `~${eta} sem`
+  const meses = Math.round(eta / 4.3)
+  return `~${meses} ${meses === 1 ? 'mês' : 'meses'}`
 }
 
 const PLATAFORMAS = [
@@ -146,6 +163,35 @@ export default function AnalyticsPage() {
       .map(([rede, v]) => ({ rede, views: v.views, likes: v.likes, posts: v.videos.size, share: (v.views / total) * 100, ressonancia: v.views ? (v.likes / v.views) * 100 : 0 }))
       .sort((a, b) => b.views - a.views)
   }, [data])
+
+  // views dos posts publicados nos últimos 90 dias, por rede (proxy do 2º gate — ex.: YT 3M/90d)
+  const views90dPorRede = useMemo(() => {
+    const m = new Map<string, number>()
+    if (!data) return m
+    const limite = Date.now() - 90 * 864e5
+    for (const p of data.publicacoes) {
+      if (!p.dataPublicacao || new Date(p.dataPublicacao).getTime() < limite) continue
+      m.set(p.plataforma, (m.get(p.plataforma) || 0) + p.views)
+    }
+    return m
+  }, [data])
+
+  const gatesCalc = useMemo(() => {
+    return GATES_MONETIZACAO.map((g) => {
+      const atual = statusContas?.contas?.[g.plataforma]?.seguidores ?? null
+      const proj = statusContas?.projecao?.[g.plataforma]
+      const pr = porRede.find((x) => x.rede === g.plataforma)
+      const media = pr && pr.posts ? Math.round(pr.views / pr.posts) : null
+      const usaAtalho = !!g.gateRapido && atual !== null && atual < g.gateRapido.meta
+      const metaEfetiva = usaAtalho ? g.gateRapido!.meta : g.metaSeguidores
+      const pct = atual === null ? 0 : Math.min(100, (atual / metaEfetiva) * 100)
+      const faltam = atual === null ? null : Math.max(0, metaEfetiva - atual)
+      const v90 = views90dPorRede.get(g.plataforma) || 0
+      const pctSec = g.metaSecundariaNum ? Math.min(100, (v90 / g.metaSecundariaNum) * 100) : null
+      const conv = pr && pr.views && atual ? (atual / pr.views) * 100 : null
+      return { g, atual, proj, pr, media, usaAtalho, metaEfetiva, pct, faltam, v90, pctSec, conv }
+    })
+  }, [statusContas, porRede, views90dPorRede])
 
   // 1) Top conteúdos somando TODAS as redes (qual vídeo viralizou)
   const topConteudos = useMemo(() => {
@@ -757,88 +803,111 @@ export default function AnalyticsPage() {
         {/* ABA: FINANCEIRO — Rumo à monetização */}
         {aba === 'financeiro' && (<>
         {/* Rumo à monetização */}
+        {(() => {
+          const yt = gatesCalc.find((c) => c.g.plataforma === 'youtube')!
+          const outras = gatesCalc.filter((c) => c.g.plataforma !== 'youtube')
+          const CORES: Record<string, string> = { instagram: 'bg-pink-500', facebook: 'bg-blue-500', tiktok: 'bg-cyan-400', kwai: 'bg-orange-400' }
+          return (
         <div className="glass rounded-2xl border border-zinc-800/50 p-6">
           <div className="flex items-baseline justify-between">
             <h2 className="text-lg font-semibold text-white">🎯 Rumo à monetização</h2>
-            <span className="text-xs text-zinc-500">
-              alvo inicial = 1º gate de cada rede · plano em docs/40_PRODUTO/18_PLANO_MONETIZACAO.md
-            </span>
+            <span className="text-xs text-zinc-500">foco = YouTube · gate mais perto de virar receita</span>
           </div>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {GATES_MONETIZACAO.map((g) => {
-              const atual = statusContas?.contas?.[g.plataforma]?.seguidores ?? null
-              const pr = porRede.find((x) => x.rede === g.plataforma)
-              const media = pr && pr.posts ? Math.round(pr.views / pr.posts) : null
-              // gate efetivo = o atalho (ex.: Kwai Lives a 100) se ainda não batido, senão o principal
-              const usaAtalho = !!g.gateRapido && atual !== null && atual < g.gateRapido.meta
-              const metaEfetiva = usaAtalho ? g.gateRapido!.meta : g.metaSeguidores
-              const pct = atual === null ? 0 : Math.min(100, (atual / metaEfetiva) * 100)
-              const faltam = atual === null ? null : Math.max(0, metaEfetiva - atual)
-              const pctSec = g.metaSecundariaNum && pr ? Math.min(100, (pr.views / g.metaSecundariaNum) * 100) : null
-              return (
-                <div key={g.plataforma} className="rounded-xl border border-zinc-800/60 bg-zinc-900/60 p-4">
-                  <div className="flex items-baseline justify-between">
-                    <p className="text-sm font-semibold text-zinc-200">
-                      {g.emoji} {g.label} <span className="font-normal text-zinc-500">· {g.programa}</span>
-                    </p>
-                    <p className="text-sm font-bold tabular-nums text-white">
-                      {atual === null ? '—' : n(atual)}
-                      <span className="font-normal text-zinc-500"> / {n(metaEfetiva)}</span>
-                    </p>
-                  </div>
 
-                  {/* gate 1 — seguidores (ou atalho) */}
-                  <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-500">
-                    <span>{usaAtalho ? `⚡ ${g.gateRapido!.label}` : 'seguidores → 1º gate'}</span>
-                    <span className={pct >= 100 ? 'font-semibold text-emerald-400' : ''}>
-                      {pct >= 100 ? '✅ batido' : faltam !== null ? `faltam ${n(faltam)}` : '—'}
-                    </span>
-                  </div>
-                  <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-zinc-800">
-                    <div
-                      className={`h-full rounded-full ${pct >= 100 ? 'bg-linear-to-r from-green-500 to-emerald-400' : usaAtalho ? 'bg-linear-to-r from-orange-400 to-pink-500' : 'bg-linear-to-r from-amber-500 to-orange-500'}`}
-                      style={{ width: `${Math.max(1.5, pct)}%` }}
-                    />
-                  </div>
+          {/* faixa próximo gate */}
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+            <span className="text-zinc-500">próximo gate:</span>
+            <span className="font-medium text-white">YouTube {n(yt.metaEfetiva)} inscritos</span>
+            <span className="text-amber-400">· {yt.pct.toFixed(0)}%{yt.faltam !== null ? ` · faltam ${n(yt.faltam)}` : ''}</span>
+          </div>
 
-                  {/* gate 2 — meta secundária (progresso quando mensurável) */}
-                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-zinc-500">
-                    <span>2º gate: {g.metaSecundaria}</span>
-                    {pctSec !== null && <span>{pctSec.toFixed(1)}%</span>}
-                  </div>
-                  {pctSec !== null && (
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-800">
-                      <div className="h-full rounded-full bg-linear-to-r from-sky-600 to-cyan-400" style={{ width: `${Math.max(1, pctSec)}%` }} />
-                    </div>
-                  )}
+          {/* FEATURED — YouTube */}
+          <div className="mt-4 rounded-2xl border-2 border-rose-500/40 bg-zinc-900/60 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-base">▶️</span>
+                <span className="text-sm font-semibold text-white">YouTube</span>
+                <span className="text-[11px] text-zinc-500">· {yt.g.programa}</span>
+                <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold text-rose-300">FOCO DA SEMANA</span>
+              </div>
+              <div className="text-sm font-bold tabular-nums text-white">
+                {yt.atual === null ? '—' : n(yt.atual)}<span className="font-normal text-zinc-500"> / {n(yt.metaEfetiva)} inscritos</span>
+              </div>
+            </div>
 
-                  {/* performance real da rede */}
-                  {pr && (
-                    <div className="mt-3 grid grid-cols-3 gap-2 border-t border-white/5 pt-3 text-center">
-                      <div>
-                        <div className="text-sm font-bold tabular-nums text-white">{n(pr.views)}</div>
-                        <div className="text-[10px] text-zinc-500">alcance</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold tabular-nums text-white">{media !== null ? n(media) : '—'}</div>
-                        <div className="text-[10px] text-zinc-500">média/post</div>
-                      </div>
-                      <div>
-                        <div className={`text-sm font-bold tabular-nums ${pr.ressonancia >= 4 ? 'text-emerald-400' : 'text-white'}`}>{pr.ressonancia.toFixed(1)}%</div>
-                        <div className="text-[10px] text-zinc-500">engaja</div>
-                      </div>
-                    </div>
-                  )}
+            <div className="mt-2.5 flex items-center justify-between text-[11px] text-zinc-500">
+              <span>inscritos → 1º gate (fan funding)</span>
+              <span className={yt.pct >= 100 ? 'font-semibold text-emerald-400' : 'text-amber-400'}>
+                {yt.pct >= 100 ? '✅ batido' : yt.faltam !== null ? `faltam ${n(yt.faltam)}` : '—'}
+              </span>
+            </div>
+            <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-zinc-800">
+              <div
+                className={`h-full rounded-full ${yt.pct >= 100 ? 'bg-linear-to-r from-green-500 to-emerald-400' : 'bg-linear-to-r from-amber-500 to-orange-500'}`}
+                style={{ width: `${Math.max(1.5, yt.pct)}%` }}
+              />
+            </div>
 
-                  {/* alavanca — o que melhorar */}
-                  <p className="mt-3 rounded-lg bg-violet-500/5 p-2 text-[11px] leading-snug text-violet-200/90">
-                    ⚡ <b>Alavanca:</b> {g.alavanca}
-                  </p>
+            <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-2.5">
+                <div className="text-[10px] text-zinc-500">📈 ritmo de inscritos</div>
+                <div className="mt-0.5 text-base font-bold text-emerald-400">
+                  {yt.proj?.porSemana != null ? `${yt.proj.porSemana > 0 ? '+' : ''}${yt.proj.porSemana}` : '—'}
+                  <span className="text-[11px] font-normal text-zinc-500"> / semana</span>
                 </div>
-              )
-            })}
+                <div className="mt-0.5 text-[11px] text-zinc-400">ETA p/ {n(yt.metaEfetiva)}: {etaLabel(yt.proj?.etaSemanas ?? null, yt.proj?.porSemana ?? null)}</div>
+              </div>
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-2.5">
+                <div className="text-[10px] text-zinc-500">2º gate · views Shorts / 90d</div>
+                <div className="mt-0.5 text-base font-bold text-white">
+                  {n(yt.v90)}<span className="text-[11px] font-normal text-zinc-500"> / {n(yt.g.metaSecundariaNum || 0)}</span>
+                </div>
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                  <div className="h-full rounded-full bg-linear-to-r from-sky-600 to-cyan-400" style={{ width: `${Math.max(1, yt.pctSec || 0)}%` }} />
+                </div>
+              </div>
+            </div>
+
+            {yt.pr && (
+              <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-white/5 pt-2.5 text-center">
+                <div><div className="text-sm font-bold tabular-nums text-white">{n(yt.pr.views)}</div><div className="text-[10px] text-zinc-500">alcance</div></div>
+                <div><div className="text-sm font-bold tabular-nums text-white">{yt.media !== null ? n(yt.media) : '—'}</div><div className="text-[10px] text-zinc-500">média/post</div></div>
+                <div><div className="text-sm font-bold tabular-nums text-amber-300">{yt.conv !== null ? `${yt.conv.toFixed(1)}%` : '—'}</div><div className="text-[10px] text-zinc-500">→ inscrito</div></div>
+              </div>
+            )}
+
+            <p className="mt-2.5 rounded-lg bg-violet-500/5 p-2 text-[11px] leading-snug text-violet-200/90">
+              ⚡ <b>Alavanca:</b> {yt.g.alavanca}
+            </p>
           </div>
+
+          {/* outras 4 redes — cross-post normal, funil pro YouTube */}
+          <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+            {outras.map((c) => (
+              <div key={c.g.plataforma} className={`rounded-xl border bg-zinc-900/60 p-3 ${c.usaAtalho ? 'border-orange-500/30' : 'border-zinc-800/60'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] font-semibold text-zinc-200">{c.g.emoji} {c.g.label}</span>
+                  {c.usaAtalho ? (
+                    <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] font-semibold text-orange-300">⚡ Lives a {c.g.gateRapido!.meta}</span>
+                  ) : (
+                    <span className="text-xs font-medium tabular-nums text-zinc-300">{c.atual === null ? '—' : n(c.atual)} <span className="text-zinc-500">/ {n(c.metaEfetiva)}</span></span>
+                  )}
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                  <div className={`h-full rounded-full ${c.usaAtalho ? 'bg-linear-to-r from-orange-400 to-pink-500' : CORES[c.g.plataforma] || 'bg-zinc-500'}`} style={{ width: `${Math.max(1.5, c.pct)}%` }} />
+                </div>
+                <div className="mt-1.5 flex items-center justify-between text-[10px] text-zinc-500">
+                  <span className="truncate">{c.faltam !== null && !c.usaAtalho ? `faltam ${n(c.faltam)}` : c.g.programa}</span>
+                  {c.proj?.porSemana != null && c.proj.porSemana > 0 && <span className="shrink-0 text-emerald-400/80">+{c.proj.porSemana}/sem</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-3 text-[10px] text-zinc-600">ritmo e ETA começam a valer com 2+ dias de histórico (snapshot diário automático) · plano em docs/40_PRODUTO/18_PLANO_MONETIZACAO.md</p>
         </div>
+          )
+        })()}
 
         </>)}
 
