@@ -129,8 +129,27 @@ async function publicarYouTube(videoUrl: string, titulo: string, descricao: stri
   const vid = await fetch(videoUrl)
   if (!vid.ok) throw new Error(`Não baixei o vídeo (${vid.status})`)
   const buf = Buffer.from(await vid.arrayBuffer())
+  // Idioma pt-BR EXPLÍCITO: sem isso o YouTube auto-detecta pt-PT (Portugal) pela voz e
+  // mira o mercado errado — provável causa do alcance achatado nos uploads via API (13/07).
+  // tags = hashtags da legenda + básicos; #Shorts garante a classificação de Short.
+  const tags = [
+    ...new Set([
+      ...(descricao.match(/#([\p{L}\w]+)/gu) || []).map((h) => h.slice(1)),
+      'pulso',
+      'shorts',
+      'curiosidades',
+    ]),
+  ].slice(0, 15)
+  const desc = /#shorts/i.test(descricao) ? descricao : `${descricao}\n\n#Shorts`
   const meta = {
-    snippet: { title: titulo.slice(0, 100), description: descricao.slice(0, 4900), categoryId: '27' },
+    snippet: {
+      title: titulo.slice(0, 100),
+      description: desc.slice(0, 4900),
+      categoryId: '27',
+      defaultLanguage: 'pt-BR',
+      defaultAudioLanguage: 'pt-BR',
+      tags,
+    },
     status: { privacyStatus: 'public', selfDeclaredMadeForKids: false },
   }
   const boundary = '----pulso' + Math.random().toString(16).slice(2)
