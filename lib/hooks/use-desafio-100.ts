@@ -29,6 +29,11 @@ export interface Desafio100 {
   projecaoVideos: number // no ritmo atual, quantos vídeos até o dia 100
   projecaoViews: number
   serie: { data: string; videos: number; publicou: boolean }[] // por dia corrido (heatmap/trilha)
+  /** burn-up: acumulado REAL (por estreia) × ritmo exigido pela grade. Responde "vamos bater a meta?" */
+  burnup: { dia: number; real: number; meta: number }[]
+  metaGrade: number // diasCorridos × alvoDia
+  aderenciaGrade: number // 0..1 — vídeos distintos ÷ meta da grade
+  gapGrade: number // vídeos distintos − meta da grade (negativo = atrasado)
 }
 
 function isoLocal(d: Date) {
@@ -135,6 +140,30 @@ export function useDesafio100() {
       const ritmoVideos = videosPublicados / diaAtual
       const ritmoViews = viewsAcumuladas / diaAtual
 
+      // ── burn-up: real acumulado × ritmo da grade ──────────────────────────────
+      // ESTREIA = 1º dia (BRT) em que o vídeo saiu em QUALQUER rede. Sem isso um vídeo
+      // conta de novo quando o Kwai sai no dia seguinte, e a curva do real mente pra cima.
+      const estreia = new Map<string, string>()
+      for (const m of mpRes.data || []) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mm = m as any
+        const d = diaBR(mm.data_publicacao || '')
+        if (!d || d < inicio || d > hoje || !mm.ideia_id) continue
+        const atual = estreia.get(mm.ideia_id)
+        if (!atual || d < atual) estreia.set(mm.ideia_id, d)
+      }
+      const estreiasPorDia = new Map<string, number>()
+      for (const d of estreia.values()) estreiasPorDia.set(d, (estreiasPorDia.get(d) ?? 0) + 1)
+
+      let acc = 0
+      const burnup = serie.map((s, i) => {
+        acc += estreiasPorDia.get(s.data) ?? 0
+        return { dia: i + 1, real: acc, meta: (i + 1) * alvoDia }
+      })
+      const metaGrade = diasCorridos * alvoDia
+      const aderenciaGrade = metaGrade ? estreia.size / metaGrade : 0
+      const gapGrade = estreia.size - metaGrade
+
       return {
         inicio,
         metaDias,
@@ -153,6 +182,10 @@ export function useDesafio100() {
         projecaoVideos: Math.round(ritmoVideos * metaDias),
         projecaoViews: Math.round(ritmoViews * metaDias),
         serie,
+        burnup,
+        metaGrade,
+        aderenciaGrade,
+        gapGrade,
       }
     },
   })

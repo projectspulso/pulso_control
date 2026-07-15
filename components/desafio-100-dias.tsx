@@ -1,6 +1,7 @@
 'use client'
 
 import { Flame, Target, TrendingUp, CalendarCheck, Trophy, Eye } from 'lucide-react'
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useDesafio100 } from '@/lib/hooks/use-desafio-100'
 
 function fmt(n: number) {
@@ -89,6 +90,47 @@ export function Desafio100Dias({ variante = 'full' }: { variante?: 'full' | 'fai
           ))}
         </div>
       </div>
+
+      {/* burn-up: real × ritmo da grade. A trilha acima diz "publiquei hoje?"; este diz
+          "vamos bater a meta?" — perguntas diferentes, e só o burn-up mostra o gap. */}
+      {variante === 'full' && d.burnup.length > 1 && (
+        <div className="mt-5 rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="text-sm font-semibold text-zinc-200">Vamos bater a meta?</span>
+            <span className={`text-xs font-semibold tabular-nums ${d.gapGrade >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+              {d.gapGrade >= 0 ? `+${d.gapGrade}` : d.gapGrade} vídeos vs a grade · {Math.round(d.aderenciaGrade * 100)}%
+            </span>
+          </div>
+          <p className="mt-0.5 mb-2 text-[11px] text-zinc-500">
+            acumulado real × ritmo de {d.alvoDia}/dia · meta {d.metaGrade} até hoje
+          </p>
+          <div className="h-44 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={d.burnup} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
+                <CartesianGrid stroke="#2c2c2a" strokeDasharray="2 3" vertical={false} />
+                <XAxis dataKey="dia" tick={{ fill: '#6e6b7b', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#383835' }} />
+                <YAxis tick={{ fill: '#6e6b7b', fontSize: 10 }} tickLine={false} axisLine={false} width={40} />
+                <Tooltip
+                  contentStyle={{ background: '#1a1922', border: '1px solid rgba(255,255,255,.14)', borderRadius: 10, fontSize: 12 }}
+                  labelStyle={{ color: '#a3a0b0' }}
+                  labelFormatter={(v) => `Dia ${v}`}
+                  formatter={(v: number, n: string) => [`${v} vídeos`, n]}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, color: '#a3a0b0' }} iconType="plainline" iconSize={14} />
+                <Line type="monotone" dataKey="meta" name="ritmo da grade" stroke="#6e6b7b" strokeWidth={2} strokeDasharray="4 3" dot={false} />
+                <Line type="monotone" dataKey="real" name="real" stroke="#9085e9" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          {d.gapGrade < 0 && (
+            <p className="mt-2 text-[11px] leading-snug text-amber-200/80">
+              A consistência de {pct(d.consistencia)} mede <b className="font-semibold">&ldquo;publiquei algo hoje?&rdquo;</b> — não a grade.
+              Pela grade de {d.alvoDia}/dia estamos em <b className="font-semibold">{Math.round(d.aderenciaGrade * 100)}%</b>, projetando{' '}
+              <b className="font-semibold">{d.projecaoVideos}</b> vídeos no dia {d.metaDias} (meta {d.metaDias * d.alvoDia}).
+            </p>
+          )}
+        </div>
+      )}
 
       {variante === 'full' && (
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
