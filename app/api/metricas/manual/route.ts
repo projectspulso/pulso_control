@@ -51,6 +51,29 @@ export async function POST(request: NextRequest) {
   // Modo A) números por vídeo
   const { ideia_id, plataforma } = body
   if (!ideia_id || !plataforma) return NextResponse.json({ error: 'ideia_id e plataforma obrigatórios' }, { status: 400 })
+
+  // TRAVA (14/07): ideia SEM vídeo produzido não pode receber publicação — é logicamente
+  // impossível (o que não foi renderizado não está no ar). Sem isso, a contagem manual do
+  // Kwai (feita por foto, casando pelo NOME) grudava no rascunho errado: o #84 "O emprego que
+  // ninguém pensou que a IA poderia roubar" foi parar num rascunho de junho chamado "Você
+  // assina contratos com IA" — cujo título descrevia o conteúdo do vídeo MELHOR que o título real.
+  const { data: pipe } = await sb.schema('pulso_content').from('pipeline_producao')
+    .select('status, metadata').eq('ideia_id', ideia_id)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const produzido = (pipe || []).some((p: any) =>
+    ['PRONTO_PUBLICACAO', 'PUBLICADO'].includes(p.status) || !!(p.metadata || {}).video_url
+  )
+  if (!produzido) {
+    const { data: ide } = await sb.schema('pulso_content').from('ideias').select('titulo').eq('id', ideia_id).maybeSingle()
+    return NextResponse.json(
+      {
+        error: 'Ideia sem vídeo produzido — não pode receber publicação.',
+        ideia: ide?.titulo ?? ideia_id,
+        dica: 'Confira se o vídeo é de outra ideia. O título do rascunho costuma descrever o tema melhor que o título real do vídeo publicado — case pela THUMBNAIL/número do vídeo, não pelo nome.',
+      },
+      { status: 409 },
+    )
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const campos: Record<string, any> = { ultima_atualizacao: new Date().toISOString() }
   if (body.views != null) campos.views = Number(body.views) || 0
