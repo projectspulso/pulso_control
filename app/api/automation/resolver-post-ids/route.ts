@@ -155,11 +155,17 @@ async function resolver(request: NextRequest) {
   // texto de casamento = título + trecho do roteiro (cobre legendas reescritas na publicação manual)
   const textoDe = (id: string) => `${tituloDe.get(id) || ''} ${roteiroDe.get(id) || ''}`
 
-  // órfão = precisa de id. IG: sem post_id OU shortcode (não-numérico). FB/TikTok: sem post_id.
+  // órfão = precisa de id.
+  //  IG: sem post_id OU shortcode (não-numérico — a Graph API exige o media_id numérico).
+  //  TikTok: sem post_id OU rascunho `v_inbox_file~...` — o publish via API cria um rascunho e,
+  //    quando o vídeo é finalizado, ganha um id REAL (numérico). O rascunho engana o `!post_id`
+  //    e a linha ficava presa no id de inbox pra sempre (views zeradas). Ids reais são numéricos.
+  //  FB: sem post_id.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const precisa = (l: any) => {
     if (!l.ideia_id || !tituloDe.get(l.ideia_id)) return false
     if (l.plataforma === 'instagram') return !soDigitos(l.post_id)
+    if (l.plataforma === 'tiktok') return !soDigitos(l.post_id)
     return !l.post_id
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

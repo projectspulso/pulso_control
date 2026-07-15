@@ -35,6 +35,14 @@
     {
       "path": "/api/automation/status-contas",
       "schedule": "5 11 * * *"
+    },
+    {
+      "path": "/api/automation/reconciliar-publicacoes",
+      "schedule": "30 2 * * *"
+    },
+    {
+      "path": "/api/automation/resolver-post-ids",
+      "schedule": "40 2 * * *"
     }
   ]
 }

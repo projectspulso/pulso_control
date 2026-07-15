@@ -74,14 +74,29 @@ async function reconciliar(request: NextRequest) {
     }
   }
 
-  // 2) âncora: ideia_id -> tokens. Duas fontes por ideia (caption IG + TÍTULO da ideia),
-  //    pra o título curto do YouTube casar forte (a legenda IG sozinha casava mal).
+  const avisos: string[] = []
+
+  // 2) âncora: ideia_id -> tokens. Fontes por ideia: caption do pipeline (texto EXATO que
+  //    publicamos — a âncora mais forte), TÍTULO da ideia e caption do IG.
+  //    idsAlvo = TODA ideia com qualquer publicação. Antes era só quem tinha linha de IG,
+  //    o que criava um ovo-e-galinha: se o publish do IG morreu no timeout da Vercel, a ideia
+  //    ficava SEM âncora e os órfãos de FB/TikTok dela nunca casavam.
   const ancora: Array<{ ideia_id: string; toks: Set<string> }> = []
-  const idsAlvo = [...new Set(igRows.map((x) => x.ideia_id))]
+  const idsAlvo = [
+    ...new Set((pubs || []).map((p: { ideia_id?: string | null }) => p.ideia_id).filter(Boolean)),
+  ] as string[]
+
+  // mídias do IG: viram âncora (as já registradas) E órfão (as que faltam) — ver bloco 3
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let igMedia: any[] = []
   if (token && igUserId) {
-    const r = await fetch(`${GRAPH}/${igUserId}/media?fields=id,caption&limit=50&access_token=${token}`).then((x) => x.json()).catch(() => null)
+    const r = await fetch(`${GRAPH}/${igUserId}/media?fields=id,caption,permalink,timestamp&limit=50&access_token=${token}`)
+      .then((x) => x.json())
+      .catch(() => null)
+    if (r?.error) avisos.push(`Instagram: ${r.error.message}`)
+    igMedia = r?.data || []
     const byId = new Map(igRows.map((x) => [x.post_id, x.ideia_id]))
-    for (const m of r?.data || []) {
+    for (const m of igMedia) {
       const iid = byId.get(m.id)
       if (iid) ancora.push({ ideia_id: iid, toks: tokens(m.caption || '') })
     }
@@ -89,6 +104,12 @@ async function reconciliar(request: NextRequest) {
   if (idsAlvo.length) {
     const { data: ideias } = await supabase.schema('pulso_content').from('ideias').select('id, titulo').in('id', idsAlvo)
     for (const i of ideias || []) if (i.titulo) ancora.push({ ideia_id: i.id, toks: tokens(i.titulo) })
+    const { data: pipe } = await supabase
+      .schema('pulso_content').from('pipeline_producao').select('ideia_id, metadata').in('ideia_id', idsAlvo)
+    for (const p of (pipe || []) as Array<{ ideia_id: string; metadata: Record<string, unknown> | null }>) {
+      const cap = (p.metadata || {}).caption
+      if (p.ideia_id && cap) ancora.push({ ideia_id: p.ideia_id, toks: tokens(String(cap)) })
+    }
   }
   function casar(caption: string): { ideia_id: string | null; best: number; second: number } {
     const t = tokens(caption)
@@ -109,7 +130,18 @@ async function reconciliar(request: NextRequest) {
 
   // 3) coleta os vídeos de cada rede (cada uma isolada)
   const orfaos: Orfao[] = []
-  const avisos: string[] = []
+
+  // --- Instagram: a linha PODE faltar. O publish via Vercel estoura os 60s e morre ANTES de
+  //     gravar em metricas_publicacao — o reel fica no ar e o app nem sabe que existe.
+  //     Antes o IG era só âncora (fonte da verdade) e nunca era varrido como órfão. ---
+  for (const m of igMedia) {
+    const id = String(m.id)
+    if (registrados.has(id)) continue
+    orfaos.push({
+      plataforma: 'instagram', post_id: id, caption: m.caption || '',
+      url: m.permalink || '', data: m.timestamp || new Date().toISOString(),
+    })
+  }
 
   // --- TikTok ---
   try {
