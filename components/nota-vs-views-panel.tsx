@@ -13,9 +13,11 @@ import {
   ZAxis,
 } from 'recharts'
 import { useNotaVsViews, type PontoNota } from '@/lib/hooks/use-nota-vs-views'
-import { corNota5 } from '@/lib/hooks/use-aprendizados'
 
-const COR_NOTA: Record<number, string> = { 3: '#fb923c', 4: '#fbbf24', 5: '#34d399' }
+// Nota é ORDINAL (3 < 4 < 5): rampa de um matiz só, do fraco ao forte. Uma paleta
+// categórica (laranja/amarelo/verde) sugeria três coisas diferentes, não três degraus —
+// e ainda pintava ★5 de verde "bom", prejulgando justo o que o painel investiga.
+const COR_NOTA: Record<number, string> = { 3: '#4a4463', 4: '#6d61b0', 5: '#9085e9' }
 const n = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : String(v))
 
 /**
@@ -26,10 +28,10 @@ const n = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}
 export function NotaVsViewsPanel() {
   const { data, isLoading } = useNotaVsViews()
 
-  if (isLoading) return <div className="h-72 animate-pulse rounded-2xl bg-zinc-900/50" />
+  if (isLoading) return <div className="h-72 animate-pulse rounded-2xl bg-[#1a1922]" />
   if (!data || data.amostra < 3) {
     return (
-      <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+      <div className="rounded-2xl border border-white/8 bg-[#1a1922] p-6">
         <div className="flex items-center gap-2">
           <HelpCircle className="h-5 w-5 text-cyan-400" />
           <h2 className="text-lg font-semibold text-white">A nota prevê o viral?</h2>
@@ -46,7 +48,7 @@ export function NotaVsViewsPanel() {
   const corForte = correlacao == null ? 'text-zinc-400' : correlacao >= 0.4 ? 'text-emerald-300' : correlacao >= 0.15 ? 'text-amber-300' : 'text-red-300'
 
   return (
-    <div className="glass rounded-2xl border border-zinc-800/50 p-6">
+    <div className="rounded-2xl border border-white/8 bg-[#1a1922] p-6">
       <div className="flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-cyan-400" />
         <h2 className="text-lg font-semibold text-white">A nota prevê o viral?</h2>
@@ -54,7 +56,7 @@ export function NotaVsViewsPanel() {
       </div>
 
       {/* Veredito + correlação */}
-      <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-3">
+      <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-white/8 bg-[#232231] p-3">
         <div className="text-center">
           <div className={`text-2xl font-black tabular-nums ${corForte}`}>{correlacao == null ? '—' : correlacao.toFixed(2)}</div>
           <div className="text-[10px] uppercase tracking-wide text-zinc-500">correlação</div>
@@ -69,28 +71,28 @@ export function NotaVsViewsPanel() {
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart margin={{ top: 8, right: 12, left: 4, bottom: 8 }}>
-                <CartesianGrid stroke="#27272a" strokeDasharray="3 3" />
+                <CartesianGrid stroke="#2c2c2a" strokeDasharray="3 3" />
                 <XAxis
                   type="number"
                   dataKey="notaHook"
                   name="Nota"
                   domain={[2.5, 5.5]}
                   ticks={[3, 4, 5]}
-                  tick={{ fill: '#a1a1aa', fontSize: 12 }}
-                  label={{ value: 'nota do gancho', position: 'insideBottom', offset: -4, fill: '#71717a', fontSize: 11 }}
+                  tick={{ fill: '#6e6b7b', fontSize: 12 }}
+                  label={{ value: 'nota do gancho', position: 'insideBottom', offset: -4, fill: '#6e6b7b', fontSize: 11 }}
                 />
                 <YAxis
                   type="number"
                   dataKey="views"
                   name="Views"
-                  tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                  tick={{ fill: '#6e6b7b', fontSize: 11 }}
                   tickFormatter={n}
                   width={40}
                 />
                 <ZAxis range={[60, 60]} />
                 <Tooltip
                   cursor={{ strokeDasharray: '3 3', stroke: '#52525b' }}
-                  contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 10, color: '#fff', fontSize: 12 }}
+                  contentStyle={{ background: '#1a1922', border: '1px solid rgba(255,255,255,.14)', borderRadius: 10, color: '#fff', fontSize: 12 }}
                   formatter={(value: number | string, name: string) => [name === 'Views' ? n(Number(value)) : value, name]}
                   labelFormatter={() => ''}
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -107,7 +109,7 @@ export function NotaVsViewsPanel() {
                 />
                 <Scatter data={pontos} fillOpacity={0.85}>
                   {pontos.map((p, i) => (
-                    <Cell key={i} fill={COR_NOTA[p.notaHook] || '#a1a1aa'} />
+                    <Cell key={i} fill={COR_NOTA[p.notaHook] || '#514b63'} />
                   ))}
                 </Scatter>
               </ScatterChart>
@@ -121,11 +123,18 @@ export function NotaVsViewsPanel() {
           <div className="mt-4 space-y-3">
             {porNota.map((p) => (
               <div key={p.nota} className="flex items-center gap-3">
-                <span className={`w-9 shrink-0 rounded-md px-1.5 py-0.5 text-center text-xs font-bold ring-1 ${corNota5(p.nota)}`}>★{p.nota}</span>
-                <div className="h-6 flex-1 overflow-hidden rounded-full bg-zinc-800/80">
+                {/* rótulo direto da barra: segue a rampa dela, não o corNota5 do kanban
+                    (lá a cor é sinal de status; aqui é o mesmo degrau que a barra pinta) */}
+                <span
+                  className="w-9 shrink-0 rounded-md px-1.5 py-0.5 text-center text-xs font-bold text-white ring-1 ring-inset ring-white/10"
+                  style={{ background: `${COR_NOTA[p.nota] || '#514b63'}40` }}
+                >
+                  ★{p.nota}
+                </span>
+                <div className="h-6 flex-1 overflow-hidden rounded-full bg-[#232231]">
                   <div
                     className="h-full rounded-full"
-                    style={{ width: `${Math.max(3, Math.round((p.mediaViews / maxMedia) * 100))}%`, background: COR_NOTA[p.nota] || '#a1a1aa' }}
+                    style={{ width: `${Math.max(3, Math.round((p.mediaViews / maxMedia) * 100))}%`, background: COR_NOTA[p.nota] || '#514b63' }}
                   />
                 </div>
                 <span className="w-24 shrink-0 text-right text-sm text-zinc-200">
@@ -150,7 +159,7 @@ export function NotaVsViewsPanel() {
               <ul className="mt-2 space-y-1.5">
                 {surpresas.map((p) => (
                   <li key={p.ideiaId} className="flex items-center gap-2 text-xs">
-                    <span className="shrink-0 rounded bg-orange-500/15 px-1.5 py-0.5 font-bold text-orange-300">★{p.notaHook}</span>
+                    <span className="shrink-0 rounded bg-white/5 px-1.5 py-0.5 font-bold text-[#a3a0b0]">★{p.notaHook}</span>
                     {p.numero != null && <span className="shrink-0 text-zinc-600">#{p.numero}</span>}
                     <span className="min-w-0 flex-1 truncate text-zinc-200" title={p.titulo}>{p.titulo}</span>
                     <span className="shrink-0 font-semibold text-emerald-300">{n(p.views)}</span>
@@ -168,7 +177,7 @@ export function NotaVsViewsPanel() {
               <ul className="mt-2 space-y-1.5">
                 {decepcoes.map((p) => (
                   <li key={p.ideiaId} className="flex items-center gap-2 text-xs">
-                    <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-0.5 font-bold text-emerald-300">★{p.notaHook}</span>
+                    <span className="shrink-0 rounded bg-white/5 px-1.5 py-0.5 font-bold text-[#a3a0b0]">★{p.notaHook}</span>
                     {p.numero != null && <span className="shrink-0 text-zinc-600">#{p.numero}</span>}
                     <span className="min-w-0 flex-1 truncate text-zinc-200" title={p.titulo}>{p.titulo}</span>
                     <span className="shrink-0 font-semibold text-red-300">{n(p.views)}</span>

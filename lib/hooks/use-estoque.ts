@@ -23,9 +23,9 @@ export function useEstoquePipeline() {
     queryKey: ['estoque-pipeline'],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const [{ data: pipeline, error: e1 }, { data: planos, error: e2 }] = await Promise.all([
+      const [{ data: pipeline, error: e1 }, { data: cfgRow, error: e2 }] = await Promise.all([
         supabase.schema('pulso_content').from('pipeline_producao').select('status, data_publicacao'),
-        supabase.schema('pulso_content').from('plano_publicacao').select('intervalo_dias, ativo').eq('ativo', true),
+        supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'desafio_100').maybeSingle(),
       ])
       if (e1) throw e1
       if (e2) throw e2
@@ -37,12 +37,12 @@ export function useEstoquePipeline() {
       const publicados = porStatus('PUBLICADO')
       const agendados = porStatus('AGENDADO')
 
-      // ritmo exigido pela grade: soma de 1/intervalo de cada plano ativo (fallback: 1 vídeo/dia)
-      const ritmo =
-        planos && planos.length > 0
-          ? planos.reduce((acc, p) => acc + 1 / Math.max(1, p.intervalo_dias || 1), 0)
-          : 1
-      const diasCobertura = ritmo > 0 ? Math.floor((prontos + agendados) / ritmo) : 0
+      // Ritmo = a MESMA grade que o Desafio dos 100 Dias cobra (pulso_core.configuracoes).
+      // Antes vinha de plano_publicacao, tabela que ninguém mais escreve: ela somava 1/intervalo
+      // de cada plano ativo e devolvia 12/dia, zerando a cobertura e deixando o alarme sempre aceso.
+      const cfg = (cfgRow?.valor as { publicacoes_dia_alvo?: number } | null) || {}
+      const ritmo = Math.max(1, cfg.publicacoes_dia_alvo ?? 3)
+      const diasCobertura = (prontos + agendados) / ritmo
 
       let situacao: EstoquePipeline['situacao'] = 'SAUDAVEL'
       if (diasCobertura < 3) situacao = 'CRITICO'

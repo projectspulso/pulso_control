@@ -28,10 +28,24 @@ export interface VideoAderencia {
   ressonancia: number // likes/views
 }
 
+export interface PlataformaAderencia {
+  views: number
+  likes: number
+  automatica: boolean
+  /** vídeos distintos que chegaram nessa rede */
+  posts: number
+  /** linhas sem url/post_id — publicou mas não sabemos onde: a coleta nunca acha */
+  semLink: number
+  /** linhas coletadas nas últimas 36h — mede se o coletor está vivo nessa rede */
+  frescas: number
+}
+
 export interface AderenciaSnapshot {
   videos: VideoAderencia[]
-  porPlataforma: Record<string, { views: number; likes: number; automatica: boolean }>
+  porPlataforma: Record<string, PlataformaAderencia>
   totalViews: number
+  /** vídeos com pelo menos uma publicação — denominador da cobertura */
+  totalVideos: number
   ultimaColeta: string | null
 }
 
@@ -66,6 +80,9 @@ export function useAderencia() {
 
       const porVideo = new Map<string, VideoAderencia>()
       const porPlataforma: AderenciaSnapshot['porPlataforma'] = {}
+      // vídeos distintos por rede: a mesma ideia pode ter 2 linhas na mesma rede
+      // (repost, v2, linha manual) e sem isso a cobertura passa de 100%
+      const videosPorPlataforma = new Map<string, Set<string>>()
       let ultimaColeta: string | null = null
 
       for (const m of (metricas || []) as PublicacaoMetrica[]) {
@@ -89,16 +106,26 @@ export function useAderencia() {
         v.totalLikes += m.likes || 0
 
         if (!porPlataforma[m.plataforma]) {
-          porPlataforma[m.plataforma] = { views: 0, likes: 0, automatica: PLATAFORMAS_AUTO.has(m.plataforma) }
+          porPlataforma[m.plataforma] = {
+            views: 0, likes: 0, automatica: PLATAFORMAS_AUTO.has(m.plataforma),
+            posts: 0, semLink: 0, frescas: 0,
+          }
         }
-        porPlataforma[m.plataforma].views += m.views || 0
-        porPlataforma[m.plataforma].likes += m.likes || 0
+        const pp = porPlataforma[m.plataforma]
+        pp.views += m.views || 0
+        pp.likes += m.likes || 0
+        if (!videosPorPlataforma.has(m.plataforma)) videosPorPlataforma.set(m.plataforma, new Set())
+        videosPorPlataforma.get(m.plataforma)!.add(m.ideia_id)
+        if (!m.url_publicacao && !m.post_id) pp.semLink += 1
+        if (m.ultima_atualizacao && Date.now() - new Date(m.ultima_atualizacao).getTime() < 36 * 3600e3) pp.frescas += 1
 
         // ultima_atualizacao = hora real da coleta (o que o coletar-metricas grava).
         // updated_at muda em qualquer alteração da linha — não é a coleta.
         const col = m.ultima_atualizacao || m.updated_at
         if (col && (!ultimaColeta || col > ultimaColeta)) ultimaColeta = col
       }
+
+      for (const [plat, set] of videosPorPlataforma) porPlataforma[plat].posts = set.size
 
       const videos = [...porVideo.values()]
         .map((v) => ({ ...v, ressonancia: v.totalViews > 0 ? (v.totalLikes / v.totalViews) * 100 : 0 }))
@@ -108,6 +135,7 @@ export function useAderencia() {
         videos,
         porPlataforma,
         totalViews: videos.reduce((acc, v) => acc + v.totalViews, 0),
+        totalVideos: videos.length,
         ultimaColeta,
       }
     },

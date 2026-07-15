@@ -1,17 +1,15 @@
 'use client'
 
-import { useMemo } from 'react'
 import {
   Activity,
   BarChart3,
   Bot,
   Eye,
-  Heart,
   RefreshCw,
-  Trophy,
   UserRound,
 } from 'lucide-react'
 
+import { AuditPanel } from '@/components/audit-panel'
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { useAderencia, useColetarAgora, type VideoAderencia } from '@/lib/hooks/use-aderencia'
@@ -41,20 +39,6 @@ export default function ValidacaoPage() {
   const { data, isLoading, isError, refetch } = useAderencia()
   const apr = useAprendizados()
   const coletar = useColetarAgora()
-
-  const ranking = useMemo(() => {
-    if (!data) return []
-    const porVertical = new Map<string, { views: number; likes: number; videos: number }>()
-    for (const v of data.videos) {
-      const key = verticalCurta(v.canalNome)
-      const acc = porVertical.get(key) || { views: 0, likes: 0, videos: 0 }
-      acc.views += v.totalViews
-      acc.likes += v.totalLikes
-      acc.videos += 1
-      porVertical.set(key, acc)
-    }
-    return [...porVertical.entries()].sort((a, b) => b[1].views - a[1].views)
-  }, [data])
 
   if (isLoading) {
     return (
@@ -91,8 +75,6 @@ export default function ValidacaoPage() {
     )
   }
 
-  const lider = ranking[0]
-
   return (
     <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-8">
@@ -114,10 +96,14 @@ export default function ValidacaoPage() {
           }
         />
 
-        {/* Cards por plataforma */}
+        {/* Cobertura por plataforma — a pergunta desta página é "o que está no ar?", não
+            "quanto rendeu?". Alcance por rede vive no /analytics; aqui medimos presença e
+            se o link existe (sem link a coleta nunca acha o post). */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           {ORDEM_PLATAFORMAS.map((plat) => {
             const stats = data.porPlataforma[plat]
+            const posts = stats?.posts || 0
+            const pct = data.totalVideos > 0 ? (posts / data.totalVideos) * 100 : 0
             return (
               <div key={plat} className="glass rounded-2xl border border-zinc-800/50 p-6">
                 <div className="flex items-center justify-between">
@@ -134,53 +120,30 @@ export default function ValidacaoPage() {
                     </span>
                   )}
                 </div>
-                <p className="mt-3 text-3xl font-bold text-white">{n(stats?.views || 0)}</p>
-                <p className="mt-1 flex items-center gap-1 text-sm text-zinc-400">
-                  <Heart className="h-3.5 w-3.5" /> {n(stats?.likes || 0)} likes
+                <p className="mt-3 text-3xl font-bold text-white tabular-nums">
+                  {posts}
+                  <span className="text-lg font-medium text-zinc-600">/{data.totalVideos}</span>
+                </p>
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
+                  <div
+                    className={`h-full rounded-full ${pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-400' : 'bg-red-500/70'}`}
+                    style={{ width: `${Math.max(2, pct)}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-zinc-500">
+                  {Math.round(pct)}% dos vídeos
+                  {stats?.semLink ? (
+                    <span className="ml-1.5 font-semibold text-red-300">· {stats.semLink} sem link</span>
+                  ) : null}
                 </p>
               </div>
             )
           })}
         </div>
 
-        {/* Ranking de aderência por vertical */}
-        <div className="glass rounded-2xl border border-zinc-800/50 p-6">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-amber-400" />
-            <h2 className="text-lg font-semibold text-white">Ranking de aderência por vertical</h2>
-          </div>
-          {lider && (
-            <p className="mt-1 text-sm text-zinc-400">
-              Líder atual: <span className="font-semibold text-amber-300">{lider[0]}</span> com {n(lider[1].views)}{' '}
-              views — candidata à faixa âncora da grade.
-            </p>
-          )}
-          <div className="mt-4 space-y-3">
-            {ranking.map(([vertical, stats], idx) => {
-              const max = ranking[0]?.[1].views || 1
-              const pct = Math.max(2, Math.round((stats.views / max) * 100))
-              return (
-                <div key={vertical} className="flex items-center gap-3">
-                  <span className="w-6 text-right font-mono text-sm text-zinc-500">{idx + 1}º</span>
-                  <span className="w-44 truncate text-sm text-zinc-200">{vertical}</span>
-                  <div className="h-6 flex-1 overflow-hidden rounded-full bg-zinc-800/80">
-                    <div
-                      className={`flex h-full items-center rounded-full px-2 text-xs font-semibold text-white ${
-                        idx === 0 ? 'bg-linear-to-r from-amber-500 to-orange-500' : 'bg-violet-600/70'
-                      }`}
-                      style={{ width: `${pct}%` }}
-                    >
-                      {n(stats.views)}
-                    </div>
-                  </div>
-                  <span className="w-24 text-right text-xs text-zinc-500">
-                    {stats.views > 0 ? `${((stats.likes / stats.views) * 100).toFixed(1)}% resson.` : '—'}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        {/* Saúde dos dados — veio do /analytics (14/07). Coerência entre pipeline e publicações
+            é operacional: pertence a "o que está no ar agora", junto do Coletar agora. */}
+        <AuditPanel />
 
         {/* Tabela vídeo × plataforma */}
         <div className="glass overflow-hidden rounded-2xl border border-zinc-800/50">
@@ -203,7 +166,7 @@ export default function ValidacaoPage() {
                     </th>
                   ))}
                   <th className="px-3 py-3 text-right">Total</th>
-                  <th className="px-6 py-3 text-right">Resson.</th>
+                  <th className="px-6 py-3 text-right">Cobertura</th>
                 </tr>
               </thead>
               <tbody>
@@ -254,8 +217,17 @@ export default function ValidacaoPage() {
                     <td className="whitespace-nowrap px-3 py-3 text-right font-semibold text-white">
                       {n(v.totalViews)}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-3 text-right text-zinc-400">
-                      {v.ressonancia.toFixed(1)}%
+                    <td className="whitespace-nowrap px-6 py-3 text-right">
+                      {(() => {
+                        const faltam = ORDEM_PLATAFORMAS.filter((p) => !v.plataformas[p])
+                        if (faltam.length === 0)
+                          return <span className="text-xs font-semibold text-emerald-400">5/5</span>
+                        return (
+                          <span className="text-xs text-amber-300/90" title={`Ainda não está em: ${faltam.map((p) => PLATAFORMA_LABEL[p]).join(', ')}`}>
+                            {ORDEM_PLATAFORMAS.length - faltam.length}/5 · falta {faltam.map((p) => PLATAFORMA_LABEL[p].slice(0, 2)).join(', ')}
+                          </span>
+                        )
+                      })()}
                     </td>
                   </tr>
                 ))}

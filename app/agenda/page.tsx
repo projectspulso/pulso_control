@@ -123,7 +123,9 @@ export default function AgendaPage() {
         {msg && <p className="text-sm text-zinc-300">{msg}</p>}
 
         {/* DESAFIO DOS 100 DIAS — disciplina que constrói audiência e autoridade */}
-        <Desafio100Dias />
+        {/* faixa = dia/sequência/trilha. O burn-up ("vamos bater a meta?") vive no /analytics:
+            aqui a pergunta é "publiquei hoje?", lá é "estamos no ritmo?". */}
+        <Desafio100Dias variante="faixa" />
 
         {/* OPERAÇÃO DE HOJE — checklist do ciclo diário */}
         <div className="glass rounded-2xl border border-violet-500/20 p-5">

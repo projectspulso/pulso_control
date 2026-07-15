@@ -32,7 +32,7 @@ export function EstoqueBanner() {
           <Icone className="h-5 w-5 shrink-0" />
           <div>
             <p className="text-sm font-semibold">
-              Antecipação: {data.diasCobertura} {data.diasCobertura === 1 ? 'dia' : 'dias'} de cobertura
+              Antecipação: {data.diasCobertura.toFixed(1)} {data.diasCobertura === 1 ? 'dia' : 'dias'} de cobertura
               <span className="ml-2 font-normal opacity-75">(meta {data.metaMinDias}–{data.metaMaxDias} dias)</span>
             </p>
             <p className="mt-0.5 text-sm opacity-85">{MENSAGEM[data.situacao]}</p>

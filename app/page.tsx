@@ -5,19 +5,13 @@ import {
   ArrowUpRight,
   CheckCircle2,
   Clapperboard,
-  Eye,
-  Facebook,
-  Heart,
-  Instagram,
   Lightbulb,
-  Music2,
   Rocket,
-  Smartphone,
-  Youtube,
 } from 'lucide-react'
 
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
+import { AlertasOperacao } from '@/components/alertas-operacao'
 import { useDashboard } from '@/lib/hooks/use-dashboard'
 
 function n(value: number) {
@@ -25,14 +19,6 @@ function n(value: number) {
     notation: value >= 10000 ? 'compact' : 'standard',
     maximumFractionDigits: 1,
   }).format(value)
-}
-
-const REDE_UI: Record<string, { label: string; icon: typeof Youtube; cor: string; fluxo: string }> = {
-  youtube: { label: 'YouTube', icon: Youtube, cor: 'text-red-400', fluxo: 'Studio assistido' },
-  instagram: { label: 'Instagram', icon: Instagram, cor: 'text-pink-400', fluxo: 'API automática' },
-  facebook: { label: 'Facebook', icon: Facebook, cor: 'text-blue-400', fluxo: 'Business Suite manual' },
-  tiktok: { label: 'TikTok', icon: Music2, cor: 'text-cyan-400', fluxo: 'draft → celular' },
-  kwai: { label: 'Kwai', icon: Smartphone, cor: 'text-orange-400', fluxo: 'manual celular' },
 }
 
 const ETAPAS_PIPELINE = [
@@ -126,27 +112,7 @@ export default function Home() {
           }
         />
 
-        {/* Views por rede */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {data.redes.map((r) => {
-            const ui = REDE_UI[r.plataforma]
-            const Icon = ui.icon
-            return (
-              <div key={r.plataforma} className="glass rounded-2xl border border-zinc-800/50 p-5">
-                <div className="flex items-center justify-between">
-                  <span className={`flex items-center gap-2 font-semibold ${ui.cor}`}>
-                    <Icon className="h-5 w-5" /> {ui.label}
-                  </span>
-                  <span className="text-xs text-zinc-500">{r.publicacoes} posts</span>
-                </div>
-                <p className="mt-3 text-3xl font-black tabular-nums text-white">{n(r.views)}</p>
-                <p className="mt-1 flex items-center gap-1 text-sm text-zinc-500">
-                  <Heart className="h-3.5 w-3.5" /> {n(r.likes)} · <span className="text-zinc-600">{ui.fluxo}</span>
-                </p>
-              </div>
-            )
-          })}
-        </div>
+        <AlertasOperacao />
 
         {/* Esteira + Ações */}
         <div className="grid gap-6 lg:grid-cols-3">
@@ -204,30 +170,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Top vídeos + últimas publicações */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="glass rounded-2xl border border-zinc-800/50 p-6">
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
-              <Eye className="h-5 w-5 text-green-400" /> Top vídeos (views)
-            </h2>
-            <div className="mt-4 space-y-2">
-              {data.topVideos.map((v, i) => (
-                <a
-                  key={`${v.url}-${i}`}
-                  href={v.url || '#'}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-3 rounded-lg p-2 hover:bg-zinc-900/60"
-                >
-                  <span className="w-5 text-right font-mono text-sm text-zinc-500">{i + 1}º</span>
-                  <span className="flex-1 truncate text-sm text-zinc-200">{v.ideiaTitulo}</span>
-                  <span className="text-xs capitalize text-zinc-500">{v.plataforma}</span>
-                  <span className="w-16 text-right text-sm font-bold text-white">{n(v.views)}</span>
-                </a>
-              ))}
-            </div>
-          </div>
-
+        {/* Últimas publicações — o que saiu hoje. Ranking e alcance por rede vivem no /analytics. */}
+        <div className="grid gap-6">
           <div className="glass rounded-2xl border border-zinc-800/50 p-6">
             <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
               <Lightbulb className="h-5 w-5 text-violet-400" /> Últimas publicações
