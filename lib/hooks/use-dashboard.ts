@@ -21,7 +21,8 @@ export interface DashboardData {
   redes: RedeResumo[]
   viewsTotal: number
   likesTotal: number
-  publicacoesTotal: number
+  publicacoesTotal: number // posts (1 por rede) — 5 redes, então 1 vídeo pode virar até 5
+  videosPublicados: number // vídeos DISTINTOS (ideia) que foram ao ar — o número "real"
   ultimaColeta: string | null
   pipeline: Record<string, number>
   estoqueIdeias: { rascunhos: number; aprovadasLivres: number }
@@ -58,6 +59,7 @@ export function useDashboard() {
       const redes: RedeResumo[] = REDES.map((p) => ({ plataforma: p, views: 0, likes: 0, publicacoes: 0 }))
       let ultimaColeta: string | null = null
       const videos: TopVideo[] = []
+      const videosDistintos = new Set<string>()
 
       for (const m of metricasQ.data || []) {
         const rede = redes.find((r) => r.plataforma === m.plataforma)
@@ -66,6 +68,7 @@ export function useDashboard() {
           rede.likes += m.likes || 0
           rede.publicacoes += 1
         }
+        if (m.ideia_id) videosDistintos.add(m.ideia_id)
         if (m.ultima_atualizacao && (!ultimaColeta || m.ultima_atualizacao > ultimaColeta)) {
           ultimaColeta = m.ultima_atualizacao
         }
@@ -120,6 +123,7 @@ export function useDashboard() {
         viewsTotal: redes.reduce((a, r) => a + r.views, 0),
         likesTotal: redes.reduce((a, r) => a + r.likes, 0),
         publicacoesTotal: redes.reduce((a, r) => a + r.publicacoes, 0),
+        videosPublicados: videosDistintos.size,
         ultimaColeta,
         pipeline,
         estoqueIdeias: { rascunhos, aprovadasLivres },

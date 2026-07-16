@@ -139,7 +139,7 @@ export default function AgendaPage() {
               { n: 2, icon: '✅', href: '/roteiros', titulo: 'Aprovar roteiros', valor: String(data.operacao.aprovarPendentes), sub: 'pendentes', ok: data.operacao.aprovarPendentes === 0 },
               { n: 3, icon: '🎙️', href: '/producao', titulo: 'Gerar áudios', valor: String(data.operacao.audiosAFazer), sub: 'a gerar', ok: data.operacao.audiosAFazer === 0 },
               { n: 4, icon: '🎬', href: '/producao', titulo: 'Renderizar', valor: String(data.operacao.renderAFazer), sub: 'pra amanhã', ok: data.operacao.renderAFazer === 0 },
-              { n: 5, icon: '📤', href: '/publicar', titulo: 'Publicar hoje', valor: String(data.operacao.publicarProntos), sub: '4 redes juntas', hot: data.operacao.publicarProntos > 0 },
+              { n: 5, icon: '📤', href: '/publicar', titulo: 'Publicar hoje', valor: String(data.operacao.publicarProntos), sub: '5 redes juntas', hot: data.operacao.publicarProntos > 0 },
               { n: 6, icon: '📊', href: '/analytics', titulo: 'Analisar', valor: '', sub: 'ver os KPIs' },
             ].map((c) => (
               <Link key={c.n} href={c.href} className={`group relative rounded-xl border p-3 transition-all hover:-translate-y-0.5 ${c.hot ? 'border-violet-500/50 bg-violet-500/10' : c.ok ? 'border-emerald-500/25 bg-emerald-500/5' : 'border-zinc-800/60 bg-zinc-900/50 hover:border-zinc-700'}`}>

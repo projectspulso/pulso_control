@@ -11,7 +11,7 @@ const fluxo = [
   { icon: Lock, quem: 'VOCÊ', etapa: 'Aprovar roteiro', desc: 'Revisa e manda o roteiro pro áudio. Esse clique é a aprovação de produção.', gate: true },
   { icon: Mic, quem: 'App', etapa: 'Áudio + cenas', desc: 'ElevenLabs gera a narração (voz PULSO) e o cérebro escreve ~10 cenas + a legenda.', gate: false },
   { icon: Film, quem: 'Worker', etapa: 'Render + QC', desc: 'Veo 3.1 Lite gera os clipes, ffmpeg monta com a CTA do mascote, QC completo aprova.', gate: false },
-  { icon: Lock, quem: 'VOCÊ', etapa: 'Publicar', desc: 'Publicação nas 4 redes só com o seu OK (IG/TikTok via app, YT/FB pelo navegador/kit).', gate: true },
+  { icon: Lock, quem: 'VOCÊ', etapa: 'Publicar', desc: 'Publicação nas 5 redes só com o seu OK (IG/TikTok via app, YT/FB pelo navegador/kit, Kwai manual no celular).', gate: true },
 ]
 
 const padrao = [

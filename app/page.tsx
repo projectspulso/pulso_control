@@ -103,7 +103,7 @@ export default function Home() {
       <div className="mx-auto max-w-7xl space-y-8">
         <PageHeader
           titulo="Centro de Comando"
-          subtitulo={`${n(data.viewsTotal)} views · ${data.publicacoesTotal} publicações nas 4 redes`}
+          subtitulo={`${n(data.viewsTotal)} views · ${data.videosPublicados} vídeos · ${data.publicacoesTotal} posts em 5 redes`}
           acoes={
             <div className="glass rounded-2xl px-5 py-3 text-right">
               <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Última coleta</p>
