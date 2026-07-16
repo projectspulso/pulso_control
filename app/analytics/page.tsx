@@ -16,6 +16,7 @@ import {
   CardCampeoes,
   CardCrescimento,
   CardCustos,
+  CardExperimento,
   CardDecisao,
   CardGates,
   CardMatrizRedes,
@@ -31,6 +32,7 @@ import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
 import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
 import { useDecisao } from '@/lib/hooks/use-decisao'
 import { useFinanceiro } from '@/lib/hooks/use-financeiro'
+import { useExperimento } from '@/lib/hooks/use-experimento'
 
 interface Projecao {
   porSemana: number | null
@@ -98,6 +100,7 @@ export default function AnalyticsPage() {
   const { data: decisao } = useDecisao()
   const { data: statusContas } = useStatusContas()
   const { data: fin } = useFinanceiro()
+  const { data: experimento } = useExperimento()
 
   const resumo = useMemo(() => {
     if (!data) return null
@@ -386,6 +389,7 @@ export default function AnalyticsPage() {
           <div className="space-y-3.5">
             <NaoSegueFiltro filtros={filtros} motivo="a meta é publicar em qualquer rede, todo dia" />
             <Desafio100Dias />
+            <CardExperimento exp={experimento} />
             <CardCrescimento serie={data.serieCumulativa} diaria={data.serieDiaria} alto />
           </div>
         )}

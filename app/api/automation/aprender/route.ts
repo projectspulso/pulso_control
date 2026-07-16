@@ -12,6 +12,30 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
  * Roda semanal (cron) — quanto mais dados, mais forte.
  */
 
+/**
+ * PLANO DE CRESCIMENTO — trava estratégica que a IA de ideias/roteiro sempre segue.
+ *
+ * Vem do benchmark do concorrente @ministroda_educacao (2,5M no IG): a medição real dos
+ * reels dele mostrou que "objeto/processo do cotidiano + gancho Como funciona / Você já
+ * imaginou" faz mediana de ~334k views, enquanto mistério abstrato afunda. Bate com o
+ * nosso próprio dado (no YouTube, Ciência 584 > IA 78 views no dia 3).
+ *
+ * Fica AQUI (prefixado no digest semanal) e não numa config solta porque o cron `aprender`
+ * reescreve o aprendizado_cerebro toda segunda — se estivesse solto, seria apagado. Assim
+ * a trava sobrevive a cada reescrita e continua data-driven (edite este bloco pra ajustar).
+ */
+const PLANO_CRESCIMENTO = `PLANO DE CRESCIMENTO (regra dura — vale acima de qualquer outra preferência):
+FÓRMULA VENCEDORA (comprovada por benchmark + nosso próprio dado): objeto/processo CONCRETO do
+cotidiano, explicado de forma visual. Gancho no padrão "Como [X] funciona / é feito", "Por que
+[X]", "O que acontece se [X]" ou "Você já imaginou [X]". Nada abstrato — sempre uma coisa física
+que dá pra ver acontecer.
+PRIORIZE temas de: como as coisas são feitas/funcionam, corpo humano (processos), animais
+(comportamento/recorde), materiais e engenharia do dia a dia, ciência do cotidiano.
+EVITE (comprovadamente fraco pra nós): mistério abstrato sem payload visual, "história que ninguém
+conta" genérica, IA/tech como tema (afunda). Só entram se tiverem um objeto concreto no centro.
+EXPLORAÇÃO: ~1 em cada 5 ideias pode fugir da fórmula pra testar tema novo — o resto segue a fórmula.
+`
+
 const norm = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
@@ -100,7 +124,8 @@ export async function POST(request: NextRequest) {
     const linhasTemaRede = Object.entries(temaRedeTop)
       .map(([p, v]) => `- ${p}: ${v}`)
       .join('\n')
-    const texto = `APRENDIZADO DA NOSSA AUDIÊNCIA (referência de PADRÃO — não copie tema nem frase literal):
+    const texto = `${PLANO_CRESCIMENTO}
+APRENDIZADO DA NOSSA AUDIÊNCIA (referência de PADRÃO — não copie tema nem frase literal):
 GANCHOS QUE MAIS RETIVERAM (replique a ESTRUTURA do gancho, não o assunto):
 ${ganchos.map((g) => `- "${g}"`).join('\n')}
 TEMA × REDE (o que cada rede mais premiou em views — priorize ao distribuir/escolher tema):

@@ -2,6 +2,7 @@
 
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts'
 import type { BiPublicacao } from '@/lib/hooks/use-bi'
+import type { Experimento } from '@/lib/hooks/use-experimento'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
 
 /**
@@ -443,6 +444,54 @@ export function ModalDrill({ titulo, publicacoes, onClose }: {
         </div>
       </div>
     </div>
+  )
+}
+
+const REDE_NOME: Record<string, string> = {
+  youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', kwai: 'Kwai',
+}
+
+/* ── TRILHA: a coorte do benchmark rende mais que a base? ────────────────── */
+export function CardExperimento({ exp }: { exp?: Experimento }) {
+  if (!exp) return null
+  const cor = exp.deltaGeral == null ? 'text-[#a3a0b0]' : exp.deltaGeral >= 0.15 ? 'text-[#0ca30c]' : exp.deltaGeral <= -0.15 ? 'text-[#d03b3b]' : 'text-[#fab219]'
+  return (
+    <Card titulo="Trilha do benchmark" sub="Temas copiados do concorrente × a nossa base histórica — está rendendo mais?"
+      rodape={<>Coorte = as {exp.totalCoorte} ideias semeadas do @ministroda_educacao (marcadas <B>BENCHMARK_CONCORRENTE</B>). Só compara views reais de quem já foi ao ar — enquanto ninguém publicou, o veredito é &ldquo;medindo&rdquo;, nunca um número inventado.</>}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className={`text-[28px] font-medium tabular-nums ${cor}`}>
+          {exp.deltaGeral == null ? '—' : `${exp.deltaGeral >= 0 ? '+' : ''}${Math.round(exp.deltaGeral * 100)}%`}
+          <span className="ml-2 text-xs font-normal text-[#6e6b7b]">vs base</span>
+        </div>
+        <span className="text-xs tabular-nums text-[#6e6b7b]">{exp.publicadas}/{exp.totalCoorte} no ar</span>
+      </div>
+      <p className="mt-1 text-[13px] leading-snug text-[#a3a0b0]">{exp.veredito}</p>
+
+      <div className="mt-4 space-y-2.5">
+        {exp.porRede.filter((r) => r.nBase > 0).map((r) => {
+          const max = Math.max(r.base, r.coorte || 0, 1)
+          return (
+            <div key={r.rede} className="grid grid-cols-[74px_1fr_auto] items-center gap-2 text-xs">
+              <span className="text-[#a3a0b0]">{REDE_NOME[r.rede] || r.rede}</span>
+              <div className="space-y-1">
+                <div className="h-2 overflow-hidden rounded-full bg-[#232231]">
+                  <div className="h-full rounded-full bg-[#514b63]" style={{ width: `${Math.max(2, (r.base / max) * 100)}%` }} />
+                </div>
+                {r.coorte != null && (
+                  <div className="h-2 overflow-hidden rounded-full bg-[#232231]">
+                    <div className="h-full rounded-full bg-[#9085e9]" style={{ width: `${Math.max(2, (r.coorte / max) * 100)}%` }} />
+                  </div>
+                )}
+              </div>
+              <span className="w-24 text-right tabular-nums text-[#6e6b7b]">
+                {n(r.base)}<span className="text-[#4a4658]"> base</span>
+                {r.coorte != null && <> · <span className="text-[#9085e9]">{n(r.coorte)}</span></>}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </Card>
   )
 }
 
