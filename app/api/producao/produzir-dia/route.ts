@@ -18,7 +18,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 const CUSTO_POR_VIDEO_CR = 60 // ~10 cenas, banco reusa ~25% → ~7-8 cenas novas × 8cr
 const CREDITO_BRL = 0.27
-const ALVO_PADRAO = 4 // publica 3/dia firme → produz 4 pra reconstruir buffer devagar
+const ALVO_PADRAO = 4 // publica 2/dia; produz 4 pra reconstruir o buffer (estoque baixo)
 
 const TIER1 = ['curios', 'mist', 'psico', 'estudo', 'produt', 'casos reais', 'bizarr']
 const TIER3 = ['momento', 'games', 'nostalgia']

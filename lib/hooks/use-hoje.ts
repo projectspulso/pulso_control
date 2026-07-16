@@ -33,8 +33,10 @@ export interface Hoje {
   emRenderComCenas: number
   emRenderSemCenas: number
   aguardandoRoteiroOuAudio: number
-  /** dias de estoque (prontos ÷ 3 publicações/dia da grade) */
+  /** dias de estoque (prontos ÷ publicações/dia da grade, lida da config desafio_100) */
   estoqueDias: number
+  /** publicações/dia da grade ativa (config desafio_100) */
+  alvoDia: number
 }
 
 const HOJE_ISO = () => new Date().toISOString().slice(0, 10)
@@ -44,7 +46,7 @@ export function useHoje() {
     queryKey: ['hoje'],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const [ppRes, ideiasRes, canaisRes, metRes, rotRes] = await Promise.all([
+      const [ppRes, ideiasRes, canaisRes, metRes, rotRes, cfgRes] = await Promise.all([
         supabase.schema('pulso_content').from('pipeline_producao').select('id, ideia_id, status, metadata'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
         supabase.schema('pulso_core').from('canais').select('id, nome'),
@@ -54,7 +56,10 @@ export function useHoje() {
           .select('ideia_id, plataforma, data_publicacao')
           .gte('data_publicacao', HOJE_ISO()),
         supabase.schema('pulso_content').from('roteiros').select('ideia_id, nota_hook'),
+        supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'desafio_100').maybeSingle(),
       ])
+      // grade real (mesma fonte do burn-up e do estoque) — não hardcodar 3/dia
+      const alvoDia = Math.max(1, (cfgRes.data?.valor as { publicacoes_dia_alvo?: number } | null)?.publicacoes_dia_alvo ?? 2)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ideiaMap = new Map<string, any>((ideiasRes.data || []).map((i: any) => [i.id, i]))
@@ -119,7 +124,8 @@ export function useHoje() {
         emRenderComCenas,
         emRenderSemCenas,
         aguardandoRoteiroOuAudio,
-        estoqueDias: Math.round((prontos.length / 3) * 10) / 10,
+        estoqueDias: Math.round((prontos.length / alvoDia) * 10) / 10,
+        alvoDia,
       }
     },
   })

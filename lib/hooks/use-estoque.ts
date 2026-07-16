@@ -41,7 +41,7 @@ export function useEstoquePipeline() {
       // Antes vinha de plano_publicacao, tabela que ninguém mais escreve: ela somava 1/intervalo
       // de cada plano ativo e devolvia 12/dia, zerando a cobertura e deixando o alarme sempre aceso.
       const cfg = (cfgRow?.valor as { publicacoes_dia_alvo?: number } | null) || {}
-      const ritmo = Math.max(1, cfg.publicacoes_dia_alvo ?? 3)
+      const ritmo = Math.max(1, cfg.publicacoes_dia_alvo ?? 2)
       const diasCobertura = (prontos + agendados) / ritmo
 
       let situacao: EstoquePipeline['situacao'] = 'SAUDAVEL'

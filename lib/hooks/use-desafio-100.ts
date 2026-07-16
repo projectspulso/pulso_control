@@ -59,7 +59,7 @@ function diffDias(a: string, b: string) {
   return Math.round((db - da) / 86_400_000)
 }
 
-const DEFAULT = { inicio: '2026-06-10', meta_dias: 100, publicacoes_dia_alvo: 3 }
+const DEFAULT = { inicio: '2026-06-10', meta_dias: 100, publicacoes_dia_alvo: 2 }
 
 export function useDesafio100() {
   return useQuery<Desafio100>({
@@ -81,7 +81,7 @@ export function useDesafio100() {
 
       const inicio = cfg.inicio
       const metaDias = cfg.meta_dias ?? 100
-      const alvoDia = cfg.publicacoes_dia_alvo ?? 3
+      const alvoDia = cfg.publicacoes_dia_alvo ?? 2
       const hoje = diaBR(new Date().toISOString()) // hoje em Brasília
 
       // vídeos únicos por dia (dentro da janela do desafio)
