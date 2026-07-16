@@ -58,7 +58,11 @@ export function useBi(filtros: BiFiltros) {
           .schema('pulso_analytics')
           .from('leituras_metricas')
           .select('ideia_id, plataforma, data_ref, views, likes')
-          .gte('data_ref', '2026-06-10'), // série limpa: 1 leitura por post por dia (sem FK)
+          // Série limpa: 1 leitura por post por dia (sem FK). estimado=false descarta as 392
+          // linhas do backfill de 19/06, que carimbaram o valor daquele dia sobre 10–17/06 —
+          // a curva ficava chapada e o crescimento do período, zero. Real começa em 18/06.
+          .eq('estimado', false)
+          .gte('data_ref', '2026-06-18'),
         supabase
           .schema('pulso_analytics')
           .from('leituras_metricas')
