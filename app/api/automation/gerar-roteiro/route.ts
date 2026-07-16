@@ -99,8 +99,27 @@ export async function POST(request: NextRequest) {
       /* aprendizado é opcional */
     }
 
+    // PRÓXIMO TEMA DA FILA (pro CTA teaser): a ideia APROVADA de maior prioridade que NÃO é esta.
+    // Proxy honesto do "próximo vídeo" — o auto-funil produz por prioridade. Teaser fica em "no
+    // próximo" (não "amanhã"), pra não prometer dia exato que a grade pode não cumprir.
+    let proximoTema: string | undefined
+    try {
+      const { data: prox } = await supabase
+        .schema('pulso_content')
+        .from('ideias')
+        .select('titulo')
+        .eq('status', 'APROVADA')
+        .neq('id', ideia.id)
+        .order('prioridade', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (prox?.titulo) proximoTema = String(prox.titulo)
+    } catch {
+      /* teaser é opcional */
+    }
+
     // Gerar roteiro via GPT
-    const prompt = buildPromptGerarRoteiro(canal, ideiaCtx, undefined, aprendizado)
+    const prompt = buildPromptGerarRoteiro(canal, ideiaCtx, undefined, aprendizado, proximoTema)
     const { content: roteiro, usage } = await callOpenAI(prompt, {
       temperature: 0.7,
       max_tokens: 2048,

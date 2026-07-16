@@ -208,7 +208,8 @@ export function buildPromptGerarRoteiro(
   canal: CanalContext,
   ideia: IdeiaContext,
   plataformas: string[] = ['youtube_shorts', 'tiktok', 'instagram_reels'],
-  aprendizado?: string
+  aprendizado?: string,
+  proximoTema?: string
 ): string {
   const duracaoAlvo = ideia.duracao_estimada || 35
   const palavrasAlvo = Math.round(duracaoAlvo * 2.5) // ~2.5 palavras/segundo pt-BR
@@ -218,6 +219,10 @@ export function buildPromptGerarRoteiro(
   const aprendizadoCtx = aprendizado ? `\n\n${aprendizado}` : ''
   // promessa de série pra o CTA = o tema do canal (motivo concreto pra seguir)
   const promessaSerie = canal.nome.replace(/^PULSO\s*/i, '').trim() || 'histórias que ninguém te conta'
+  // teaser do PRÓXIMO vídeo real da fila (FOMO concreto — o maior driver de follow no short-form)
+  const teaserProximo = proximoTema
+    ? `\n   - FOMO do próximo (use SE couber natural): mencione que vem mais — sem prometer dia exato. O próximo tema da fila é "${proximoTema}"; transforme num teaser curto e curioso (ex.: "e no próximo: por que ${proximoTema.toLowerCase()}"). Não entregue a resposta do próximo, só a isca.`
+    : ''
 
   return `Você é o roteirista-chefe do PULSO e segue o HARNESS editorial do projeto (Atenção → Lacuna → Dopamina): o hook prende em ≤2 segundos, abre uma lacuna de curiosidade que SÓ fecha no final, e tudo é fato real verificável — nunca invente.
 
@@ -246,9 +251,10 @@ ESTRUTURA OBRIGATÓRIA (Hook → Body → Payoff — estado da arte short-form):
    - A revelação que o hook prometeu — só aqui, e que valha a espera
    - FECHE EM LOOP: a última frase deve ecoar/responder o gancho de um jeito que dá vontade de rever o começo (replay impulsiona distribuição)
 
-4. CTA (1 frase, atrelado a promessa de série — NÃO um "tchau"):
-   - UM só CTA de seguir, com MOTIVO concreto e promessa do canal: ex. "Segue o PULSO pra mais ${promessaSerie} que ninguém te conta."
-   - O CTA dá uma razão pra voltar (a série continua), não uma despedida genérica
+4. CTA (1-2 frases, atrelado a promessa de série — NÃO um "tchau"):
+   - OBRIGATÓRIO: o CTA SEMPRE carrega um MOTIVO concreto. PROIBIDO "Segue o PULSO!" pelado, sem razão — um "segue" sem motivo não converte.
+   - Fórmula base: "Segue o Pulso pra mais ${promessaSerie} que ninguém te conta" (ou variação com a MESMA estrutura: ask + motivo + promessa da série).${teaserProximo}
+   - Dá razão pra VOLTAR (a série continua), cria leve FOMO — nunca uma despedida genérica.
    - PROIBIDO engagement bait (penalizado pelas redes): nada de "comenta SIM", "comenta uma palavra/emoji", "marca 3 amigos", cliffhanger oco só pra forçar comentário
 
 REGRAS DURAS:
