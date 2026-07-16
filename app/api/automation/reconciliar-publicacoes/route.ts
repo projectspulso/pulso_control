@@ -47,6 +47,13 @@ async function reconciliar(request: NextRequest) {
   const igUserId = process.env.META_IG_USER_ID
   const pageId = process.env.META_PAGE_ID
   const ytKey = process.env.YOUTUBE_API_KEY
+  // Facebook /videos é edge de PÁGINA: o INSTAGRAM_ACCESS_TOKEN (IG-scoped) lê seguidores
+  // mas pode devolver [] em /videos sem erro — foi o que sumiu os reels de 16/07 em silêncio.
+  // O system user token é page-scoped e sem expiração (ver meta-api-pulso).
+  const pageToken = process.env.META_SYSTEM_USER_TOKEN || process.env.META_PAGE_ACCESS_TOKEN || token
+  // diagnóstico: quantos itens cada rede devolveu vs quantos viraram órfão novo — mata a
+  // cegueira "0 órfãos" que não distinguia "não varri" de "varri e não achei nada".
+  const varridos: Record<string, { api: number; novos: number }> = {}
 
   // 1) estado atual: post_ids cadastrados por rede + mapa ideia->roteiro
   const { data: pubs, error: pErr } = await supabase
@@ -134,6 +141,7 @@ async function reconciliar(request: NextRequest) {
   // --- Instagram: a linha PODE faltar. O publish via Vercel estoura os 60s e morre ANTES de
   //     gravar em metricas_publicacao — o reel fica no ar e o app nem sabe que existe.
   //     Antes o IG era só âncora (fonte da verdade) e nunca era varrido como órfão. ---
+  let igNovos = 0
   for (const m of igMedia) {
     const id = String(m.id)
     if (registrados.has(id)) continue
@@ -141,7 +149,9 @@ async function reconciliar(request: NextRequest) {
       plataforma: 'instagram', post_id: id, caption: m.caption || '',
       url: m.permalink || '', data: m.timestamp || new Date().toISOString(),
     })
+    igNovos++
   }
+  varridos.instagram = { api: igMedia.length, novos: igNovos }
 
   // --- TikTok ---
   try {
@@ -166,28 +176,36 @@ async function reconciliar(request: NextRequest) {
         method: 'POST', headers: { Authorization: `Bearer ${oauth.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ max_count: 20 }),
       }).then((x) => x.json())
-      for (const v of lista?.data?.videos || []) {
+      const vids = lista?.data?.videos || []
+      let ttNovos = 0
+      for (const v of vids) {
         const id = String(v.id)
         if (registrados.has(id)) continue
         orfaos.push({ plataforma: 'tiktok', post_id: id, caption: v.title || '',
           url: `https://www.tiktok.com/@${ttHandle}/video/${id}`,
           data: v.create_time ? new Date(v.create_time * 1000).toISOString() : new Date().toISOString() })
+        ttNovos++
       }
+      varridos.tiktok = { api: vids.length, novos: ttNovos }
     } else avisos.push('TikTok sem token configurado')
   } catch (e) { avisos.push(`TikTok falhou: ${e instanceof Error ? e.message : 'erro'}`) }
 
-  // --- Facebook (/videos cobre os reels com o system token) ---
+  // --- Facebook (/videos cobre os reels; usa o page/system token, não o IG-scoped) ---
   try {
-    if (token && pageId) {
-      const r = await fetch(`${GRAPH}/${pageId}/videos?fields=id,description,created_time&limit=50&access_token=${token}`).then((x) => x.json())
+    if (pageToken && pageId) {
+      const r = await fetch(`${GRAPH}/${pageId}/videos?fields=id,description,created_time&limit=50&access_token=${pageToken}`).then((x) => x.json())
       if (r.error) avisos.push(`Facebook: ${r.error.message}`)
-      for (const v of r?.data || []) {
+      const lista = r?.data || []
+      let novos = 0
+      for (const v of lista) {
         const id = String(v.id)
         if (registrados.has(id)) continue
         orfaos.push({ plataforma: 'facebook', post_id: id, caption: v.description || '',
           url: `https://www.facebook.com/reel/${id}`, data: v.created_time || new Date().toISOString() })
+        novos++
       }
-    }
+      varridos.facebook = { api: lista.length, novos }
+    } else avisos.push('Facebook: sem page token ou META_PAGE_ID — ignorado')
   } catch (e) { avisos.push(`Facebook falhou: ${e instanceof Error ? e.message : 'erro'}`) }
 
   // --- YouTube (uploads do canal via playlist) ---
@@ -278,6 +296,7 @@ async function reconciliar(request: NextRequest) {
     inseridos,
     promovidos,
     por_rede: porRede,
+    varridos, // {rede: {api, novos}} — o que cada rede DEVOLVEU vs virou órfão novo
     revisar,
     avisos: avisos.length ? avisos : undefined,
     registrados: registrar.map((r) => ({ plataforma: r.plataforma, post_id: r.post_id })),
