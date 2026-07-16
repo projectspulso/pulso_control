@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
+import type { BiFiltros } from '@/lib/hooks/use-bi'
 
 /**
  * A NOTA PREVÊ VIRAL? — cruza a nota_hook do roteiro (1-5) com as views reais.
@@ -77,9 +78,10 @@ function quantil(v: number[], q: number): number {
   return s[base + 1] !== undefined ? Math.round(s[base] + rest * (s[base + 1] - s[base])) : s[base]
 }
 
-export function useNotaVsViews() {
+export function useNotaVsViews(filtros?: BiFiltros) {
+  const f = filtros ?? { plataforma: 'todas', canalId: 'todos', periodoDias: 0 }
   return useQuery<NotaVsViews>({
-    queryKey: ['nota-vs-views'],
+    queryKey: ['nota-vs-views', f.plataforma, f.canalId, f.periodoDias],
     staleTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
     queryFn: async () => {
@@ -87,7 +89,15 @@ export function useNotaVsViews() {
         supabase.schema('pulso_content').from('roteiros').select('ideia_id, nota_hook'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
         supabase.schema('pulso_core').from('canais').select('id, nome'),
-        supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, views'),
+        (() => {
+          // o alcance segue o filtro: "a nota prevê o viral NO YOUTUBE?" é outra pergunta —
+          // e a resposta muda mesmo (a correlação global esconde a de cada rede)
+          let q = supabase.schema('pulso_content').from('metricas_publicacao')
+            .select('ideia_id, views, plataforma, data_publicacao')
+          if (f.plataforma !== 'todas') q = q.eq('plataforma', f.plataforma)
+          if (f.periodoDias > 0) q = q.gte('data_publicacao', new Date(Date.now() - f.periodoDias * 864e5).toISOString())
+          return q
+        })(),
         supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, metadata'),
       ])
 
@@ -117,6 +127,7 @@ export function useNotaVsViews() {
         const nota = notaDe.get(ideiaId)
         if (nota == null || views <= 0) continue // só publicados com nota e com views reais
         const ideia = ideiaMap.get(ideiaId)
+        if (f.canalId !== 'todos' && ideia?.canal_id !== f.canalId) continue
         pontos.push({
           ideiaId,
           numero: numeroDe.get(ideiaId) ?? null,

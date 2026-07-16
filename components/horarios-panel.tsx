@@ -3,9 +3,10 @@
 import { Clock } from 'lucide-react'
 
 import { useHorarios } from '@/lib/hooks/use-horarios'
+import type { BiFiltros } from '@/lib/hooks/use-bi'
 
-export function HorariosPanel() {
-  const { data, isLoading } = useHorarios()
+export function HorariosPanel({ filtros }: { filtros?: BiFiltros }) {
+  const { data, isLoading } = useHorarios(filtros)
   if (isLoading || !data) return null
 
   const maxMedia = Math.max(1, ...data.porHora.map((h) => h.media))

@@ -116,6 +116,12 @@ export function useBi(filtros: BiFiltros) {
         })
       }
 
+      // quando cada post nasceu — o ganho do dia precisa saber se a 1ª leitura é estreia ou base
+      const dataPubPorPost = new Map<string, string>()
+      for (const p of publicacoes) {
+        if (p.dataPublicacao) dataPubPorPost.set(`${p.ideia_id}|${p.plataforma}`, p.dataPublicacao)
+      }
+
       // ── séries: snapshot CUMULATIVO por post (ideia_id+plataforma) com CARRY-FORWARD ──
       // metricas_diarias guarda, por linha, o total de views de UM post naquele dia. A cobertura
       // é incompleta (nem todo post tem linha todo dia), então somar cru gera serrote e subconta.
@@ -166,18 +172,34 @@ export function useBi(filtros: BiFiltros) {
 
       // crescimento total acumulado (curva monotônica que fecha no total real)
       const serieCumulativa = cumul.slice(-14)
-      // ganho do dia = hoje − ontem (delta da curva acumulada)
-      let prevV = 0
-      let prevL = 0
-      const serieDiaria = cumul
-        .map((d) => {
-          const ganhoViews = Math.max(0, d.views - prevV) // max(0) evita negativo se um post sumir
-          const ganhoLikes = Math.max(0, d.likes - prevL)
-          prevV = d.views
-          prevL = d.likes
-          return { data: d.data, views: ganhoViews, likes: ganhoLikes }
-        })
-        .slice(-14)
+
+      // GANHO DO DIA — soma dos deltas REAIS de cada post, nunca o diff de `cumul`.
+      // O diff de cumul mentiria por dois motivos: o carry-forward inventa platôs, e a âncora
+      // do último ponto no total real despeja todo o gap acumulado numa única barra final.
+      // Aqui: delta = leitura de hoje − leitura anterior DAQUELE post. Primeira leitura de um
+      // post que já existia antes da janela é LINHA DE BASE (não é ganho); de post nascido
+      // dentro dela, o valor inteiro é ganho — o dia de estreia é o maior de todos.
+      const primeiroDia = diasOrd[0]
+      const serieDiaria: BiSerieDia[] = diasOrd.map((dia) => {
+        let views = 0
+        let likes = 0
+        for (const [key, serie] of porPost) {
+          const hoje = serie.get(dia)
+          if (!hoje) continue
+          const anterior = [...serie.keys()].filter((k) => k < dia).sort().pop()
+          if (anterior === undefined) {
+            const nasceu = (dataPubPorPost.get(key) || '').slice(0, 10)
+            if (!nasceu || !primeiroDia || nasceu < primeiroDia) continue // post velho → base
+            views += hoje.views
+            likes += hoje.likes
+          } else {
+            const ant = serie.get(anterior)!
+            if (hoje.views > ant.views) views += hoje.views - ant.views
+            if (hoje.likes > ant.likes) likes += hoje.likes - ant.likes
+          }
+        }
+        return { data: dia, views, likes }
+      }).slice(-14)
 
       const videosProduzidos = new Set(publicacoes.map((p) => p.ideia_id)).size
 

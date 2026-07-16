@@ -73,6 +73,22 @@ function n(value: number) {
   }).format(value)
 }
 
+/**
+ * Avisa quando um painel NÃO obedece o filtro ativo. Alguns não têm como: custo é por vídeo
+ * produzido (não por rede), e o Desafio conta "publiquei hoje" em qualquer rede. Filtro que
+ * não aplica em silêncio é pior que filtro nenhum — o leitor acha que está vendo um recorte.
+ */
+function NaoSegueFiltro({ filtros, motivo }: { filtros: BiFiltros; motivo: string }) {
+  const ativo = filtros.plataforma !== 'todas' || filtros.canalId !== 'todos' || filtros.periodoDias > 0
+  if (!ativo) return null
+  return (
+    <p className="flex items-center gap-1.5 px-1 text-[11px] text-[#6e6b7b]">
+      <Filter className="h-3 w-3" />
+      Ignora o filtro ativo — {motivo}.
+    </p>
+  )
+}
+
 
 export default function AnalyticsPage() {
   const [filtros, setFiltros] = useState<BiFiltros>({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 })
@@ -343,7 +359,7 @@ export default function AnalyticsPage() {
           <div className="space-y-3.5">
             <div className="grid gap-3.5 lg:grid-cols-2">
               <CardVerticais ranking={rankingVertical} />
-              <NotaVsViewsPanel />
+              <NotaVsViewsPanel filtros={filtros} />
             </div>
             <div className="grid gap-3.5 lg:grid-cols-2">
               <CardMelhorDia dias={porDiaSemana} />
@@ -361,15 +377,16 @@ export default function AnalyticsPage() {
               <CardGates gatesCalc={gatesCalc} />
               <CardRessonancia porRede={porRede} />
             </div>
-            <HorariosPanel />
+            <HorariosPanel filtros={filtros} />
           </div>
         )}
 
         {/* ══════ CRESCIMENTO ══════ */}
         {aba === 'crescimento' && (
           <div className="space-y-3.5">
+            <NaoSegueFiltro filtros={filtros} motivo="a meta é publicar em qualquer rede, todo dia" />
             <Desafio100Dias />
-            <CardCrescimento serie={data.serieCumulativa} alto />
+            <CardCrescimento serie={data.serieCumulativa} diaria={data.serieDiaria} alto />
           </div>
         )}
 
@@ -377,6 +394,7 @@ export default function AnalyticsPage() {
         {aba === 'financeiro' && (
           <div className="space-y-3.5">
             <CardCustos resumo={resumo} />
+            <NaoSegueFiltro filtros={filtros} motivo="custo é por vídeo produzido, não por rede — só o período aplica" />
             <ExtratoSemanalPanel />
             <CardQuandoPaga gatesCalc={gatesCalc} />
           </div>

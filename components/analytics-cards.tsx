@@ -1,6 +1,6 @@
 'use client'
 
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts'
 import type { BiPublicacao } from '@/lib/hooks/use-bi'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
 
@@ -165,10 +165,16 @@ export function CardMelhorDia({ dias }: { dias: { dia: string; posts: number; me
 }
 
 /* ── LINHA: tempo ───────────────────────────────────────────────────────── */
-export function CardCrescimento({ serie, alto }: { serie: { data: string; views: number }[]; alto?: boolean }) {
+export function CardCrescimento({ serie, diaria, alto }: {
+  serie: { data: string; views: number }[]
+  diaria?: { data: string; views: number }[]
+  alto?: boolean
+}) {
+  const pico = diaria?.length ? Math.max(...diaria.map((d) => d.views)) : 0
+  const fmtDia = (v: string) => v.slice(5).split('-').reverse().join('/')
   return (
     <Card titulo="Crescimento acumulado" sub="Total de views somando tudo, dia a dia"
-      rodape={<>A curva é <B>monotônica</B> e o último ponto é ancorado no total real. O miolo é aproximado porque a coleta ainda não cobre 100% dos posts todo dia.</>}>
+      rodape={<>A curva é <B>monotônica</B> e o último ponto é ancorado no total real. O miolo é aproximado porque a coleta ainda não cobre 100% dos posts todo dia. O ganho do dia abaixo <B>não</B> é o diff dessa curva — vem do delta real de cada post.</>}>
       <div className={alto ? 'h-72' : 'h-44'}>
         {serie.length === 0 ? (
           <div className="flex h-full items-center justify-center text-xs text-[#6e6b7b]">sem histórico no recorte</div>
@@ -194,6 +200,36 @@ export function CardCrescimento({ serie, alto }: { serie: { data: string; views:
           </ResponsiveContainer>
         )}
       </div>
+
+      {/* Ganho do dia — painel PRÓPRIO embaixo, compartilhando o eixo do tempo.
+          Não sobrepus no mesmo gráfico de propósito: acumulado (146 mil) e ganho (2-13 mil)
+          vivem em escalas diferentes, e juntá-los exigiria 2 eixos Y — o truque clássico que
+          deixa qualquer correlação parecer o que o autor quiser. Dois painéis empilhados
+          respondem as duas perguntas sem que nenhum minta. */}
+      {diaria && diaria.length > 1 && (
+        <div className="mt-4 border-t border-white/8 pt-3">
+          <div className="mb-1 flex items-baseline justify-between">
+            <span className="text-[11px] uppercase tracking-wide text-[#6e6b7b]">Ganho do dia (só o dia, sem somar)</span>
+            <span className="text-[11px] tabular-nums text-[#6e6b7b]">pico {n(pico)}</span>
+          </div>
+          <div className="h-28">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={diaria} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid stroke="#2c2c2a" strokeDasharray="2 3" vertical={false} />
+                <XAxis dataKey="data" tickFormatter={fmtDia} tick={{ fill: '#6e6b7b', fontSize: 10 }}
+                  tickLine={false} axisLine={{ stroke: '#383835' }} minTickGap={24} />
+                <YAxis tickFormatter={(v: number) => n(v)} tick={{ fill: '#6e6b7b', fontSize: 10 }}
+                  tickLine={false} axisLine={false} width={44} />
+                <Tooltip contentStyle={{ background: '#1a1922', border: '1px solid rgba(255,255,255,.14)', borderRadius: 10, fontSize: 12 }}
+                  labelStyle={{ color: '#a3a0b0' }} cursor={{ fill: 'rgba(255,255,255,.04)' }}
+                  labelFormatter={(v: string) => new Date(v + 'T12:00:00').toLocaleDateString('pt-BR')}
+                  formatter={(v: number) => [n(v), 'views ganhas no dia']} />
+                <Bar dataKey="views" fill="#514b63" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }

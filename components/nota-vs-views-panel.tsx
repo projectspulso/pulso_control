@@ -13,6 +13,7 @@ import {
   ZAxis,
 } from 'recharts'
 import { useNotaVsViews, type PontoNota } from '@/lib/hooks/use-nota-vs-views'
+import type { BiFiltros } from '@/lib/hooks/use-bi'
 
 // Nota é ORDINAL (3 < 4 < 5): rampa de um matiz só, do fraco ao forte. Uma paleta
 // categórica (laranja/amarelo/verde) sugeria três coisas diferentes, não três degraus —
@@ -25,8 +26,8 @@ const n = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}
  * as surpresas (viralizou com nota baixa) e decepções (nota alta que floppou).
  * Serve pro dono validar se vale seguir priorizando por nota — e alimenta o critério.
  */
-export function NotaVsViewsPanel() {
-  const { data, isLoading } = useNotaVsViews()
+export function NotaVsViewsPanel({ filtros }: { filtros?: BiFiltros }) {
+  const { data, isLoading } = useNotaVsViews(filtros)
 
   if (isLoading) return <div className="h-72 animate-pulse rounded-2xl bg-[#1a1922]" />
   if (!data || data.amostra < 3) {
