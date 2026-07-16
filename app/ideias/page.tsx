@@ -1,6 +1,7 @@
 'use client'
 
 import { useIdeias, useIdeiasStats } from '@/lib/hooks/use-ideias'
+import { usePublicadas } from '@/lib/hooks/use-publicadas'
 import { useCanais } from '@/lib/hooks/use-core'
 import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
@@ -12,10 +13,12 @@ export default function IdeiasPage() {
   const { data: ideias, isLoading, isError, refetch } = useIdeias()
   const { data: stats } = useIdeiasStats()
   const { data: canais } = useCanais()
-  
+  const { data: publicadas } = usePublicadas()
+
   const [filtroStatus, setFiltroStatus] = useState<string>('TODOS')
   const [filtroCanal, setFiltroCanal] = useState<string>('TODOS')
   const [busca, setBusca] = useState('')
+  const [mostrarPostadas, setMostrarPostadas] = useState(false)
 
   const [canalGerar, setCanalGerar] = useState<string>('')
   const [qtdGerar, setQtdGerar] = useState<number>(5)
@@ -48,12 +51,15 @@ export default function IdeiasPage() {
   const ideiasFiltradas = ideias?.filter(ideia => {
     const matchStatus = filtroStatus === 'TODOS' || ideia.status === filtroStatus
     const matchCanal = filtroCanal === 'TODOS' || ideia.canal_id === filtroCanal
-    const matchBusca = !busca || 
+    const matchBusca = !busca ||
       ideia.titulo?.toLowerCase().includes(busca.toLowerCase()) ||
       ideia.descricao?.toLowerCase().includes(busca.toLowerCase())
-    
-    return matchStatus && matchCanal && matchBusca
+    // esconde as já postadas por padrão (desentulha) — botão revela
+    const matchPostada = mostrarPostadas || !publicadas?.has(ideia.id)
+
+    return matchStatus && matchCanal && matchBusca && matchPostada
   })
+  const qtdPostadas = ideias?.filter((i) => publicadas?.has(i.id)).length ?? 0
 
   if (isLoading) {
     return (
@@ -208,6 +214,21 @@ export default function IdeiasPage() {
                 ))}
               </select>
             </div>
+          </div>
+          {/* Postadas ficam ocultas por padrão (desentulha) — botão revela. Nada é apagado. */}
+          <div className="mt-3 flex items-center justify-between border-t border-zinc-800/60 pt-3">
+            <span className="text-xs text-zinc-500">
+              {qtdPostadas > 0
+                ? `${qtdPostadas} já postada(s) ${mostrarPostadas ? 'visíveis' : 'ocultas'} da lista`
+                : 'nenhuma postada ainda'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setMostrarPostadas((v) => !v)}
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 transition-colors hover:border-violet-500"
+            >
+              {mostrarPostadas ? 'Ocultar postadas' : `Mostrar postadas${qtdPostadas ? ` (${qtdPostadas})` : ''}`}
+            </button>
           </div>
         </div>
 

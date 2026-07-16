@@ -1,6 +1,7 @@
 'use client'
 
 import { useRoteiros, useRoteirosStats } from '@/lib/hooks/use-roteiros'
+import { usePublicadas } from '@/lib/hooks/use-publicadas'
 import { useCanais } from '@/lib/hooks/use-core'
 import { ErrorState } from '@/components/ui/error-state'
 import { ModoFocoBanner } from '@/components/modo-foco-banner'
@@ -12,11 +13,13 @@ export default function RoteirosPage() {
   const { data: roteiros, isLoading, isError, refetch } = useRoteiros()
   const { data: stats } = useRoteirosStats()
   const { data: canais } = useCanais()
-  
+  const { data: publicadas } = usePublicadas()
+
   const [filtroStatus, setFiltroStatus] = useState<string>('TODOS')
   const [filtroCanal, setFiltroCanal] = useState<string>('TODOS')
   const [filtroHook, setFiltroHook] = useState<string>('TODOS')
   const [busca, setBusca] = useState('')
+  const [mostrarPostadas, setMostrarPostadas] = useState(false)
   const [refazendoLote, setRefazendoLote] = useState(false)
   const [loteMsg, setLoteMsg] = useState<string | null>(null)
   const [canalGerar, setCanalGerar] = useState<string>('')
@@ -78,9 +81,15 @@ export default function RoteirosPage() {
     const matchBusca = !busca ||
       roteiro.titulo?.toLowerCase().includes(busca.toLowerCase()) ||
       roteiro.conteudo_md?.toLowerCase().includes(busca.toLowerCase())
+    const iid = (roteiro as { ideia_id?: string | null }).ideia_id
+    const matchPostada = mostrarPostadas || !(iid && publicadas?.has(iid))
 
-    return matchStatus && matchCanal && matchHook && matchBusca
+    return matchStatus && matchCanal && matchHook && matchBusca && matchPostada
   })
+  const qtdPostadas = roteiros?.filter((r) => {
+    const iid = (r as { ideia_id?: string | null }).ideia_id
+    return iid && publicadas?.has(iid)
+  }).length ?? 0
 
   if (isLoading) {
     return (
@@ -233,6 +242,21 @@ export default function RoteirosPage() {
                 <option value="FORTE">Forte (≥4)</option>
               </select>
             </div>
+          </div>
+          {/* Postados ficam ocultos por padrão (desentulha) — botão revela. Nada é apagado. */}
+          <div className="mt-3 flex items-center justify-between border-t border-zinc-800/60 pt-3">
+            <span className="text-xs text-zinc-500">
+              {qtdPostadas > 0
+                ? `${qtdPostadas} de ideia já postada ${mostrarPostadas ? 'visíveis' : 'ocultos'} da lista`
+                : 'nenhum de ideia postada'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setMostrarPostadas((v) => !v)}
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 transition-colors hover:border-violet-500"
+            >
+              {mostrarPostadas ? 'Ocultar postados' : `Mostrar postados${qtdPostadas ? ` (${qtdPostadas})` : ''}`}
+            </button>
           </div>
         </div>
 

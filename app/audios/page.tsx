@@ -6,6 +6,7 @@ import { AudioLines, RefreshCw, RotateCcw, Clapperboard, Loader2, Info, ListOrde
 import { supabase } from '@/lib/supabase/client'
 import { ErrorState } from '@/components/ui/error-state'
 import { AvisoCreditoRender } from '@/components/aviso-credito-render'
+import { usePublicadas } from '@/lib/hooks/use-publicadas'
 import {
   useAprendizados,
   corNotaHook,
@@ -47,6 +48,8 @@ const fmtDur = (s: number | null) =>
 export default function AudiosPage() {
   const qc = useQueryClient()
   const [filtro, setFiltro] = useState<string>('todos')
+  const [mostrarPostadas, setMostrarPostadas] = useState(false)
+  const { data: publicadas } = usePublicadas()
 
   const apr = useAprendizados()
 
@@ -143,7 +146,10 @@ export default function AudiosPage() {
       .slice(0, 8)
   }, [audios, apr.data])
 
-  const filtrados = filtro === 'todos' ? audios : audios.filter((a) => a.status === filtro)
+  const porStatus = filtro === 'todos' ? audios : audios.filter((a) => a.status === filtro)
+  // esconde os de ideia já postada por padrão (desentulha) — botão revela. Nada é apagado.
+  const filtrados = mostrarPostadas ? porStatus : porStatus.filter((a) => !publicadas?.has(a.ideia_id))
+  const qtdPostadas = porStatus.filter((a) => publicadas?.has(a.ideia_id)).length
 
   if (isError) {
     return (
@@ -245,6 +251,15 @@ export default function AudiosPage() {
           <Chip v="EM_EDICAO" label="🎬 Na fila de render" n={contagem.EM_EDICAO || 0} />
           <Chip v="PRONTO_PUBLICACAO" label="Renderizados" n={contagem.PRONTO_PUBLICACAO || 0} />
           <Chip v="PUBLICADO" label="Publicados" n={contagem.PUBLICADO || 0} />
+          {/* de ideia já postada ficam ocultos por padrão (desentulha) — este botão revela */}
+          <button
+            onClick={() => setMostrarPostadas((v) => !v)}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+              mostrarPostadas ? 'bg-zinc-700 text-white' : 'bg-zinc-900/60 text-zinc-400 ring-1 ring-zinc-700/50 hover:text-white'
+            }`}
+          >
+            {mostrarPostadas ? 'Ocultar postados' : `Mostrar postados${qtdPostadas ? ` (${qtdPostadas})` : ''}`}
+          </button>
           <button
             onClick={() => refetch()}
             disabled={isFetching}
