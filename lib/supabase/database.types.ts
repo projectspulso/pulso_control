@@ -111,7 +111,10 @@ export interface Database {
           descricao: string | null
           origem: string | null
           prioridade: number | null
-          status: 'RASCUNHO' | 'APROVADA' | 'EM_PRODUCAO' | 'CONCLUIDA' | 'ARQUIVADA'
+          // enum real do banco (pulso_status_ideia): RASCUNHO | APROVADA | DESCARTADA.
+          // Os demais são legado do tipo gerado (nunca aceitos pelo enum) — mantidos só p/ não
+          // cascatear nos mapas de display; DESCARTADA é o único terminal válido (arquivar/rejeitar).
+          status: 'RASCUNHO' | 'APROVADA' | 'DESCARTADA' | 'EM_PRODUCAO' | 'CONCLUIDA' | 'ARQUIVADA'
           tags: string[] | null
           linguagem: string | null
           criado_por: string | null

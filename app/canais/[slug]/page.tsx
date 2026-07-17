@@ -33,6 +33,7 @@ const STATUS_CONFIG: Record<IdeiaStatus, { label: string; color: string }> = {
   EM_PRODUCAO: { label: 'Em producao', color: 'bg-purple-500' },
   CONCLUIDA: { label: 'Concluida', color: 'bg-blue-500' },
   ARQUIVADA: { label: 'Arquivada', color: 'bg-zinc-700' },
+  DESCARTADA: { label: 'Descartada', color: 'bg-zinc-700' },
 }
 
 function getErrorMessage(error: unknown) {

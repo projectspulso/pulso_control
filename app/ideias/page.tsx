@@ -192,9 +192,8 @@ export default function IdeiasPage() {
                 <option value="NOVA">NOVA</option>
                 <option value="EM_ANALISE">EM_ANALISE</option>
                 <option value="APROVADA">APROVADA</option>
-                <option value="REJEITADA">REJEITADA</option>
                 <option value="EM_PRODUCAO">EM_PRODUCAO</option>
-                <option value="ARQUIVADA">ARQUIVADA</option>
+                <option value="DESCARTADA">DESCARTADA</option>
               </select>
             </div>
 
@@ -333,9 +332,8 @@ function StatusBadge({ status }: { status: string | null }) {
     NOVA: { label: 'Nova', color: 'bg-blue-600' },
     EM_ANALISE: { label: 'Em Análise', color: 'bg-yellow-600' },
     APROVADA: { label: 'Aprovada', color: 'bg-green-600' },
-    REJEITADA: { label: 'Rejeitada', color: 'bg-red-600' },
     EM_PRODUCAO: { label: 'Em Produção', color: 'bg-purple-600' },
-    ARQUIVADA: { label: 'Arquivada', color: 'bg-gray-600' },
+    DESCARTADA: { label: 'Descartada', color: 'bg-gray-600' },
   }
 
   const config = status ? (statusConfig[status] || { label: status || 'Indefinido', color: 'bg-zinc-600' }) : { label: status || 'Indefinido', color: 'bg-zinc-600' }

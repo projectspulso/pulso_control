@@ -25,11 +25,17 @@ export function useAudit() {
     queryFn: async () => {
       const [pipeQ, ideiasQ, mpQ] = await Promise.all([
         supabase.schema('pulso_content').from('pipeline_producao').select('id, ideia_id, status, metadata'),
-        supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
+        supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id, status'),
         supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma, post_id'),
       ])
       if (pipeQ.error) throw pipeQ.error
-      const pipe = pipeQ.data || []
+      // Ideia arquivada/rejeitada saiu da esteira: o fluxo de arquivar do app só muda o status da
+      // ideia (não mexe no pipeline), então sua linha pendente NÃO é um problema de produção. Sem
+      // isto, arquivar uma ideia com pipeline em aberto criava erro-fantasma na Saúde dos dados.
+      const arquivadas = new Set(
+        (ideiasQ.data || []).filter((i) => ['ARQUIVADA', 'REJEITADA', 'DESCARTADA'].includes(i.status as string)).map((i) => i.id),
+      )
+      const pipe = (pipeQ.data || []).filter((p) => !arquivadas.has(p.ideia_id || ''))
       const tit = new Map((ideiasQ.data || []).map((i) => [i.id, i.titulo as string]))
       const canal = new Map((ideiasQ.data || []).map((i) => [i.id, i.canal_id as string | null]))
       const mp = mpQ.data || []

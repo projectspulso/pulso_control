@@ -254,7 +254,9 @@ export default function IdeiaDetalhesPage({
           : {}
 
       const updates: IdeiaUpdate = {
-        status: 'ARQUIVADA',
+        // DESCARTADA é o valor real do enum pulso_status_ideia. ARQUIVADA/REJEITADA NÃO existem
+        // no enum → o arquivamento falhava com "invalid input value for enum". Ver relatorio (usa DESCARTADA).
+        status: 'DESCARTADA',
         metadata: {
           ...metadataAtual,
           motivo_rejeicao: motivoRejeicao.trim() || 'Nao especificado',
@@ -509,7 +511,7 @@ export default function IdeiaDetalhesPage({
               </button>
             )}
 
-            {ideia.status !== 'ARQUIVADA' && (
+            {ideia.status !== 'DESCARTADA' && (
               <button
                 type="button"
                 onClick={() => setShowRejectDialog(true)}
@@ -580,7 +582,7 @@ export default function IdeiaDetalhesPage({
       <ConfirmDialog
         open={showRejectDialog}
         title="Arquivar ideia"
-        description="Registrar um motivo ajuda a manter historico e contexto editorial. No banco, este fluxo usa o status ARQUIVADA."
+        description="Registrar um motivo ajuda a manter historico e contexto editorial. No banco, este fluxo usa o status DESCARTADA."
         confirmLabel="Arquivar"
         confirmTone="danger"
         isConfirming={atualizarIdeia.isPending}
@@ -618,7 +620,7 @@ function StatusBadge({ status }: { status: string | null }) {
     EM_ANALISE: { label: 'Em analise', color: 'bg-yellow-600' },
     APROVADA: { label: 'Aprovada', color: 'bg-green-600' },
     EM_PRODUCAO: { label: 'Em producao', color: 'bg-purple-600' },
-    ARQUIVADA: { label: 'Arquivada', color: 'bg-zinc-500' },
+    DESCARTADA: { label: 'Descartada', color: 'bg-zinc-500' },
   }
 
   const config = (status && statusConfig[status]) || {
