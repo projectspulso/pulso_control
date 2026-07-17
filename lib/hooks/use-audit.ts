@@ -69,9 +69,14 @@ export function useAudit() {
       // 5) métricas órfãs (sem ideia)
       add('metricas_orfas', 'Métricas órfãs (sem ideia)',
         mp.filter((r) => !r.ideia_id).map(() => 'linha sem ideia_id'))
-      // 6) post_id duplicado na mesma rede
+      // 6) post_id duplicado na mesma rede — ignora placeholders manuais (ex.: Kwai é registrado
+      // por foto e todos os posts compartilham `manual_kwai`; drafts do TikTok usam `v_inbox_file~`).
+      // Esses sentinelas repetem por design; duplicata só importa pra id externo REAL.
+      const ehPlaceholder = (pid: string) => /^manual_|^v_inbox/i.test(pid)
       const seen = new Map<string, number>()
-      for (const r of mp) if (r.post_id) { const k = `${r.plataforma}|${r.post_id}`; seen.set(k, (seen.get(k) || 0) + 1) }
+      for (const r of mp) if (r.post_id && !ehPlaceholder(r.post_id)) {
+        const k = `${r.plataforma}|${r.post_id}`; seen.set(k, (seen.get(k) || 0) + 1)
+      }
       add('post_dup', 'post_id duplicado na mesma rede',
         [...seen.entries()].filter(([, n]) => n > 1).map(([k]) => k))
 

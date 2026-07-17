@@ -123,9 +123,9 @@ export function useBi(filtros: BiFiltros) {
       }
 
       // ── séries: snapshot CUMULATIVO por post (ideia_id+plataforma) com CARRY-FORWARD ──
-      // metricas_diarias guarda, por linha, o total de views de UM post naquele dia. A cobertura
-      // é incompleta (nem todo post tem linha todo dia), então somar cru gera serrote e subconta.
-      // Carry-forward: cada post mantém seu último valor conhecido até aparecer snapshot novo.
+      // Fonte = leituras_metricas (diariasQ): 1 leitura por post por dia, cobertura total desde
+      // que o coletor passou a terminar (~303 posts/dia). Carry-forward cobre só lacunas de dia
+      // (post existente que não teve releitura mantém seu último valor) — não subconta mais.
       const porPost = new Map<string, Map<string, { views: number; likes: number }>>()
       const diasSet = new Set<string>()
       for (const d of diariasQ.data || []) {
