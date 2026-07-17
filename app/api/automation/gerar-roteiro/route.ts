@@ -156,15 +156,20 @@ export async function POST(request: NextRequest) {
       typeof ideia.metadata?.numero === 'number' ? ideia.metadata.numero : null
     if (numero == null) {
       try {
-        const { data: roteirosNum } = await supabase
-          .schema('pulso_content')
-          .from('roteiros')
-          .select('metadata')
-          .not('metadata->numero', 'is', null)
+        // maxNumero de TODAS as fontes (roteiros + ideias + pipeline) — antes lia só roteiros,
+        // e os números do lote de junho viviam em ideias/pipeline, então julho recomeçava baixo
+        // e colidia (6 números duplicados até 17/07). Agora o próximo é sempre > o real máximo.
+        const [rotN, ideiasN, pipeN] = await Promise.all([
+          supabase.schema('pulso_content').from('roteiros').select('metadata').not('metadata->numero', 'is', null),
+          supabase.schema('pulso_content').from('ideias').select('metadata').not('metadata->numero', 'is', null),
+          supabase.schema('pulso_content').from('pipeline_producao').select('metadata').not('metadata->numero', 'is', null),
+        ])
         let maxNumero = 0
-        for (const r of (roteirosNum || [])) {
-          const n = Number(r?.metadata?.numero)
-          if (Number.isFinite(n) && n > maxNumero) maxNumero = n
+        for (const src of [rotN.data, ideiasN.data, pipeN.data]) {
+          for (const r of (src || [])) {
+            const n = Number((r?.metadata as { numero?: unknown })?.numero)
+            if (Number.isFinite(n) && n > maxNumero) maxNumero = n
+          }
         }
         numero = maxNumero + 1
       } catch (e) {
