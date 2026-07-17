@@ -121,7 +121,7 @@ export default function RoteirosPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        <PageHeader titulo="Roteiros" subtitulo={`${stats?.total || 0} roteiros gerados`} />
+        <PageHeader titulo="Roteiros" subtitulo={`${(stats?.total ?? 0) - qtdPostadas} a produzir · ${stats?.total ?? 0} no total${qtdPostadas ? ` (${qtdPostadas} já postados)` : ''}`} />
 
         <ModoFocoBanner detail="Roteiros fora do canal foco podem ser auditados, mas nao entram no lote atual." />
 

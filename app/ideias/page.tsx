@@ -93,7 +93,7 @@ export default function IdeiasPage() {
       <div className="max-w-7xl mx-auto space-y-8">
         <PageHeader
           titulo="Ideias"
-          subtitulo={`${stats?.total || 0} ideias cadastradas`}
+          subtitulo={`${(stats?.total ?? 0) - qtdPostadas} a produzir · ${stats?.total ?? 0} no total${qtdPostadas ? ` (${qtdPostadas} já postadas)` : ''}`}
           acoes={
             <Link
               href={`/ideias/nova`}
