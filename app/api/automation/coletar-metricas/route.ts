@@ -14,6 +14,11 @@ import { fetchYoutubeRetention } from '@/lib/youtube/retention'
  * page access token do app Meta "Pulso Control"). TikTok/Facebook: coleta manual até F4.
  */
 
+// Teto do plano. Sem isto a rota roda no default (bem menor) e o cron das 11h morria no meio:
+// 308 publicações em série passavam de 90s, então só os primeiros posts ganhavam leitura do dia
+// e metricas_diarias subcontava todo dia. Ver também o pool em comPool().
+export const maxDuration = 60
+
 interface LinhaPublicacao {
   id: string
   ideia_id: string | null
@@ -22,6 +27,17 @@ interface LinhaPublicacao {
   url_publicacao: string | null
   data_publicacao: string
   views: number | null
+}
+
+/** Roda fn sobre os itens com no máximo `limite` em voo — o laço era sequencial e estourava o tempo. */
+async function comPool<T>(itens: T[], limite: number, fn: (item: T) => Promise<void>) {
+  let proximo = 0
+  const trabalhadores = Array.from({ length: Math.min(limite, itens.length) }, async () => {
+    while (proximo < itens.length) {
+      await fn(itens[proximo++])
+    }
+  })
+  await Promise.all(trabalhadores)
 }
 
 async function coletar(request: NextRequest) {
@@ -59,13 +75,16 @@ async function coletar(request: NextRequest) {
   if (!process.env.YOUTUBE_API_KEY) avisos.push('YOUTUBE_API_KEY ausente — YouTube ignorado')
   if (!process.env.INSTAGRAM_ACCESS_TOKEN) avisos.push('INSTAGRAM_ACCESS_TOKEN ausente — Instagram ignorado')
 
+  const fbToken =
+    process.env.META_PAGE_ACCESS_TOKEN || process.env.META_SYSTEM_USER_TOKEN || process.env.INSTAGRAM_ACCESS_TOKEN
+  const fbPageId = process.env.META_PAGE_ID
+  if (!fbToken) avisos.push('sem token de Página (META_PAGE_ACCESS_TOKEN/META_SYSTEM_USER_TOKEN) — Facebook ignorado')
+
   // RECONCILIAÇÃO FB: reels publicados manualmente entram com post_id placeholder (não-numérico),
   // então o coletor não acha as views (0 no app apesar de ter views no Meta). Buscamos os reels reais
   // da Página e casamos por palavra-chave da ideia (só match único = seguro) → corrige o post_id.
   try {
     const fbBad = publicacoes.filter((p) => p.plataforma === 'facebook' && !/^\d+$/.test(p.post_id || ''))
-    const fbToken = process.env.META_PAGE_ACCESS_TOKEN || process.env.INSTAGRAM_ACCESS_TOKEN
-    const fbPageId = process.env.META_PAGE_ID
     if (fbBad.length > 0 && fbToken && fbPageId) {
       const ideiaIds = [...new Set(fbBad.map((p) => p.ideia_id).filter(Boolean))]
       const { data: ideiasFb } = await supabase
@@ -160,22 +179,32 @@ async function coletar(request: NextRequest) {
             .update({ valor: JSON.stringify(oauth) }).eq('chave', 'tiktok_oauth')
         }
       }
-      const lista = await fetch(
-        'https://open.tiktokapis.com/v2/video/list/?fields=id,title,view_count,like_count,comment_count,share_count,share_url',
-        { method: 'POST', headers: { Authorization: `Bearer ${oauth.access_token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ max_count: 20 }) }
-      ).then((x) => x.json())
-      for (const v of lista?.data?.videos || []) {
-        ttStats.set(String(v.id), {
-          views: v.view_count || 0, likes: v.like_count || 0,
-          comentarios: v.comment_count || 0, shares: v.share_count || 0,
-        })
-        ttVideos.push({
-          id: String(v.id), title: v.title || '', view_count: v.view_count || 0,
-          like_count: v.like_count || 0, comment_count: v.comment_count || 0,
-          share_count: v.share_count || 0, share_url: v.share_url || '',
-        })
-      }
+      // PAGINAÇÃO: video/list devolve no máx 20 por página. Sem seguir has_more/cursor só os 20
+      // vídeos mais novos ganhavam métrica e os demais ficavam congelados (53 de 73 parados).
+      let cursor: number | undefined
+      let paginas = 0
+      do {
+        const corpo: Record<string, unknown> = { max_count: 20 }
+        if (cursor) corpo.cursor = cursor
+        const lista = await fetch(
+          'https://open.tiktokapis.com/v2/video/list/?fields=id,title,view_count,like_count,comment_count,share_count,share_url',
+          { method: 'POST', headers: { Authorization: `Bearer ${oauth.access_token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(corpo) }
+        ).then((x) => x.json())
+        for (const v of lista?.data?.videos || []) {
+          ttStats.set(String(v.id), {
+            views: v.view_count || 0, likes: v.like_count || 0,
+            comentarios: v.comment_count || 0, shares: v.share_count || 0,
+          })
+          ttVideos.push({
+            id: String(v.id), title: v.title || '', view_count: v.view_count || 0,
+            like_count: v.like_count || 0, comment_count: v.comment_count || 0,
+            share_count: v.share_count || 0, share_url: v.share_url || '',
+          })
+        }
+        cursor = lista?.data?.has_more ? lista.data.cursor : undefined
+        paginas++
+      } while (cursor && paginas < 15)
     }
   } catch {
     avisos.push('TikTok video.list falhou — coleta manual nesta rodada')
@@ -225,7 +254,7 @@ async function coletar(request: NextRequest) {
   const agora = new Date()
   const resultados: Array<{ id: string; plataforma: string; status: string; views?: number; motivo?: string }> = []
 
-  for (const pub of publicacoes) {
+  const processarPub = async (pub: LinhaPublicacao) => {
     try {
       let metricas: Record<string, number> | null = null
       const extras: Record<string, unknown> = {} // retenção/watch-time → colunas novas (Kaizen)
@@ -276,11 +305,12 @@ async function coletar(request: NextRequest) {
           metricas = { views: s.views, likes: s.likes, comentarios: s.comentarios, shares: s.shares, saves: 0 }
         } else {
           resultados.push({ id: pub.id, plataforma: pub.plataforma, status: 'MANUAL' })
-          continue
+          return
         }
-      } else if (pub.plataforma === 'facebook' && process.env.INSTAGRAM_ACCESS_TOKEN) {
-        // page access token cobre os Reels da Página (video_insights)
-        const token = process.env.INSTAGRAM_ACCESS_TOKEN
+      } else if (pub.plataforma === 'facebook' && fbToken) {
+        // video_insights é edge de PÁGINA: o token IG-scoped não lê. Preferir page/system token —
+        // com o IG-scoped a resposta vem vazia e o Reel era gravado como 0 view.
+        const token = fbToken
         const insUrl = new URL(`https://graph.facebook.com/v23.0/${pub.post_id}/video_insights`)
         insUrl.searchParams.set('access_token', token)
         const insResp = await fetch(insUrl.toString())
@@ -315,12 +345,12 @@ async function coletar(request: NextRequest) {
         } catch { /* retenção é best-effort */ }
       } else {
         resultados.push({ id: pub.id, plataforma: pub.plataforma, status: 'MANUAL' })
-        continue
+        return
       }
 
       if (!metricas) {
         resultados.push({ id: pub.id, plataforma: pub.plataforma, status: 'SEM_DADOS' })
-        continue
+        return
       }
 
       // janelas: marca views_24h/7d/30d conforme idade da publicação
@@ -394,9 +424,12 @@ async function coletar(request: NextRequest) {
     }
   }
 
+  await comPool(publicacoes, 16, processarPub)
+
   return NextResponse.json({
     success: true,
     total: publicacoes.length,
+    duracao_ms: Date.now() - agora.getTime(),
     coletados: resultados.filter((r) => r.status === 'SUCESSO').length,
     manuais: resultados.filter((r) => r.status === 'MANUAL').length,
     erros: resultados.filter((r) => r.status === 'ERRO').length,
