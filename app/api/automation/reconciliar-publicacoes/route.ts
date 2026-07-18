@@ -47,10 +47,12 @@ async function reconciliar(request: NextRequest) {
   const igUserId = process.env.META_IG_USER_ID
   const pageId = process.env.META_PAGE_ID
   const ytKey = process.env.YOUTUBE_API_KEY
-  // Facebook /videos é edge de PÁGINA: o INSTAGRAM_ACCESS_TOKEN (IG-scoped) lê seguidores
-  // mas pode devolver [] em /videos sem erro — foi o que sumiu os reels de 16/07 em silêncio.
-  // O system user token é page-scoped e sem expiração (ver meta-api-pulso).
-  const pageToken = process.env.META_SYSTEM_USER_TOKEN || process.env.META_PAGE_ACCESS_TOKEN || token
+  // Facebook /video_reels é edge de PÁGINA: o INSTAGRAM_ACCESS_TOKEN (IG-scoped) lê seguidores
+  // mas devolve [] em /videos sem erro. E o META_SYSTEM_USER_TOKEN, apesar de ler campos da
+  // Página, é INVÁLIDO no edge de reels ("Invalid OAuth 2.0 Access Token" — testado 18/07):
+  // por isso a reconciliação nunca achava os reels e o FB tinha que ser registrado na mão.
+  // Só o META_PAGE_ACCESS_TOKEN lê reels — preferir ele primeiro (mesma ordem do coletar-metricas).
+  const pageToken = process.env.META_PAGE_ACCESS_TOKEN || process.env.META_SYSTEM_USER_TOKEN || token
   // diagnóstico: quantos itens cada rede devolveu vs quantos viraram órfão novo — mata a
   // cegueira "0 órfãos" que não distinguia "não varri" de "varri e não achei nada".
   const varridos: Record<string, { api: number; novos: number }> = {}
