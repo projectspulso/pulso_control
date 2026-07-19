@@ -23,41 +23,74 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 const GRAPH = 'https://graph.facebook.com/v23.0'
 
-async function aguardarContainer(containerId: string, token: string) {
-  for (let i = 0; i < 30; i++) {
-    const r = await fetch(`${GRAPH}/${containerId}?fields=status_code&access_token=${token}`)
-    const j = await r.json()
-    if (j.status_code === 'FINISHED') return true
-    if (j.status_code === 'ERROR') throw new Error(`Container IG com erro: ${JSON.stringify(j)}`)
-    await new Promise((res) => setTimeout(res, 5000))
-  }
-  throw new Error('Timeout aguardando processamento do vídeo no Instagram')
+// Erro-sentinela: o container do IG existe e está salvo, mas o processamento passou do prazo
+// (a função da Vercel morre em 60s). NÃO é falha — é "retente que eu finalizo". Ver publicarInstagram.
+const IG_PROCESSANDO = 'IG_PROCESSANDO'
+
+async function igStatusContainer(containerId: string, token: string): Promise<string | undefined> {
+  const r = await fetch(`${GRAPH}/${containerId}?fields=status_code&access_token=${token}`)
+  const j = await r.json()
+  return j.status_code as string | undefined // FINISHED | IN_PROGRESS | ERROR | EXPIRED | PUBLISHED
 }
 
-async function publicarInstagram(videoUrl: string, caption: string, token: string, igUserId: string) {
-  const criar = await fetch(`${GRAPH}/${igUserId}/media`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      media_type: 'REELS',
-      video_url: videoUrl,
-      caption,
-      share_to_feed: true,
-      access_token: token,
-    }),
-  })
-  const container = await criar.json()
-  if (!container.id) throw new Error(`IG container: ${JSON.stringify(container)}`)
+// Persiste (ou limpa) o container pendente no pipeline. Relê a metadata atual pra não pisar em
+// escrita concorrente; também mantém `meta` em memória em dia pro update final da rota.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function igSetPendente(supabase: any, pipelineId: string, meta: Record<string, unknown> | null, containerId: string | null) {
+  const { data } = await supabase.schema('pulso_content').from('pipeline_producao').select('metadata').eq('id', pipelineId).single()
+  const atual = { ...(data?.metadata || {}) }
+  if (containerId) atual.ig_container_pending = containerId
+  else delete atual.ig_container_pending
+  await supabase.schema('pulso_content').from('pipeline_producao').update({ metadata: atual }).eq('id', pipelineId)
+  if (meta) { if (containerId) meta.ig_container_pending = containerId; else delete meta.ig_container_pending }
+}
 
-  await aguardarContainer(container.id, token)
+// Publica um Reel no IG resistindo ao teto de 60s da Vercel. O processamento do vídeo pelo IG
+// pode passar de 60s; antes, a função morria DEPOIS de criar o container e ANTES de publicar,
+// perdendo o vídeo em silêncio (foi o que derrubou o #101). Agora: cria o container e SALVA o id
+// na hora; se o processamento não terminar até o prazo, lança IG_PROCESSANDO (não perde nada) e
+// uma nova chamada reaproveita o container salvo e finaliza — sem republicar.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function publicarInstagram(videoUrl: string, caption: string, token: string, igUserId: string, supabase: any, pipelineId: string, meta: Record<string, unknown> | null, deadlineMs: number) {
+  // 1) reaproveita container de uma tentativa anterior que estourou o tempo
+  let containerId = typeof meta?.ig_container_pending === 'string' ? (meta.ig_container_pending as string) : null
+  if (containerId) {
+    const st = await igStatusContainer(containerId, token)
+    if (st === 'ERROR' || st === 'EXPIRED' || !st) containerId = null // container morreu → recria
+  }
 
+  // 2) cria o container e PERSISTE o id imediatamente (sobrevive ao kill de 60s)
+  if (!containerId) {
+    const criar = await fetch(`${GRAPH}/${igUserId}/media`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ media_type: 'REELS', video_url: videoUrl, caption, share_to_feed: true, access_token: token }),
+    })
+    const container = await criar.json()
+    if (!container.id) throw new Error(`IG container: ${JSON.stringify(container)}`)
+    containerId = container.id as string
+    await igSetPendente(supabase, pipelineId, meta, containerId)
+  }
+
+  // 3) espera FINISHED até o prazo (deixa margem pro publish caber nos 60s)
+  let status: string | undefined = 'IN_PROGRESS'
+  while (Date.now() < deadlineMs) {
+    status = await igStatusContainer(containerId, token)
+    if (status === 'FINISHED' || status === 'ERROR') break
+    await new Promise((res) => setTimeout(res, 5000))
+  }
+  if (status === 'ERROR') { await igSetPendente(supabase, pipelineId, meta, null); throw new Error('Container IG com erro') }
+  if (status !== 'FINISHED') throw new Error(IG_PROCESSANDO) // container salvo → retry finaliza
+
+  // 4) FINISHED → publica e limpa o pendente
   const pub = await fetch(`${GRAPH}/${igUserId}/media_publish`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ creation_id: container.id, access_token: token }),
+    body: JSON.stringify({ creation_id: containerId, access_token: token }),
   })
   const media = await pub.json()
   if (!media.id) throw new Error(`IG publish: ${JSON.stringify(media)}`)
+  await igSetPendente(supabase, pipelineId, meta, null)
 
   const info = await fetch(`${GRAPH}/${media.id}?fields=permalink&access_token=${token}`).then((r) => r.json())
   return { post_id: media.id as string, url: (info.permalink as string) || 'https://www.instagram.com/pulsoprojects/' }
@@ -269,6 +302,9 @@ export async function POST(request: NextRequest) {
   const horaPub = _br.toISOString().slice(11, 19)
   const diaSemPub = _br.getUTCDay() === 0 ? 7 : _br.getUTCDay()
   const resultados: Array<{ plataforma: string; status: string; url?: string; post_id?: string; erro?: string }> = []
+  // Prazo absoluto pra IG parar de esperar o processamento e ainda caber no maxDuration=60 da
+  // Vercel (deixa ~10s pro publish + overhead). Passado o prazo, o container fica salvo e o retry finaliza.
+  const igDeadlineMs = Date.now() + 48_000
 
   for (const plataforma of plataformas) {
     try {
@@ -293,7 +329,7 @@ export async function POST(request: NextRequest) {
 
       let res: { post_id: string; url: string }
       if (plataforma === 'instagram') {
-        res = await publicarInstagram(video_url, legenda, token, igUserId)
+        res = await publicarInstagram(video_url, legenda, token, igUserId, supabase, item.id, item.metadata, igDeadlineMs)
       } else if (plataforma === 'facebook') {
         res = await publicarFacebook(video_url, legenda, token, pageId)
       } else if (plataforma === 'youtube') {
@@ -322,7 +358,12 @@ export async function POST(request: NextRequest) {
       resultados.push({ plataforma, status: 'PUBLICADO', url: res.url, post_id: res.post_id })
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido'
-      resultados.push({ plataforma, status: 'ERRO', erro: msg })
+      // IG passou de 60s processando: NÃO é erro — o container está salvo, é só rodar de novo.
+      if (msg === IG_PROCESSANDO) {
+        resultados.push({ plataforma, status: 'PROCESSANDO', erro: 'IG ainda processando o vídeo — rode publicar de novo em ~1min pra finalizar (o container está salvo, não republica)' })
+      } else {
+        resultados.push({ plataforma, status: 'ERRO', erro: msg })
+      }
     }
   }
 
@@ -339,11 +380,13 @@ export async function POST(request: NextRequest) {
       .eq('id', pipeline_id)
   }
 
+  const processando = resultados.filter((r) => r.status === 'PROCESSANDO').length
   return NextResponse.json({
     success: publicou,
     pipeline_id,
     publicados: resultados.filter((r) => r.status === 'PUBLICADO').length,
     erros: resultados.filter((r) => r.status === 'ERRO').length,
+    processando, // >0 = IG ainda processando; rode publicar de novo em ~1min (container salvo)
     resultados,
   })
 }
