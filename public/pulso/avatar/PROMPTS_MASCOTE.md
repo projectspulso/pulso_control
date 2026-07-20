@@ -38,6 +38,22 @@ Depois da base, troca só a linha da boca/expressão abaixo.
 
 ---
 
+## PISCAR (fase A — "olhos vivos") — 2 frames
+
+**Regra crítica de alinhamento:** anexe como referência o `exp_falando.png` (a pose de fala) e peça
+que **a cabeça, o corpo, o enquadramento e a POSIÇÃO dos olhos sejam IDÊNTICOS** — só as pálpebras
+mudam (de abertas para fechadas). Se a cabeça deslocar, o piscar "pula". Eu ainda realinho por código
+quando os arquivos chegarem, mas quanto mais fiel, melhor.
+
+13. **blink_fechado** (olho fechado, boca fechada — piscar em pausa) → `...both eyes FULLY CLOSED in a gentle relaxed blink, drawn as two simple downward-curved closed eyelid lines at the EXACT same position and size as the open eyes in the reference; mouth gently closed in a soft neutral line; head, body and framing identical to the reference — only the eyelids change.`
+14. **blink_falando** (olho fechado, boca aberta — piscar falando) → `...both eyes FULLY CLOSED in a gentle relaxed blink, two simple downward-curved closed eyelid lines at the EXACT same position as the open eyes in the reference; mouth OPEN mid-speech in a relaxed "ah" shape with teeth slightly visible; head, body and framing identical to the reference — only the eyelids and mouth change.`
+
+## GESTO (fase 2 — opcional) — 1 frame
+
+15. **gesto_apontar** (mão no quadro, ênfase) → `...one hand raised up into the frame near the chest, index finger pointing upward in an energetic "listen up" gesture; friendly open expression, mouth open mid-speech; same character, same framing and scale as the reference.`
+
+---
+
 ## Onde gerar
 - **GPT (ChatGPT / GPT Image)** — igual ao Doug. Grátis, você controla, ótima consistência com referência. Recomendado.
 - **Higgsfield (Nano Banana Pro / GPT Image 2)** — eu dirijo, custa créditos. Bom se quiser que eu faça em lote.
