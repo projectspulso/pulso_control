@@ -28,13 +28,17 @@ async function autoFunil(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
 
-  const [{ data: ideias }, { data: roteiros }, { data: pipe }, { data: canais }, gradeRes] = await Promise.all([
-    supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id, status'),
+  const [{ data: ideias }, { data: roteiros }, { data: pipe }, { data: canais }, gradeRes, { data: cfgRow }] = await Promise.all([
+    supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id, status, prioridade'),
     supabase.schema('pulso_content').from('roteiros').select('ideia_id'),
     supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status'),
     supabase.schema('pulso_core').from('canais').select('id, nome'),
     supabase.from('vw_agenda_semanal').select('dia_semana, faixa, canal_nome').eq('ativo', true),
+    supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle(),
   ])
+  // cap diário vem da linha de produção (fallback = MAX_POR_RUN)
+  let maxPorRun = MAX_POR_RUN
+  try { if (cfgRow?.valor) maxPorRun = JSON.parse(cfgRow.valor).roteiros_dia_max ?? MAX_POR_RUN } catch { /* default */ }
   const nomeCanal = new Map<string, string>((canais || []).map((c: { id: string; nome: string }) => [c.id, c.nome]))
   const canalDe = (id: string | null): string => nomeCanal.get(id || '') || '—'
 
@@ -57,14 +61,17 @@ async function autoFunil(request: NextRequest) {
   }
   const deficit = (canalNome: string) => Math.max(0, (demanda.get(norm(canalNome)) || 0) - (emProd.get(norm(canalNome)) || 0))
 
-  // ALVOS: ideias APROVADA sem roteiro, em canais com déficit, melhores primeiro
+  // ALVOS: ideias APROVADA sem roteiro, em canais com déficit — PRIORIDADE manda primeiro
+  // (a fila do concorrente foi ranqueada 10→7 e o dono quer produção NESSA sequência; ideia
+  // comum tem prioridade 5, então a trilha do benchmark flui na ordem sem starvar o déficit).
   const comRoteiro = new Set((roteiros || []).map((r: { ideia_id: string }) => r.ideia_id))
   const alvos = (ideias || [])
     .filter((i: { id: string; status: string; canal_id: string | null }) => i.status === 'APROVADA' && i.canal_id && !comRoteiro.has(i.id))
-    .map((i: { id: string; titulo: string; canal_id: string | null }) => ({ ...i, canal: canalDe(i.canal_id), def: deficit(canalDe(i.canal_id)) }))
+    .map((i: { id: string; titulo: string; canal_id: string | null; prioridade: number | null }) => ({ ...i, canal: canalDe(i.canal_id), def: deficit(canalDe(i.canal_id)) }))
     .filter((i: { def: number }) => i.def > 0)
-    .sort((a: { def: number; canal: string }, b: { def: number; canal: string }) => b.def - a.def || tier(a.canal) - tier(b.canal))
-    .slice(0, MAX_POR_RUN)
+    .sort((a: { def: number; canal: string; prioridade: number | null }, b: { def: number; canal: string; prioridade: number | null }) =>
+      (b.prioridade ?? 5) - (a.prioridade ?? 5) || b.def - a.def || tier(a.canal) - tier(b.canal))
+    .slice(0, maxPorRun)
 
   // gera o roteiro de cada (self-call à rota que já existe; repassa o segredo do cron)
   const origin = new URL(request.url).origin

@@ -18,16 +18,31 @@ async function autoAudio(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
 
-  const [{ data: roteiros }, { data: audios }, { data: pipe }] = await Promise.all([
+  const [{ data: roteiros }, { data: audios }, { data: pipe }, { data: cfgRow }] = await Promise.all([
     supabase.schema('pulso_content').from('roteiros').select('id, ideia_id, titulo, status'),
     supabase.schema('pulso_content').from('audios').select('roteiro_id'),
     supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status'),
+    supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle(),
   ])
 
   const comAudio = new Set((audios || []).map((a: { roteiro_id: string }) => a.roteiro_id))
   const statusPipe = new Map<string, string>(
     (pipe || []).map((p: { ideia_id: string; status: string }) => [p.ideia_id, p.status]),
   )
+
+  // TRAVA DE BUFFER (linha de produção): o gargalo é o render (3/dia). Com AUDIO_GERADO acima
+  // do teto, gerar mais áudio só queima ElevenLabs pra formar fila — pausa até o worker drenar.
+  let bufferAudioMax = 15
+  try { if (cfgRow?.valor) bufferAudioMax = JSON.parse(cfgRow.valor).buffer_audio_max ?? 15 } catch { /* default */ }
+  const emAudioGerado = (pipe || []).filter((p: { status: string }) => p.status === 'AUDIO_GERADO').length
+  if (emAudioGerado >= bufferAudioMax) {
+    return NextResponse.json({
+      success: true,
+      pausado: true,
+      motivo: `buffer AUDIO_GERADO cheio (${emAudioGerado}/${bufferAudioMax}) — áudio pausado até o render drenar`,
+      processados: 0,
+    })
+  }
 
   // alvos: roteiro APROVADO, sem áudio, cujo pipeline ainda está em ROTEIRO_PRONTO
   const alvos = (roteiros || [])
