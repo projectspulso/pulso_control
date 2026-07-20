@@ -89,23 +89,6 @@ export function useCentralPublicacao() {
   })
 }
 
-// Números MANUAIS por vídeo (Kwai etc.) via rota service-role (RLS bloqueia client).
-// Sem views/likes = só "marcar publicado" (cria a linha). Com números = atualiza.
-export function useAtualizarNumeros() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ ideiaId, rede, views, likes }: { ideiaId: string; rede: string; views?: number; likes?: number }) => {
-      const r = await fetch('/api/metricas/manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ideia_id: ideiaId, plataforma: rede, views, likes }),
-      })
-      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'falha ao salvar números')
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['central-publicacao'] }),
-  })
-}
-
 // Perfil da conta (seguidores/curtidas) de uma rede manual — ex.: Kwai.
 export interface PerfilRede { seguidores: number; curtidas: number; quando: string | null }
 export function usePerfilRede(rede: string) {

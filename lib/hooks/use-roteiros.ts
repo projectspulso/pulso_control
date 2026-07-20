@@ -35,17 +35,6 @@ export function useRoteirosStats() {
   })
 }
 
-export function useCriarRoteiro() {
-  const queryClient = useQueryClient()
-  
-  return useMutation({
-    mutationFn: (roteiro: RoteiroInsert) => roteirosApi.create(roteiro),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roteiros'] })
-    }
-  })
-}
-
 export function useAtualizarRoteiro() {
   const queryClient = useQueryClient()
   

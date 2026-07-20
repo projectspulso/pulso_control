@@ -23,14 +23,6 @@ export function useIdeia(id: string | null) {
   })
 }
 
-// Hook para ideias por status
-export function useIdeiasPorStatus(status: IdeiaStatus) {
-  return useQuery({
-    queryKey: ['ideias', 'status', status],
-    queryFn: () => ideiasApi.getByStatus(status)
-  })
-}
-
 // Hook para stats
 export function useIdeiasStats() {
   return useQuery({

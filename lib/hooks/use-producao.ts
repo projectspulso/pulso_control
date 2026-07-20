@@ -50,14 +50,6 @@ export function useConteudosProducao() {
   })
 }
 
-// Buscar conteúdos por status (para Kanban)
-export function useConteudosPorStatus(status: StatusProducao) {
-  return useQuery({
-    queryKey: ['conteudos-producao', status],
-    queryFn: () => producaoAPI.getByStatus(status),
-  })
-}
-
 // Atualizar status no pipeline
 export function useAtualizarStatusProducao() {
   const queryClient = useQueryClient()
@@ -65,19 +57,6 @@ export function useAtualizarStatusProducao() {
   return useMutation({
     mutationFn: ({ id, novoStatus }: { id: string; novoStatus: StatusProducao }) => 
       producaoAPI.updateStatus(id, novoStatus),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conteudos-producao'] })
-    },
-  })
-}
-
-// Atualizar data prevista (drag no calendário)
-export function useAtualizarDataPrevista() {
-  const queryClient = useQueryClient()
-  
-  return useMutation({
-    mutationFn: ({ id, novaData }: { id: string; novaData: Date }) => 
-      producaoAPI.updateDataPrevista(id, novaData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conteudos-producao'] })
     },

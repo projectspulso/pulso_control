@@ -18,13 +18,10 @@ import {
 import { useState } from 'react'
 
 import { ErrorState } from '@/components/ui/error-state'
-import { ModoFocoBanner } from '@/components/modo-foco-banner'
 import { PageHeader } from '@/components/layout/page-header'
 import { KitPublicacao } from '@/components/kit-publicacao'
 import { CockpitDia } from '@/components/cockpit-dia'
-import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { useAgendarPublicacao, useConteudosProntos } from '@/lib/hooks/use-calendario'
-import { usePublicar } from '@/lib/hooks/use-automation'
 import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
 
 type FeedbackTone = 'success' | 'error' | 'info'
@@ -66,7 +63,6 @@ function getFeedbackClasses(tone: FeedbackTone) {
 
 export default function PublicarPage() {
   const { data: conteudos, isLoading, isError, refetch } = useConteudosProntos()
-  const publicarAgora = usePublicar()
   const agendarPublicacao = useAgendarPublicacao()
   const apr = useAprendizados()
 
@@ -79,7 +75,7 @@ export default function PublicarPage() {
   const [horaAgendamento, setHoraAgendamento] = useState('')
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
 
-  const conteudosModoFoco = (MODO_FOCO_ATIVO ? conteudos?.filter((conteudo) => conteudo.canal === MODO_FOCO.canalNomeDb) : conteudos) ?? []
+  const conteudosModoFoco = conteudos ?? []
   const totalConteudos = conteudosModoFoco.length
   const selecionouTodos = totalConteudos > 0 && selecionados.size === totalConteudos
 
@@ -172,10 +168,6 @@ export default function PublicarPage() {
   }
 
   const fecharModalPublicar = () => {
-    if (publicarAgora.isPending) {
-      return
-    }
-
     setMostrarModalPublicar(false)
   }
 
@@ -383,20 +375,17 @@ export default function PublicarPage() {
                 <button
                   type="button"
                   onClick={() => abrirPublicacaoAssistida()}
-                  disabled={publicarAgora.isPending}
                   className="glass glass-hover rounded-xl border-green-500/50 bg-linear-to-r from-green-600 to-emerald-600 px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-green-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
-                    {publicarAgora.isPending ? 'Enviando fila...' : 'Enviar agora'}
+                    Enviar agora
                   </span>
                 </button>
               </div>
             ) : undefined
           }
         />
-
-        <ModoFocoBanner detail="Publicacao assistida limitada ao canal foco. Outros canais ficam congelados ate o gate." />
 
         {/* Kit de publicação manual — legenda + passo a passo por rede (YT/FB manuais) */}
         <KitPublicacao />

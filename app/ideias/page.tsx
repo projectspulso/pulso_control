@@ -4,7 +4,6 @@ import { useIdeias, useIdeiasStats } from '@/lib/hooks/use-ideias'
 import { usePublicadas } from '@/lib/hooks/use-publicadas'
 import { useCanais } from '@/lib/hooks/use-core'
 import { ErrorState } from '@/components/ui/error-state'
-import { ModoFocoBanner } from '@/components/modo-foco-banner'
 import { PageHeader } from '@/components/layout/page-header'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -106,8 +105,6 @@ export default function IdeiasPage() {
             </Link>
           }
         />
-
-        <ModoFocoBanner detail="Ideias fora do canal foco ficam fora da operacao diaria ate o gate do MVP." />
 
         {/* Gerar ideias com IA — escolhe o canal (travas de hook + gatilho embutidas) */}
         <div className="glass flex flex-wrap items-end gap-3 rounded-2xl border border-violet-500/30 bg-violet-500/5 p-4 animate-fade-in">

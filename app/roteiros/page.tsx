@@ -4,7 +4,6 @@ import { useRoteiros, useRoteirosStats } from '@/lib/hooks/use-roteiros'
 import { usePublicadas } from '@/lib/hooks/use-publicadas'
 import { useCanais } from '@/lib/hooks/use-core'
 import { ErrorState } from '@/components/ui/error-state'
-import { ModoFocoBanner } from '@/components/modo-foco-banner'
 import { PageHeader } from '@/components/layout/page-header'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -122,8 +121,6 @@ export default function RoteirosPage() {
     <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <PageHeader titulo="Roteiros" subtitulo={`${(stats?.total ?? 0) - qtdPostadas} a produzir · ${stats?.total ?? 0} no total${qtdPostadas ? ` (${qtdPostadas} já postados)` : ''}`} />
-
-        <ModoFocoBanner detail="Roteiros fora do canal foco podem ser auditados, mas nao entram no lote atual." />
 
         {/* Gerar roteiros — pra ideias aprovadas sem roteiro (trava de hook embutida) */}
         <div className="glass flex flex-wrap items-end gap-3 rounded-2xl border border-blue-500/30 bg-blue-500/5 p-4 animate-fade-in">

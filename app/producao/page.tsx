@@ -7,11 +7,9 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { ErrorState } from '@/components/ui/error-state'
-import { ModoFocoBanner } from '@/components/modo-foco-banner'
 import { PageHeader } from '@/components/layout/page-header'
 import { EstoqueBanner } from '@/components/estoque-banner'
 import { FilaProducao } from '@/components/fila-producao'
-import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { Calendar, Clock, Film, User } from 'lucide-react'
 import Link from 'next/link'
 import { useAprendizados, REDE_LABEL, REDE_EMOJI, corNota5 } from '@/lib/hooks/use-aprendizados'
@@ -232,7 +230,7 @@ export default function ProducaoPage() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeConteudo, setActiveConteudo] = useState<any>(null)
   const [destaque, setDestaque] = useState<string | null>(null)
-  const conteudosModoFoco = (MODO_FOCO_ATIVO ? conteudos?.filter((item) => item.canal === MODO_FOCO.canalNomeDb) : conteudos) ?? []
+  const conteudosModoFoco = conteudos ?? []
   const [processandoCards, setProcessandoCards] = useState<Set<string>>(new Set())
 
   // Avança o card pelo BOTÃO (clique confiável, não depende do arraste):
@@ -407,7 +405,6 @@ export default function ProducaoPage() {
 
           <div className="mb-6">
             <AvisoCreditoRender />
-            <ModoFocoBanner detail="Pipeline filtrado para o canal foco. Os demais canais ficam fora da execucao do MVP." />
             <div className="mt-3"><EstoqueBanner /></div>
             <div className="mt-3"><LinhaProducaoPanel /></div>
           </div>

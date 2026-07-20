@@ -46,27 +46,3 @@ export const seriesApi = {
   }
 }
 
-export const plataformasApi = {
-  async getAll() {
-    const { data, error } = await supabase
-      .from('plataformas')
-      .select('*')
-      .eq('ativo', true)
-      .order('nome_exibicao')
-    
-    if (error) throw error
-    return data
-  }
-}
-
-export const tagsApi = {
-  async getAll() {
-    const { data, error } = await supabase
-      .from('tags')
-      .select('*')
-      .order('nome')
-    
-    if (error) throw error
-    return data
-  }
-}

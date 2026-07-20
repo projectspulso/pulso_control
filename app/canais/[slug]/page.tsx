@@ -6,15 +6,12 @@ import { useState } from 'react'
 import { ArrowLeft, Filter, Plus, Sparkles } from 'lucide-react'
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { ModoFocoBanner } from '@/components/modo-foco-banner'
 import {
   type FeedbackTone,
   FeedbackBanner,
 } from '@/components/ui/feedback-banner'
-import { MODO_FOCO, MODO_FOCO_ATIVO } from '@/lib/config/modo-foco'
 import { useCanais } from '@/lib/hooks/use-core'
 import { useIdeias } from '@/lib/hooks/use-ideias'
-import { useGerarIdeias } from '@/lib/hooks/use-automation'
 import type { Database } from '@/lib/supabase/database.types'
 
 type Canal = Database['pulso_core']['Tables']['canais']['Row']
@@ -58,7 +55,7 @@ export default function CanalPage() {
   const slug = typeof params?.slug === 'string' ? params.slug : ''
   const { data: canais } = useCanais()
   const { data: allIdeias } = useIdeias()
-  const gerarIdeias = useGerarIdeias()
+  const [gerandoIdeias, setGerandoIdeias] = useState(false)
 
   const [statusFilter, setStatusFilter] = useState<'TODAS' | IdeiaStatus>('TODAS')
   const [showGenerateDialog, setShowGenerateDialog] = useState(false)
@@ -66,7 +63,7 @@ export default function CanalPage() {
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
 
   const canal = canais?.find((item: Canal) => item.slug === slug)
-  const isCanalFoco = !MODO_FOCO_ATIVO || canal?.id === MODO_FOCO.canalId
+  const isCanalFoco = true
   const ideias =
     allIdeias?.filter((item: Ideia) => item.canal_id === canal?.id) ?? []
   const ideiasFiltered =
@@ -100,7 +97,7 @@ export default function CanalPage() {
       registrarFeedback(
         'info',
         'Canal congelado pelo Modo Foco',
-        `Novas ideias devem ser geradas apenas para ${MODO_FOCO.canalNome}.`,
+        'Novas ideias devem ser geradas apenas para o canal foco.',
       )
       return
     }
@@ -115,20 +112,28 @@ export default function CanalPage() {
       return
     }
 
+    // chama a rota que GERA de verdade — antes inseria na automation_queue,
+    // fila da era n8n que nada processava (o botao enfileirava no vazio)
+    setGerandoIdeias(true)
     try {
-      await gerarIdeias.mutateAsync({
-        canalId: canal.id,
-        quantidade: qtd,
+      const res = await fetch('/api/automation/gerar-ideias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ canal_id: canal.id, quantidade: qtd }),
       })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Erro ${res.status}`)
       setShowGenerateDialog(false)
       registrarFeedback(
         'success',
-        'Workflow disparado',
-        `A geracao de ${qtd} ideias para ${canal.nome} foi iniciada.`,
+        'Ideias geradas',
+        `${data.quantidade_gerada ?? qtd} ideia(s) gerada(s) para ${canal.nome}.`,
       )
     } catch (error) {
       console.error('Erro ao gerar ideias:', error)
       registrarFeedback('error', 'Falha ao gerar ideias', getErrorMessage(error))
+    } finally {
+      setGerandoIdeias(false)
     }
   }
 
@@ -168,11 +173,11 @@ export default function CanalPage() {
             <button
               type="button"
               onClick={() => setShowGenerateDialog(true)}
-              disabled={gerarIdeias.isPending || !isCanalFoco}
+              disabled={gerandoIdeias || !isCanalFoco}
               className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Sparkles className="h-4 w-4" />
-              {gerarIdeias.isPending ? 'Gerando...' : 'Gerar ideias IA'}
+              {gerandoIdeias ? 'Gerando...' : 'Gerar ideias IA'}
             </button>
             <Link
               href={`/ideias/nova?canal=${canal.id}`}
@@ -189,7 +194,6 @@ export default function CanalPage() {
 
       {!isCanalFoco && (
         <div className="mb-6">
-          <ModoFocoBanner detail="Este canal esta congelado para o MVP. Use apenas para consulta ate o gate." />
         </div>
       )}
 
@@ -319,7 +323,7 @@ export default function CanalPage() {
         confirmLabel="Gerar ideias"
         onConfirm={handleGerarIdeias}
         onCancel={() => setShowGenerateDialog(false)}
-        isConfirming={gerarIdeias.isPending}
+        isConfirming={gerandoIdeias}
       >
         <label className="block text-sm font-medium text-zinc-300">
           Quantidade de ideias
