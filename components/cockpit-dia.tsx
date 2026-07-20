@@ -45,6 +45,34 @@ export function CockpitDia({ mostrarLinkPublicar = true }: { mostrarLinkPublicar
         </div>
       )}
 
+      {/* Manhã — 1 repost no Kwai (backfill de cobertura, campeão primeiro) */}
+      {data?.kwaiHoje && (
+        <div className="rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/5 p-4">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <span className="text-sm">☀️</span>
+            <h3 className="text-sm font-bold text-white">Manhã · repost no Kwai</h3>
+            <span className="rounded-full bg-fuchsia-500/15 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-300">
+              #{data.kwaiHoje.numero ?? '?'}
+            </span>
+            <span className="ml-auto text-[11px] text-zinc-500">faltam {data.kwaiHoje.restantes} no Kwai</span>
+          </div>
+          <p className="text-sm text-zinc-200">{data.kwaiHoje.titulo}</p>
+          {data.kwaiHoje.caption && (
+            <p className="mt-1 line-clamp-2 text-[11px] text-zinc-500" title={data.kwaiHoje.caption}>{data.kwaiHoje.caption}</p>
+          )}
+          {data.kwaiHoje.videoUrl && (
+            <a
+              href={data.kwaiHoje.videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block rounded-lg bg-fuchsia-500/15 px-3 py-1.5 text-xs font-semibold text-fuchsia-200 ring-1 ring-fuchsia-500/30 hover:bg-fuchsia-500/25"
+            >
+              Abrir vídeo pra postar no celular ↗
+            </a>
+          )}
+        </div>
+      )}
+
       {/* Plano de publicação */}
       <div className="glass rounded-2xl border border-zinc-800/50 p-5">
         <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-white">

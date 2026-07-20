@@ -27,6 +27,16 @@ export interface PublicadoHoje {
   plataformas: string[]
 }
 
+export interface KwaiRepost {
+  ideiaId: string
+  numero: number | null
+  titulo: string
+  videoUrl: string | null
+  caption: string | null
+  /** quantos ainda faltam repostar no Kwai (incluindo este) */
+  restantes: number
+}
+
 export interface Hoje {
   prontos: ItemPronto[]
   publicadosHoje: PublicadoHoje[]
@@ -37,6 +47,8 @@ export interface Hoje {
   estoqueDias: number
   /** publicações/dia da grade ativa (config desafio_100) */
   alvoDia: number
+  /** repost matinal do Kwai (backfill de cobertura) — o próximo campeão que ainda não está lá */
+  kwaiHoje: KwaiRepost | null
 }
 
 const HOJE_ISO = () => new Date().toISOString().slice(0, 10)
@@ -46,7 +58,7 @@ export function useHoje() {
     queryKey: ['hoje'],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const [ppRes, ideiasRes, canaisRes, metRes, rotRes, cfgRes] = await Promise.all([
+      const [ppRes, ideiasRes, canaisRes, metRes, rotRes, cfgRes, kwaiCfgRes, kwaiPubRes] = await Promise.all([
         supabase.schema('pulso_content').from('pipeline_producao').select('id, ideia_id, status, metadata'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
         supabase.schema('pulso_core').from('canais').select('id, nome'),
@@ -57,6 +69,8 @@ export function useHoje() {
           .gte('data_publicacao', HOJE_ISO()),
         supabase.schema('pulso_content').from('roteiros').select('ideia_id, nota_hook'),
         supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'desafio_100').maybeSingle(),
+        supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'kwai_backfill').maybeSingle(),
+        supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id').eq('plataforma', 'kwai'),
       ])
       // grade real (mesma fonte do burn-up e do estoque) — não hardcodar 3/dia
       const alvoDia = Math.max(1, (cfgRes.data?.valor as { publicacoes_dia_alvo?: number } | null)?.publicacoes_dia_alvo ?? 2)
@@ -112,6 +126,32 @@ export function useHoje() {
         }
       })
 
+      // KWAI — repost matinal do próximo campeão que ainda não está lá. Avança sozinho: usa o
+      // 1º da fila cuja ideia ainda não tem linha de Kwai (pular um dia não fura a sequência).
+      let kwaiHoje: KwaiRepost | null = null
+      try {
+        const raw = kwaiCfgRes.data?.valor
+        const cfg = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null
+        const fila: { ideia_id: string; numero: number | null; titulo: string; video_url: string | null; caption: string | null }[] =
+          cfg?.fila || []
+        const inicio: string = cfg?.inicio || '2026-07-21'
+        if (fila.length && HOJE_ISO() >= inicio) {
+          const jaNoKwai = new Set((kwaiPubRes.data || []).map((r: { ideia_id: string }) => r.ideia_id))
+          const pendentes = fila.filter((x) => !jaNoKwai.has(x.ideia_id))
+          const prox = pendentes[0]
+          if (prox) {
+            kwaiHoje = {
+              ideiaId: prox.ideia_id,
+              numero: prox.numero ?? null,
+              titulo: prox.titulo,
+              videoUrl: prox.video_url ?? null,
+              caption: prox.caption ?? null,
+              restantes: pendentes.length,
+            }
+          }
+        }
+      } catch { /* fila do Kwai é best-effort */ }
+
       const emRenderComCenas = pp.filter((p) => p.status === 'EM_EDICAO' && p.metadata?.cenas).length
       const emRenderSemCenas = pp.filter((p) => p.status === 'EM_EDICAO' && !p.metadata?.cenas).length
       const aguardandoRoteiroOuAudio = pp.filter((p) =>
@@ -126,6 +166,7 @@ export function useHoje() {
         aguardandoRoteiroOuAudio,
         estoqueDias: Math.round((prontos.length / alvoDia) * 10) / 10,
         alvoDia,
+        kwaiHoje,
       }
     },
   })
