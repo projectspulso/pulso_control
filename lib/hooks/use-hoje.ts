@@ -25,6 +25,8 @@ export interface PublicadoHoje {
   numero: number | null
   titulo: string
   plataformas: string[]
+  /** URL pública do vídeo (storage) — pra baixar e postar as redes manuais (FB/Kwai) do celular */
+  videoUrl: string | null
 }
 
 export interface KwaiRepost {
@@ -123,6 +125,7 @@ export function useHoje() {
           numero: p?.metadata?.numero ?? null,
           titulo: ideia?.titulo || '(sem título)',
           plataformas: [...plats],
+          videoUrl: p?.metadata?.video_url ?? null,
         }
       })
 

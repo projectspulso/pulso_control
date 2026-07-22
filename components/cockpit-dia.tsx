@@ -116,6 +116,17 @@ export function CockpitDia({ mostrarLinkPublicar = true }: { mostrarLinkPublicar
                   >
                     {REDE_EMOJI[rede]} priorizar {REDE_LABEL[rede]}
                   </span>
+                  {p.videoUrl && (
+                    <a
+                      href={p.videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 rounded-md bg-zinc-800 px-2 py-0.5 text-[11px] font-semibold text-zinc-300 ring-1 ring-zinc-700 hover:bg-zinc-700"
+                      title="Baixar o vídeo pra postar as redes manuais (FB/Kwai) do celular"
+                    >
+                      ⬇ vídeo
+                    </a>
+                  )}
                 </li>
               )
             })}
@@ -152,6 +163,17 @@ export function CockpitDia({ mostrarLinkPublicar = true }: { mostrarLinkPublicar
                 <span className="shrink-0 text-xs text-zinc-500">
                   {p.plataformas.map((r) => REDE_ICON[r] || r).join(' ')}
                 </span>
+                {p.videoUrl && !(p.plataformas.includes('facebook') && p.plataformas.includes('kwai')) && (
+                  <a
+                    href={p.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 rounded-md bg-zinc-800 px-2 py-0.5 text-[11px] font-semibold text-zinc-300 ring-1 ring-zinc-700 hover:bg-zinc-700"
+                    title="Baixar o vídeo pra fechar as redes manuais que faltam (FB/Kwai) do celular"
+                  >
+                    ⬇ vídeo
+                  </a>
+                )}
               </li>
             ))}
           </ul>
