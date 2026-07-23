@@ -144,23 +144,36 @@ export function CardVerticais({ ranking }: { ranking: [string, { views: number }
 }
 
 /* ── BARRAS: melhor dia (a regra de quando publicar) ────────────────────── */
+const ORDEM_SEMANA = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
+
 export function CardMelhorDia({ dias }: { dias: { dia: string; posts: number; media: number }[] }) {
-  const com = dias.filter((d) => d.posts > 0).sort((a, b) => b.media - a.media)
+  const com = dias.filter((d) => d.posts > 0)
   if (com.length < 2) return null
-  const max = com[0].media || 1
-  const vezes = com[com.length - 1].media ? com[0].media / com[com.length - 1].media : 0
+  const ranking = [...com].sort((a, b) => b.media - a.media)
+  const max = ranking[0].media || 1
+  const vezes = ranking[ranking.length - 1].media ? ranking[0].media / ranking[ranking.length - 1].media : 0
+  // ORDEM DA SEMANA, não ordem de valor: dia da semana é dado CÍCLICO. Ordenado por média
+  // (como estava) o ranking aparece mas o RITMO some — não dá pra ver se o fim de semana cai,
+  // se a terça é um pico isolado. Barra vertical na ordem natural mostra o formato da semana.
+  const emOrdem = ORDEM_SEMANA.map((nome) => com.find((d) => d.dia.startsWith(nome.slice(0, 3))) || null)
+    .filter((d): d is { dia: string; posts: number; media: number } => d !== null)
+  const ordenados = emOrdem.length >= com.length - 1 ? emOrdem : com
   return (
-    <Card titulo="Melhor dia pra publicar" sub="Média de views por vídeo, pelo dia da publicação"
-      rodape={<><B>{com[0].dia}</B> rende <B>{vezes.toFixed(1)}×</B> o pior dia. A grade trata todo dia igual — deveria concentrar o melhor material aí.</>}>
-      {com.map((d, i) => (
-        <div key={d.dia} className={i ? 'mt-2' : ''}>
-          <div className="grid grid-cols-[1fr_54px] items-center gap-2 py-[3px]">
-            <span className="text-[11.5px] text-[#a3a0b0]">{d.dia} <span className="text-[#6e6b7b]">· {d.posts} vídeos</span></span>
-            <span className="text-right text-[11.5px] tabular-nums text-[#a3a0b0]">{n(d.media)}</span>
-          </div>
-          <div className="h-[7px] rounded-full" style={{ width: `${(d.media / max) * 100}%`, background: i === 0 ? BRAND : NEUTRO }} />
-        </div>
-      ))}
+    <Card titulo="Ritmo da semana" sub="Média de views por vídeo, pelo dia da publicação"
+      rodape={<><B>{ranking[0].dia}</B> rende <B>{vezes.toFixed(1)}×</B> o pior dia. A grade trata todo dia igual — deveria concentrar o melhor material aí.</>}>
+      <div className="flex h-[124px] items-end gap-1.5">
+        {ordenados.map((d) => {
+          const melhor = d.dia === ranking[0].dia
+          const alt = Math.max(4, (d.media / max) * 92)
+          return (
+            <div key={d.dia} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1" title={`${d.dia}: ${n(d.media)} views/vídeo · ${d.posts} vídeos`}>
+              <span className={`text-[10px] tabular-nums ${melhor ? 'text-[#f5f4f8]' : 'text-[#6e6b7b]'}`}>{n(d.media)}</span>
+              <div className="w-full rounded-t-[4px]" style={{ height: alt, background: melhor ? BRAND : NEUTRO }} />
+              <span className={`truncate text-[10px] ${melhor ? 'text-[#f5f4f8]' : 'text-[#6e6b7b]'}`}>{d.dia.slice(0, 3)}</span>
+            </div>
+          )
+        })}
+      </div>
     </Card>
   )
 }
@@ -312,33 +325,61 @@ export function CardCampeoes({ tops, onDrill }: {
 }
 
 /* ── MATRIZ vídeo × rede: onde CADA conteúdo performou ──────────────────── */
+// Rampa SEQUENCIAL de um matiz só (azul), escuro→claro. No fundo escuro a fatia pequena
+// recua pra perto da superfície e a grande salta. Arco-íris aqui seria erro: a grandeza é
+// contínua, não categórica. Passos da paleta validada (100→600).
+const RAMPA_CALOR = ['#184f95', '#256abf', '#3987e5', '#6da7ec', '#9ec5f4', '#cde2fb']
+function corCalor(fatia: number) {
+  const i = Math.min(RAMPA_CALOR.length - 1, Math.floor(fatia * RAMPA_CALOR.length))
+  return RAMPA_CALOR[i]
+}
+
 export function CardMatrizRedes({ matriz, onDrill }: {
   matriz: { redes: string[]; linhas: { titulo: string; total: number; porRede: Record<string, number> }[] }
   onDrill: (t: string) => void
 }) {
   return (
-    <Card titulo="Mesmo vídeo entre redes" sub="Onde cada conteúdo performou — clique pra abrir o detalhe">
+    <Card titulo="Mesmo vídeo entre redes" sub="Cor = fatia das views daquele vídeo naquela rede — clique pra abrir o detalhe">
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead><tr className="text-[11px] text-[#6e6b7b]">
             <th className="border-b border-white/8 py-1.5 text-left font-medium">Vídeo</th>
-            {matriz.redes.map((r) => <th key={r} className="border-b border-white/8 px-2 py-1.5 text-right font-medium capitalize">{NOME_REDE[r] ?? r}</th>)}
+            {matriz.redes.map((r) => <th key={r} className="border-b border-white/8 px-1 py-1.5 text-center font-medium capitalize">{NOME_REDE[r] ?? r}</th>)}
             <th className="border-b border-white/8 py-1.5 text-right font-medium">Total</th>
           </tr></thead>
           <tbody>
             {matriz.linhas.slice(0, 12).map((l, i) => (
               <tr key={l.titulo + i} onClick={() => onDrill(l.titulo)} className="cursor-pointer hover:bg-white/5">
-                <td className="max-w-[220px] truncate border-b border-white/8 py-1.5 text-[#a3a0b0]" title={l.titulo}>{l.titulo}</td>
-                {matriz.redes.map((r) => (
-                  <td key={r} className="border-b border-white/8 px-2 py-1.5 text-right tabular-nums text-[#a3a0b0]">
-                    {l.porRede[r] ? n(l.porRede[r]) : <span className="text-[#3a3846]">—</span>}
-                  </td>
-                ))}
-                <td className="border-b border-white/8 py-1.5 text-right font-medium tabular-nums text-[#f5f4f8]">{n(l.total)}</td>
+                <td className="max-w-[200px] truncate border-b border-white/8 py-1.5 pr-2 text-[#a3a0b0]" title={l.titulo}>{l.titulo}</td>
+                {matriz.redes.map((r) => {
+                  const v = l.porRede[r] || 0
+                  // MAPA DE CALOR normalizado POR LINHA: a pergunta é "qual rede carregou ESTE
+                  // vídeo", e cada vídeo tem escala própria (um fez 30k, outro 200). Normalizar
+                  // no total global apagaria os pequenos — a linha inteira ficaria escura.
+                  const fatia = l.total > 0 ? v / l.total : 0
+                  return (
+                    <td key={r} className="border-b border-white/8 px-1 py-1" title={`${NOME_REDE[r] ?? r}: ${n(v)} views (${Math.round(fatia * 100)}% do vídeo)`}>
+                      <div
+                        className="flex h-[26px] items-center justify-center rounded-[4px] tabular-nums"
+                        style={{ background: v ? corCalor(fatia) : 'transparent', color: fatia > 0.45 ? '#0d1b2e' : '#a3a0b0' }}
+                      >
+                        {v ? n(v) : <span className="text-[#3a3846]">—</span>}
+                      </div>
+                    </td>
+                  )
+                })}
+                <td className="border-b border-white/8 py-1.5 pl-2 text-right font-medium tabular-nums text-[#f5f4f8]">{n(l.total)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="mt-3 flex items-center gap-2 text-[10px] text-[#6e6b7b]">
+        <span>menor fatia</span>
+        {[0.05, 0.2, 0.35, 0.5, 0.7, 0.9].map((f) => (
+          <span key={f} className="h-3 w-6 rounded-[3px]" style={{ background: corCalor(f) }} />
+        ))}
+        <span>maior</span>
       </div>
     </Card>
   )
