@@ -39,6 +39,16 @@ export interface KwaiRepost {
   restantes: number
 }
 
+export interface FbPendente {
+  ideiaId: string
+  numero: number | null
+  titulo: string
+  videoUrl: string | null
+  caption: string | null
+  /** dias desde a estreia do vídeo nas outras redes */
+  diasAtras: number
+}
+
 export interface Hoje {
   prontos: ItemPronto[]
   publicadosHoje: PublicadoHoje[]
@@ -51,6 +61,8 @@ export interface Hoje {
   alvoDia: number
   /** repost matinal do Kwai (backfill de cobertura) — o próximo campeão que ainda não está lá */
   kwaiHoje: KwaiRepost | null
+  /** vídeos já publicados que nunca foram ao Facebook (rede manual, Business Suite) */
+  fbPendentes: FbPendente[]
 }
 
 const HOJE_ISO = () => new Date().toISOString().slice(0, 10)
@@ -60,7 +72,7 @@ export function useHoje() {
     queryKey: ['hoje'],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const [ppRes, ideiasRes, canaisRes, metRes, rotRes, cfgRes, kwaiCfgRes, kwaiPubRes] = await Promise.all([
+      const [ppRes, ideiasRes, canaisRes, metRes, rotRes, cfgRes, kwaiCfgRes, kwaiPubRes, todasPubRes] = await Promise.all([
         supabase.schema('pulso_content').from('pipeline_producao').select('id, ideia_id, status, metadata'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
         supabase.schema('pulso_core').from('canais').select('id, nome'),
@@ -73,6 +85,10 @@ export function useHoje() {
         supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'desafio_100').maybeSingle(),
         supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'kwai_backfill').maybeSingle(),
         supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id').eq('plataforma', 'kwai'),
+        supabase
+          .schema('pulso_content')
+          .from('metricas_publicacao')
+          .select('ideia_id, plataforma, data_publicacao'),
       ])
       // grade real (mesma fonte do burn-up e do estoque) — não hardcodar 3/dia
       const alvoDia = Math.max(1, (cfgRes.data?.valor as { publicacoes_dia_alvo?: number } | null)?.publicacoes_dia_alvo ?? 2)
@@ -155,6 +171,37 @@ export function useHoje() {
         }
       } catch { /* fila do Kwai é best-effort */ }
 
+      // FACEBOOK — rede 100% manual (Business Suite). Aqui é DERIVADO, não fila fixa: qualquer
+      // vídeo que estreou nas outras redes e nunca foi ao FB aparece sozinho, e some ao ser postado.
+      // Janela de 30 dias porque repostar coisa muito antiga não vale o esforço.
+      const fbPendentes: FbPendente[] = (() => {
+        const pubs = (todasPubRes.data || []) as { ideia_id: string; plataforma: string; data_publicacao: string | null }[]
+        const temFb = new Set(pubs.filter((m) => m.plataforma === 'facebook').map((m) => m.ideia_id))
+        const estreia = new Map<string, string>()
+        for (const m of pubs) {
+          if (!m.ideia_id || !m.data_publicacao) continue
+          const atual = estreia.get(m.ideia_id)
+          if (!atual || m.data_publicacao < atual) estreia.set(m.ideia_id, m.data_publicacao)
+        }
+        const agora = Date.now()
+        return [...estreia.entries()]
+          .filter(([ideiaId]) => !temFb.has(ideiaId))
+          .map(([ideiaId, quando]) => {
+            const p = pp.find((x) => x.ideia_id === ideiaId)
+            const dias = Math.floor((agora - new Date(quando).getTime()) / 86_400_000)
+            return {
+              ideiaId,
+              numero: p?.metadata?.numero ?? null,
+              titulo: ideiaMap.get(ideiaId)?.titulo || '(sem título)',
+              videoUrl: p?.metadata?.video_url ?? null,
+              caption: p?.metadata?.caption ?? null,
+              diasAtras: dias,
+            }
+          })
+          .filter((f) => f.videoUrl && f.diasAtras <= 30)
+          .sort((a, b) => a.diasAtras - b.diasAtras)
+      })()
+
       const emRenderComCenas = pp.filter((p) => p.status === 'EM_EDICAO' && p.metadata?.cenas).length
       const emRenderSemCenas = pp.filter((p) => p.status === 'EM_EDICAO' && !p.metadata?.cenas).length
       const aguardandoRoteiroOuAudio = pp.filter((p) =>
@@ -170,6 +217,7 @@ export function useHoje() {
         estoqueDias: Math.round((prontos.length / alvoDia) * 10) / 10,
         alvoDia,
         kwaiHoje,
+        fbPendentes,
       }
     },
   })

@@ -73,6 +73,43 @@ export function CockpitDia({ mostrarLinkPublicar = true }: { mostrarLinkPublicar
         </div>
       )}
 
+      {/* Facebook — rede manual: o que estreou nas outras redes e nunca foi ao FB */}
+      {!!data?.fbPendentes?.length && (
+        <div className="rounded-2xl border border-blue-500/25 bg-blue-500/5 p-4">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="text-sm">📘</span>
+            <h3 className="text-sm font-bold text-white">Falta no Facebook</h3>
+            <span className="ml-auto text-[11px] text-zinc-500">
+              {data.fbPendentes.length} vídeo(s) · postar no Business Suite
+            </span>
+          </div>
+          <ul className="space-y-2">
+            {data.fbPendentes.map((f) => (
+              <li key={f.ideiaId} className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[11px] font-semibold text-blue-300">
+                  #{f.numero ?? '?'}
+                </span>
+                <span className="text-zinc-200">{f.titulo}</span>
+                <span className="text-[11px] text-zinc-500">há {f.diasAtras}d</span>
+                {f.videoUrl && (
+                  <a
+                    href={f.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto rounded-lg bg-blue-500/15 px-3 py-1 text-xs font-semibold text-blue-200 ring-1 ring-blue-500/30 hover:bg-blue-500/25"
+                  >
+                    Abrir vídeo ↗
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-zinc-600">
+            Confira que o &quot;Postar em&quot; está em <strong>Pulso Projects</strong> — não na Óticas.
+          </p>
+        </div>
+      )}
+
       {/* Plano de publicação */}
       <div className="glass rounded-2xl border border-zinc-800/50 p-5">
         <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-white">
