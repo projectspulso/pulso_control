@@ -30,8 +30,19 @@ export function CockpitDia({ mostrarLinkPublicar = true }: { mostrarLinkPublicar
         <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm text-amber-100">
           {data.prontos.length > 0 ? (
             <>
-              <b>Publicar hoje:</b> {data.prontos.length} vídeo{data.prontos.length > 1 ? 's' : ''} pronto
-              {data.prontos.length > 1 ? 's' : ''} — {data.prontos.map((p) => `#${p.numero ?? '?'}`).join(', ')}.{' '}
+              {/* Antes listava os 12 números de uma vez — 12 opções não é uma decisão, é um menu.
+                  Agora nomeia os N do dia (N = grade) e o resto vira "na fila". */}
+              <b>Publicar hoje:</b>{' '}
+              {data.prontos
+                .filter((p) => p.recomendadoHoje)
+                .map((p) => `#${p.numero ?? '?'} ${p.titulo}`)
+                .join('  ·  ')}
+              .{' '}
+              {data.prontos.length > data.alvoDia && (
+                <span className="text-amber-200/60">
+                  (+{data.prontos.length - data.alvoDia} na fila){' '}
+                </span>
+              )}
               {data.publicadosHoje.length > 0 && (
                 <span className="text-amber-200/70">Já saíram {data.publicadosHoje.length} hoje. </span>
               )}
@@ -130,7 +141,12 @@ export function CockpitDia({ mostrarLinkPublicar = true }: { mostrarLinkPublicar
             {data.prontos.map((p, i) => {
               const rede = apr.data?.redeRecomendada(p.canalId) || 'youtube'
               return (
-                <li key={p.pipelineId} className="flex flex-wrap items-center gap-2 rounded-xl bg-zinc-900/50 p-3">
+                <li
+                  key={p.pipelineId}
+                  className={`flex flex-wrap items-center gap-2 rounded-xl p-3 ${
+                    p.recomendadoHoje ? 'bg-violet-500/10 ring-1 ring-violet-500/30' : 'bg-zinc-900/50'
+                  }`}
+                >
                   <span className="w-5 shrink-0 text-center font-mono text-sm font-bold text-violet-400">{i + 1}</span>
                   {p.numero != null && <span className="text-[11px] font-bold text-zinc-600">#{p.numero}</span>}
                   <span className="min-w-0 flex-1 truncate text-sm text-zinc-100" title={p.titulo}>
@@ -163,6 +179,14 @@ export function CockpitDia({ mostrarLinkPublicar = true }: { mostrarLinkPublicar
                     >
                       ⬇ vídeo
                     </a>
+                  )}
+                  {/* o PORQUÊ desta posição — sem isso o ranking é caixa-preta e o dono
+                      volta a perguntar "e daí, qual eu publico?" */}
+                  {p.motivo && (
+                    <p className="w-full text-[11px] text-zinc-500">
+                      {p.recomendadoHoje && <span className="font-semibold text-violet-300">Hoje · </span>}
+                      {p.motivo}
+                    </p>
                   )}
                 </li>
               )

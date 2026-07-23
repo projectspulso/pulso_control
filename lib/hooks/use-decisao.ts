@@ -98,8 +98,10 @@ export function useDecisao() {
       }
       matriz.sort((a, b) => b.mediaViews - a.mediaViews || b.publicados - a.publicados)
 
-      // FILA: roteiros APROVADO sem publicação, ranqueados por potencial
-      // (nota de hook pesa primeiro; média do canal desempata). É o "o que publicar a seguir".
+      // FILA: roteiros APROVADO sem publicação. O QUE MUDOU: era `nota_hook × 100000 + views`,
+      // ou seja a nota esmagava tudo — e a nota_hook é ruído (corr −0,015 com views, −0,030 com
+      // retenção, n=82). Aqui ainda não há retenção própria (nada publicado), então manda o
+      // desempenho médio do CANAL, que é sinal real, e a nota entra só como desempate leve.
       const mediaPorCanal = new Map(matriz.map((m) => [m.canalId, m.mediaViews]))
       const fila: FilaItem[] = roteiros
         .filter((r) => r.status === 'APROVADO' && (!r.ideia_id || !publicados.has(r.ideia_id)))
@@ -112,7 +114,7 @@ export function useDecisao() {
             titulo: r.titulo || 'Sem título',
             canalNome: (r.canal_id && nomeCanal.get(r.canal_id)) || '—',
             notaHook: typeof r.nota_hook === 'number' ? r.nota_hook : null,
-            potencial: nh * 100000 + mc,
+            potencial: mc * 100 + nh,
           }
         })
         .sort((a, b) => b.potencial - a.potencial)

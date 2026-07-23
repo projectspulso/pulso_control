@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
+import { pontuarEstoque, escolherDoDia } from '@/lib/agenda/score'
 
 /**
  * Plano do dia do PULSO — junta agenda × estoque pronto × o que já saiu × saúde da esteira.
@@ -18,6 +19,11 @@ export interface ItemPronto {
   pipelineId: string
   caption: string | null
   notaHook: number | null
+  /** por que este vídeo está nesta posição — o dono precisa do porquê, não da caixa-preta */
+  motivo: string
+  score: number
+  /** true nos primeiros N da fila, onde N = publicações/dia da grade. É o "publique ESTE hoje". */
+  recomendadoHoje: boolean
 }
 
 export interface PublicadoHoje {
@@ -88,7 +94,7 @@ export function useHoje() {
         supabase
           .schema('pulso_content')
           .from('metricas_publicacao')
-          .select('ideia_id, plataforma, data_publicacao'),
+          .select('ideia_id, plataforma, data_publicacao, taxa_retencao'),
       ])
       // grade real (mesma fonte do burn-up e do estoque) — não hardcodar 3/dia
       const alvoDia = Math.max(1, (cfgRes.data?.valor as { publicacoes_dia_alvo?: number } | null)?.publicacoes_dia_alvo ?? 2)
@@ -119,10 +125,49 @@ export function useHoje() {
             pipelineId: p.id,
             caption: p.metadata?.caption ?? null,
             notaHook: notaHookMap.get(p.ideia_id) ?? null,
+            motivo: '',
+            score: 0,
+            recomendadoHoje: false,
           }
         })
-        // gancho mais forte publica primeiro; empate mantém a ordem do número
-        .sort((a, b) => (b.notaHook ?? 0) - (a.notaHook ?? 0) || (a.numero ?? 999) - (b.numero ?? 999))
+
+      // ORDEM DE PUBLICAÇÃO — antes era nota_hook desc, e a nota_hook é ruído: medida contra o
+      // resultado real (n=82) dá −0,015 de correlação com views e −0,030 com retenção. Agora
+      // manda a retenção do canal (percentil dentro da rede) + idade no estoque. Ver lib/agenda/score.ts.
+      const pontos = pontuarEstoque(
+        prontos.map((p) => ({
+          ideiaId: p.ideiaId,
+          canalId: p.canalId,
+          notaHook: p.notaHook,
+          prontoDesde:
+            (pp.find((x) => x.ideia_id === p.ideiaId)?.metadata?.cenas_geradas_em as string) ?? null,
+        })),
+        ((todasPubRes.data || []) as { plataforma: string; taxa_retencao: number | null; ideia_id: string }[]).map(
+          (m) => ({
+            plataforma: m.plataforma,
+            taxaRetencao: m.taxa_retencao ?? null,
+            canalId: (m.ideia_id && ideiaMap.get(m.ideia_id)?.canal_id) || null,
+          })
+        ),
+        canalNome
+      )
+      const posicao = new Map(pontos.map((p, i) => [p.ideiaId, { ...p, i }]))
+      prontos.sort(
+        (a, b) => (posicao.get(a.ideiaId)?.i ?? 999) - (posicao.get(b.ideiaId)?.i ?? 999)
+      )
+      // os N do dia saem com CANAIS DIFERENTES quando possível — o topo do placar costuma ter
+      // dois do mesmo canal empatados, e publicar os dois seguidos joga fora a variedade.
+      const doDia = escolherDoDia(
+        pontos,
+        new Map(prontos.map((p) => [p.ideiaId, p.canalId])),
+        alvoDia
+      )
+      prontos.forEach((p) => {
+        const pt = posicao.get(p.ideiaId)
+        p.motivo = pt?.motivo || ''
+        p.score = pt?.score ?? 0
+        p.recomendadoHoje = doDia.has(p.ideiaId)
+      })
 
       // já publicado hoje (agrupado por ideia)
       const porIdeia = new Map<string, Set<string>>()

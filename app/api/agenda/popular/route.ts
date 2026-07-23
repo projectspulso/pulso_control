@@ -64,7 +64,18 @@ export async function POST(request: NextRequest) {
 
     // já atribuídos: preserva slots + não reusa ideias
     const slotsExistentes = new Set((atribQ.data || []).map((a: { data: string; horario: string }) => `${a.data}|${a.horario}`))
-    const usados = new Set((atribQ.data || []).map((a: { ideia_id: string | null }) => a.ideia_id).filter(Boolean))
+    // QUEIMAVA ESTOQUE: `usados` marcava como gasta QUALQUER ideia que um dia esteve num slot —
+    // inclusive slot VENCIDO que nunca virou publicação. Vídeo pronto que perdeu a data ficava
+    // inagendável pra sempre (5 dos 12 prontos estavam nesse estado). Agora só conta slot de
+    // hoje pra frente; o que já foi ao ar continua barrado pelo set `publicado`, que é a
+    // fonte de verdade do "já postamos".
+    const hojeISO = new Date().toISOString().slice(0, 10)
+    const usados = new Set(
+      (atribQ.data || [])
+        .filter((a: { data: string }) => a.data >= hojeISO)
+        .map((a: { ideia_id: string | null }) => a.ideia_id)
+        .filter(Boolean)
+    )
 
     // gera slots datados do horizonte
     const hoje = new Date()
