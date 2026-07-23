@@ -59,6 +59,18 @@ async function coletar(request: NextRequest) {
 
   const publicacoes = (linhas || []) as LinhaPublicacao[]
 
+  // Duração da narração = duração do vídeo (o vídeo é montado em cima do áudio). É o
+  // denominador da retenção: sem ele, avg_watch_ms sozinho não diz se 18s é bom ou ruim.
+  const { data: audios } = await supabase
+    .schema('pulso_content').from('audios')
+    .select('ideia_id, duracao_segundos').not('duracao_segundos', 'is', null)
+  const duracaoPorIdeia = new Map<string, number>()
+  for (const a of (audios || []) as { ideia_id: string; duracao_segundos: number }[]) {
+    if (a.ideia_id && a.duracao_segundos && !duracaoPorIdeia.has(a.ideia_id)) {
+      duracaoPorIdeia.set(a.ideia_id, a.duracao_segundos)
+    }
+  }
+
   const avisos: string[] = []
   if (!process.env.YOUTUBE_API_KEY) avisos.push('YOUTUBE_API_KEY ausente — YouTube ignorado')
   if (!process.env.INSTAGRAM_ACCESS_TOKEN) avisos.push('INSTAGRAM_ACCESS_TOKEN ausente — Instagram ignorado')
@@ -343,6 +355,15 @@ async function coletar(request: NextRequest) {
 
       // janelas: marca views_24h/7d/30d conforme idade da publicação
       const horas = (agora.getTime() - new Date(pub.data_publicacao).getTime()) / 36e5
+      // taxa_retencao (%) = tempo médio assistido ÷ duração do vídeo. Estava NULA em 100% das
+      // linhas, e o loop de aprendizado ordena por ela — na prática ele aprendia só por views,
+      // que é o sinal errado: o vídeo de mais views tinha o MENOR tempo médio.
+      const durSeg = pub.ideia_id ? duracaoPorIdeia.get(pub.ideia_id) : undefined
+      if (typeof extras.avg_watch_ms === 'number' && durSeg && durSeg > 0) {
+        const pct = Math.round(((extras.avg_watch_ms as number) / (durSeg * 1000)) * 1000) / 10
+        if (pct > 0 && pct <= 100) extras.taxa_retencao = pct
+      }
+
       const update: Record<string, unknown> = { ...metricas, ...extras, ultima_atualizacao: agora.toISOString() }
       if (horas <= 30) update.views_24h = metricas.views
       if (horas <= 7 * 24 + 6) update.views_7dias = metricas.views
