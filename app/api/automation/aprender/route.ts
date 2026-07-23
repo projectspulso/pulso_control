@@ -46,6 +46,13 @@ function primeiraFrase(md: string): string {
   return frase.slice(0, 140).trim()
 }
 
+// O Cron da Vercel chama por GET. Esta rota só exportava POST, então o cron das segundas
+// respondia 405 e o digest ficou CONGELADO em 30/06 — o cérebro passou 23 dias aprendendo
+// com 33 ideias enquanto já havia 82. Mesmo padrão das outras rotas de cron do projeto.
+export async function GET(request: NextRequest) {
+  return POST(request)
+}
+
 export async function POST(request: NextRequest) {
   const denied = await guardApi(request)
   if (denied) return denied
