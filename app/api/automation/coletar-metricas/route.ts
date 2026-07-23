@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getYoutubeAccessToken } from '@/lib/youtube/oauth'
-import { fetchYoutubeRetention } from '@/lib/youtube/retention'
+import { fetchYoutubeRetention, fetchYoutubeWatchTime } from '@/lib/youtube/retention'
 
 /**
  * POST|GET /api/automation/coletar-metricas
@@ -267,6 +267,14 @@ async function coletar(request: NextRequest) {
           try {
             const retGraph = await fetchYoutubeRetention(pub.post_id, ytAnalyticsToken)
             if (retGraph) extras.retention_graph = retGraph
+            // tempo médio: põe o YouTube no mesmo ranking de qualidade de IG/FB.
+            // A API já devolve a % pronta — melhor que dividir por duração (ela considera
+            // rewatch e o corte real do Short), então esta tem prioridade sobre o cálculo.
+            const wt = await fetchYoutubeWatchTime(pub.post_id, ytAnalyticsToken)
+            if (wt) {
+              extras.avg_watch_ms = wt.avgWatchMs
+              extras.taxa_retencao = wt.retencaoPct
+            }
           } catch { /* retenção é best-effort */ }
         }
       } else if (pub.plataforma === 'instagram' && process.env.INSTAGRAM_ACCESS_TOKEN) {
@@ -359,7 +367,7 @@ async function coletar(request: NextRequest) {
       // linhas, e o loop de aprendizado ordena por ela — na prática ele aprendia só por views,
       // que é o sinal errado: o vídeo de mais views tinha o MENOR tempo médio.
       const durSeg = pub.ideia_id ? duracaoPorIdeia.get(pub.ideia_id) : undefined
-      if (typeof extras.avg_watch_ms === 'number' && durSeg && durSeg > 0) {
+      if (extras.taxa_retencao === undefined && typeof extras.avg_watch_ms === 'number' && durSeg && durSeg > 0) {
         const pct = Math.round(((extras.avg_watch_ms as number) / (durSeg * 1000)) * 1000) / 10
         if (pct > 0 && pct <= 100) extras.taxa_retencao = pct
       }

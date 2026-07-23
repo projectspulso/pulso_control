@@ -54,3 +54,39 @@ export async function fetchYoutubeRetention(
 
   return graph
 }
+
+/**
+ * Tempo médio assistido e retenção média de um vídeo (YouTube Analytics).
+ *
+ * A curva acima diz o FORMATO do abandono; isto diz o TAMANHO dele em um número.
+ * É o equivalente do avg_watch_ms que Instagram e Facebook devolvem — sem isto o
+ * YouTube ficava de fora do ranking de qualidade, mesmo sendo a rede de foco.
+ * Usa o mesmo token (yt-analytics.readonly), sem autorização nova.
+ *
+ * ATENÇÃO: a Analytics API tem atraso de ~48h. Vídeo recém-publicado devolve 0 —
+ * por isso só grava quando views > 0, senão zeraria a retenção de quem acabou de sair.
+ */
+export async function fetchYoutubeWatchTime(
+  videoId: string,
+  accessToken: string
+): Promise<{ avgWatchMs: number; retencaoPct: number } | null> {
+  const hoje = new Date().toISOString().slice(0, 10)
+  const url = new URL('https://youtubeanalytics.googleapis.com/v2/reports')
+  url.searchParams.set('ids', 'channel==MINE')
+  url.searchParams.set('startDate', '2024-01-01')
+  url.searchParams.set('endDate', hoje)
+  url.searchParams.set('metrics', 'views,averageViewDuration,averageViewPercentage')
+  url.searchParams.set('filters', `video==${videoId}`)
+
+  const resp = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } })
+  if (!resp.ok) return null
+
+  const data = await resp.json()
+  const linha = (data?.rows || [])[0] as [number, number, number] | undefined
+  if (!linha) return null
+
+  const [views, avgDurSeg, avgPct] = linha
+  if (!views || !avgDurSeg) return null   // ainda sem dado processado
+
+  return { avgWatchMs: Math.round(avgDurSeg * 1000), retencaoPct: Math.round(avgPct * 10) / 10 }
+}
