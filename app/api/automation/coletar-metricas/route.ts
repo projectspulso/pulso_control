@@ -329,6 +329,16 @@ async function coletar(request: NextRequest) {
         const reacoes = (vals.post_video_likes_by_reaction_type || {}) as Record<string, number>
         const likesFb = Object.values(reacoes).reduce((a, b) => a + (b || 0), 0)
         const social = (vals.post_video_social_actions || {}) as Record<string, number>
+        // Estes três já vinham nesta MESMA resposta e eram descartados — nenhuma chamada extra.
+        // alcance: quantas pessoas distintas viram (views conta exibição, não pessoa).
+        if (typeof vals.post_impressions_unique === 'number') extras.reach = vals.post_impressions_unique
+        // seguidores ganhos POR ESTE VÍDEO ÷ mil views. É a única métrica de conversão real que
+        // alguma rede nos dá — mede o que a meta pede (virar seguidor), não só quem assistiu.
+        const seguidores = vals.post_video_followers
+        const viewsFb = (vals.fb_reels_total_plays as number) || (vals.blue_reels_play_count as number) || 0
+        if (typeof seguidores === 'number' && viewsFb > 0) {
+          extras.taxa_conversao = Math.round((seguidores / viewsFb) * 1000 * 100) / 100
+        }
         metricas = {
           views: (vals.fb_reels_total_plays as number) || (vals.blue_reels_play_count as number) || 0,
           likes: likesFb,
