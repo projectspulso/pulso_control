@@ -137,6 +137,71 @@ async function reconciliar(request: NextRequest) {
     return { ideia_id, best, second }
   }
 
+  // 2.5) FINALIZA IG PENDENTE — o /publicar devolve PROCESSANDO quando o container do reel passa
+  //      do prazo (reel leva 30-60s) e salva `ig_container_pending`. Sem ninguém retentar, o vídeo
+  //      ficava estacionado e NUNCA publicava (causa dos gaps de 21-22/07). Aqui o cron fecha:
+  //      container FINISHED -> media_publish + registra; ERROR/EXPIRED -> limpa o pendente.
+  const igFinalizados: { ideia_id: string; post_id?: string; estado: string }[] = []
+  if (token && igUserId) {
+    const { data: pendentes } = await supabase
+      .schema('pulso_content').from('pipeline_producao')
+      .select('id, ideia_id, roteiro_id, metadata')
+      .not('metadata->>ig_container_pending', 'is', null)
+    for (const p of (pendentes || []) as { id: string; ideia_id: string; roteiro_id: string | null; metadata: Record<string, unknown> }[]) {
+      const cid = String(p.metadata?.ig_container_pending || '')
+      if (!cid) continue
+      // TRAVA ANTI-DUPLICATA: se essa ideia JÁ tem linha de Instagram, o pendente é resíduo —
+      // só limpa. Sem isso, um container órfão publicaria um segundo reel do mesmo vídeo.
+      const { data: jaIg } = await supabase
+        .schema('pulso_content').from('metricas_publicacao')
+        .select('id').eq('ideia_id', p.ideia_id).eq('plataforma', 'instagram').limit(1)
+      if (jaIg && jaIg.length > 0) {
+        const meta = { ...(p.metadata || {}) }
+        delete meta.ig_container_pending
+        await supabase.schema('pulso_content').from('pipeline_producao').update({ metadata: meta }).eq('id', p.id)
+        igFinalizados.push({ ideia_id: p.ideia_id, estado: 'ja tinha IG — pendente limpo (sem republicar)' })
+        continue
+      }
+      const limpar = async () => {
+        const meta = { ...(p.metadata || {}) }
+        delete meta.ig_container_pending
+        await supabase.schema('pulso_content').from('pipeline_producao').update({ metadata: meta }).eq('id', p.id)
+      }
+      try {
+        const st = await fetch(`${GRAPH}/${cid}?fields=status_code&access_token=${token}`).then((r) => r.json())
+        const code = st?.status_code
+        if (code === 'FINISHED') {
+          const pub = await fetch(`${GRAPH}/${igUserId}/media_publish`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ creation_id: cid, access_token: token }),
+          }).then((r) => r.json())
+          if (pub?.id) {
+            const info = await fetch(`${GRAPH}/${pub.id}?fields=permalink&access_token=${token}`).then((r) => r.json())
+            const agoraIso = new Date().toISOString()
+            const br = new Date(Date.now() - 3 * 3600_000)
+            await supabase.schema('pulso_content').from('metricas_publicacao').insert({
+              ideia_id: p.ideia_id, roteiro_id: p.roteiro_id, plataforma: 'instagram',
+              url_publicacao: info?.permalink || 'https://www.instagram.com/pulsoprojects/',
+              post_id: String(pub.id), data_publicacao: agoraIso,
+              hora_publicacao: br.toISOString().slice(11, 19),
+              dia_semana: br.getUTCDay() === 0 ? 7 : br.getUTCDay(),
+              metadata: { metodo: 'api', finalizado_por: 'reconciliar' },
+            })
+            await limpar()
+            igFinalizados.push({ ideia_id: p.ideia_id, post_id: String(pub.id), estado: 'PUBLICADO' })
+          } else {
+            igFinalizados.push({ ideia_id: p.ideia_id, estado: `publish falhou: ${JSON.stringify(pub).slice(0, 80)}` })
+          }
+        } else if (code === 'ERROR' || code === 'EXPIRED' || !code) {
+          await limpar()
+          igFinalizados.push({ ideia_id: p.ideia_id, estado: `container ${code || 'sumiu'} — pendente limpo` })
+        } // IN_PROGRESS: deixa pra próxima rodada
+      } catch (e) {
+        igFinalizados.push({ ideia_id: p.ideia_id, estado: `erro: ${e instanceof Error ? e.message : 'desconhecido'}` })
+      }
+    }
+  }
+
   // 3) coleta os vídeos de cada rede (cada uma isolada)
   const orfaos: Orfao[] = []
 
@@ -299,6 +364,7 @@ async function reconciliar(request: NextRequest) {
     promovidos,
     por_rede: porRede,
     varridos, // {rede: {api, novos}} — o que cada rede DEVOLVEU vs virou órfão novo
+    ig_finalizados: igFinalizados.length ? igFinalizados : undefined, // containers IG que estavam PROCESSANDO
     revisar,
     avisos: avisos.length ? avisos : undefined,
     registrados: registrar.map((r) => ({ plataforma: r.plataforma, post_id: r.post_id })),

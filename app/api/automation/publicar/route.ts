@@ -302,9 +302,11 @@ export async function POST(request: NextRequest) {
   const horaPub = _br.toISOString().slice(11, 19)
   const diaSemPub = _br.getUTCDay() === 0 ? 7 : _br.getUTCDay()
   const resultados: Array<{ plataforma: string; status: string; url?: string; post_id?: string; erro?: string }> = []
-  // Prazo absoluto pra IG parar de esperar o processamento e ainda caber no maxDuration=60 da
-  // Vercel (deixa ~10s pro publish + overhead). Passado o prazo, o container fica salvo e o retry finaliza.
-  const igDeadlineMs = Date.now() + 48_000
+  // Prazo absoluto pra IG parar de esperar e ainda caber no maxDuration=60 da Vercel.
+  // 48s era CURTO DEMAIS (regressão de 18/07): reel do IG leva tipicamente 30-60s, então
+  // publicações que antes fechavam aos 50-58s passaram a estacionar em PROCESSANDO. 52s
+  // devolve a janela do caso comum e ainda deixa ~8s pro publish+permalink (que levam ~2s).
+  const igDeadlineMs = Date.now() + 52_000
 
   for (const plataforma of plataformas) {
     try {
@@ -369,13 +371,24 @@ export async function POST(request: NextRequest) {
 
   const publicou = resultados.some((r) => r.status === 'PUBLICADO')
   if (publicou) {
+    // MERGE, não sobrescrita: a UI dispara 1 chamada POR REDE em PARALELO, e todas leram a
+    // metadata no início. Gravar `{...item.metadata}` fazia a última a terminar APAGAR o que as
+    // outras salvaram — inclusive o `ig_container_pending` do Instagram (causa dos gaps de 21-22/07).
+    // Relê o estado atual e mescla os resultados por plataforma antes de gravar.
+    const { data: atualRow } = await supabase
+      .schema('pulso_content').from('pipeline_producao').select('metadata').eq('id', pipeline_id).single()
+    const metaAtual = (atualRow?.metadata || {}) as Record<string, unknown>
+    const anteriores = Array.isArray(metaAtual.publicacao_meta_api)
+      ? (metaAtual.publicacao_meta_api as { plataforma: string }[])
+      : []
+    const merged = [...anteriores.filter((a) => !resultados.some((r) => r.plataforma === a.plataforma)), ...resultados]
     await supabase
       .schema('pulso_content')
       .from('pipeline_producao')
       .update({
         status: 'PUBLICADO',
         data_publicacao: agora,
-        metadata: { ...(item.metadata || {}), publicacao_meta_api: resultados },
+        metadata: { ...metaAtual, publicacao_meta_api: merged },
       })
       .eq('id', pipeline_id)
   }
