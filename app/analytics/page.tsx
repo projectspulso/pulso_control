@@ -95,7 +95,7 @@ function NaoSegueFiltro({ filtros, motivo }: { filtros: BiFiltros; motivo: strin
 
 export default function AnalyticsPage() {
   const [filtros, setFiltros] = useState<BiFiltros>({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 })
-  const [aba, setAba] = useState<'geral' | 'conteudo' | 'audiencia' | 'crescimento' | 'financeiro'>('geral')
+  const [aba, setAba] = useState<'geral' | 'conteudo' | 'qualidade' | 'audiencia' | 'crescimento' | 'financeiro'>('geral')
   const [drill, setDrill] = useState<string | null>(null)
   const { data, isLoading, isError, refetch } = useBi(filtros)
   const { data: decisao } = useDecisao()
@@ -369,11 +369,13 @@ export default function AnalyticsPage() {
               <CardMelhorDia dias={porDiaSemana} />
               <CardCampeoes tops={topConteudos} onDrill={setDrill} />
             </div>
-            <QualidadePanel filtros={filtros} />
             <CardMatrizRedes matriz={matrizRedes} onDrill={setDrill} />
             {decisao && <CardDecisao decisao={decisao} filtros={filtros} setFiltros={setFiltros} />}
           </div>
         )}
+
+        {/* ══════ QUALIDADE ══════ */}
+        {aba === 'qualidade' && <QualidadePanel filtros={filtros} />}
 
         {/* ══════ AUDIÊNCIA ══════ */}
         {aba === 'audiencia' && (

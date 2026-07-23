@@ -498,6 +498,9 @@ export function CardExperimento({ exp }: { exp?: Experimento }) {
 export const ABAS = [
   { id: 'geral' as const, label: 'Visão geral' },
   { id: 'conteudo' as const, label: 'Conteúdo' },
+  // Separada do Conteúdo: lá é O QUE produzir (tema, dia, gancho); aqui é COMO o vídeo
+  // segura quem assiste. Junto, a aba tinha 7 painéis e ninguém achava nada.
+  { id: 'qualidade' as const, label: 'Qualidade' },
   { id: 'audiencia' as const, label: 'Audiência' },
   { id: 'crescimento' as const, label: 'Crescimento' },
   { id: 'financeiro' as const, label: 'Financeiro' },
