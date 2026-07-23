@@ -80,6 +80,26 @@ export async function POST(request: NextRequest) {
       if (r.ideia_id && !roteiroPorIdeia.has(r.ideia_id)) roteiroPorIdeia.set(r.ideia_id, r)
     }
 
+    // PERCENTIL POR REDE: a retenção não é comparável entre plataformas — o YouTube devolve
+    // averageViewPercentage, que passa de 100% quando o Short entra em loop (vimos 328%),
+    // enquanto IG/FB são tempo÷duração (teto ~100). Comparar o número cru fazia o YouTube
+    // ocupar o pódio inteiro por artefato de escala. Aqui cada vídeo é medido contra os
+    // outros DA MESMA REDE: 0..1 = posição relativa. Aí sim as redes se somam.
+    const porRede = new Map<string, number[]>()
+    for (const m of metricas || []) {
+      if (!m.taxa_retencao) continue
+      if (!porRede.has(m.plataforma)) porRede.set(m.plataforma, [])
+      porRede.get(m.plataforma)!.push(m.taxa_retencao)
+    }
+    for (const arr of porRede.values()) arr.sort((a, b) => a - b)
+    const percentil = (plataforma: string, valor: number | null) => {
+      const arr = porRede.get(plataforma)
+      if (!valor || !arr || arr.length < 2) return 0
+      let abaixo = 0
+      for (const v of arr) if (v < valor) abaixo++
+      return abaixo / (arr.length - 1)
+    }
+
     // --- agrega métricas por ideia (retenção máx + views totais) ---
     const porIdeia = new Map<string, { views: number; ret: number }>()
     // --- tema×rede: views por (plataforma, vertical) ---
@@ -87,7 +107,7 @@ export async function POST(request: NextRequest) {
     for (const m of metricas || []) {
       const ag = porIdeia.get(m.ideia_id) || { views: 0, ret: 0 }
       ag.views += m.views || 0
-      ag.ret = Math.max(ag.ret, m.taxa_retencao || 0)
+      ag.ret = Math.max(ag.ret, percentil(m.plataforma, m.taxa_retencao))
       porIdeia.set(m.ideia_id, ag)
 
       const vert = canalNome.get(ideiaCanal.get(m.ideia_id) || '') || '?'

@@ -88,5 +88,13 @@ export async function fetchYoutubeWatchTime(
   const [views, avgDurSeg, avgPct] = linha
   if (!views || !avgDurSeg) return null   // ainda sem dado processado
 
-  return { avgWatchMs: Math.round(avgDurSeg * 1000), retencaoPct: Math.round(avgPct * 10) / 10 }
+  // Valor CRU, sem teto: em Short o averageViewPercentage passa de 100% quando o vídeo
+  // entra em loop (vimos 328%) — e isso é sinal de qualidade, não erro. Cortar em 100
+  // empatava metade do catálogo no teto. A escala do YouTube não bate com a de IG/FB
+  // (tempo÷duração), então quem compara redes tem que normalizar POR REDE — é o que o
+  // /aprender faz via percentil. Guardar cru aqui mantém o dado honesto.
+  return {
+    avgWatchMs: Math.round(avgDurSeg * 1000),
+    retencaoPct: Math.round(avgPct * 10) / 10,
+  }
 }
