@@ -205,7 +205,19 @@ export async function POST(request: NextRequest) {
     try {
       await gerarCenas(supabase, { roteiro_id: roteiro.id })
     } catch (e) {
+      // O console.error sozinho não bastava: o log morre na Vercel e o card fica em
+      // EM_EDICAO sem cenas PRA SEMPRE — o worker de render pula item sem cenas, e ninguém
+      // fica sabendo. Quatro vídeos ficaram parados de 6 a 13 dias assim, sem rastro nenhum.
+      // Agora o motivo fica escrito no próprio card, visível no kanban.
+      const motivo = e instanceof Error ? e.message : 'erro desconhecido'
       console.error('[gerar-audio] gerar-cenas best-effort falhou (segue):', e)
+      try {
+        await supabase
+          .schema('pulso_content')
+          .from('pipeline_producao')
+          .update({ observacoes: `Cenas não geradas (${new Date().toISOString().slice(0, 10)}): ${motivo}`.slice(0, 500) })
+          .eq('ideia_id', roteiro.ideia_id)
+      } catch { /* anotar o motivo é best-effort; nunca derruba a geração do áudio */ }
     }
 
     return NextResponse.json({
