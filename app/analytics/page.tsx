@@ -9,6 +9,7 @@ import { Desafio100Dias } from '@/components/desafio-100-dias'
 import { InsightDoDia } from '@/components/insight-do-dia'
 import { HorariosPanel } from '@/components/horarios-panel'
 import { NotaVsViewsPanel } from '@/components/nota-vs-views-panel'
+import { QualidadePanel } from '@/components/qualidade-panel'
 import { ExtratoSemanalPanel } from '@/components/extrato-semanal-panel'
 import {
   ABAS,
@@ -368,6 +369,7 @@ export default function AnalyticsPage() {
               <CardMelhorDia dias={porDiaSemana} />
               <CardCampeoes tops={topConteudos} onDrill={setDrill} />
             </div>
+            <QualidadePanel filtros={filtros} />
             <CardMatrizRedes matriz={matrizRedes} onDrill={setDrill} />
             {decisao && <CardDecisao decisao={decisao} filtros={filtros} setFiltros={setFiltros} />}
           </div>

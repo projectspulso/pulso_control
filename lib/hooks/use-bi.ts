@@ -22,8 +22,23 @@ export interface BiPublicacao {
   comentarios: number
   shares: number
   saves: number
-  avgWatchMs: number | null // tempo médio assistido (FB + IG entregam; YT/TikTok não)
+  avgWatchMs: number | null // tempo médio assistido (IG, FB e YT entregam; TikTok/Kwai não)
   duracaoSeg: number | null // duração do vídeo (do áudio da ideia) — pro % assistido
+  reach: number | null // PESSOAS distintas alcançadas (views conta exibição) — só FB e IG
+  taxaRetencao: number | null // % assistido. YT passa de 100 quando o Short entra em loop
+  seguidores: number | null // seguidores ganhos por este vídeo — só o FB entrega
+}
+
+/** Um vídeo no ranking de qualidade — retenção comparada DENTRO da própria rede. */
+export interface BiQualidade {
+  ideiaId: string
+  titulo: string
+  plataforma: string
+  views: number
+  reach: number | null
+  taxaRetencao: number
+  percentil: number // 0..100 — posição entre os vídeos DA MESMA rede
+  seguidores: number | null
 }
 
 export interface BiSerieDia {
@@ -42,6 +57,9 @@ export interface BiSnapshot {
   retencaoMedia: { t: number; pct: number }[] // curva média de retenção (FB), 41 pontos 0→fim
   retencaoVideos: number // quantos vídeos entraram na média
   retencao3s: number | null // % retido por volta dos 3s (queda inicial) — média
+  qualidade: BiQualidade[] // ranking por percentil de retenção dentro da rede (melhor 1º)
+  alcancePorRede: { plataforma: string; views: number; reach: number }[] // views ≠ pessoas
+  seguidoresTotal: number // seguidores ganhos somados (hoje só o FB mede)
 }
 
 export function useBi(filtros: BiFiltros) {
@@ -113,6 +131,14 @@ export function useBi(filtros: BiFiltros) {
           saves: m.saves || 0,
           avgWatchMs: m.avg_watch_ms ?? null,
           duracaoSeg: m.ideia_id ? duracaoPorIdeia.get(m.ideia_id) ?? null : null,
+          reach: m.reach ?? null,
+          taxaRetencao: m.taxa_retencao ?? null,
+          // taxa_conversao é gravada como seguidores por MIL views — aqui volta pro absoluto,
+          // que é o número honesto: a taxa infla em vídeo pequeno (1 seguidor em 170 views).
+          seguidores:
+            m.taxa_conversao != null && m.views
+              ? Math.round((m.taxa_conversao * m.views) / 1000)
+              : null,
         })
       }
 
@@ -229,6 +255,53 @@ export function useBi(filtros: BiFiltros) {
       // ~3s: vídeos ~50s / 40 segmentos ≈ 1,25s cada → ponto 2-3 ≈ 3s
       const retencao3s = retencaoVideos > 0 ? retencaoMedia[3]?.pct ?? null : null
 
+      // ── QUALIDADE: percentil de retenção DENTRO da rede ──
+      // A retenção não é comparável entre plataformas: o YouTube devolve averageViewPercentage,
+      // que passa de 100% quando o Short entra em loop (já vimos 328%), enquanto IG/FB são
+      // tempo÷duração (teto ~100). Ordenar pelo número cru punha o YouTube no pódio inteiro.
+      // Mesmo critério que o /api/automation/aprender usa pra escolher os campeões — a tela
+      // mostra a MESMA lista que o cérebro enxerga.
+      const retPorRede = new Map<string, number[]>()
+      for (const p of publicacoes) {
+        if (p.taxaRetencao == null) continue
+        if (!retPorRede.has(p.plataforma)) retPorRede.set(p.plataforma, [])
+        retPorRede.get(p.plataforma)!.push(p.taxaRetencao)
+      }
+      for (const arr of retPorRede.values()) arr.sort((a, b) => a - b)
+      const qualidade: BiQualidade[] = publicacoes
+        .filter((p) => p.taxaRetencao != null && p.ideia_id)
+        .map((p) => {
+          const arr = retPorRede.get(p.plataforma) || []
+          let abaixo = 0
+          for (const v of arr) if (v < (p.taxaRetencao as number)) abaixo++
+          return {
+            ideiaId: p.ideia_id as string,
+            titulo: p.ideiaTitulo,
+            plataforma: p.plataforma,
+            views: p.views,
+            reach: p.reach,
+            taxaRetencao: p.taxaRetencao as number,
+            percentil: arr.length > 1 ? Math.round((abaixo / (arr.length - 1)) * 100) : 0,
+            seguidores: p.seguidores,
+          }
+        })
+        .sort((a, b) => b.percentil - a.percentil || b.views - a.views)
+
+      // alcance × views por rede: views conta EXIBIÇÃO, reach conta PESSOA
+      const alcanceMap = new Map<string, { views: number; reach: number }>()
+      for (const p of publicacoes) {
+        if (p.reach == null) continue
+        const a = alcanceMap.get(p.plataforma) || { views: 0, reach: 0 }
+        a.views += p.views
+        a.reach += p.reach
+        alcanceMap.set(p.plataforma, a)
+      }
+      const alcancePorRede = [...alcanceMap.entries()]
+        .map(([plataforma, v]) => ({ plataforma, ...v }))
+        .sort((a, b) => b.reach - a.reach)
+
+      const seguidoresTotal = publicacoes.reduce((s, p) => s + (p.seguidores || 0), 0)
+
       return {
         publicacoes: publicacoes.sort((a, b) => b.views - a.views),
         serieDiaria,
@@ -239,6 +312,9 @@ export function useBi(filtros: BiFiltros) {
         retencaoMedia,
         retencaoVideos,
         retencao3s,
+        qualidade,
+        alcancePorRede,
+        seguidoresTotal,
       }
     },
   })
