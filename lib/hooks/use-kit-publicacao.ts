@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { supabase } from '@/lib/supabase/client'
+import { withPulsoCodigo } from '@/lib/pulso-codigo'
 
 /**
  * KIT DE PUBLICAÇÃO MANUAL — tudo que o dono precisa pra subir um PRONTO à mão
@@ -44,7 +45,8 @@ export function useKitPublicacao() {
       return (pipeQ.data || []).map((p) => {
         const md = p.metadata || {}
         const numero = (md.numero as number) ?? null
-        const legenda = (md.caption as string) || ''
+        // #pulsoNNN discreto no fim da legenda — código de ligação entre redes. Idempotente.
+        const legenda = withPulsoCodigo((md.caption as string) || '', numero)
         const url = (md.video_url as string) || null
         const slug = url ? (url.split('/').pop() || '').replace(/\.mp4$/, '') : ''
         return {

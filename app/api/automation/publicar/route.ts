@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { withPulsoCodigo } from '@/lib/pulso-codigo'
 
 /**
  * POST /api/automation/publicar
@@ -295,7 +296,12 @@ export async function POST(request: NextRequest) {
     .eq('id', item.ideia_id)
     .single()
 
-  const legenda = caption || `${ideia?.titulo || 'PULSO'} 👁️ Segue o PULSO.`
+  // #pulsoNNN: código de ligação entre redes, o MESMO em todas (é o que liga o vídeo entre
+  // elas). N vem de metadata.numero — nunca inventado. Idempotente: se a legenda já traz o
+  // código (gerado antes daqui), não duplica. Vai na legenda (IG/FB/TikTok) e na descrição (YT).
+  const legendaBase = caption || `${ideia?.titulo || 'PULSO'} 👁️ Segue o PULSO.`
+  const numeroVideo = typeof item.metadata?.numero === 'number' ? item.metadata.numero : null
+  const legenda = withPulsoCodigo(legendaBase, numeroVideo)
   const agora = new Date().toISOString()
   // hora real (Brasília, UTC-3) — alimenta o painel de horários do analytics
   const _br = new Date(Date.now() - 3 * 3600_000)

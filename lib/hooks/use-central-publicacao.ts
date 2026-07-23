@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
+import { withPulsoCodigo } from '@/lib/pulso-codigo'
 
 // Conteúdo de publicação por rede, salvo em pipeline_producao.metadata.publicacao
 export interface PubRede {
@@ -64,8 +65,10 @@ export function useCentralPublicacao() {
       }
       return (pipeQ.data || []).map((p) => {
         const md = p.metadata || {}
-        const caption = (md.caption as string) || ''
         const numero = (md.numero as number) ?? null
+        // #pulsoNNN no fim da legenda-base: o código de ligação entre redes segue pra toda
+        // cópia manual (Kwai/IG/FB/TikTok) montada a partir daqui. Idempotente.
+        const caption = withPulsoCodigo((md.caption as string) || '', numero)
         const pronto = p.status === 'PRONTO_PUBLICACAO' || p.status === 'PUBLICADO'
         return {
           pipelineId: p.id,
