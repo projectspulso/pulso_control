@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       supabase.schema('pulso_content').from('audios').select('ideia_id'),
       supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id'),
       supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status'),
-      supabase.schema('pulso_content').from('agenda_atribuicoes').select('data, horario, ideia_id'),
+      supabase.schema('pulso_content').from('agenda_atribuicoes').select('id, data, horario, ideia_id, fixado, status'),
     ])
     if (gradeQ.error) return NextResponse.json({ error: gradeQ.error.message }, { status: 500 })
 
@@ -77,6 +77,22 @@ export async function POST(request: NextRequest) {
         .filter(Boolean)
     )
 
+    // REAVALIAÇÃO DE SLOT OBSOLETO — o motivo de a agenda apontar vídeo já publicado.
+    // A rota era insert-only: slot existente era pulado pra sempre (os 2 slots de hoje foram
+    // escritos em 27/06 e nunca revisitados). Agora um slot FUTURO é reavaliado quando ficou
+    // obsoleto: sem ideia, ou a ideia já foi ao ar, ou ela saiu do estoque.
+    // TRAVAS: nunca toca data passada (histórico é histórico) nem slot fixado=true (edição do
+    // dono manda). A coluna `fixado` era escrita em /atribuir e nunca lida — agora é lida.
+    const emEstoque = new Set<string>()
+    for (const arr of estoque.values()) for (const x of arr) emEstoque.add(x.id)
+
+    const slotsPorChave = new Map<string, { id: string; data: string; ideia_id: string | null; fixado?: boolean }>()
+    for (const a of (atribQ.data || []) as { id: string; data: string; horario: string; ideia_id: string | null; fixado?: boolean }[]) {
+      slotsPorChave.set(`${a.data}|${a.horario}`, { id: a.id, data: a.data, ideia_id: a.ideia_id, fixado: a.fixado })
+    }
+    const hojeIso = new Date().toISOString().slice(0, 10)
+    const reavaliar: { id: string; ideia_id: string | null; estagio: string }[] = []
+
     // gera slots datados do horizonte
     const hoje = new Date()
     hoje.setHours(0, 0, 0, 0)
@@ -88,7 +104,23 @@ export async function POST(request: NextRequest) {
       const dataIso = dt.toISOString().slice(0, 10)
       for (const g of grade.filter((x: { dia_semana: number }) => x.dia_semana === wd)) {
         const chave = `${dataIso}|${g.horario}`
-        if (slotsExistentes.has(chave)) continue // preserva
+        const existente = slotsPorChave.get(chave)
+        if (existente) {
+          const intocavel = existente.fixado === true || existente.data < hojeIso
+          const obsoleto =
+            !existente.ideia_id ||
+            publicado.has(existente.ideia_id) ||
+            !emEstoque.has(existente.ideia_id)
+          if (intocavel || !obsoleto) {
+            if (existente.ideia_id) usados.add(existente.ideia_id) // segue ocupando a ideia
+            continue
+          }
+          const lista = estoque.get(g.canal_id) || []
+          const troca = lista.find((x) => !usados.has(x.id))
+          if (troca) usados.add(troca.id)
+          reavaliar.push({ id: existente.id, ideia_id: troca?.id || null, estagio: troca?.estagio || 'vazio' })
+          continue
+        }
         const lista = estoque.get(g.canal_id) || []
         const escolha = lista.find((x) => !usados.has(x.id))
         if (escolha) usados.add(escolha.id)
@@ -109,12 +141,24 @@ export async function POST(request: NextRequest) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // troca item de slot futuro que ficou obsoleto (um UPDATE por slot — são poucos)
+    let reavaliados = 0
+    for (const r of reavaliar) {
+      const { error } = await supabase
+        .schema('pulso_content')
+        .from('agenda_atribuicoes')
+        .update({ ideia_id: r.ideia_id, estagio: r.estagio })
+        .eq('id', r.id)
+      if (!error) reavaliados++
+    }
+
     const porEstagio: Record<string, number> = {}
     for (const n of novos) porEstagio[n.estagio as string] = (porEstagio[n.estagio as string] || 0) + 1
 
     return NextResponse.json({
       success: true,
       criados: novos.length,
+      reavaliados, // slots futuros que apontavam vídeo já publicado ou fora do estoque
       preenchidos: novos.filter((n) => n.ideia_id).length,
       vazios: novos.filter((n) => !n.ideia_id).length,
       por_estagio: porEstagio,
