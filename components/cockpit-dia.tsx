@@ -121,6 +121,68 @@ export function CockpitDia({ mostrarLinkPublicar = true }: { mostrarLinkPublicar
         </div>
       )}
 
+      {/* COBERTURA — "está tudo ligado?" sem precisar perguntar. Grade das 5 redes por vídeo
+          das últimas 48h; incompletos primeiro; separa o que a API resolve sozinha do manual. */}
+      {!!data?.coberturaRecente?.length && (
+        <div className="glass rounded-2xl border border-zinc-800/50 p-5">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+            <h2 className="text-lg font-semibold text-white">Está tudo ligado?</h2>
+            <span className="ml-auto text-[11px] text-zinc-500">cobertura das 5 redes · últimas 48h</span>
+          </div>
+          <p className="mb-3 text-xs text-zinc-500">
+            YouTube, Instagram e TikTok a reconciliação liga sozinha (07:50 e 23:30). Só{' '}
+            <b className="text-zinc-300">Facebook</b> e <b className="text-zinc-300">Kwai</b> pedem a mão.
+          </p>
+          <div className="space-y-1.5">
+            {data.coberturaRecente.map((c) => {
+              const completo = c.faltamAuto.length === 0 && c.faltamManual.length === 0
+              return (
+                <div
+                  key={c.ideiaId}
+                  className={`flex flex-wrap items-center gap-2 rounded-xl p-2.5 ${
+                    completo ? 'bg-zinc-900/40' : 'bg-amber-500/8 ring-1 ring-amber-500/20'
+                  }`}
+                >
+                  {c.numero != null && <span className="text-[11px] font-bold text-zinc-600">#{c.numero}</span>}
+                  <span className="min-w-0 flex-1 truncate text-sm text-zinc-200" title={c.titulo}>
+                    {c.titulo}
+                  </span>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {(['youtube', 'instagram', 'facebook', 'tiktok', 'kwai'] as const).map((r) => (
+                      <span
+                        key={r}
+                        title={`${r}: ${c.redes[r] ? 'ligado' : 'falta'}`}
+                        className={`grid h-6 w-6 place-items-center rounded-md text-[11px] ${
+                          c.redes[r]
+                            ? 'bg-emerald-500/15 ring-1 ring-emerald-500/30'
+                            : 'bg-zinc-800/60 opacity-40 ring-1 ring-zinc-700'
+                        }`}
+                      >
+                        {REDE_ICON[r]}
+                      </span>
+                    ))}
+                  </div>
+                  {completo ? (
+                    <span className="shrink-0 text-[11px] font-semibold text-emerald-400">5/5 ✓</span>
+                  ) : (
+                    <span className="w-full text-[11px] text-amber-300/80">
+                      {c.faltamManual.length > 0 && <>falta você postar: <b>{c.faltamManual.join(', ')}</b>. </>}
+                      {c.faltamAuto.length > 0 && (
+                        <span className="text-zinc-500">
+                          {c.faltamManual.length > 0 ? 'Auto ' : 'A reconciliação liga '}
+                          ({c.faltamAuto.join(', ')}) até 23:30.
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Plano de publicação */}
       <div className="glass rounded-2xl border border-zinc-800/50 p-5">
         <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-white">

@@ -55,6 +55,20 @@ export interface FbPendente {
   diasAtras: number
 }
 
+export const REDES_ORDEM = ['youtube', 'instagram', 'facebook', 'tiktok', 'kwai'] as const
+
+export interface CoberturaVideo {
+  ideiaId: string
+  numero: number | null
+  titulo: string
+  videoUrl: string | null
+  /** rede → true se já tem linha registrada */
+  redes: Record<string, boolean>
+  /** redes que faltam, já separadas: as que a API resolve sozinha vs as manuais */
+  faltamAuto: string[]
+  faltamManual: string[]
+}
+
 export interface Hoje {
   prontos: ItemPronto[]
   publicadosHoje: PublicadoHoje[]
@@ -69,6 +83,8 @@ export interface Hoje {
   kwaiHoje: KwaiRepost | null
   /** vídeos já publicados que nunca foram ao Facebook (rede manual, Business Suite) */
   fbPendentes: FbPendente[]
+  /** cobertura das 5 redes dos vídeos publicados nas últimas 48h — o "está tudo ligado?" */
+  coberturaRecente: CoberturaVideo[]
 }
 
 const HOJE_ISO = () => new Date().toISOString().slice(0, 10)
@@ -190,6 +206,54 @@ export function useHoje() {
         }
       })
 
+      // COBERTURA RECENTE — "está tudo ligado?" sem me chamar. Pega os vídeos com QUALQUER
+      // publicação nas últimas 48h e mostra as 5 redes de CADA, cruzando TODAS as linhas
+      // (não só as de hoje — senão um vídeo de ontem cujo Kwai saiu hoje pareceria faltar 4).
+      // Redes que a API resolve sozinha (YT/IG/TikTok, via reconciliação 2×/dia) ficam
+      // separadas das MANUAIS (FB no Business Suite + Kwai sem API) — só as manuais exigem mão.
+      const REDES_AUTO = new Set(['youtube', 'instagram', 'tiktok'])
+      const limite48h = Date.now() - 2 * 864e5
+      const todasPub = (todasPubRes.data || []) as { ideia_id: string; plataforma: string; data_publicacao: string | null }[]
+      const recentes = new Set(
+        todasPub
+          .filter((m) => m.ideia_id && m.data_publicacao && new Date(m.data_publicacao).getTime() >= limite48h)
+          .map((m) => m.ideia_id)
+      )
+      const redesPorIdeia = new Map<string, Set<string>>()
+      for (const m of todasPub) {
+        if (!m.ideia_id || !recentes.has(m.ideia_id)) continue
+        if (!redesPorIdeia.has(m.ideia_id)) redesPorIdeia.set(m.ideia_id, new Set())
+        redesPorIdeia.get(m.ideia_id)!.add(m.plataforma)
+      }
+      const coberturaRecente: CoberturaVideo[] = [...redesPorIdeia.entries()]
+        .map(([ideiaId, tem]) => {
+          const p = pp.find((x) => x.ideia_id === ideiaId)
+          const redes: Record<string, boolean> = {}
+          const faltamAuto: string[] = []
+          const faltamManual: string[] = []
+          for (const r of REDES_ORDEM) {
+            const ok = tem.has(r)
+            redes[r] = ok
+            if (!ok) (REDES_AUTO.has(r) ? faltamAuto : faltamManual).push(r)
+          }
+          return {
+            ideiaId,
+            numero: p?.metadata?.numero ?? null,
+            titulo: ideiaMap.get(ideiaId)?.titulo || '(sem título)',
+            videoUrl: p?.metadata?.video_url ?? null,
+            redes,
+            faltamAuto,
+            faltamManual,
+          }
+        })
+        // incompletos primeiro (é onde o dono precisa agir), depois por número desc
+        .sort(
+          (a, b) =>
+            a.faltamAuto.length + a.faltamManual.length > 0 === (b.faltamAuto.length + b.faltamManual.length > 0)
+              ? (b.numero ?? 0) - (a.numero ?? 0)
+              : b.faltamAuto.length + b.faltamManual.length - (a.faltamAuto.length + a.faltamManual.length)
+        )
+
       // KWAI — repost matinal do próximo campeão que ainda não está lá. Avança sozinho: usa o
       // 1º da fila cuja ideia ainda não tem linha de Kwai (pular um dia não fura a sequência).
       let kwaiHoje: KwaiRepost | null = null
@@ -263,6 +327,7 @@ export function useHoje() {
         alvoDia,
         kwaiHoje,
         fbPendentes,
+        coberturaRecente,
       }
     },
   })
