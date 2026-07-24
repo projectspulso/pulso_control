@@ -403,12 +403,21 @@ async function coletar(request: NextRequest) {
       // captura TODOS os posts; crescimento = diferença entre leituras). Upsert no dia (latest do dia).
       try {
         const dataRef = agora.toISOString().slice(0, 10)
+        // SÓ as colunas que leituras_metricas TEM. `extras` carrega taxa_retencao e
+        // taxa_conversao (que só existem em metricas_publicacao) — jogá-las aqui via `...extras`
+        // fazia o insert dar 400 (PGRST204) e o catch abaixo engolia em silêncio. Foi o que
+        // parou a série diária em 19/07 (o "ganho do dia" secou; o acumulado sobrevive porque
+        // tem âncora no total real). Espalhar só o subconjunto que a tabela aceita.
+        const extrasLeitura: Record<string, unknown> = {}
+        for (const k of ['avg_watch_ms', 'view_time_ms', 'reach', 'retention_graph'] as const) {
+          if (extras[k] !== undefined) extrasLeitura[k] = extras[k]
+        }
         const leitura = {
           ideia_id: pub.ideia_id, plataforma: pub.plataforma, post_id: pub.post_id,
           data_ref: dataRef, coletado_em: agora.toISOString(),
           views: metricas.views || 0, likes: metricas.likes || 0,
           comentarios: metricas.comentarios || 0, compartilhamentos: metricas.shares || 0,
-          ...extras,
+          ...extrasLeitura,
         }
         const { data: jaHoje } = await supabase
           .schema('pulso_analytics').from('leituras_metricas')
@@ -418,7 +427,11 @@ async function coletar(request: NextRequest) {
         if (!jaHoje || jaHoje.length === 0) {
           await supabase.schema('pulso_analytics').from('leituras_metricas').insert(leitura)
         }
-      } catch { /* leitura é best-effort */ }
+      } catch (e) {
+        // era `catch {}` mudo — foi ele que escondeu por 4 dias o 400 do insert. Best-effort
+        // continua (não derruba a coleta), mas agora o motivo aparece no log da função.
+        console.error('[coletar-metricas] leitura_metricas falhou:', e instanceof Error ? e.message : e)
+      }
       // (o snapshot em metricas_diarias foi aposentado 20/07: cobria só ~48 posts/dia via FK de
       // pulso_distribution.posts e nenhuma tela lia — leituras_metricas é a série canônica)
     } catch (err) {
