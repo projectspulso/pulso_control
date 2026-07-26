@@ -1,7 +1,9 @@
 'use client'
 
-import { Award, Users, UserPlus, HelpCircle } from 'lucide-react'
+import { Award, Users, UserPlus, HelpCircle, TrendingDown } from 'lucide-react'
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -130,6 +132,11 @@ export function QualidadePanel({ filtros }: { filtros: BiFiltros }) {
     pctLabel: a.views > 0 ? `${Math.round((a.reach / a.views) * 100)}%` : '',
   }))
 
+  // Curva de retenção média — já era computada em use-bi e NUNCA desenhada. 41 pontos (0→fim),
+  // só YouTube+Facebook entregam a curva. t=0..40 vira % do vídeo (cada ponto ≈ 2,5% do vídeo).
+  const curva = (data?.retencaoMedia || []).map((p) => ({ pct: Math.round((p.t / 40) * 100), ret: Math.round(p.pct * 10) / 10 }))
+  const retVideos = data?.retencaoVideos || 0
+
   return (
     <div className="space-y-3.5">
       {/* 1) QUEM PRENDE — facetado por rede */}
@@ -151,6 +158,37 @@ export function QualidadePanel({ filtros }: { filtros: BiFiltros }) {
             ))}
         </div>
       </div>
+
+      {/* CURVA DE RETENÇÃO MÉDIA — onde a audiência abandona (só YT+FB medem a curva) */}
+      {curva.length > 1 && retVideos > 0 && (
+        <div className="rounded-2xl border border-white/8 bg-[#1a1922] p-6">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <TrendingDown className="h-5 w-5 self-center text-rose-400" />
+            <h2 className="text-lg font-semibold text-white">Onde a audiência abandona</h2>
+            <span className="ml-auto text-[11px] text-zinc-500">média de {retVideos} vídeos · só YouTube + Facebook</span>
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">
+            % da audiência que ainda está assistindo ao longo do vídeo. A queda dos primeiros
+            segundos é a mais cara — é onde o gancho decide.
+          </p>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={curva} margin={{ top: 12, right: 12, bottom: 16, left: 4 }}>
+              <defs>
+                <linearGradient id="gret" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} stroke={GRID} />
+              <XAxis dataKey="pct" tick={EIXO} tickLine={false} axisLine={{ stroke: GRID }} unit="%" minTickGap={30}
+                label={{ value: 'ponto do vídeo', position: 'insideBottom', offset: -12, fill: '#6e6b7b', fontSize: 11 }} />
+              <YAxis tick={EIXO} tickLine={false} axisLine={false} width={38} unit="%" />
+              <Tooltip contentStyle={TOOLTIP_BASE} formatter={(v: number) => [`${v}% ainda assistindo`, '']} labelFormatter={(l) => `${l}% do vídeo`} />
+              <Area type="monotone" dataKey="ret" stroke="#f43f5e" strokeWidth={2} fill="url(#gret)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       <div className="grid gap-3.5 lg:grid-cols-2">
         {/* 2) PRENDER CONVERTE? */}

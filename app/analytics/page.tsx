@@ -11,6 +11,7 @@ import { HorariosPanel } from '@/components/horarios-panel'
 import { NotaVsViewsPanel } from '@/components/nota-vs-views-panel'
 import { QualidadePanel } from '@/components/qualidade-panel'
 import { ReconciliacaoPanel } from '@/components/reconciliacao-panel'
+import { BoxplotVerticais } from '@/components/boxplot-verticais'
 import { ExtratoSemanalPanel } from '@/components/extrato-semanal-panel'
 import {
   ABAS,
@@ -143,6 +144,24 @@ export default function AnalyticsPage() {
       acc.set(key, v)
     }
     return [...acc.entries()].sort((a, b) => b[1].views - a[1].views)
+  }, [data])
+
+  // boxplot: views por VÍDEO (soma das redes de cada ideia) agrupadas por vertical/canal
+  const boxplotDados = useMemo(() => {
+    if (!data) return []
+    const porVideo = new Map<string, { canal: string; views: number }>()
+    for (const p of data.publicacoes) {
+      const k = p.ideia_id || p.id
+      const atual = porVideo.get(k) || { canal: p.canalNome, views: 0 }
+      atual.views += p.views
+      porVideo.set(k, atual)
+    }
+    const porVertical = new Map<string, number[]>()
+    for (const v of porVideo.values()) {
+      if (!porVertical.has(v.canal)) porVertical.set(v.canal, [])
+      porVertical.get(v.canal)!.push(v.views)
+    }
+    return [...porVertical.entries()].map(([vertical, valores]) => ({ vertical, valores }))
   }, [data])
 
   const porRede = useMemo(() => {
@@ -370,6 +389,7 @@ export default function AnalyticsPage() {
               <CardMelhorDia dias={porDiaSemana} />
               <CardCampeoes tops={topConteudos} onDrill={setDrill} />
             </div>
+            <BoxplotVerticais dados={boxplotDados} />
             <CardMatrizRedes matriz={matrizRedes} onDrill={setDrill} />
             {decisao && <CardDecisao decisao={decisao} filtros={filtros} setFiltros={setFiltros} />}
           </div>
