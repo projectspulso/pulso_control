@@ -43,6 +43,14 @@
     {
       "path": "/api/automation/resolver-post-ids",
       "schedule": "40 2 * * *"
+    },
+    {
+      "path": "/api/automation/reconciliar-publicacoes",
+      "schedule": "45 21 * * *"
+    },
+    {
+      "path": "/api/automation/reconciliar-publicacoes",
+      "schedule": "45 0 * * *"
     }
   ]
 }

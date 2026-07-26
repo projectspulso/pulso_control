@@ -220,10 +220,21 @@ export default function PublicarPage() {
         resultadosMsg.push(`${conteudo?.ideia?.slice(0, 28) || pipelineId} → ${linhasRede.join(' · ')}`)
       }
 
+      // LIGAÇÃO FINAL — fecha a janela em que o container do IG fica "FINISHED mas não
+      // publicado". A rota /publicar respeita o maxDuration=60 da Vercel: se o reel do IG
+      // demora, ela volta com o container PENDENTE e o publish real fica pro retry. Antes esse
+      // retry só vinha no cron (07:50/23:30), então entre publicar e o cron o vídeo aparecia
+      // "sem Instagram". Agora a própria publicação dispara a reconciliação: 40s (pega o container
+      // que já ficou pronto) e 90s (pega o lento). É best-effort — o cron continua de backstop.
+      const reconciliar = () =>
+        fetch('/api/automation/reconciliar-publicacoes', { method: 'POST' }).catch(() => {})
+      window.setTimeout(reconciliar, 40_000)
+      window.setTimeout(reconciliar, 90_000)
+
       setFeedback({
         tone: 'success',
         title: 'Publicacao executada',
-        description: resultadosMsg.join(' | '),
+        description: `${resultadosMsg.join(' | ')} — a ligação final das redes roda sozinha em ~1min.`,
       })
       setSelecionados(new Set())
       setMostrarModalPublicar(false)
