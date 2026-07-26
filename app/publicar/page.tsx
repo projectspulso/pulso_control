@@ -32,6 +32,31 @@ interface FeedbackState {
   description: string
 }
 
+/**
+ * REDES QUE PUBLICAM VIA API. O Facebook está FORA DE PROPÓSITO — não é esquecimento.
+ *
+ * TESTE 11/07/2026 (conta aquecida ~20 dias, mesma página, reels published:true): FB via API
+ * entregou ALCANCE 0 nos 3 testes, contra 234/265 pela mão. Só o método difere — é política de
+ * distribuição do FB pra reel não-nativo (o IG, mesma Graph API, não sofre isso). Confirmado no
+ * dado atual: FB MANUAL rende ~2.261 views/post e 65k de alcance/14d — 7× a melhor rede de API.
+ *
+ * Botar 'facebook' aqui = jogar fora a rede de maior alcance do PULSO. Se um dia quiser reverter,
+ * é DECISÃO CONSCIENTE: tem que remover o Facebook de REDES_PROIBIDAS_API abaixo TAMBÉM, e o
+ * certo é re-testar o alcance antes. Ver memória teste-alcance-api-vs-manual.
+ */
+const REDES_API = ['youtube', 'instagram', 'tiktok'] as const
+const REDES_PROIBIDAS_API = ['facebook'] as const // FB estrangula reel não-nativo via API (0 alcance)
+
+// Trava de segurança: se alguém re-adicionar uma rede proibida em REDES_API sem remover daqui,
+// isto avisa alto no console em vez de silenciosamente matar o alcance daquela rede.
+const REDES_API_SEGURAS = REDES_API.filter((r) => {
+  if ((REDES_PROIBIDAS_API as readonly string[]).includes(r)) {
+    console.error(`[publicar] "${r}" está em REDES_API mas é PROIBIDA (estrangula via API) — removendo. Ver comentário.`)
+    return false
+  }
+  return true
+})
+
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
     return error.message
@@ -194,15 +219,10 @@ export default function PublicarPage() {
           continue
         }
 
-        // RESULTADO DO TESTE 11/07: com conta aquecida (~20 dias), YouTube e Instagram via
-        // API entregam alcance normal (YT 281, IG 117-208), mas FACEBOOK via API deu 0 nos 3
-        // — mesma página, reels published:true, só o método difere (manual 234/265 vs API 0).
-        // É política de distribuição do FB pra reels não-nativos (o IG, mesma Graph API, não
-        // tem isso). Então: YT+IG+TikTok via API, FB volta pro MANUAL (Business Suite).
-        // Reversível: re-adicionar 'facebook' aqui quando descobrirmos o que destrava.
-        const REDES = ['youtube', 'instagram', 'tiktok']
+        // Facebook NÃO entra aqui: estrangula reel via API (alcance 0). Definição e motivo em
+        // REDES_API / REDES_PROIBIDAS_API no topo do módulo — inclui a trava anti-reintrodução.
         const linhasRede = await Promise.all(
-          REDES.map((rede) =>
+          REDES_API_SEGURAS.map((rede) =>
             fetch('/api/automation/publicar', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
