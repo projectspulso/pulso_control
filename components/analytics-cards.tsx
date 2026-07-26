@@ -552,6 +552,9 @@ export const ABAS = [
   { id: 'audiencia' as const, label: 'Audiência' },
   { id: 'crescimento' as const, label: 'Crescimento' },
   { id: 'financeiro' as const, label: 'Financeiro' },
+  // A biblioteca de clips como ATIVO: economia, fadiga, escassez de tema. O /assets navega a
+  // galeria; aqui é o valor econômico dela.
+  { id: 'biblioteca' as const, label: 'Biblioteca' },
   // Confiabilidade: reconciliação dos números + cobertura por métrica. Base de tudo — nenhuma
   // recomendação vale se os totais não fecharem.
   { id: 'dados' as const, label: 'Dados' },

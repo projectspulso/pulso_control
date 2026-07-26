@@ -12,6 +12,7 @@ import { NotaVsViewsPanel } from '@/components/nota-vs-views-panel'
 import { QualidadePanel } from '@/components/qualidade-panel'
 import { ReconciliacaoPanel } from '@/components/reconciliacao-panel'
 import { BoxplotVerticais } from '@/components/boxplot-verticais'
+import { BibliotecaPanel } from '@/components/biblioteca-panel'
 import { ExtratoSemanalPanel } from '@/components/extrato-semanal-panel'
 import {
   ABAS,
@@ -97,7 +98,7 @@ function NaoSegueFiltro({ filtros, motivo }: { filtros: BiFiltros; motivo: strin
 
 export default function AnalyticsPage() {
   const [filtros, setFiltros] = useState<BiFiltros>({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 })
-  const [aba, setAba] = useState<'geral' | 'conteudo' | 'qualidade' | 'audiencia' | 'crescimento' | 'financeiro' | 'dados'>('geral')
+  const [aba, setAba] = useState<'geral' | 'conteudo' | 'qualidade' | 'audiencia' | 'crescimento' | 'financeiro' | 'biblioteca' | 'dados'>('geral')
   const [drill, setDrill] = useState<string | null>(null)
   const { data, isLoading, isError, refetch } = useBi(filtros)
   const { data: decisao } = useDecisao()
@@ -428,6 +429,10 @@ export default function AnalyticsPage() {
             <CardQuandoPaga gatesCalc={gatesCalc} />
           </div>
         )}
+
+        {/* ══════ DADOS (confiabilidade) ══════ */}
+        {/* ══════ BIBLIOTECA ══════ */}
+        {aba === 'biblioteca' && <BibliotecaPanel />}
 
         {/* ══════ DADOS (confiabilidade) ══════ */}
         {aba === 'dados' && <ReconciliacaoPanel />}
