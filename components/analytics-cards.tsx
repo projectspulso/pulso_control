@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts'
 import type { BiPublicacao } from '@/lib/hooks/use-bi'
 import type { Experimento } from '@/lib/hooks/use-experimento'
@@ -464,6 +465,7 @@ export function ModalDrill({ titulo, publicacoes, onClose }: {
 }) {
   const pubs = publicacoes.filter((p) => p.ideiaTitulo === titulo).sort((a, b) => b.views - a.views)
   const total = pubs.reduce((a, p) => a + p.views, 0)
+  const ideiaId = pubs[0]?.ideia_id || null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-lg rounded-2xl border border-white/14 bg-[#1a1922] p-6" onClick={(e) => e.stopPropagation()}>
@@ -472,6 +474,11 @@ export function ModalDrill({ titulo, publicacoes, onClose }: {
           <button onClick={onClose} className="text-[#6e6b7b] hover:text-[#f5f4f8]" aria-label="Fechar">✕</button>
         </div>
         <p className="mt-1 text-xs text-[#6e6b7b]">{n(total)} views somando {pubs.length} rede(s)</p>
+        {ideiaId && (
+          <Link href={`/analytics/videos/${ideiaId}`} className="mt-2 inline-block rounded-lg bg-violet-500/15 px-3 py-1 text-xs font-semibold text-violet-200 ring-1 ring-violet-500/30 hover:bg-violet-500/25">
+            Abrir página completa do vídeo ↗
+          </Link>
+        )}
         <div className="mt-4 space-y-2">
           {pubs.map((p) => (
             <div key={p.id} className="grid grid-cols-[80px_1fr_60px] items-center gap-2">
