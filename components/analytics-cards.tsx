@@ -392,12 +392,15 @@ export function CardCustos({ resumo }: { resumo: any }) {
   if (!resumo) return null
   return (
     <Card titulo="Custo da operação" sub="No recorte selecionado"
-      rodape={<>Cada vídeo custa <B>{brl(resumo.custoPorVideo)}</B> · <B>{brl(resumo.custoPorView)}</B> por view. Receita: <B>{brl(resumo.receita)}</B> — nenhum gate aberto ainda.</>}>
+      rodape={<>
+        <B>{brl(resumo.custoPorVideo)}</B>/vídeo é <B>estimativa</B> (custo do período ÷ vídeos — não há custo por vídeo no banco).
+        A biblioteca já evitou <span className="font-semibold text-[#41c980]">{brl(resumo.economiaBiblioteca || 0)}</span> em {resumo.reusos || 0} reusos. Receita: <B>{brl(resumo.receita)}</B> — nenhum gate aberto.
+      </>}>
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
         <Kpi valor={brl(resumo.custoProducao)} label="produção no recorte" />
-        <Kpi valor={brl(resumo.custoPorVideo)} label="custo por vídeo" cor="text-[#fab219]" />
+        <Kpi valor={`~${brl(resumo.custoPorVideo)}`} label="custo/vídeo (estimativa)" cor="text-[#fab219]" />
+        <Kpi valor={brl(resumo.economiaBiblioteca || 0)} label="evitado pela biblioteca" cor="text-[#41c980]" />
         <Kpi valor={brl(resumo.assinaturas)} label="assinaturas /mês" />
-        <Kpi valor={brl(resumo.receita)} label="receita" cor="text-[#6e6b7b]" />
       </div>
     </Card>
   )

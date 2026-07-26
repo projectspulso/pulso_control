@@ -37,6 +37,7 @@ import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
 import { useDecisao } from '@/lib/hooks/use-decisao'
 import { useFinanceiro } from '@/lib/hooks/use-financeiro'
 import { useExperimento } from '@/lib/hooks/use-experimento'
+import { useBancoClipsCatalogo } from '@/lib/hooks/use-banco-clips'
 
 interface Projecao {
   porSemana: number | null
@@ -105,6 +106,7 @@ export default function AnalyticsPage() {
   const { data: statusContas } = useStatusContas()
   const { data: fin } = useFinanceiro()
   const { data: experimento } = useExperimento()
+  const { data: catalogoClips } = useBancoClipsCatalogo()
 
   const resumo = useMemo(() => {
     if (!data) return null
@@ -118,8 +120,12 @@ export default function AnalyticsPage() {
       (l) => l.servico !== 'topup' && l.servico !== 'assinatura' && (!limite || new Date(l.data).getTime() >= limite)
     )
     const custoProducao = lancProducao.reduce((a, l) => a + l.brl, 0)
+    // ESTIMATIVA, não atribuição: não há custo por vídeo no banco. É o custo do período ÷ vídeos.
     const custoPorVideo = data.videosProduzidos > 0 ? custoProducao / data.videosProduzidos : 0
     const assinaturas = Object.values<number>({ ...ASSINATURAS_MENSAIS_BRL }).reduce((a, b) => a + b, 0)
+    // Custo EVITADO pela biblioteca: cada reuso é uma geração que não aconteceu (~R$8 do Veo).
+    const reusos = (catalogoClips || []).reduce((s, c) => s + (c.usos || 0), 0)
+    const economiaBiblioteca = reusos * 8
     return {
       views,
       likes,
@@ -130,9 +136,11 @@ export default function AnalyticsPage() {
       custoPorVideo,
       assinaturas,
       custoPorView: views > 0 ? custoProducao / views : 0,
+      economiaBiblioteca,
+      reusos,
       receita: 0, // gate de monetização (CNPJ/AdSense) ainda não aberto — ver CONFIG_REDES §3.3
     }
-  }, [data, fin, filtros.periodoDias])
+  }, [data, fin, filtros.periodoDias, catalogoClips])
 
   const rankingVertical = useMemo(() => {
     if (!data) return []
