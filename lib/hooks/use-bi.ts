@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { supabase } from '@/lib/supabase/client'
+import { dedupePublicacoes } from '@/lib/analytics/dedupe'
 
 export interface BiFiltros {
   plataforma: string // 'todas' | youtube | instagram | facebook | tiktok
@@ -60,6 +61,7 @@ export interface BiSnapshot {
   qualidade: BiQualidade[] // ranking por percentil de retenção dentro da rede (melhor 1º)
   alcancePorRede: { plataforma: string; views: number; reach: number }[] // views ≠ pessoas
   seguidoresTotal: number // seguidores ganhos somados (hoje só o FB mede)
+  republicacoes: number // linhas descartadas por serem repost da mesma (ideia, plataforma)
 }
 
 export function useBi(filtros: BiFiltros) {
@@ -104,9 +106,15 @@ export function useBi(filtros: BiFiltros) {
       }
       const limite = filtros.periodoDias > 0 ? Date.now() - filtros.periodoDias * 864e5 : 0
 
+      // DEDUP DE REPUBLICAÇÃO — a tabela não tem UNIQUE(ideia,plataforma). Alguns vídeos foram
+      // repostados (linha antiga ~4 views, nova com views reais); somar as duas dobra o vídeo.
+      // Fica a de maior views. Ver lib/analytics/dedupe.ts.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { unicas: metricasUnicas, republicacoes } = dedupePublicacoes((metricasQ.data || []) as any[])
+
       const publicacoes: BiPublicacao[] = []
       let ultimaColeta: string | null = null
-      for (const m of metricasQ.data || []) {
+      for (const m of metricasUnicas) {
         const ideia = m.ideia_id ? ideias.get(m.ideia_id) : null
         if (!ideia) continue
         if (filtros.plataforma !== 'todas' && m.plataforma !== filtros.plataforma) continue
@@ -301,6 +309,7 @@ export function useBi(filtros: BiFiltros) {
         .sort((a, b) => b.reach - a.reach)
 
       const seguidoresTotal = publicacoes.reduce((s, p) => s + (p.seguidores || 0), 0)
+      void republicacoes // exposto no retorno; a contagem global vem do use-reconciliacao
 
       return {
         publicacoes: publicacoes.sort((a, b) => b.views - a.views),
@@ -315,6 +324,7 @@ export function useBi(filtros: BiFiltros) {
         qualidade,
         alcancePorRede,
         seguidoresTotal,
+        republicacoes,
       }
     },
   })
