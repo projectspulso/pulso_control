@@ -15,24 +15,40 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 /**
  * PLANO DE CRESCIMENTO — trava estratégica que a IA de ideias/roteiro sempre segue.
  *
- * Vem do benchmark do concorrente @ministroda_educacao (2,5M no IG): a medição real dos
- * reels dele mostrou que "objeto/processo do cotidiano + gancho Como funciona / Você já
- * imaginou" faz mediana de ~334k views, enquanto mistério abstrato afunda. Bate com o
- * nosso próprio dado (no YouTube, Ciência 584 > IA 78 views no dia 3).
+ * RECONCILIADO 25/07/2026 com o NOSSO dado, que contradiz parte do benchmark que originou
+ * este bloco. O benchmark do @ministroda_educacao dizia "gancho Como funciona / evite mistério".
+ * Mas a nossa audiência mostrou o contrário:
+ *   - O #43 "COMO um menino inventou um brinquedo" (o padrão que o texto antigo MANDAVA usar)
+ *     floppou — o dono reprovou no olho, a régua deu nota 2.
+ *   - O #44 "Os camelos NÃO armazenam água... mas o que tem lá?" (quebra de crença — o padrão
+ *     que o texto antigo mandava EVITAR) pegou — nota 5.
+ *   - Os campeões de RETENÇÃO são todos MISTÉRIO ("uma casa que ninguém consegue deixar", "um
+ *     navio sumiu no Ártico") — os mesmos que aparecem na lista GANCHOS QUE MAIS RETIVERAM
+ *     gerada abaixo. O texto antigo brigava com a própria lista de campeões dele.
+ *   - Medido: nota-de-gancho (quebra+laço) correlaciona com VIEWS +0,194 (o gancho para o dedo;
+ *     a retenção é o vídeo, não o gancho). Ver lib/automation/hook-score.ts.
+ *
+ * O que se MANTÉM do benchmark: PAYLOAD VISUAL CONCRETO. Mistério vago sem objeto afunda; o que
+ * retém é mistério/quebra-de-crença COM uma coisa física no centro que dá pra mostrar (#44 = camelo).
  *
  * Fica AQUI (prefixado no digest semanal) e não numa config solta porque o cron `aprender`
  * reescreve o aprendizado_cerebro toda segunda — se estivesse solto, seria apagado. Assim
  * a trava sobrevive a cada reescrita e continua data-driven (edite este bloco pra ajustar).
  */
 const PLANO_CRESCIMENTO = `PLANO DE CRESCIMENTO (regra dura — vale acima de qualquer outra preferência):
-FÓRMULA VENCEDORA (comprovada por benchmark + nosso próprio dado): objeto/processo CONCRETO do
-cotidiano, explicado de forma visual. Gancho no padrão "Como [X] funciona / é feito", "Por que
-[X]", "O que acontece se [X]" ou "Você já imaginou [X]". Nada abstrato — sempre uma coisa física
-que dá pra ver acontecer.
-PRIORIZE temas de: como as coisas são feitas/funcionam, corpo humano (processos), animais
-(comportamento/recorde), materiais e engenharia do dia a dia, ciência do cotidiano.
-EVITE (comprovadamente fraco pra nós): mistério abstrato sem payload visual, "história que ninguém
-conta" genérica, IA/tech como tema (afunda). Só entram se tiverem um objeto concreto no centro.
+FÓRMULA VENCEDORA (comprovada pelo NOSSO dado): abrir QUEBRANDO UMA CRENÇA ("X não é o que você
+pensa", "ao contrário do que todos acham") OU com um MISTÉRIO/laço aberto que só fecha no fim
+("existe uma casa que ninguém consegue deixar" → por quê?), sobre uma coisa CONCRETA que dá pra
+mostrar. O gancho para o dedo; o objeto físico no centro segura quem ficou.
+NUNCA abrir com "Como [X] funciona / foi inventado" seco — é explicação sem tensão, foi o que
+floppou (#43). A régua de hook (hook-score.ts) rebaixa esse padrão pra nota 2 e ele é bloqueado.
+PRIORIZE: mistério/contra-intuição/curiosidade COM payload concreto; ciência do cotidiano com
+reviravolta; história com virada; animal/corpo humano com um fato que surpreende.
+PAYLOAD OBRIGATÓRIO: sempre um objeto/lugar/fenômeno físico no centro que dá pra ver acontecer.
+Mistério abstrato SEM isso afunda (essa parte do benchmark estava certa) — mas mistério COM objeto
+concreto é o que MAIS reteve na nossa audiência.
+EVITE: "Como/Por que X funciona" como abertura seca (sem quebra nem laço); IA/tech como tema
+(afunda); "história que ninguém conta" genérica sem objeto concreto.
 EXPLORAÇÃO: ~1 em cada 5 ideias pode fugir da fórmula pra testar tema novo — o resto segue a fórmula.
 `
 
