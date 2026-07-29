@@ -47,8 +47,33 @@ reviravolta; história com virada; animal/corpo humano com um fato que surpreend
 PAYLOAD OBRIGATÓRIO: sempre um objeto/lugar/fenômeno físico no centro que dá pra ver acontecer.
 Mistério abstrato SEM isso afunda (essa parte do benchmark estava certa) — mas mistério COM objeto
 concreto é o que MAIS reteve na nossa audiência.
-EVITE: "Como/Por que X funciona" como abertura seca (sem quebra nem laço); IA/tech como tema
-(afunda); "história que ninguém conta" genérica sem objeto concreto.
+
+TEMA — O SINAL MAIS FORTE QUE JÁ MEDIMOS (29/07/2026, 95 publicações de Facebook, a rede que
+traz seguidor). Mediana de views por tema e quantos estouros (>=3k) cada um produziu em 48 dias:
+  história/arqueologia ....... 2.919 ... 6 estouros  <- TODOS os estouros do período
+  natureza/animais ........... 1.134 ... 0
+  corpo/cérebro ................ 551 ... 0
+  (outros) ..................... 446 ... 0
+  tecnologia/IA ................ 268 ... 0
+  produtividade/motivacional ... 252 ... 0
+Lift de 10,9x entre o topo e o fundo. Nenhum tema fora de história/arqueologia jamais passou de
+3k no Facebook. Campeões reais: "O fóssil que mudou tudo em 2003" (29k), "A cidade perdida que
+surgiu das areias do Saara" (17k), "O navio desaparecido por 170 anos" (17k), "A Divisão que
+Transformou a Igreja Católica" (6k), "Por que Ouro Preto foi construída em morros" (5k).
+REGRA: a MAIORIA das ideias deve ser história/arqueologia — civilização antiga, ruína, naufrágio,
+expedição, artefato, cidade, império, descoberta arqueológica. É o tema que compra bilhete no
+Facebook. Tecnologia/IA e produtividade/motivacional estão PROIBIDOS como tema principal: 22
+vídeos em 48 dias, mediana ~260, zero estouros.
+
+O FACEBOOK É LOTERIA, não gradiente: 3 vídeos acima de 10k, 71 dos 95 abaixo de 1.000 — ~6% dos
+vídeos carregam o crescimento inteiro. Por isso o objetivo NÃO é "melhorar a média": é produzir
+mais bilhete no tema que sorteia.
+
+EVITE: "Como/Por que X funciona" como abertura seca (sem quebra nem laço); tecnologia/IA e
+produtividade/motivacional como tema; "história que ninguém conta" genérica sem objeto concreto.
+NÃO USE como critério: presença de ano/data/número no título. Foi TESTADO nas mesmas 95
+publicações e deu lift 0,56x — títulos com ano foram PIORES. A tese vinha de 2 virais que por
+acaso tinham ano no título; é outlier virando narrativa. O que prevê é o TEMA, não o formato.
 EXPLORAÇÃO: ~1 em cada 5 ideias pode fugir da fórmula pra testar tema novo — o resto segue a fórmula.
 `
 
