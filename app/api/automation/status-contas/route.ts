@@ -111,6 +111,16 @@ export async function GET() {
   }
 
   // Kwai — sem API pública; seguidores vêm do lançamento manual (config kwai_perfil)
+  //
+  // TRAVA DE FRESCOR (29/07/2026): antes daqui, o cron tirava foto do kwai_perfil TODO DIA sem
+  // olhar a idade do lançamento. Como ninguém escreve nessa config automaticamente, o valor velho
+  // era gravado como se fosse a medida de hoje — e o histórico ficou com "98, 98, 98, 98" e
+  // "139, 139": platôs falsos que na verdade eram dias NÃO medidos. Pior, isso zera o ganho do
+  // dia e depois cria um degrau artificial quando alguém enfim atualiza.
+  //
+  // Agora: lançamento com mais de VALIDADE_HORAS grava null (dia sem medição, honesto) e entra
+  // como aviso. Melhor um furo declarado do que uma linha reta inventada.
+  const KWAI_VALIDADE_HORAS = 36
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = getSupabaseAdminClient() as any
@@ -119,7 +129,20 @@ export async function GET() {
     if (cfg?.valor) {
       const perfil = typeof cfg.valor === 'string' ? JSON.parse(cfg.valor) : cfg.valor
       if (typeof perfil?.seguidores === 'number') {
-        contas.kwai = { seguidores: perfil.seguidores, detalhe: `${perfil.curtidas ?? 0} curtidas · manual` }
+        const quando = perfil.quando ? new Date(perfil.quando).getTime() : NaN
+        const horas = Number.isFinite(quando) ? (Date.now() - quando) / 3_600_000 : Infinity
+        if (horas <= KWAI_VALIDADE_HORAS) {
+          contas.kwai = { seguidores: perfil.seguidores, detalhe: `${perfil.curtidas ?? 0} curtidas · manual` }
+        } else {
+          const dias = Number.isFinite(horas) ? Math.floor(horas / 24) : null
+          contas.kwai = {
+            seguidores: null,
+            detalhe: dias != null ? `lançamento manual parado há ${dias} dia(s)` : 'lançamento manual sem data',
+          }
+          avisos.push(
+            `kwai: seguidores NÃO registrados hoje — último lançamento ${dias != null ? `há ${dias} dia(s)` : 'sem data'}. Registre em /api/metricas/kwai-perfil.`
+          )
+        }
       }
     }
   } catch (e) {

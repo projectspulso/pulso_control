@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { ErrorState } from '@/components/ui/error-state'
 import {
   BlocoBriefing,
+  BlocoCobertura,
   BlocoFila,
   BlocoRadar,
   BlocoRedes,
@@ -35,6 +36,9 @@ const ABAS = [
   { id: 'assunto' as const, label: 'Assunto' },
   { id: 'distribuicao' as const, label: 'Distribuição' },
   { id: 'ritmo' as const, label: 'Ritmo' },
+  // A honestidade do módulo: de onde vem cada número, o que a API não entrega e o que é
+  // digitado à mão. Pedido do dono — conclusão sobre Kwai não pode parecer medida por API.
+  { id: 'cobertura' as const, label: 'Cobertura' },
 ]
 
 type AbaId = (typeof ABAS)[number]['id']
@@ -56,6 +60,12 @@ export default function DecisorPage() {
         ? `Só ${fila.emTemaQueSorteia} de ${fila.total} na fila estão no tema que sorteia no Facebook.`
         : null,
     distribuicao: null,
+    cobertura: (() => {
+      const c = data?.fatos.cobertura || []
+      const atras = c.filter((x) => (x.atrasoDias ?? 0) >= 2)
+      if (atras.length) return `${atras.map((x) => x.plataforma).join(', ')} sem atualizar há 2+ dias.`
+      return null
+    })(),
     ritmo:
       tend && tend.variacao <= -20
         ? `Novas views caíram ${Math.abs(tend.variacao)}% vs a semana anterior.`
@@ -141,6 +151,8 @@ export default function DecisorPage() {
           {aba === 'ritmo' && (
             <BlocoTendencia tendencia={data.fatos.tendencia} dependencia={data.fatos.dependencia} />
           )}
+
+          {aba === 'cobertura' && <BlocoCobertura cobertura={data.fatos.cobertura} />}
 
           <p className="pt-1 text-center text-[10px] text-zinc-600">
             Fatos calculados em código sobre {data.janelaDias} dias de série · atualizado{' '}

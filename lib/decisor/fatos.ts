@@ -205,56 +205,83 @@ export function dependenciaDeViral(ganhos: GanhoDia[], viewsPorVideo: Map<string
 // ====== 4. PERFIL DAS REDES (onde vem seguidor × onde vem view) ======
 
 /**
- * Razão seguidor/curtida observada pelo dono nas contas de Kwai e TikTok (29/07/2026):
- * Kwai 154 seguidores / ~1.500 curtidas e TikTok 151 / 1.487 — dois números independentes
- * batendo em ~10%. É ESTIMATIVA direcional, sempre rotulada na tela; nunca vira KPI nem entra
- * em conta que decide sozinha.
+ * O papel de cada rede sai do CONTADOR DE SEGUIDORES medido todo dia (pulso_core.configuracoes,
+ * chave seguidores_historico) — não de estimativa.
+ *
+ * ERRO CORRIGIDO EM 29/07/2026 (o dono perguntou "a rotina do Kwai não grava os seguidores?" e
+ * derrubou a conta): a versão anterior calculava seguidores do Facebook como
+ * `taxa_conversao × reach` somado por post, e chegava a 3.093. O contador real do Facebook
+ * naquele dia era 408 — errado por 7,5×. `taxa_conversao` NÃO é "% do alcance que virou
+ * seguidor"; somá-la entre posts não dá o total de seguidores. Ficou proibido derivar seguidor
+ * de métrica de post: o único número honesto é o contador do perfil.
+ *
+ * A correção inverteu a conclusão. Ganho de 22→29/07: Kwai +46, YouTube +38, Facebook +38,
+ * Instagram +26, TikTok +14. O Kwai — que a versão errada chamava de "motor de view que converte
+ * pouco" — é quem MAIS ganha seguidor.
+ *
+ * A razão observada pelo dono (seguidor ≈ 10% das curtidas em Kwai e TikTok) se confirma no dado
+ * real: Kwai 144/1.454 = 9,9% e TikTok 151/1.491 = 10,1%. Vira só conferência de sanidade — com
+ * o contador diário na mão, não é mais preciso estimar.
  */
-const RAZAO_SEGUIDOR_CURTIDA = 0.1
-const REDES_RAZAO = new Set(['kwai', 'tiktok'])
+export interface PontoSeguidores {
+  data: string
+  [rede: string]: number | string
+}
 
 export interface PerfilRede {
   plataforma: string
   views: number
   likes: number
-  seguidoresMedidos: number | null // só Facebook entrega conversão × alcance
-  seguidoresEstimados: number | null // Kwai/TikTok pela razão observada
-  seguidorPorMilViews: number
+  seguidores: number | null // contador do perfil, medido
+  ganhoJanela: number | null // quanto ganhou na janela do histórico
+  diasJanela: number
+  seguidorPorMilViews: number | null // eficiência: quanto de view vira seguidor
   papel: 'motor de seguidor' | 'motor de view' | 'indefinido'
 }
 
-export function perfilDasRedes(pubs: PubBruta[]): PerfilRede[] {
-  const ag = new Map<string, { views: number; likes: number; seg: number; temConv: boolean }>()
+const REDES_CONHECIDAS = ['facebook', 'youtube', 'instagram', 'tiktok', 'kwai']
+
+export function perfilDasRedes(pubs: PubBruta[], historico: PontoSeguidores[] = []): PerfilRede[] {
+  const ag = new Map<string, { views: number; likes: number }>()
   for (const p of pubs) {
-    const a = ag.get(p.plataforma) || { views: 0, likes: 0, seg: 0, temConv: false }
+    const a = ag.get(p.plataforma) || { views: 0, likes: 0 }
     a.views += p.views ?? 0
     a.likes += p.likes ?? 0
-    if (p.taxaConversao != null && p.reach != null) {
-      a.seg += Math.round((p.reach * p.taxaConversao) / 100)
-      a.temConv = true
-    }
     ag.set(p.plataforma, a)
   }
 
+  const serie = [...historico].sort((a, b) => (a.data < b.data ? -1 : 1))
+  const primeiro = serie[0]
+  const ultimo = serie[serie.length - 1]
+  const diasJanela = primeiro && ultimo ? (diasEntre(String(primeiro.data), String(ultimo.data)) ?? 0) : 0
+
+  // views ganhas na mesma janela, pra eficiência ser comparável (view acumulada vs ganho de
+  // seguidor seria comparar estoque com fluxo)
+  const num = (v: unknown) => (typeof v === 'number' ? v : null)
+
   const saida: PerfilRede[] = []
-  for (const [plataforma, a] of ag) {
-    const medidos = a.temConv ? a.seg : null
-    const estimados = REDES_RAZAO.has(plataforma) ? Math.round(a.likes * RAZAO_SEGUIDOR_CURTIDA) : null
-    const seg = medidos ?? estimados
-    const porMil = seg != null && a.views > 0 ? (seg / a.views) * 1000 : 0
+  for (const plataforma of new Set([...ag.keys(), ...REDES_CONHECIDAS])) {
+    const a = ag.get(plataforma) || { views: 0, likes: 0 }
+    const seg = ultimo ? num(ultimo[plataforma]) : null
+    const segIni = primeiro ? num(primeiro[plataforma]) : null
+    const ganho = seg != null && segIni != null ? seg - segIni : null
+
+    const porMil = ganho != null && a.views > 0 ? (ganho / a.views) * 1000 : null
     const papel: PerfilRede['papel'] =
-      seg == null ? 'indefinido' : porMil >= 10 ? 'motor de seguidor' : 'motor de view'
+      ganho == null ? 'indefinido' : ganho <= 0 ? 'motor de view' : porMil != null && porMil >= 1 ? 'motor de seguidor' : 'motor de view'
+
     saida.push({
       plataforma,
       views: a.views,
       likes: a.likes,
-      seguidoresMedidos: medidos,
-      seguidoresEstimados: estimados,
-      seguidorPorMilViews: Math.round(porMil * 10) / 10,
+      seguidores: seg,
+      ganhoJanela: ganho,
+      diasJanela,
+      seguidorPorMilViews: porMil == null ? null : Math.round(porMil * 100) / 100,
       papel,
     })
   }
-  return saida.sort((a, b) => b.views - a.views)
+  return saida.sort((a, b) => (b.ganhoJanela ?? -1) - (a.ganhoJanela ?? -1))
 }
 
 // ====== 5. DESEMPENHO POR TEMA (o achado, recalculado sempre no dado vivo) ======
@@ -350,6 +377,102 @@ export function filaPorTema(titulosFila: Array<string | null>): FilaPorTema {
     percentualMorto: total > 0 ? Math.round((emTemaMorto / total) * 100) : 0,
     emTemaQueSorteia,
   }
+}
+
+// ====== 7. COBERTURA — o que cada API NÃO entrega ======
+
+/**
+ * A honestidade do módulo. Sem isto o Decisor afirma "Kwai é motor de view, 44 mil views" sem
+ * dizer que aquilo é PRINT DIGITADO À MÃO, não API — e uma conclusão baseada em registro manual
+ * de 1 dia atrasado não tem o mesmo peso de uma medida pela Graph API.
+ *
+ * MEDIDO em 29/07/2026:
+ *   facebook  API completa — alcance, retenção 88%, conversão 96%, curva 100%
+ *   youtube   API — retenção 98%, curva 92%; NÃO dá alcance nem conversão
+ *   instagram API — alcance, retenção 92%; NÃO dá conversão nem curva
+ *   tiktok    API pobre — só views e curtidas; NÃO dá retenção, alcance nem tempo médio
+ *   kwai      SEM API — 46 de 69 registros são print digitado à mão ([[metricas-manuais-por-foto]])
+ *
+ * Consequência prática, que a tela precisa dizer: "retenção" e "seguidor ganho" NÃO existem em
+ * TikTok e Kwai. Comparar qualidade de vídeo entre redes usando esses campos é comparar com o
+ * vazio — e o radar de estouro do Kwai depende de alguém ter digitado o print naquele dia.
+ */
+export interface CoberturaRede {
+  plataforma: string
+  fonte: 'api' | 'manual' | 'misto'
+  registros: number
+  registrosManuais: number
+  ultimaColeta: string | null
+  atrasoDias: number | null
+  entrega: string[]
+  naoEntrega: string[]
+}
+
+/** O que cada campo significa na tela — e em quais redes ele existe de verdade. */
+const CAMPOS_METRICA: Array<{ chave: keyof CoberturaEntrada; rotulo: string }> = [
+  { chave: 'reach', rotulo: 'alcance' },
+  { chave: 'taxaRetencao', rotulo: 'retenção' },
+  { chave: 'avgWatchMs', rotulo: 'tempo médio' },
+  { chave: 'retentionGraph', rotulo: 'curva' },
+  { chave: 'taxaConversao', rotulo: 'seguidor ganho' },
+]
+
+export interface CoberturaEntrada {
+  plataforma: string
+  postId: string | null
+  ultimaAtualizacao: string | null
+  reach: number | null
+  taxaRetencao: number | null
+  avgWatchMs: number | null
+  retentionGraph: unknown | null
+  taxaConversao: number | null
+}
+
+export function coberturaPorRede(linhas: CoberturaEntrada[], hoje?: string): CoberturaRede[] {
+  const ref = hoje ?? new Date().toISOString().slice(0, 10)
+  const ag = new Map<
+    string,
+    { n: number; manuais: number; ultima: string | null; tem: Map<string, number> }
+  >()
+
+  for (const l of linhas) {
+    if (!ag.has(l.plataforma)) ag.set(l.plataforma, { n: 0, manuais: 0, ultima: null, tem: new Map() })
+    const a = ag.get(l.plataforma)!
+    a.n++
+    // sem post_id = não veio de API nenhuma; alguém digitou (Kwai, via print)
+    if (!l.postId || String(l.postId) === 'null') a.manuais++
+    if (l.ultimaAtualizacao && (!a.ultima || l.ultimaAtualizacao > a.ultima)) a.ultima = l.ultimaAtualizacao
+    for (const c of CAMPOS_METRICA) {
+      const v = l[c.chave]
+      // zero NÃO conta como entregue: rede que não fornece o campo grava 0, e contar isso
+      // como "tem o dado" seria fabricar cobertura que não existe.
+      const presente = v != null && v !== 0 && !(typeof v === 'number' && Number.isNaN(v))
+      if (presente) a.tem.set(c.rotulo, (a.tem.get(c.rotulo) || 0) + 1)
+    }
+  }
+
+  const saida: CoberturaRede[] = []
+  for (const [plataforma, a] of ag) {
+    const entrega: string[] = []
+    const naoEntrega: string[] = []
+    for (const c of CAMPOS_METRICA) {
+      // 20% é o piso pra dizer que a rede "entrega" — abaixo disso é resíduo, não cobertura
+      if ((a.tem.get(c.rotulo) || 0) / Math.max(1, a.n) >= 0.2) entrega.push(c.rotulo)
+      else naoEntrega.push(c.rotulo)
+    }
+    const fracManual = a.manuais / Math.max(1, a.n)
+    saida.push({
+      plataforma,
+      fonte: fracManual >= 0.9 ? 'manual' : fracManual > 0 ? 'misto' : 'api',
+      registros: a.n,
+      registrosManuais: a.manuais,
+      ultimaColeta: a.ultima,
+      atrasoDias: a.ultima ? diasEntre(a.ultima.slice(0, 10), ref) : null,
+      entrega,
+      naoEntrega,
+    })
+  }
+  return saida.sort((a, b) => b.entrega.length - a.entrega.length)
 }
 
 // ====== HELPERS ======

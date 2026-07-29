@@ -44,10 +44,22 @@ export interface PerfilRede {
   plataforma: string
   views: number
   likes: number
-  seguidoresMedidos: number | null
-  seguidoresEstimados: number | null
-  seguidorPorMilViews: number
+  seguidores: number | null
+  ganhoJanela: number | null
+  diasJanela: number
+  seguidorPorMilViews: number | null
   papel: 'motor de seguidor' | 'motor de view' | 'indefinido'
+}
+
+export interface CoberturaRede {
+  plataforma: string
+  fonte: 'api' | 'manual' | 'misto'
+  registros: number
+  registrosManuais: number
+  ultimaColeta: string | null
+  atrasoDias: number | null
+  entrega: string[]
+  naoEntrega: string[]
 }
 
 export interface DesempenhoTema {
@@ -95,6 +107,7 @@ export interface DecisorSnapshot {
     temasFacebook: DesempenhoTema[]
     temasGeral: DesempenhoTema[]
     fila: FilaPorTema
+    cobertura: CoberturaRede[]
     publicadosHoje: { videos: number; redes: string[] }
   }
   parecer: Parecer | null

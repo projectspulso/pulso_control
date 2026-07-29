@@ -6,6 +6,7 @@ import {
   Ban,
   CheckCircle2,
   Compass,
+  Database,
   Eye,
   Flame,
   HelpCircle,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import type {
+  CoberturaRede,
   DesempenhoTema,
   FilaPorTema,
   ItemParecer,
@@ -361,46 +363,135 @@ export function BlocoFila({ fila }: { fila: FilaPorTema }) {
 // ====== 5. ROTEAMENTO POR REDE ======
 
 export function BlocoRedes({ redes }: { redes: PerfilRede[] }) {
+  const dias = redes.find((r) => r.diasJanela > 0)?.diasJanela ?? 0
+  const maxGanho = Math.max(...redes.map((r) => r.ganhoJanela ?? 0), 1)
+
   return (
     <Card>
-      <Titulo icone={<Users className="h-5 w-5 text-cyan-400" />} cor="bg-cyan-500/10" nota="para onde mandar o quê">
+      <Titulo
+        icone={<Users className="h-5 w-5 text-cyan-400" />}
+        cor="bg-cyan-500/10"
+        nota={dias > 0 ? `ganho de seguidor nos últimos ${dias} dias · contador medido` : 'para onde mandar o quê'}
+      >
         Papel de cada rede
       </Titulo>
       <div className="mt-4 space-y-2">
         {redes.map((r) => (
           <div key={r.plataforma} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/8 bg-black/20 px-3.5 py-2.5">
             <span className="w-20 shrink-0 text-sm text-zinc-200">{REDE_NOME[r.plataforma] || r.plataforma}</span>
-            <span
-              className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
-                r.papel === 'motor de seguidor' ? 'bg-emerald-500/10 text-emerald-300' : r.papel === 'motor de view' ? 'bg-sky-500/10 text-sky-300' : 'bg-zinc-800/70 text-zinc-500'
-              }`}
-            >
-              {r.papel}
-            </span>
+            {r.ganhoJanela != null ? (
+              <span className="flex shrink-0 items-center gap-2">
+                <span className="text-sm font-semibold tabular-nums text-emerald-300">
+                  +{r.ganhoJanela}
+                </span>
+                <span className="h-1.5 w-16 overflow-hidden rounded-full bg-white/5">
+                  <span
+                    className="block h-full rounded-full bg-emerald-500"
+                    style={{ width: `${Math.max(3, ((r.ganhoJanela ?? 0) / maxGanho) * 100)}%` }}
+                  />
+                </span>
+              </span>
+            ) : (
+              <span className="shrink-0 text-[11px] text-zinc-600">sem contador</span>
+            )}
             <span className="text-[11px] tabular-nums text-zinc-500">
-              {r.views.toLocaleString('pt-BR')} views · {r.likes.toLocaleString('pt-BR')} curtidas
+              {r.seguidores != null && <>{r.seguidores.toLocaleString('pt-BR')} seguidores · </>}
+              {r.views.toLocaleString('pt-BR')} views
             </span>
             <span className="ml-auto text-[11px] text-zinc-400">
-              {r.seguidoresMedidos != null ? (
+              {r.seguidorPorMilViews != null ? (
                 <>
-                  <strong className="text-zinc-200">{r.seguidoresMedidos.toLocaleString('pt-BR')}</strong> seguidores (medido)
-                </>
-              ) : r.seguidoresEstimados != null ? (
-                <>
-                  ~<strong className="text-zinc-200">{r.seguidoresEstimados.toLocaleString('pt-BR')}</strong> seguidores{' '}
-                  <span className="text-zinc-600">(estimativa: 10% das curtidas)</span>
+                  <strong className="text-zinc-200">{r.seguidorPorMilViews}</strong> seguidor / mil views
                 </>
               ) : (
-                <span className="text-zinc-600">seguidor não medido nesta rede</span>
+                <span className="text-zinc-600">—</span>
               )}
             </span>
           </div>
         ))}
       </div>
       <p className="mt-3 text-[10px] text-zinc-600">
-        Facebook converte por alcance (dado da API). Kwai e TikTok usam a razão observada nas contas
-        em 29/07 — Kwai 154/1.5k e TikTok 151/1.487, ambos ~10%. É estimativa direcional, não KPI.
+        Seguidor vem do CONTADOR DO PERFIL medido todo dia, nunca derivado de métrica de post: em
+        29/07 a conta antiga (conversão × alcance) dava 3.093 no Facebook quando o contador real era
+        408 — errado por 7,5×. A razão observada pelo dono (~10% das curtidas em Kwai e TikTok) bate
+        com o contador (Kwai 144/1.454, TikTok 151/1.491), mas virou só conferência.
       </p>
+    </Card>
+  )
+}
+
+// ====== 7. COBERTURA — o que a API de cada rede NÃO entrega ======
+
+/**
+ * O bloco da honestidade. Sem ele o Decisor afirma coisas sobre o Kwai sem dizer que o número é
+ * print digitado à mão, e compara "retenção entre redes" onde TikTok e Kwai não têm retenção
+ * nenhuma. Conclusão apoiada em registro manual atrasado não tem o mesmo peso de medida por API.
+ */
+export function BlocoCobertura({ cobertura }: { cobertura: CoberturaRede[] }) {
+  const manuais = cobertura.filter((c) => c.fonte !== 'api')
+  const atrasadas = cobertura.filter((c) => (c.atrasoDias ?? 0) >= 2)
+
+  return (
+    <Card>
+      <Titulo icone={<Database className="h-5 w-5 text-zinc-400" />} cor="bg-zinc-500/10" nota="o que cada rede entrega de verdade">
+        De onde vem cada número
+      </Titulo>
+      <p className="mt-1.5 text-xs text-zinc-400">
+        Nem toda rede entrega tudo. O que não vem da API aparece aqui como ausente — nunca como
+        zero, que seria fingir que medimos.
+      </p>
+
+      <div className="mt-4 space-y-2">
+        {cobertura.map((c) => (
+          <div key={c.plataforma} className="rounded-xl border border-white/8 bg-black/20 px-3.5 py-3">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              <span className="w-20 shrink-0 text-sm text-zinc-200">{REDE_NOME[c.plataforma] || c.plataforma}</span>
+              <span
+                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
+                  c.fonte === 'api'
+                    ? 'bg-emerald-500/10 text-emerald-300'
+                    : c.fonte === 'manual'
+                      ? 'bg-amber-500/10 text-amber-300'
+                      : 'bg-sky-500/10 text-sky-300'
+                }`}
+              >
+                {c.fonte === 'api' ? 'API' : c.fonte === 'manual' ? 'digitado à mão' : `${c.registrosManuais} de ${c.registros} à mão`}
+              </span>
+              {c.atrasoDias != null && c.atrasoDias >= 2 && (
+                <span className="shrink-0 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-300">
+                  {c.atrasoDias} dias sem atualizar
+                </span>
+              )}
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
+              {c.entrega.length > 0 && (
+                <span className="text-zinc-400">
+                  entrega: <span className="text-emerald-300/80">{c.entrega.join(', ')}</span>
+                </span>
+              )}
+              {c.naoEntrega.length > 0 && (
+                <span className="text-zinc-400">
+                  não entrega: <span className="text-zinc-600">{c.naoEntrega.join(', ')}</span>
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {(manuais.length > 0 || atrasadas.length > 0) && (
+        <p className="mt-3.5 border-t border-white/8 pt-3 text-[11px] text-amber-300/80">
+          {manuais.length > 0 && (
+            <>
+              {manuais.map((m) => REDE_NOME[m.plataforma] || m.plataforma).join(' e ')} dependem de
+              alguém registrar o print — se um dia não for digitado, o radar não enxerga estouro lá.{' '}
+            </>
+          )}
+          {atrasadas.length > 0 && (
+            <>Atrasado agora: {atrasadas.map((a) => REDE_NOME[a.plataforma] || a.plataforma).join(', ')}.</>
+          )}
+        </p>
+      )}
     </Card>
   )
 }

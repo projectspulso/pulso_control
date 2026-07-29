@@ -9,6 +9,9 @@ import {
   perfilDasRedes,
   desempenhoPorTema,
   filaPorTema,
+  coberturaPorRede,
+  type CoberturaEntrada,
+  type PontoSeguidores,
   type LeituraBruta,
   type PubBruta,
 } from '@/lib/decisor/fatos'
@@ -37,11 +40,13 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdminClient()
     const desde = new Date(Date.now() - DIAS_SERIE * 86_400_000).toISOString().slice(0, 10)
 
-    const [pubQ, leiQ, ideiasQ, filaQ, parecerQ] = await Promise.all([
+    const [pubQ, leiQ, ideiasQ, filaQ, parecerQ, segQ] = await Promise.all([
       supabase
         .schema('pulso_content')
         .from('metricas_publicacao')
-        .select('ideia_id, plataforma, data_publicacao, views, likes, reach, taxa_conversao'),
+        .select(
+          'ideia_id, plataforma, data_publicacao, views, likes, reach, taxa_conversao, taxa_retencao, avg_watch_ms, retention_graph, post_id, ultima_atualizacao'
+        ),
       supabase
         .schema('pulso_analytics')
         .from('leituras_metricas')
@@ -55,6 +60,15 @@ export async function GET(request: NextRequest) {
         .select('ideia_id, status')
         .not('status', 'eq', 'PUBLICADO'),
       supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', CHAVE_PARECER).maybeSingle(),
+      // contador de seguidores medido todo dia — a ÚNICA fonte honesta de seguidor.
+      // Não derivar seguidor de métrica de post: taxa_conversao × reach dava 3.093 no Facebook
+      // quando o contador real era 408 (erro de 7,5×, corrigido em 29/07).
+      supabase
+        .schema('pulso_core')
+        .from('configuracoes')
+        .select('valor')
+        .eq('chave', 'seguidores_historico')
+        .maybeSingle(),
     ])
 
     if (pubQ.error) throw pubQ.error
@@ -111,6 +125,17 @@ export async function GET(request: NextRequest) {
     const idsFila = [...new Set(((filaQ.data || []) as any[]).map((f) => f.ideia_id).filter(Boolean))]
     const titulosFila = idsFila.map((id) => titulos.get(id) ?? null)
 
+    const cobertura: CoberturaEntrada[] = rawPubs.map((p) => ({
+      plataforma: p.plataforma,
+      postId: p.post_id,
+      ultimaAtualizacao: p.ultima_atualizacao,
+      reach: p.reach,
+      taxaRetencao: p.taxa_retencao,
+      avgWatchMs: p.avg_watch_ms,
+      retentionGraph: p.retention_graph,
+      taxaConversao: p.taxa_conversao,
+    }))
+
     const radar = radarDeEstouro(leituras, titulos, publicadoEm)
     const temasFacebook = desempenhoPorTema(pubs, titulos, 'facebook')
     const temasGeral = desempenhoPorTema(pubs, titulos)
@@ -118,6 +143,11 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parecerRaw = (parecerQ.data as any)?.valor ?? null
     const parecer = typeof parecerRaw === 'string' ? safeParse(parecerRaw) : parecerRaw
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let segRaw: any = (segQ.data as any)?.valor ?? null
+    if (typeof segRaw === 'string') segRaw = safeParse(segRaw)
+    const historicoSeguidores: PontoSeguidores[] = Array.isArray(segRaw) ? segRaw : segRaw?.historico || []
 
     return NextResponse.json({
       ok: true,
@@ -128,10 +158,12 @@ export async function GET(request: NextRequest) {
         ganhos: ganhos.slice(-14),
         tendencia: tendencia(ganhos, 7),
         dependencia: dependenciaDeViral(ganhos, viewsPorVideo),
-        redes: perfilDasRedes(pubs),
+        redes: perfilDasRedes(pubs, historicoSeguidores),
         temasFacebook,
         temasGeral,
         fila: filaPorTema(titulosFila),
+        cobertura: coberturaPorRede(cobertura),
+        historicoSeguidores,
         publicadosHoje: contarPublicadosHoje(pubs),
       },
       parecer,
