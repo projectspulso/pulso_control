@@ -3,6 +3,7 @@ import {
   BarChart3,
   CalendarDays,
   Clapperboard,
+  Compass,
   FileEdit,
   LayoutDashboard,
   Lightbulb,
@@ -35,6 +36,12 @@ export interface Area {
 }
 
 export const AREAS: Area[] = [
+  // PRIMEIRO de propósito: é a pergunta que se faz ao abrir o app ("o que faço agora e por quê?").
+  // As outras áreas são a biblioteca de consulta; esta é a camada de decisão. Ver /decisor.
+  { href: '/decisor', nome: 'Decisor', icon: Compass,
+    navGradient: 'from-indigo-600 to-violet-600', navGlow: 'shadow-indigo-500/25',
+    text: 'text-indigo-300', dot: 'bg-indigo-500', ring: 'ring-indigo-500/30', soft: 'bg-indigo-500/10',
+    headerGlow: 'from-indigo-600/20 via-violet-600/5 to-transparent', iconBox: 'from-indigo-500 to-violet-500' },
   { href: '/', nome: 'Dashboard', icon: LayoutDashboard,
     navGradient: 'from-violet-600 to-pink-600', navGlow: 'shadow-violet-500/25',
     text: 'text-violet-300', dot: 'bg-violet-500', ring: 'ring-violet-500/30', soft: 'bg-violet-500/10',
@@ -85,7 +92,8 @@ export const AREAS: Area[] = [
     headerGlow: 'from-rose-600/20 via-red-600/5 to-transparent', iconBox: 'from-rose-500 to-red-500' },
 ]
 
-const DASHBOARD = AREAS[0]
+// por href, não por índice: o Decisor entrou na frente e AREAS[0] deixou de ser o Dashboard
+const DASHBOARD = AREAS.find((a) => a.href === '/')!
 
 /** Acha a área pela rota (exata pra '/', senão maior prefixo). */
 export function areaFor(pathname: string): Area {

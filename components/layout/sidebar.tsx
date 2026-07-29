@@ -9,6 +9,7 @@ import {
   BarChart3,
   CalendarDays,
   Clapperboard,
+  Compass,
   FileEdit,
   GraduationCap,
   LayoutDashboard,
@@ -29,6 +30,9 @@ import { useUsuario } from '@/lib/hooks/use-usuario'
 import { areaFor } from '@/lib/config/areas'
 
 const navigation = [
+  // PRIMEIRO de propósito: é a pergunta que se faz ao abrir o app ("o que faço agora e por quê?").
+  // As demais áreas são a biblioteca de consulta; o Decisor é a camada de decisão.
+  { name: 'Decisor', href: '/decisor', icon: Compass, badge: 'ai', soAdmin: false },
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, badge: null, soAdmin: false },
   { name: 'Aderência', href: '/validacao', icon: Target, badge: 'mvp', soAdmin: false },
   { name: 'Trend Tops', href: '/trends', icon: TrendingUp, badge: 'ai', soAdmin: false },
