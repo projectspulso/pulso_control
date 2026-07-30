@@ -36,8 +36,19 @@ export interface DedupItem {
   descricao?: string | null
 }
 
+/**
+ * SÓ O TÍTULO — a descrição saiu em 29/07/2026, e essa era a falha principal.
+ *
+ * Medido nas 6 duplicatas reais do acervo: com título+descrição elas pontuavam 0,11 a 0,25
+ * contra um limiar de 0,45 — a trava pegava ZERO. A descrição é longa e sempre diferente entre
+ * dois vídeos do mesmo assunto, então ela DILUI a sobreposição do título. Só no título os mesmos
+ * pares dão 0,30 a 0,50.
+ *
+ * Baixar o limiar não resolvia: 0,40 / 0,35 / 0,30 com descrição junto continuavam pegando zero.
+ * O problema era a feature, não o corte.
+ */
 export function chaveSimilaridade(item: DedupItem): Set<string> {
-  return tokenize(`${item.titulo} ${item.descricao || ''}`)
+  return tokenize(item.titulo)
 }
 
 export interface DuplicataMatch {
@@ -47,10 +58,17 @@ export interface DuplicataMatch {
 }
 
 /**
- * Limiar padrão. 0.45 separou o único par real de duplicatas (Mary Celeste,
- * 0.48) sem falsos positivos nas 83 ideias existentes.
+ * Limiar de SUSPEITA, não de veto. 0.30 no título pega as 6 duplicatas reais medidas em 29/07
+ * (0,30–0,50) — mas nesse corte o Jaccard também gera falso positivo, porque casa FRASE e não
+ * assunto. Dois exemplos reais do acervo:
+ *   "Uma carta perdida que mudou tudo"  ×  "O fóssil que mudou tudo em 2003"  (33%) — carta ≠ fóssil
+ *   "A estrada que brilha no escuro"    ×  "Por que a Lua brilha no escuro?"  (33%) — estrada ≠ Lua
+ *
+ * Por isso o lexical virou GERADOR DE CANDIDATOS e quem decide é a camada semântica. O corte
+ * anterior (0.45 sobre título+descrição) não pegava nada; este pega demais de propósito, e o LLM
+ * separa. Errar pra mais custa uma chamada de LLM; errar pra menos custa um render duplicado.
  */
-export const LIMIAR_DUPLICIDADE = 0.45
+export const LIMIAR_DUPLICIDADE = 0.3
 
 /**
  * Filtra candidatas contra as ideias existentes E contra as já aceitas no
@@ -108,11 +126,22 @@ export async function filtrarDuplicatasSemantica<T extends DedupItem>(
   const prompt = [
     'Você é curador de um canal de vídeos curtos de curiosidades/mistérios.',
     'Tarefa: para cada IDEIA CANDIDATA, decidir se ela é, NO FUNDO, o MESMO tema/história/fenômeno de alguma IDEIA EXISTENTE — mesmo que escrita com palavras diferentes.',
-    'É duplicata (mesmo assunto central):',
+    '',
+    'É DUPLICATA (mesmo assunto central) — barre:',
     '- "Seu cérebro acha que uma mão falsa é sua" ≡ "Efeito Rubber Hand"',
     '- "O menino que sobreviveu a 2 desastres aéreos" ≡ "A mulher que sobreviveu a 2 desastres aéreos"',
     '- "Voo 19: aviões somem no Triângulo" ≡ "5 aviões da Marinha desaparecem nas Bermudas em 1945"',
-    'NÃO é duplicata quando o fenômeno central é diferente (ex.: técnica Pomodoro vs aprender durante o sono são distintas).',
+    // Casos REAIS que passaram e viraram vídeo repetido — o padrão é o mesmo fenômeno com moldura
+    // trocada, não o mesmo evento. A versão anterior deste prompt só ensinava "mesmo evento".
+    '- "Por que esquecemos o que íamos DIZER ao entrar numa sala" ≡ "...o que íamos FAZER em outra sala" (mesmo efeito de porta)',
+    '- "O Erro COMUM que destrói seu foco" ≡ "O Erro MORTAL que destrói seu foco"',
+    '- "Um relojoeiro suíço criou em 1923 um relógio que manipula o tempo" ≡ "Um relógio em Praga marcava o tempo ao contrário em 1922" (mesma premissa e época; só trocou o detalhe)',
+    '- "Como a Rota da Seda moldou conflitos modernos" ≡ "Como o Irã moldou a Rota da Seda" (mesmo objeto central)',
+    '',
+    'NÃO é duplicata quando o OBJETO CENTRAL é outro, mesmo com palavras iguais:',
+    '- "Uma CARTA perdida que mudou tudo" ≠ "O FÓSSIL que mudou tudo em 2003"',
+    '- "A ESTRADA que brilha no escuro" ≠ "Por que a LUA brilha no escuro"',
+    '- técnica Pomodoro ≠ aprender durante o sono',
     '',
     'IDEIAS EXISTENTES:',
     ...titulos.map((t, i) => `E${i + 1}. ${t}`),
@@ -121,14 +150,28 @@ export async function filtrarDuplicatasSemantica<T extends DedupItem>(
     ...candidatas.map((c, i) => `C${i + 1}. ${c.titulo} — ${(c.descricao || '').slice(0, 140)}`),
     '',
     'Responda APENAS JSON: {"duplicatas":[{"candidata":<n de C>,"igual_a":"<titulo existente>","motivo":"<curto>"}]}.',
-    'Inclua só candidatas que são claramente o mesmo assunto central de alguma existente. Na dúvida, NÃO marque.',
+    // INVERSÃO do viés (29/07/2026): antes dizia "na dúvida, NÃO marque", e o custo era assimétrico
+    // ao contrário — deixar passar gera roteiro + voz + render duplicados; barrar à toa custa uma
+    // ideia que o gerador refaz de graça no próximo lote.
+    'NA DÚVIDA, MARQUE COMO DUPLICATA. Deixar passar custa produção inteira; barrar à toa custa nada, porque o gerador propõe outra.',
   ].join('\n')
 
   let parsed: { duplicatas?: Array<{ candidata?: number; igual_a?: string }> }
   try {
     parsed = JSON.parse(await callLLM(prompt))
   } catch {
-    return { aceitas: candidatas, ignoradas: [] }
+    // FAIL-CLOSED (29/07/2026): antes o catch devolvia TUDO como aceito, em silêncio — se a
+    // chamada falhasse ou o JSON viesse quebrado, o lote inteiro entrava sem checagem semântica e
+    // ninguém ficava sabendo. Agora barra tudo e diz por quê: melhor um lote perdido (o gerador
+    // roda de novo) do que duplicata entrando calada na esteira.
+    return {
+      aceitas: [],
+      ignoradas: candidatas.map((c) => ({
+        titulo: c.titulo,
+        similar_a: '(checagem semântica indisponível — lote barrado por precaução)',
+        score: 0,
+      })),
+    }
   }
 
   const dup = new Map<number, string>()

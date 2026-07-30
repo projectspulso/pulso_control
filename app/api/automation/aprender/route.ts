@@ -192,10 +192,28 @@ export async function POST(request: NextRequest) {
     const linhasTemaRede = Object.entries(temaRedeTop)
       .map(([p, v]) => `- ${p}: ${v}`)
       .join('\n')
+    // ANTI-IMITAÇÃO (29/07/2026): esta seção estava FABRICANDO duplicatas. Ela injeta os ganchos
+    // campeões como referência, e o gerador — mesmo lendo "replique a estrutura, não o assunto" —
+    // derivava pro assunto do exemplo. Virou loop: campeão entra como referência → gerador produz
+    // variante do campeão → a trava lexical não pegava a variante → variante vira vídeo. Foi assim
+    // que saíram "relógio de Praga 1922" e "relógio suíço 1923", ou "Rota da Seda" duas vezes em
+    // 4 dias. O aprendizado funcionava; só estava otimizando IMITAÇÃO em vez de acerto, porque
+    // ninguém media diversidade. Agora os campeões vêm com a lista de assuntos QUEIMADOS colada.
+    const assuntosQueimados = ganchos
+      .map((g) => String(g).replace(/^Em \d{4},?\s*/i, '').split(/[.,]/)[0].trim())
+      .filter((s) => s.length > 8)
+
     const texto = `${PLANO_CRESCIMENTO}
 APRENDIZADO DA NOSSA AUDIÊNCIA (referência de PADRÃO — não copie tema nem frase literal):
-GANCHOS QUE MAIS RETIVERAM (replique a ESTRUTURA do gancho, não o assunto):
+GANCHOS QUE MAIS RETIVERAM (replique a ESTRUTURA do gancho, NUNCA o assunto):
 ${ganchos.map((g) => `- "${g}"`).join('\n')}
+
+ASSUNTOS JÁ QUEIMADOS — estes ganchos acima JÁ VIRARAM VÍDEO. Propor qualquer variação deles é
+duplicata e será barrada. Não vale trocar o detalhe (ano, cidade, nacionalidade, objeto parecido)
+e chamar de ideia nova — "relojoeiro suíço em 1923" é o mesmo vídeo que "relojoeiro em Praga em
+1922". O que se copia é a ESTRUTURA da frase; o assunto tem que ser inédito:
+${assuntosQueimados.map((s) => `- ${s}`).join('\n')}
+
 TEMA × REDE (o que cada rede mais premiou em views — priorize ao distribuir/escolher tema):
 ${linhasTemaRede}`
 
