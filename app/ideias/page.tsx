@@ -23,10 +23,19 @@ export default function IdeiasPage() {
   const [qtdGerar, setQtdGerar] = useState<number>(5)
   const [gerando, setGerando] = useState(false)
   const [gerarMsg, setGerarMsg] = useState<string | null>(null)
+  // O PORQUÊ da geração, não só o placar. Antes a tela dizia só "2 geradas · 4 ignoradas" — o
+  // dono não via QUAL foi barrada nem por que aquele canal, e é aí que está a informação útil:
+  // no teste de 29/07, 4 das 6 propostas eram clone de campeão ("O fóssil que reescreveu a
+  // história em 2003" contra o de 29k). Ver o que foi barrado é o que dá confiança na trava.
+  const [gerarDetalhe, setGerarDetalhe] = useState<{
+    motivo: string | null
+    barradas: Array<{ titulo: string; similar_a: string }>
+  } | null>(null)
 
   const handleGerarIdeias = async () => {
     setGerando(true)
     setGerarMsg(null)
+    setGerarDetalhe(null)
     try {
       const body: { quantidade: number; canal_id?: string } = { quantidade: qtdGerar }
       if (canalGerar) body.canal_id = canalGerar
@@ -38,7 +47,16 @@ export default function IdeiasPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `Erro ${res.status}`)
       const ign = data.ignoradas_duplicidade?.length || 0
-      setGerarMsg(`✅ ${data.quantidade_gerada} ideia(s) gerada(s) em "${data.canal}"${ign ? ` · ${ign} ignorada(s) por duplicidade` : ''}.`)
+      setGerarMsg(`✅ ${data.quantidade_gerada} ideia(s) gerada(s) em "${data.canal}"${ign ? ` · ${ign} barrada(s) por duplicidade` : ''}.`)
+      setGerarDetalhe({
+        motivo: data.canal_motivo ?? null,
+        barradas: (data.ignoradas_duplicidade || []).map(
+          (d: { titulo?: string; similar_a?: string }) => ({
+            titulo: d.titulo || '(sem título)',
+            similar_a: d.similar_a || '(existente)',
+          })
+        ),
+      })
       await refetch()
     } catch (e) {
       setGerarMsg(`❌ ${e instanceof Error ? e.message : 'erro ao gerar'}`)
@@ -143,6 +161,32 @@ export default function IdeiasPage() {
             {gerando ? '✨ Gerando…' : '✨ Gerar ideias com IA'}
           </button>
           {gerarMsg && <span className="w-full text-sm text-zinc-300">{gerarMsg}</span>}
+
+          {gerarDetalhe && (gerarDetalhe.motivo || gerarDetalhe.barradas.length > 0) && (
+            <div className="w-full space-y-2 rounded-xl border border-white/8 bg-black/20 p-3.5">
+              {gerarDetalhe.motivo && (
+                <p className="text-[11px] text-zinc-400">
+                  <span className="text-zinc-500">Canal escolhido por desempenho:</span> {gerarDetalhe.motivo}
+                </p>
+              )}
+              {gerarDetalhe.barradas.length > 0 && (
+                <div>
+                  <p className="mb-1.5 text-[11px] text-zinc-500">
+                    Barradas por já existirem — cada uma seria roteiro, voz e render duplicados:
+                  </p>
+                  <ul className="space-y-1">
+                    {gerarDetalhe.barradas.map((b, n) => (
+                      <li key={n} className="text-[12px] leading-snug">
+                        <span className="text-amber-300/90">{b.titulo}</span>
+                        <span className="text-zinc-600"> ≈ </span>
+                        <span className="text-zinc-400">{b.similar_a}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Stats Cards */}
