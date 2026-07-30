@@ -125,9 +125,19 @@ export async function filtrarDuplicatasSemantica<T extends DedupItem>(
 
   const prompt = [
     'Você é curador de um canal de vídeos curtos de curiosidades/mistérios.',
-    'Tarefa: para cada IDEIA CANDIDATA, decidir se ela é, NO FUNDO, o MESMO tema/história/fenômeno de alguma IDEIA EXISTENTE — mesmo que escrita com palavras diferentes.',
+    'Tarefa: para cada IDEIA CANDIDATA, decidir se ela conta a MESMA HISTÓRIA de alguma IDEIA EXISTENTE.',
     '',
-    'É DUPLICATA (mesmo assunto central) — barre:',
+    // O CRITÉRIO, e ele é a coisa mais importante deste prompt. Sem defini-lo, "na dúvida barre"
+    // fez o modelo barrar por GÊNERO: em 30/07 recusou "a colônia de Roanoke" contra "o Farol das
+    // Ilhas Flannan" — colônia inglesa sumida em 1587 na América × faroleiros sumidos em 1900 na
+    // Escócia. Só compartilham "gente que desapareceu". Um lote inteiro morreu assim.
+    'O CRITÉRIO É O EVENTO/OBJETO ESPECÍFICO, NUNCA O GÊNERO.',
+    'Duas ideias sobre desaparecimentos são histórias DIFERENTES se o desaparecimento for outro.',
+    'Duas ideias sobre mapas antigos são DIFERENTES se o mapa for outro.',
+    'Duas ideias sobre cidades perdidas são DIFERENTES se a cidade for outra.',
+    'Pergunte: é o MESMO caso, com o mesmo protagonista/lugar/data? Se for outro caso, NÃO é duplicata.',
+    '',
+    'É DUPLICATA (mesma história) — barre:',
     '- "Seu cérebro acha que uma mão falsa é sua" ≡ "Efeito Rubber Hand"',
     '- "O menino que sobreviveu a 2 desastres aéreos" ≡ "A mulher que sobreviveu a 2 desastres aéreos"',
     '- "Voo 19: aviões somem no Triângulo" ≡ "5 aviões da Marinha desaparecem nas Bermudas em 1945"',
@@ -138,7 +148,11 @@ export async function filtrarDuplicatasSemantica<T extends DedupItem>(
     '- "Um relojoeiro suíço criou em 1923 um relógio que manipula o tempo" ≡ "Um relógio em Praga marcava o tempo ao contrário em 1922" (mesma premissa e época; só trocou o detalhe)',
     '- "Como a Rota da Seda moldou conflitos modernos" ≡ "Como o Irã moldou a Rota da Seda" (mesmo objeto central)',
     '',
-    'NÃO é duplicata quando o OBJETO CENTRAL é outro, mesmo com palavras iguais:',
+    'NÃO é duplicata quando o CASO é outro, mesmo com palavras ou gênero iguais — casos REAIS que',
+    'foram barrados por engano em 30/07 e NÃO devem ser barrados:',
+    '- "A colônia de ROANOKE que desapareceu" ≠ "O Farol das ILHAS FLANNAN" (dois sumiços, casos distintos)',
+    '- "Os mapas antigos que revelam terras desconhecidas" ≠ "O mapa de PIRI REIS" (mapas diferentes)',
+    '- "O artefato de 5000 anos indecifrável" ≠ "O manuscrito de VOYNICH" (objetos diferentes)',
     '- "Uma CARTA perdida que mudou tudo" ≠ "O FÓSSIL que mudou tudo em 2003"',
     '- "A ESTRADA que brilha no escuro" ≠ "Por que a LUA brilha no escuro"',
     '- técnica Pomodoro ≠ aprender durante o sono',
@@ -150,10 +164,10 @@ export async function filtrarDuplicatasSemantica<T extends DedupItem>(
     ...candidatas.map((c, i) => `C${i + 1}. ${c.titulo} — ${(c.descricao || '').slice(0, 140)}`),
     '',
     'Responda APENAS JSON: {"duplicatas":[{"candidata":<n de C>,"igual_a":"<titulo existente>","motivo":"<curto>"}]}.',
-    // INVERSÃO do viés (29/07/2026): antes dizia "na dúvida, NÃO marque", e o custo era assimétrico
-    // ao contrário — deixar passar gera roteiro + voz + render duplicados; barrar à toa custa uma
-    // ideia que o gerador refaz de graça no próximo lote.
-    'NA DÚVIDA, MARQUE COMO DUPLICATA. Deixar passar custa produção inteira; barrar à toa custa nada, porque o gerador propõe outra.',
+    // Viés calibrado em 30/07: "na dúvida marque" sozinho zerou um lote inteiro (5 de 5 barradas,
+    // 0 geradas), porque a dúvida virava "parece do mesmo tipo". A dúvida legítima é sobre o CASO
+    // ser o mesmo, não sobre o gênero — daí a pergunta explícita abaixo.
+    'Na dúvida sobre ser O MESMO CASO, marque como duplicata. Mas se for outro caso, deixe passar mesmo que o tema soe parecido — barrar um assunto inédito custa uma ideia boa.',
   ].join('\n')
 
   let parsed: { duplicatas?: Array<{ candidata?: number; igual_a?: string }> }

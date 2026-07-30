@@ -156,6 +156,47 @@ export async function POST(request: NextRequest) {
     ideias = semantica.aceitas
     const ignoradasTotal = [...ignoradas, ...semantica.ignoradas]
 
+    // SEGUNDA TENTATIVA quando o lote inteiro cai (30/07/2026). O dono clicou e recebeu
+    // "0 ideia(s) gerada(s) · 5 barrada(s)" — botão que não entrega nada é botão quebrado, e a
+    // culpa não é dele: o canal Mistérios & História já tem muito assunto ocupado, então é normal
+    // um lote inteiro colidir. Em vez de devolver vazio, o gerador roda de novo sabendo o que foi
+    // recusado. Uma vez só — se cair de novo, aí é sinal real de saturação e o aviso diz isso.
+    let tentouDeNovo = false
+    if (ideias.length === 0 && ignoradasTotal.length > 0) {
+      tentouDeNovo = true
+      const recusadas = ignoradasTotal.map((d) => `- "${d.titulo}" (já existe algo igual)`).join('\n')
+      const promptRetry = `${prompt}
+
+ATENÇÃO — TENTATIVA 2. As ideias abaixo você JÁ propôs agora há pouco e TODAS foram recusadas por
+já existirem no acervo. Não proponha nenhuma variação delas:
+${recusadas}
+
+Escolha CASOS ESPECÍFICOS e inéditos: um evento nomeado, com lugar e época próprios. Evite título
+genérico de categoria ("os mapas antigos", "o artefato indecifrável") — genérico colide com tudo
+que já existe. Nomeie o caso.`
+      try {
+        const retry = await callOpenAI(promptRetry, { temperature: 0.9, json_mode: true })
+        const p2 = JSON.parse(retry.content)
+        const ehLista = (v: unknown): v is unknown[] =>
+          Array.isArray(v) && v.length > 0 && typeof v[0] === 'object' && v[0] !== null && 'titulo' in v[0]
+        const brutas = Array.isArray(p2) ? p2 : ehLista(p2.ideias) ? p2.ideias : Object.values(p2).find(ehLista) || []
+        const cand = (brutas as Array<{ titulo?: string }>).filter((i) => i && typeof i.titulo === 'string' && i.titulo)
+        if (cand.length) {
+          const lex2 = filtrarDuplicatas(
+            cand as Array<{ titulo: string; descricao?: string | null }>,
+            existentesIdeias || []
+          )
+          const sem2 = await filtrarDuplicatasSemantica(lex2.aceitas, existentesIdeias || [], (p) =>
+            callOpenAI(p, { json_mode: true, temperature: 0, max_tokens: 1200 }).then((r) => r.content)
+          )
+          ideias = sem2.aceitas
+          ignoradasTotal.push(...lex2.ignoradas, ...sem2.ignoradas)
+        }
+      } catch {
+        /* a 2ª tentativa é bônus — se falhar, cai no aviso de lote vazio abaixo */
+      }
+    }
+
     if (ideias.length === 0) {
       return NextResponse.json({
         success: true,
@@ -165,7 +206,9 @@ export async function POST(request: NextRequest) {
         quantidade_gerada: 0,
         ideias: [],
         ignoradas_duplicidade: ignoradasTotal,
-        aviso: 'Todas as ideias geradas já existiam (trava anti-duplicidade lexical + semântica).',
+        aviso: tentouDeNovo
+          ? `Duas tentativas e tudo colidiu com o acervo — "${canal.nome}" está saturado. Escolha outro canal no seletor.`
+          : 'Todas as ideias geradas já existiam (trava anti-duplicidade lexical + semântica).',
         tokens: usage,
       })
     }
