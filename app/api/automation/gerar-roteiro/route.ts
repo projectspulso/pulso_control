@@ -99,21 +99,46 @@ export async function POST(request: NextRequest) {
       /* aprendizado é opcional */
     }
 
-    // PRÓXIMO TEMA DA FILA (pro CTA teaser): a ideia APROVADA de maior prioridade que NÃO é esta.
-    // Proxy honesto do "próximo vídeo" — o auto-funil produz por prioridade. Teaser fica em "no
-    // próximo" (não "amanhã"), pra não prometer dia exato que a grade pode não cumprir.
+    // PRÓXIMO TEMA DA FILA (pro CTA teaser).
+    //
+    // BUG CORRIGIDO EM 30/07/2026 — o dono notou o CTA repetido e o rastro levou aqui. A consulta
+    // pegava "a APROVADA de maior prioridade" e NÃO excluía as já publicadas. Como prioridade
+    // quase nunca muda, dava sempre a MESMA ideia: os 12 roteiros mais recentes prometiam todos
+    // "a curiosa história do método de estudo que desafiou Harvard" — um vídeo que já tinha sido
+    // publicado em 19/07. Uma dúzia de vídeos prometendo um "próximo" que já passou.
+    //
+    // Agora: só ideias que estão REALMENTE por vir (têm pipeline e não foram publicadas), e
+    // sorteadas entre as candidatas — senão o teaser volta a congelar num título só.
     let proximoTema: string | undefined
     try {
-      const { data: prox } = await supabase
-        .schema('pulso_content')
-        .from('ideias')
-        .select('titulo')
-        .eq('status', 'APROVADA')
-        .neq('id', ideia.id)
-        .order('prioridade', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      if (prox?.titulo) proximoTema = String(prox.titulo)
+      const [{ data: emProducao }, { data: jaPublicadas }] = await Promise.all([
+        supabase
+          .schema('pulso_content')
+          .from('pipeline_producao')
+          .select('ideia_id')
+          .neq('status', 'PUBLICADO'),
+        supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id'),
+      ])
+      const publicadas = new Set((jaPublicadas || []).map((m: { ideia_id: string }) => m.ideia_id))
+      const candidatasId = [
+        ...new Set(
+          (emProducao || [])
+            .map((p: { ideia_id: string | null }) => p.ideia_id)
+            .filter((id: string | null): id is string => !!id && id !== ideia.id && !publicadas.has(id))
+        ),
+      ]
+      if (candidatasId.length) {
+        const { data: tits } = await supabase
+          .schema('pulso_content')
+          .from('ideias')
+          .select('titulo')
+          .in('id', candidatasId.slice(0, 40))
+          .eq('status', 'APROVADA')
+        const nomes = (tits || [])
+          .map((t: { titulo: string | null }) => t.titulo)
+          .filter((t: string | null): t is string => !!t)
+        if (nomes.length) proximoTema = nomes[Math.floor(Math.random() * nomes.length)]
+      }
     } catch {
       /* teaser é opcional */
     }
