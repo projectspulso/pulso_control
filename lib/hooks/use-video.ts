@@ -15,6 +15,10 @@ import { dedupePublicacoes } from '@/lib/analytics/dedupe'
 
 export interface RedeDoVideo {
   plataforma: string
+  /** só Instagram: o painel do IG exibe views(IG) + facebook_views(crosspost) num número só.
+   *  Guardado pra tela explicar a diferença — ver memória instagram-total-views-crosspost. */
+  igTotalViews?: number | null
+  igFacebookViews?: number | null
   url: string | null
   views: number
   reach: number | null
@@ -62,7 +66,7 @@ export function useVideo(ideiaId: string) {
       const [ideiaQ, metQ, todasMetQ, pipeQ, audioQ, canaisQ, roteiroQ, leiturasQ] = await Promise.all([
         supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id').eq('id', ideiaId).maybeSingle(),
         supabase.schema('pulso_content').from('metricas_publicacao')
-          .select('plataforma, url_publicacao, views, reach, likes, comentarios, shares, saves, taxa_retencao, taxa_conversao, data_publicacao')
+          .select('plataforma, url_publicacao, views, reach, likes, comentarios, shares, saves, taxa_retencao, taxa_conversao, data_publicacao, metadata')
           .eq('ideia_id', ideiaId),
         // retenção de TODOS os vídeos, por rede, pra calcular o percentil deste dentro da rede
         supabase.schema('pulso_content').from('metricas_publicacao').select('plataforma, taxa_retencao'),
@@ -103,6 +107,8 @@ export function useVideo(ideiaId: string) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((m: any) => ({
           plataforma: m.plataforma,
+          igTotalViews: (m.metadata as { ig_total_views?: number } | null)?.ig_total_views ?? null,
+          igFacebookViews: (m.metadata as { ig_facebook_views?: number } | null)?.ig_facebook_views ?? null,
           url: m.url_publicacao,
           views: m.views || 0,
           reach: REACH_REDES.has(m.plataforma) ? (m.reach ?? null) : null,

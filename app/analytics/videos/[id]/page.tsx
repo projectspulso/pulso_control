@@ -122,7 +122,17 @@ export default function VideoDetalhePage({ params }: { params: Promise<{ id: str
               {data.redes.map((r) => (
                 <tr key={r.plataforma} className="border-t border-white/5">
                   <td className="py-2 font-medium text-zinc-100">{NOME_REDE[r.plataforma] || r.plataforma}</td>
-                  <td className="py-2 text-right tabular-nums">{n(r.views)}</td>
+                  <td className="py-2 text-right tabular-nums">
+                    {n(r.views)}
+                    {/* O painel do Instagram exibe views(IG) + facebook_views(crosspost) num número
+                        só — em 30/07 mostrava 1.405 onde o app dizia 248, e parecia coleta parada.
+                        A nota abaixo faz o número do celular reconciliar com o da tela. */}
+                    {r.plataforma === 'instagram' && r.igTotalViews != null && r.igTotalViews > r.views && (
+                      <span className="block text-[10px] font-normal text-zinc-600">
+                        app do IG mostra {n(r.igTotalViews)} (+{n(r.igFacebookViews || 0)} do crosspost no FB)
+                      </span>
+                    )}
+                  </td>
                   <td className="py-2 text-right tabular-nums text-zinc-400">{r.reach != null ? n(r.reach) : <span className="text-zinc-700">ind.</span>}</td>
                   <td className="py-2 text-right tabular-nums text-zinc-400">{r.taxaRetencao != null ? `${r.taxaRetencao}%` : <span className="text-zinc-700">ind.</span>}</td>
                   <td className="py-2 text-right tabular-nums">{r.percentil != null ? <span className={r.percentil >= 60 ? 'text-emerald-400' : r.percentil <= 40 ? 'text-amber-400' : 'text-zinc-400'}>p{r.percentil}</span> : <span className="text-zinc-700">—</span>}</td>

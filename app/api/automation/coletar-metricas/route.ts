@@ -27,6 +27,7 @@ interface LinhaPublicacao {
   url_publicacao: string | null
   data_publicacao: string
   views: number | null
+  metadata: Record<string, unknown> | null
 }
 
 /** Roda fn sobre os itens com no máximo `limite` em voo — o laço era sequencial e estourava o tempo. */
@@ -50,7 +51,7 @@ async function coletar(request: NextRequest) {
   const { data: linhas, error: fetchError } = await supabase
     .schema('pulso_content')
     .from('metricas_publicacao')
-    .select('id, ideia_id, plataforma, post_id, url_publicacao, data_publicacao, views')
+    .select('id, ideia_id, plataforma, post_id, url_publicacao, data_publicacao, views, metadata')
     .not('post_id', 'is', null)
 
   if (fetchError) {
@@ -258,6 +259,8 @@ async function coletar(request: NextRequest) {
     try {
       let metricas: Record<string, number> | null = null
       const extras: Record<string, unknown> = {} // retenção/watch-time → colunas novas (Kaizen)
+      // números de CONFERÊNCIA (não decidem nada) — vão pro metadata, não viram coluna
+      const metaExtra: Record<string, unknown> = {}
 
       if (pub.plataforma === 'youtube') {
         const s = ytStats.get(pub.post_id as string)
@@ -288,7 +291,13 @@ async function coletar(request: NextRequest) {
 
         const insights: Record<string, number> = {}
         const insUrl = new URL(`https://graph.facebook.com/v23.0/${pub.post_id}/insights`)
-        insUrl.searchParams.set('metric', 'views,reach,saved,shares,ig_reels_avg_watch_time,ig_reels_video_view_total_time,total_interactions')
+        // total_views/facebook_views entram só pra RECONCILIAR com o que o dono vê no celular.
+        // O painel do Instagram exibe `total_views`, que é views(IG) + facebook_views(crosspost) —
+        // medido em 30/07 no #106: 248 + 1.157 = 1.405, e o app mostrava 248. Parecia coleta
+        // atrasada e não era: o Instagram junta as duas redes num número só. Guardamos separado
+        // (juntar esconderia qual rede entregou — no #106 o Facebook fez 82%), mas guardamos
+        // também o total pra tela poder explicar a diferença em vez de deixar dúvida.
+        insUrl.searchParams.set('metric', 'views,total_views,facebook_views,reach,saved,shares,ig_reels_avg_watch_time,ig_reels_video_view_total_time,total_interactions')
         insUrl.searchParams.set('access_token', token)
         const insResp = await fetch(insUrl.toString())
         if (insResp.ok) {
@@ -307,6 +316,11 @@ async function coletar(request: NextRequest) {
         if (insights.ig_reels_avg_watch_time) extras.avg_watch_ms = Math.round(insights.ig_reels_avg_watch_time)
         if (insights.ig_reels_video_view_total_time) extras.view_time_ms = insights.ig_reels_video_view_total_time
         if (insights.reach) extras.reach = insights.reach
+        // guardado no metadata (não vira coluna): é número de conferência, não métrica de decisão
+        if (insights.total_views) {
+          metaExtra.ig_total_views = insights.total_views
+          metaExtra.ig_facebook_views = insights.facebook_views || 0
+        }
       } else if (pub.plataforma === 'tiktok') {
         const s = ttStats.get(pub.post_id as string)
         if (s) {
@@ -383,6 +397,9 @@ async function coletar(request: NextRequest) {
       }
 
       const update: Record<string, unknown> = { ...metricas, ...extras, ultima_atualizacao: agora.toISOString() }
+      if (Object.keys(metaExtra).length) {
+        update.metadata = { ...(pub.metadata || {}), ...metaExtra }
+      }
       if (horas <= 30) update.views_24h = metricas.views
       if (horas <= 7 * 24 + 6) update.views_7dias = metricas.views
       if (horas <= 30 * 24 + 6) update.views_30dias = metricas.views
