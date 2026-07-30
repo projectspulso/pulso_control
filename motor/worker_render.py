@@ -225,7 +225,11 @@ def run(ideia_id=None):
             set_render_status(p, 'erro', motivo[:180])
             return
         log("montando (ffmpeg + CTA)...")
-        r2 = subprocess.run(["python", "D:/tmp/make_video.py", slug], capture_output=True, text=True, timeout=900)
+        r2 = subprocess.run(["python", "D:/tmp/make_video.py", slug], capture_output=True, text=True, timeout=5400)
+        # 5400s (90min), era 900s (15min). A montagem extrai TODOS os frames pra PNG pro
+        # lip-sync do mascote (~1.957 frames em 1080x1920) e leva ~35min por video. Com 15min
+        # o worker matava a montagem no meio, SEMPRE — o #112 ficou preso em "renderizando"
+        # desde 23/07 por causa disso, e a fila inteira parou. Medido em 30/07: 35min pro #122.
         if not os.path.exists(final):
             log("make_video falhou:", r2.stdout[-300:], r2.stderr[-200:])
             set_render_status(p, 'erro', 'montagem (ffmpeg) falhou')
