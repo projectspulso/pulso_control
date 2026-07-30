@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
+import { escolherCanalPorDesempenho, type CanalCandidato } from '@/lib/automation/escolher-canal'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarIdeias } from '@/lib/automation/prompts'
@@ -27,6 +28,8 @@ export async function POST(request: NextRequest) {
   try {
     // Determinar canal
     let canal
+    let motivoCanal: string | null = null
+    let pesosCanal: Array<{ nome: string; peso: number; mediana: number; n: number }> = []
     if (payload.canal_id) {
       const { data } = await supabase
         .schema('pulso_core')
@@ -36,32 +39,44 @@ export async function POST(request: NextRequest) {
         .single()
       canal = data
     } else {
-      // Rotação automática: canal com menos ideias recentes
-      const { data: canais } = await supabase
-        .from('vw_pulso_canais')
-        .select('id, nome, descricao, idioma, slug, total_ideias')
-        .eq('status', 'ATIVO')
-        .order('total_ideias', { ascending: true })
-        .limit(1)
-      canal = canais?.[0]
-
-      if (!canal) {
-        // fallback: rotação direta na tabela de canais (canal com menos ideias)
-        const [todosQ, ideiasQ] = await Promise.all([
-          supabase.schema('pulso_core').from('canais').select('id, nome, descricao, idioma, slug'),
-          supabase.schema('pulso_content').from('ideias').select('canal_id'),
-        ])
-        if (todosQ.error) {
-          return NextResponse.json({ error: `Fallback canais: ${todosQ.error.message}` }, { status: 500 })
-        }
-        const contagem = new Map<string, number>()
-        for (const i of ideiasQ.data || []) {
-          if (i.canal_id) contagem.set(i.canal_id, (contagem.get(i.canal_id) || 0) + 1)
-        }
-        canal = (todosQ.data || []).sort(
-          (a: { id: string }, b: { id: string }) => (contagem.get(a.id) || 0) - (contagem.get(b.id) || 0)
-        )[0]
+      // ESCOLHA POR DESEMPENHO (29/07/2026), no lugar de "canal com menos ideias".
+      //
+      // A rotação por contagem escolheu o Pulso Dark PT num teste real e o lote saiu inteiro de
+      // horror fabricado — o oposto do que o PLANO_CRESCIMENTO manda. A identidade do canal vence
+      // a estratégia de tema, então o canal errado já perde antes do prompt. E os canais diferem
+      // 13× em mediana de Facebook (IA 86 × Mistérios & História 1.151), diferença que a contagem
+      // ignorava. Ver lib/automation/escolher-canal.ts.
+      const [canaisQ, ideiasCanalQ, metricasQ] = await Promise.all([
+        supabase.schema('pulso_core').from('canais').select('id, nome, descricao, idioma, slug'),
+        supabase.schema('pulso_content').from('ideias').select('id, canal_id'),
+        supabase
+          .schema('pulso_content')
+          .from('metricas_publicacao')
+          .select('ideia_id, views')
+          .eq('plataforma', 'facebook'),
+      ])
+      if (canaisQ.error) {
+        return NextResponse.json({ error: `Canais: ${canaisQ.error.message}` }, { status: 500 })
       }
+
+      const canalDaIdeia = new Map<string, string>()
+      for (const i of ideiasCanalQ.data || []) if (i.canal_id) canalDaIdeia.set(i.id, i.canal_id)
+
+      const viewsPorCanal = new Map<string, number[]>()
+      for (const m of metricasQ.data || []) {
+        const c = m.ideia_id ? canalDaIdeia.get(m.ideia_id) : null
+        if (!c) continue
+        if (!viewsPorCanal.has(c)) viewsPorCanal.set(c, [])
+        viewsPorCanal.get(c)!.push(m.views ?? 0)
+      }
+
+      const escolha = escolherCanalPorDesempenho(
+        (canaisQ.data || []) as CanalCandidato[],
+        [...viewsPorCanal.entries()].map(([canalId, viewsFacebook]) => ({ canalId, viewsFacebook }))
+      )
+      canal = escolha?.canal as typeof canal
+      motivoCanal = escolha?.motivo ?? null
+      pesosCanal = escolha?.pesos ?? []
     }
 
     if (!canal) {
@@ -145,6 +160,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         canal: canal.nome,
+        canal_motivo: motivoCanal,
+        canal_pesos: pesosCanal,
         quantidade_gerada: 0,
         ideias: [],
         ignoradas_duplicidade: ignoradasTotal,
@@ -209,6 +226,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       canal: canal.nome,
+      // o porquê da escolha do canal — o dono precisa poder discordar do sorteio
+      canal_motivo: motivoCanal,
+      canal_pesos: pesosCanal,
       quantidade_gerada: saved?.length || 0,
       ideias: saved,
       ignoradas_duplicidade: ignoradasTotal,

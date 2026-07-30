@@ -199,9 +199,24 @@ export async function POST(request: NextRequest) {
     // que saíram "relógio de Praga 1922" e "relógio suíço 1923", ou "Rota da Seda" duas vezes em
     // 4 dias. O aprendizado funcionava; só estava otimizando IMITAÇÃO em vez de acerto, porque
     // ninguém media diversidade. Agora os campeões vêm com a lista de assuntos QUEIMADOS colada.
-    const assuntosQueimados = ganchos
-      .map((g) => String(g).replace(/^Em \d{4},?\s*/i, '').split(/[.,]/)[0].trim())
-      .filter((s) => s.length > 8)
+    // A lista tem que ser os TÍTULOS PUBLICADOS, não só os 8 ganchos de retenção. No teste de
+    // 29/07 o gerador propôs "A Cidade Submersa que Ressurgiu no Deserto" — praticamente o
+    // campeão de 17k "A cidade perdida que surgiu das areias do Saara" — e passou, porque o Saara
+    // não estava entre os ganchos (ele é campeão de VIEWS, e a lista vinha da RETENÇÃO).
+    const titulosPublicados = [
+      ...new Set(
+        (metricas || [])
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((m: any) => ideiaTitulo.get(m.ideia_id) as string | undefined)
+          .filter((t: string | undefined): t is string => typeof t === 'string' && t.length > 8)
+      ),
+    ]
+    const assuntosQueimados = [
+      ...ganchos
+        .map((g) => String(g).replace(/^Em \d{4},?\s*/i, '').split(/[.,]/)[0].trim())
+        .filter((s) => s.length > 8),
+      ...titulosPublicados,
+    ]
 
     const texto = `${PLANO_CRESCIMENTO}
 APRENDIZADO DA NOSSA AUDIÊNCIA (referência de PADRÃO — não copie tema nem frase literal):
