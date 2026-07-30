@@ -92,33 +92,6 @@ export function useCentralPublicacao() {
   })
 }
 
-// Perfil da conta (seguidores/curtidas) de uma rede manual — ex.: Kwai.
-export interface PerfilRede { seguidores: number; curtidas: number; quando: string | null }
-export function usePerfilRede(rede: string) {
-  return useQuery<PerfilRede>({
-    queryKey: ['perfil-rede', rede],
-    queryFn: async () => {
-      const r = await fetch(`/api/metricas/manual?perfil=${rede}`)
-      const d = await r.json()
-      return d.perfil as PerfilRede
-    },
-  })
-}
-export function useSalvarPerfilRede() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ rede, seguidores, curtidas }: { rede: string; seguidores: number; curtidas: number }) => {
-      const r = await fetch('/api/metricas/manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ perfilRede: rede, seguidores, curtidas }),
-      })
-      if (!r.ok) throw new Error('falha ao salvar perfil')
-    },
-    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ['perfil-rede', v.rede] }),
-  })
-}
-
 // Salva o conteúdo de publicação por rede dentro de metadata.publicacao (merge, sem perder o resto).
 export function useSalvarPublicacao() {
   const qc = useQueryClient()

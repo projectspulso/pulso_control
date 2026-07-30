@@ -32,20 +32,22 @@ export async function POST(request: NextRequest) {
   const sb = admin()
 
   // Modo B) perfil da conta (seguidores/curtidas)
+  //
+  // APOSENTADO em 29/07/2026. Este caminho aceitava QUALQUER número sem validação — dava pra
+  // gravar 1.000.000 de seguidores do front, e o dono apontou o furo. Valor de perfil inventado
+  // contamina o histórico de seguidores e, com ele, o cálculo de qual rede realmente cresce.
+  // Também não tinha trava de queda: 154 virando 54 por dígito trocado passava direto.
+  //
+  // O caminho válido agora é POST /api/metricas/kwai-perfil, que valida, recusa queda suspeita e
+  // carimba o histórico do dia. O front virou somente-leitura (componente PerfilKwai).
   if (body.perfilRede) {
-    const rede = String(body.perfilRede)
-    const valor = JSON.stringify({
-      seguidores: Number(body.seguidores) || 0,
-      curtidas: Number(body.curtidas) || 0,
-      quando: new Date().toISOString(),
-    })
-    const { data: ex } = await sb.schema('pulso_core').from('configuracoes').select('chave').eq('chave', `${rede}_perfil`).maybeSingle()
-    const q = ex
-      ? sb.schema('pulso_core').from('configuracoes').update({ valor }).eq('chave', `${rede}_perfil`)
-      : sb.schema('pulso_core').from('configuracoes').insert({ chave: `${rede}_perfil`, valor })
-    const { error } = await q
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ success: true })
+    return NextResponse.json(
+      {
+        error:
+          'Entrada manual de perfil desativada. Use POST /api/metricas/kwai-perfil (valida o número e recusa queda suspeita). O Kwai entra só pela rotina de print.',
+      },
+      { status: 410 }
+    )
   }
 
   // Modo A) números por vídeo
