@@ -122,16 +122,24 @@ export const MEDIANA_FB_MEDIDA: Record<Tema, number> = {
  * achando que era tema morto. O mesmo valia para "rei " dentro de outras palavras. Termos longos
  * seguem por substring de propósito: "arqueolog" precisa pegar arqueologia/arqueólogo/arqueológico.
  */
-const RE_PALAVRA_INTEIRA = /^[a-zà-ú]{1,4}\s?$/i
+const RE_PALAVRA_INTEIRA = /^[a-z]{1,4}\s?$/i
+
+/**
+ * Tira acento dos DOIS lados da comparação. Sem isto, "arque**ó**logos" não casava com o termo
+ * `arqueolog` do dicionário e "A máscara enigmática que confundiu os arqueólogos" caía em
+ * "outros" — arqueologia pura classificada como tema neutro, e o roteador da agenda deixando de
+ * priorizar o único tema que estoura no Facebook. Achado em 31/07 ao ranquear o que publicar.
+ */
+const semAcento = (x: string) => x.normalize('NFD').replace(/[̀-ͯ]/g, '')
 
 export function classificarTema(tituloRaw: string | null): Tema {
-  const t = (tituloRaw || '').toLowerCase()
+  const t = semAcento((tituloRaw || '').toLowerCase())
   if (!t.trim()) return 'outros'
   for (const d of DICIONARIO) {
-    const casou = d.termos.some((termo) => {
+    const casou = d.termos.some((termoRaw) => {
+      const termo = semAcento(termoRaw.toLowerCase())
       if (RE_PALAVRA_INTEIRA.test(termo)) {
-        const limpo = termo.trim()
-        return new RegExp(`(^|[^a-zà-ú])${limpo}([^a-zà-ú]|$)`, 'i').test(t)
+        return new RegExp(`(^|[^a-z0-9])${termo.trim()}([^a-z0-9]|$)`, 'i').test(t)
       }
       return t.includes(termo)
     })
