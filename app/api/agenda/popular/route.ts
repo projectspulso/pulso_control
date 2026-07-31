@@ -131,9 +131,16 @@ export async function POST(request: NextRequest) {
     // hoje pra frente; o que já foi ao ar continua barrado pelo set `publicado`, que é a
     // fonte de verdade do "já postamos".
     const hojeISO = new Date().toISOString().slice(0, 10)
+    // OCUPADAS = só as ideias presas em slot que o roteador NÃO vai reescrever (fixado pelo dono
+    // ou no passado). As que estão em slot futuro reavaliável voltam pro bolo.
+    //
+    // BUG CORRIGIDO EM 30/07: isto marcava como ocupada QUALQUER ideia em slot futuro — mas esses
+    // slots são justamente os que estão sendo reavaliados. O roteador então não podia devolver a
+    // um slot nem a ideia que ele já tinha, e ficava com 33 candidatos livres para 56 slots: 24
+    // vagas viravam "sem conteúdo" com 41 vídeos parados no estoque. O dono viu na tela.
     const usados = new Set<string>(
       (atribQ.data || [])
-        .filter((a: { data: string }) => a.data >= hojeISO)
+        .filter((a: { data: string; fixado?: boolean }) => a.data < hojeISO || a.fixado === true)
         .map((a: { ideia_id: string | null }) => a.ideia_id)
         .filter((x: string | null): x is string => !!x)
     )

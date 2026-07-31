@@ -1,20 +1,21 @@
 'use client'
 
-import { AlertTriangle, CalendarDays, CheckCircle2, Flame, Layers } from 'lucide-react'
+import { AlertTriangle, CalendarDays, CheckCircle2, ExternalLink, Flame, Layers } from 'lucide-react'
 import Link from 'next/link'
 
 import { classificarTema, PAPEL_NO_FACEBOOK, MEDIANA_FB_MEDIDA, type Tema } from '@/lib/decisor/temas'
 
 /**
- * A AGENDA EM TRÊS BLOCOS — hoje, próximos dias, e o que está travando.
+ * A AGENDA EM TRÊS BLOCOS — publicar hoje, o que está travando, e o calendário.
  *
  * A tela anterior era uma grade de 28 dias com filtros (canal, faixa, grid/lista) e a trilha do
  * funil: 336 linhas onde a decisão do dia se escondia. Grade grande parece completa e não é —
  * ninguém lê 84 células pra descobrir o que publicar hoje.
  *
- * Aqui cada item vem com o TEMA e o que ele significa no Facebook, porque é o sinal que decide
- * (história/arqueologia tem mediana 2.919 e monopoliza os estouros; tecnologia/IA 268 e zero).
- * O calendário completo continua existindo como consulta, embaixo — não como a tela principal.
+ * Cada item vem com o TEMA e o que ele significa no Facebook, porque é o sinal que decide:
+ * história/arqueologia detém os 6 estouros de 48 dias, e nenhum outro tema produziu um.
+ * E leva o LINK DO ARQUIVO junto — "ter tudo ligado" era o pedido, então dá pra ir da data até
+ * o vídeo sem trocar de tela.
  */
 
 export interface ItemAgenda {
@@ -24,6 +25,9 @@ export interface ItemAgenda {
   ideiaId: string | null
   titulo: string | null
   estagio: string
+  /** arquivo do vídeo quando já existe — "ter tudo ligado" era o pedido: a agenda leva ao que vai ao ar */
+  videoUrl?: string | null
+  numero?: number | null
 }
 
 const ESTAGIO_ROTULO: Record<string, { txt: string; cor: string }> = {
@@ -78,6 +82,7 @@ function Linha({ item, hoje }: { item: ItemAgenda; hoje: string }) {
           className="min-w-0 flex-1 truncate text-sm text-zinc-200 hover:text-white hover:underline"
           title={item.titulo || ''}
         >
+          {item.numero != null && <span className="mr-1.5 text-zinc-500">#{item.numero}</span>}
           {item.titulo}
         </Link>
       ) : (
@@ -85,6 +90,17 @@ function Linha({ item, hoje }: { item: ItemAgenda; hoje: string }) {
       )}
       {tema && <ChipTema tema={tema} />}
       <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${est.cor}`}>{est.txt}</span>
+      {item.videoUrl && (
+        <a
+          href={item.videoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="abrir o arquivo do vídeo"
+          className="shrink-0 text-zinc-600 transition-colors hover:text-zinc-300"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+        </a>
+      )}
       {atrasado && (
         <span className="shrink-0 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-300" title="não dá tempo de ficar pronto até a data">
           não fica pronto
@@ -96,19 +112,12 @@ function Linha({ item, hoje }: { item: ItemAgenda; hoje: string }) {
 
 export function AgendaEnxuta({ itens, hoje }: { itens: ItemAgenda[]; hoje: string }) {
   const doDia = itens.filter((i) => i.data === hoje)
-  const proximos = itens.filter((i) => i.data > hoje).slice(0, 8)
 
   // TRAVANDO: slot sem conteúdo, ou com item que não fica pronto a tempo. É o que exige ação —
   // o resto é só o plano seguindo.
   const travando = itens.filter(
     (i) => !i.ideiaId || diasEntre(hoje, i.data) < (DIAS_ATE_PRONTO[i.estagio] ?? 0)
   )
-
-  const porData = new Map<string, ItemAgenda[]>()
-  for (const i of proximos) {
-    if (!porData.has(i.data)) porData.set(i.data, [])
-    porData.get(i.data)!.push(i)
-  }
 
   const fmt = (iso: string) =>
     new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })
@@ -134,9 +143,8 @@ export function AgendaEnxuta({ itens, hoje }: { itens: ItemAgenda[]; hoje: strin
           </div>
         )}
         <p className="mt-3 text-[10px] text-zinc-600">
-          O tema decide: história/arqueologia é o único que estourou no Facebook em 48 dias
-          (mediana 2.919); tecnologia/IA e produtividade têm ~260 e nenhum estouro. Passe o mouse no
-          chip pra ver o número.
+          O tema decide: os 6 estouros do Facebook em 48 dias saíram todos de história/arqueologia;
+          tecnologia/IA e produtividade nunca produziram um. Passe o mouse no chip pra ver o número.
         </p>
       </div>
 
@@ -168,31 +176,89 @@ export function AgendaEnxuta({ itens, hoje }: { itens: ItemAgenda[]; hoje: strin
         </div>
       )}
 
-      {/* ══════ PRÓXIMOS DIAS ══════ */}
-      <div className="rounded-2xl border border-white/8 bg-[#1a1922] p-6">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <span className="rounded-lg bg-zinc-500/10 p-2">
-            <CalendarDays className="h-5 w-5 text-zinc-400" />
-          </span>
-          <h2 className="text-lg font-semibold text-white">Próximos dias</h2>
-        </div>
-        {porData.size === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500">Nada planejado à frente.</p>
-        ) : (
-          <div className="mt-4 space-y-3.5">
-            {[...porData.entries()].map(([data, lista]) => (
-              <div key={data}>
-                <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-zinc-500">{fmt(data)}</p>
+      {/* ══════ CALENDÁRIO — a agenda inteira, num lugar só ══════ */}
+      <CalendarioAgenda itens={itens} hoje={hoje} />
+    </div>
+  )
+}
+
+/**
+ * CALENDÁRIO ÚNICO. Antes havia "próximos dias" (lista de 8) MAIS o "calendário do mês" logo
+ * abaixo — duas visões do mesmo plano, e o dono apontou: "parece duplicidade e sem função,
+ * emagrecer é ter um local só para ver as coisas". Ficou um só: cada dia mostra seus slots com
+ * horário, tema e o link do arquivo, então dá pra ir da data até o vídeo sem trocar de tela.
+ */
+function CalendarioAgenda({ itens, hoje }: { itens: ItemAgenda[]; hoje: string }) {
+  const futuros = itens.filter((i) => i.data > hoje)
+  const porData = new Map<string, ItemAgenda[]>()
+  for (const i of futuros) {
+    if (!porData.has(i.data)) porData.set(i.data, [])
+    porData.get(i.data)!.push(i)
+  }
+  const dias = [...porData.entries()]
+
+  return (
+    <div className="rounded-2xl border border-white/8 bg-[#1a1922] p-6">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="rounded-lg bg-zinc-500/10 p-2">
+          <CalendarDays className="h-5 w-5 text-zinc-400" />
+        </span>
+        <h2 className="text-lg font-semibold text-white">Calendário</h2>
+        <span className="ml-auto text-[11px] text-zinc-500">{dias.length} dias planejados</span>
+      </div>
+
+      {dias.length === 0 ? (
+        <p className="mt-3 text-sm text-zinc-500">Nada planejado à frente.</p>
+      ) : (
+        <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          {dias.map(([data, lista]) => {
+            const dt = new Date(`${data}T12:00:00`)
+            const fds = dt.getDay() === 0 || dt.getDay() === 6
+            return (
+              <div key={data} className={`rounded-xl border p-3 ${fds ? 'border-white/5 bg-black/30' : 'border-white/8 bg-black/20'}`}>
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+                  {dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                </p>
                 <div className="space-y-1.5">
-                  {lista.map((i) => (
-                    <Linha key={i.data + i.horario} item={i} hoje={hoje} />
-                  ))}
+                  {lista.map((i) => {
+                    const tema = i.titulo ? classificarTema(i.titulo) : null
+                    const papel = tema ? PAPEL_NO_FACEBOOK[tema] : null
+                    const cor =
+                      papel === 'sorteia' ? 'border-l-emerald-500' : papel === 'morto' ? 'border-l-red-500/70' : 'border-l-zinc-700'
+                    return (
+                      <div key={i.horario} className={`border-l-2 pl-2 ${cor}`}>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] tabular-nums text-zinc-500">{i.horario.slice(0, 5)}</span>
+                          {i.numero != null && <span className="text-[10px] text-zinc-600">#{i.numero}</span>}
+                          <span className={`ml-auto rounded px-1 text-[9px] ${ESTAGIO_ROTULO[i.estagio]?.cor || ESTAGIO_ROTULO.vazio.cor}`}>
+                            {ESTAGIO_ROTULO[i.estagio]?.txt || 'vazio'}
+                          </span>
+                          {i.videoUrl && (
+                            <a href={i.videoUrl} target="_blank" rel="noopener noreferrer" title="abrir o arquivo do vídeo" className="text-zinc-600 hover:text-zinc-300">
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
+                        {i.ideiaId ? (
+                          <Link href={`/analytics/videos/${i.ideiaId}`} className="block truncate text-[12px] leading-snug text-zinc-300 hover:text-white" title={i.titulo || ''}>
+                            {i.titulo}
+                          </Link>
+                        ) : (
+                          <span className="block text-[12px] text-red-300/70">sem conteúdo</span>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            )
+          })}
+        </div>
+      )}
+      <p className="mt-3 text-[10px] text-zinc-600">
+        Barra verde = tema que estoura no Facebook · vermelha = tema sem estouro registrado. O ícone
+        abre o arquivo do vídeo; o título abre a página dele.
+      </p>
     </div>
   )
 }

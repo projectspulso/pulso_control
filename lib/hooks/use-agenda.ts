@@ -28,6 +28,9 @@ export interface Atribuicao {
   ideiaTitulo: string | null
   estagio: string // ideia|roteiro|audio|video|vazio
   status: string
+  /** arquivo do vídeo, quando já existe — a agenda linka direto pro que vai ao ar */
+  videoUrl: string | null
+  numero: number | null
 }
 
 export interface EstoqueItem {
@@ -90,7 +93,7 @@ export function useAgenda(horizonteDias = 21) {
         supabase.schema('pulso_content').from('roteiros').select('ideia_id, status'),
         supabase.schema('pulso_content').from('audios').select('ideia_id'),
         supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, views'),
-        supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status'),
+        supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status, metadata'),
         supabase.from('vw_agenda_atribuicoes').select('*'),
       ])
       if (gradeQ.error) throw gradeQ.error
@@ -199,14 +202,23 @@ export function useAgenda(horizonteDias = 21) {
         storyMelhorViews: melhorViews,
       }
 
-      // atribuições por slot
+      // atribuições por slot — com o arquivo do vídeo junto, pra agenda linkar o que vai ao ar
+      // em vez de só nomear (pedido do dono: "ter tudo ligado").
+      const midiaPorIdeia = new Map<string, { videoUrl: string | null; numero: number | null }>()
+      for (const p of pipeQ.data || []) {
+        const md = (p.metadata || {}) as { video_url?: string; numero?: number }
+        if (p.ideia_id) midiaPorIdeia.set(p.ideia_id, { videoUrl: md.video_url ?? null, numero: md.numero ?? null })
+      }
       const atribuicoes: Record<string, Atribuicao> = {}
       for (const a of atribQ.data || []) {
+        const m = a.ideia_id ? midiaPorIdeia.get(a.ideia_id) : null
         atribuicoes[`${a.data}|${a.horario}`] = {
           ideiaId: a.ideia_id,
           ideiaTitulo: a.ideia_titulo,
           estagio: a.estagio || 'vazio',
           status: a.status,
+          videoUrl: m?.videoUrl ?? null,
+          numero: m?.numero ?? null,
         }
       }
 
