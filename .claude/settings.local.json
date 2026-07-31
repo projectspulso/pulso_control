@@ -6,7 +6,9 @@
       "Bash(npx --yes skills@latest add higgsfield-ai/skills -l)",
       "Bash(npx --yes skills@latest add higgsfield-ai/skills --all)",
       "mcp__90582afd-1ceb-4ebd-af94-0643a3ac3bd7__execute_sql",
-      "mcp__90582afd-1ceb-4ebd-af94-0643a3ac3bd7__list_projects"
+      "mcp__90582afd-1ceb-4ebd-af94-0643a3ac3bd7__list_projects",
+      "Bash(PYTHONIOENCODING=utf-8 python)",
+      "Bash(timeout 60 sed -n '1,60p' /d/tmp/pulso_guard.py)"
     ]
   },
   "enableAllProjectMcpServers": true,
