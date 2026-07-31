@@ -17,6 +17,25 @@ CREATE TABLE pulso_analytics.eventos (
     data_evento date NOT NULL DEFAULT (timezone('utc'::text, now()))::date
 );
 
+CREATE TABLE pulso_analytics.leituras_metricas (
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    ideia_id uuid,
+    plataforma text NOT NULL,
+    post_id text,
+    data_ref date NOT NULL,
+    coletado_em timestamp with time zone NOT NULL DEFAULT now(),
+    views integer DEFAULT 0,
+    likes integer DEFAULT 0,
+    comentarios integer DEFAULT 0,
+    compartilhamentos integer DEFAULT 0,
+    created_at timestamp with time zone DEFAULT now(),
+    avg_watch_ms integer,
+    view_time_ms bigint,
+    reach integer,
+    retention_graph jsonb,
+    estimado boolean NOT NULL DEFAULT false
+);
+
 CREATE TABLE pulso_analytics.metricas_diarias (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
     post_id uuid NOT NULL,
@@ -115,6 +134,19 @@ CREATE TABLE pulso_automation.workflows (
     configuracao jsonb DEFAULT '{}'::jsonb,
     created_at timestamp without time zone DEFAULT timezone('utc'::text, now()),
     updated_at timestamp without time zone DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE pulso_content.agenda_atribuicoes (
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    data date NOT NULL,
+    horario text NOT NULL,
+    canal_id uuid,
+    ideia_id uuid,
+    estagio text,
+    status text DEFAULT 'planejado'::text,
+    fixado boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
 );
 
 CREATE TABLE pulso_content.audios (
@@ -229,7 +261,8 @@ CREATE TABLE pulso_content.ideias (
     updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()),
     personagem_sugerido_id uuid,
     nota_ia_inicial numeric,
-    potencial_viral_ia numeric
+    potencial_viral_ia numeric,
+    gatilho_psicologico text
 );
 
 CREATE TABLE pulso_content.logs_workflows (
@@ -274,7 +307,11 @@ CREATE TABLE pulso_content.metricas_publicacao (
     cpm numeric,
     metadata jsonb DEFAULT '{}'::jsonb,
     ultima_atualizacao timestamp with time zone DEFAULT now(),
-    created_at timestamp with time zone DEFAULT now()
+    created_at timestamp with time zone DEFAULT now(),
+    avg_watch_ms integer,
+    view_time_ms bigint,
+    reach integer,
+    retention_graph jsonb
 );
 
 CREATE TABLE pulso_content.personagens (
@@ -365,7 +402,8 @@ CREATE TABLE pulso_content.roteiros (
     canal_id uuid,
     categoria_metadata text,
     personagem_id uuid,
-    nota_qualidade_ia numeric
+    nota_qualidade_ia numeric,
+    nota_hook smallint
 );
 
 CREATE TABLE pulso_content.roteiros_renders (
@@ -441,6 +479,17 @@ CREATE TABLE pulso_content.workflow_queue (
     erro_ultimo text,
     status text NOT NULL DEFAULT 'pendente'::text,
     created_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+CREATE TABLE pulso_core.agenda_semanal (
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    dia_semana smallint NOT NULL,
+    horario text NOT NULL,
+    faixa text NOT NULL,
+    canal_id uuid,
+    ordem smallint DEFAULT 1,
+    ativo boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now()
 );
 
 CREATE TABLE pulso_core.canais (
@@ -580,7 +629,7 @@ CREATE TABLE pulso_distribution.posts_logs (
 -- ROW LEVEL SECURITY
 -- ============================================================
 -- RLS HABILITADO (7): pulso_automation.ai_config, pulso_automation.automation_queue, pulso_content.audios, pulso_content.logs_workflows, pulso_content.workflow_queue, pulso_core.configuracoes, pulso_core.plataforma_credenciais
--- RLS DESABILITADO (29): pulso_analytics.eventos, pulso_analytics.metricas_diarias, pulso_assets.assets, pulso_assets.conteudo_variantes_assets, pulso_automation.workflow_execucoes, pulso_automation.workflows, pulso_content.canais_personagens, pulso_content.conteudo_variantes, pulso_content.conteudos, pulso_content.feedbacks, pulso_content.ideias, pulso_content.metricas_publicacao, pulso_content.personagens, pulso_content.pipeline_producao, pulso_content.pipeline_producao_backup_20251126, pulso_content.plano_publicacao, pulso_content.roteiros, pulso_content.roteiros_renders, pulso_content.thumbnails, pulso_content.videos, pulso_core.canais, pulso_core.canais_plataformas, pulso_core.plataformas, pulso_core.series, pulso_core.series_tags, pulso_core.tags, pulso_core.usuarios_internos, pulso_distribution.posts, pulso_distribution.posts_logs
+-- ⚠️ RLS DESABILITADO (32): pulso_analytics.eventos, pulso_analytics.leituras_metricas, pulso_analytics.metricas_diarias, pulso_assets.assets, pulso_assets.conteudo_variantes_assets, pulso_automation.workflow_execucoes, pulso_automation.workflows, pulso_content.agenda_atribuicoes, pulso_content.canais_personagens, pulso_content.conteudo_variantes, pulso_content.conteudos, pulso_content.feedbacks, pulso_content.ideias, pulso_content.metricas_publicacao, pulso_content.personagens, pulso_content.pipeline_producao, pulso_content.pipeline_producao_backup_20251126, pulso_content.plano_publicacao, pulso_content.roteiros, pulso_content.roteiros_renders, pulso_content.thumbnails, pulso_content.videos, pulso_core.agenda_semanal, pulso_core.canais, pulso_core.canais_plataformas, pulso_core.plataformas, pulso_core.series, pulso_core.series_tags, pulso_core.tags, pulso_core.usuarios_internos, pulso_distribution.posts, pulso_distribution.posts_logs
 
 -- POLICIES (20):
 --   pulso_automation.ai_config  [SELECT]  ai_config_read

@@ -8,9 +8,8 @@
 | Arquivo | O que é | Fonte de verdade? |
 |---|---|---|
 | `migrations/` | Cópia fiel das 56 migrations canônicas (`supabase/migrations`) | ✅ **sim** — DDL exato, ordem real |
-| `schema.sql` | Snapshot estrutural atual (CREATE TABLE + RLS + policies) via Management API | retrato legível (para DDL exato, ver `migrations/`) |
-| `seed-candidates.md` | Contagem por tabela — base para decidir o `seed.sql` | — |
-| `seed.sql` | Dados de referência/lookup (curado por humano, **sem PII** — LGPD) | a curar |
+| `schema.sql` | Snapshot estrutural atual (CREATE TABLE + RLS + policies) via Management API | retrato legível |
+| `seed-candidates.md` | Contagem por tabela — base para o `seed.sql` | — |
 
 ## Regenerar
 
@@ -18,9 +17,9 @@
 node Cockpit/scripts/dump-db-mirror.mjs pulso_control
 ```
 
-Lê `SUPABASE_TOKEN` + `VITE_SUPABASE_URL` do `pulso_control/.env` (nunca expõe). Read-only no banco.
+Lê token Supabase + URL do `pulso_control/.env` (nunca expõe). Read-only no banco.
 
 ## Ressalvas
 
-- `schema.sql` é estrutural (colunas/tipos/RLS/policies). Constraints, índices e triggers exatos: ver `migrations/`.
-- `seed.sql` **não é gerado automaticamente** — exige curadoria humana por causa da LGPD (R-013).
+- `schema.sql` é estrutural. Constraints/índices/triggers exatos: ver `migrations/`.
+- `seed.sql` **não é gerado automaticamente** — curadoria humana por LGPD (R-013).

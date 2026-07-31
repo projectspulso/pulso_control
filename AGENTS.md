@@ -1,4 +1,4 @@
-﻿# Roteamento documental operacional
+# Roteamento documental operacional
 
 Antes de qualquer alteracao neste app, leia tambem:
 
@@ -7,165 +7,160 @@ D:\projetos\Cockpit\Apps\pulso_control\README.md
 O app/codigo/filesystem e a verdade factual. O Cockpit e a fonte documental operacional. Se divergirem, o app vence e o Cockpit deve ser atualizado no mesmo turno.
 
 ---
-# AGENTS.md â€” pulso_control
+# AGENTS.md — pulso_control
 
-> **Porta de entrada padronizada** para qualquer agente IA (Claude, Cursor, Cline, Copilot, Aider) entrando neste app. ConvenÃ§Ã£o definida em [ADR-0024](../Cockpit/ADR/ADR-0024-agents-md-por-app-aguardando-design-system.md).
+> **Porta de entrada padronizada** para qualquer agente IA (Claude, Cursor, Cline, Copilot, Aider) entrando neste app. Convenção definida em [ADR-0024](../Cockpit/ADR/ADR-0024-agents-md-por-app-aguardando-design-system.md).
 >
-> Criado em 2026-05-25 (replicaÃ§Ã£o do padrÃ£o piloto `clearix_hub/AGENTS.md` adaptado para app nÃ£o-Clearix).
->
-> âš  **ATENÃ‡ÃƒO ABSOLUTA:** segundo a Spec, hÃ¡ "WIP de merge nÃ£o resolvido na main" â€” **NÃƒO TOCAR** no estado da branch sem confirmaÃ§Ã£o explÃ­cita do dono. Trabalhar sempre em branch separada.
+> Criado em 2026-05-25. **Reescrito em 2026-07-31** por despacho R-032 do agente do digiai
+> (`_DESPACHO_DO_DIGIAI_2026-07-31.md`): a versão anterior dizia que o sistema estava travado
+> desde 04/12/2025 — estava 7 meses desatualizada e **custou 3 rodadas de correção** no painel
+> do dono, porque agente novo lia isto e concluía que o app morreu. Números abaixo verificados
+> no banco em 2026-07-31.
 
 ---
 
-## 1. O que Ã© (1 frase)
+## 1. O que é (1 frase)
 
-Centro de comando editorial para criar e operar canais de vÃ­deos curtos faceless com **Pulso** como personagem-mascote â€” atualmente em **MODO FOCO** no canal "PULSO MistÃ©rios & HistÃ³ria" (YouTube Shorts), com 10 canais cadastrados e 131 ideias no portfolio.
+Centro de comando editorial de uma **esteira 100% automática e viva** de vídeos curtos faceless (personagem-mascote **Pulso**), publicando diariamente em **5 redes** (YouTube, Instagram, Facebook, TikTok, Kwai) — 13 canais/verticais cadastrados, 193 ideias no portfólio, produção contínua há 51+ dias seguidos.
 
-## 2. PosiÃ§Ã£o na DIGIAI
+## 2. Posição na DIGIAI
 
-- **Verdade CanÃ´nica que rege:** *"Pulso trabalha primeiro a favor da DIGIAI"* (MÃ‰DIO)
-- **Fase atual do app:** ProduÃ§Ã£o parcial **TRAVADA** â€” sistema parou em 04/12/2025; fix do pg_cron aplicado em 2026-05-22 (jobid=10), mas pipeline de vÃ­deoâ†’publicaÃ§Ã£o nunca rodou end-to-end
-- **Prioridade na matriz:** **MÃ‰DIA** (motor de mÃ­dia interno â€” pendÃªncia estratÃ©gica entre alimentar DIGIAI vs canais autÃ´nomos)
-- **Categoria portfÃ³lio:** ALAVANCA CRÃTICA / INCUBAÃ‡ÃƒO (depende de decisÃ£o estratÃ©gica documentada no Backlog Executivo digiai 04/2026)
-- **Pacote comercial:** **nÃ£o aplicÃ¡vel** (operaÃ§Ã£o interna DIGIAI, nÃ£o SaaS)
+- **Verdade Canônica que rege:** *"Pulso trabalha primeiro a favor da DIGIAI"* (MÉDIO)
+- **Fase atual do app:** **OPERAÇÃO CONTÍNUA** — esteira ideia → roteiro → áudio → render → publicação → métricas rodando end-to-end desde ~10/06/2026 (Desafio dos 100 Dias, dia 1 = 10/06). Snapshot 2026-07-31: **475 publicações**, **289.528 views** (FB 133,5k · Kwai 48,6k · YT 43,5k · TikTok 32,4k · IG 31,5k), última publicação **hoje**.
+- **Prioridade na matriz:** MÉDIA (motor de mídia interno)
+- **Categoria portfólio:** ALAVANCA CRÍTICA — card no Portfólio do digiai (maturidade 92)
+- **Pacote comercial:** não aplicável (operação interna DIGIAI, não SaaS)
 
-## 3. Onde estÃ¡ a verdade (leituras obrigatÃ³rias antes de editar)
+### ⚠ Onde mora a verdade no banco — LEIA ANTES DE QUALQUER QUERY
 
-- **Spec prÃ³pria:** [`../Cockpit/Spec/pulso_control.md`](../Cockpit/Spec/pulso_control.md) â€” **fonte canÃ´nica** (sweep completo do navegador 2026-05-22 com 14 seÃ§Ãµes de gaps verificados)
-- **Doc canÃ´nico crÃ­tico:** `pulso_control/docs/40_PRODUTO/90_APOIO/CRITICA_VIABILIDADE_CANAIS_DARK_2026.md` (sistema interno editorial 7/10 viÃ¡vel vs fÃ¡brica dark multi-rede 3/10)
-- **ADRs aplicÃ¡veis:** âš  A confirmar â€” sem ADR especÃ­fico do Pulso ainda
-- **Regras Harness crÃ­ticas:**
-  - **R-001** â€” `docs/` obrigatÃ³rio (existe com convenÃ§Ã£o numerada `00_MESTRE`/`10_SETUP`/etc â€” **nÃ£o padronizar agora**)
-  - **R-003** â€” nÃ£o commit sem pedido
-  - **R-004** â€” aÃ§Ã£o destrutiva exige confirmaÃ§Ã£o (worker pg_cron + 49 publicaÃ§Ãµes agendadas)
-  - **R-005** â€” UI verificada no navegador (Spec jÃ¡ tem auditoria completa)
-  - **R-010** â€” Pergunta de Ouro
-  - **R-011** â€” AI nunca publica direto (Pulso publica em redes sociais â€” cuidado MÃXIMO com R-011: publicaÃ§Ã£o real exige autorizaÃ§Ã£o humana)
-  - **R-024** â€” Baseline AppSec (OWASP Top 10): RLS Â· parametrized queries Â· webhooks com signature Â· headers de seguranÃ§a Â· `dangerouslySetInnerHTML` e `execute_sql` interpolado bloqueados por hook T-005
-- **NÃƒO se aplica:** R-014 (clearix_design). Pulso tem identidade visual prÃ³pria â€” nÃ£o Ã© Clearix.
-- **NÃƒO se aplica:** R-009 (banco Clearix). Pulso tem banco prÃ³prio (`nlcisbfdiokmipyihtuz`).
+- **VIVO:** schema **`pulso_content.*`** (`metricas_publicacao`, `pipeline_producao`, `ideias`, `roteiros`, `audios`, `videos`…) + `pulso_core.configuracoes` + `pulso_analytics.leituras_metricas` (série diária, a "joia").
+- **LEGADO MORTO — NÃO USAR COMO FONTE:** `public.posts` (65 linhas, parado em 16/06/2026), `public.metricas_diarias` (snapshots CUMULATIVOS — somar `views` infla ~37×; parou 20/07), fila `automation_queue`, cron jobs pg_cron 1–7 e 10 (todos INATIVOS, apontando para schemas que nem existem mais), views `vw_pulso_*` duplicadas. Proposta de descomissionamento em `docs/20_BANCO/PROPOSTA_LIMPEZA_LEGADO_2026-07-31.md`.
+- **CONTRATO EXTERNO:** `public.v_espelho_pulso` — view agregada criada pelo digiai (2026-07-31), **consumida em produção** por `app.digiai.app.br/#/marketing`. Se mudar schema/tabela de `pulso_content`, **atualize a view junto** — quebrá-la = tela vazia no painel do dono.
+
+## 3. Onde está a verdade (leituras obrigatórias antes de editar)
+
+- **Spec própria:** [`../Cockpit/Spec/pulso_control.md`](../Cockpit/Spec/pulso_control.md) — atualizada 2026-07-31 (era automática)
+- **Memória operacional do agente:** o Claude Code deste app mantém memória persistente com ~50 fatos operacionais (gotchas de coleta, travas de orçamento, estratégia por rede). Padrões-chave duplicados na Spec.
+- **ADRs aplicáveis:** ⚠ sem ADR específico do Pulso ainda
+- **Regras Harness críticas:**
+  - **R-001** — `docs/` obrigatório (convenção numerada `00_MESTRE`/`10_SETUP`/etc — não padronizar agora)
+  - **R-003** — não commit sem pedido (o dono autoriza push por fase, rotineiramente)
+  - **R-004** — ação destrutiva exige confirmação
+  - **R-005** — UI verificada no navegador antes de declarar pronto
+  - **R-010** — Pergunta de Ouro
+  - **R-011** — AI nunca publica direto: a rota `/api/automation/publicar` exige `confirmar: true` e o fluxo é sempre autorizado pelo dono. **Facebook é 100% manual** (via API a Meta estrangula reels a ~0 de alcance — testado A/B em 11/07). Kwai não tem API (métrica entra por print lido pelo agente).
+  - **R-024** — Baseline AppSec: RLS (anon é read-only desde 29/06) · parametrized queries · headers de segurança
+- **NÃO se aplica:** R-014 (clearix_design) — Pulso tem identidade visual própria. R-009 (banco Clearix) — banco próprio.
 
 ## 4. Stack + dev
 
-- **Stack:** **Next.js 16.2.1** (App Router) + React 19.2 + TypeScript 5 + Tailwind 4 + Supabase + React Query + Zustand + `@antv/x6` + `@xyflow/react` (workflows/grafos) + `react-d3-tree` + `vis-network` (organograma) + recharts + `react-big-calendar` + `@dnd-kit` (kanban) + react-markdown + remark-gfm + `pg` 8.16 (Postgres direto) + babel-plugin-react-compiler 1.0
-- **Porta dev:** **3004** (definida pelo dono em runbook; Next.js default 3000 conflita com Hub/digiai). Comando: `npx next dev --port=3004`
-- **URL produÃ§Ã£o:** âš  A confirmar â€” Spec presume Vercel (`docs/10_SETUP/VERCEL_ENV_SETUP.md` existe)
-- **Como rodar:** `npx next dev --port=3004`
-- **Hospedagem:** Vercel presumido (a confirmar)
-- **CI/CD:** âš  A confirmar
+- **Stack:** Next.js 16.2.1 (App Router) + React 19.2 + TypeScript 5 + Tailwind 4 + Supabase + React Query + recharts + `@dnd-kit` (kanban) + react-markdown
+- **Porta dev:** **3004** (`npx next dev --port=3004`) — 3000 conflita com Hub/digiai
+- **URL produção:** `https://pulsoprojects.vercel.app` (Vercel, deploy automático no push da main)
+- **Motor de render (LOCAL, não Vercel):** `motor/` no repo (cópia de segurança; runtime em `D:/tmp`) — `worker_render.py` roda por Tarefa Agendada do Windows (08/16/23h) e esvazia a fila de `EM_EDICAO`. Cascata de b-roll: **banco de clips → Pexels/Pixabay (grátis) → Wan/DashScope (barato) → Veo/Higgsfield (pago, último recurso)**. Gate humano: só renderiza o que o dono arrastou pra "Em Edição" no kanban.
+- **Push:** `git push https://projectspulso@github.com/projectspulso/pulso_control.git main` (o `git push` puro trava pedindo credencial no /dev/tty)
 
-## 5. Banco + permissÃµes
+## 5. Banco + permissões
 
-- **Projeto Supabase:** **`nlcisbfdiokmipyihtuz`** (banco prÃ³prio do Pulso â€” **NÃƒO Clearix**)
-- **MCP Supabase tem acesso direto?** **âŒ NÃ£o** (R-012 â€” MCP sÃ³ vÃª banco Clearix). OperaÃ§Ãµes DB neste app via SDK Supabase normal + `pg` (cliente direto).
-- **PAT local em `.env`?** Sim â€” usado para Management API (foi crÃ­tico no fix do pg_cron em 22/05/2026)
-- **Schemas que o app toca:**
-  - `pulso_core`, `pulso_content`, `pulso_assets`, `pulso_distribution`, `pulso_automation`, `pulso_analytics`
-- **Auth:** Supabase Auth (dashboard acessÃ­vel sem login nesta sessÃ£o â€” anon mostra dados)
-- **Tabela crÃ­tica:** `cron.job` + `cron.job_run_details` (pg_cron) â€” fix do jobid=10 aplicado 22/05/2026, monitorar
+- **Projeto Supabase:** `nlcisbfdiokmipyihtuz` (banco próprio do Pulso — NÃO Clearix)
+- **Acesso do agente:** SDK Supabase + REST com `SUPABASE_SERVICE_ROLE_KEY` do `.env`. MCP Supabase é **read-only** (DDL via Management API com PAT, quando autorizado).
+- **Schemas vivos:** `pulso_core`, `pulso_content`, `pulso_assets`, `pulso_distribution`, `pulso_analytics` (⚠ `pulso_automation` não existe mais — os cron jobs legados que apontam pra ele estão mortos)
+- **Espelho documentado:** `docs/migrations/` (schema.sql + 56 migrations; regenerar com `node Cockpit/scripts/dump-db-mirror.mjs pulso_control`)
+- **RLS:** anon é read-only nos 6 schemas desde 2026-06-29 (revoke aplicado após incidente de escrita aberta)
 
-## 6. Comandos
+## 6. Automação viva — Vercel Crons (vercel.json), NÃO pg_cron
 
-### âœ… Verde (rodar sem confirmar)
-
-- `npm install` â€” primeira vez
-- `npx next dev --port=3004` â€” dev local
-- `npm run build` â€” build Next.js
-- `npm run start` â€” start production local
-- `npm run lint` â€” eslint
-- `git status` / `git diff` / `git log` / `git branch` â€” leitura git
-
-### ðŸŸ¡ Confirma antes
-
-- `npm install <pacote>` â€” nova dependÃªncia
-- DDL em qualquer schema `pulso_*` via Management API
-- Qualquer comando que toque `cron.job` (worker jÃ¡ travou uma vez por JSON malformado)
-- OperaÃ§Ãµes em `net._http_response` (limpeza pode esconder problemas)
-- Trigger manual de `processar-fila-auto`
-
-### ðŸ”´ Vermelho (NÃƒO fazer â€” exige autorizaÃ§Ã£o explÃ­cita)
-
-- `git checkout main`, `git pull`, `git merge`, `git push` â€” **WIP de merge nÃ£o resolvido na main**
-- `git push --force`
-- `git commit`
-- **`cron.unschedule` em job ativo** sem backup do cÃ³digo + plano de rollback (jobid=10 Ã© o atual apÃ³s fix)
-- DELETE em `ideias` / `roteiros` / `producao` (49 itens agendados em produÃ§Ã£o)
-- **PUBLICAR vÃ­deo em rede social** (YouTube/TikTok/Instagram) â€” R-011 absoluto, exige aprovaÃ§Ã£o humana
-- Reset/truncate em qualquer schema `pulso_*`
-- Modificar `.env` em produÃ§Ã£o (Vercel dashboard)
-- `dangerouslySetInnerHTML` sem DOMPurify (hook T-005 bloqueia â€” R-024)
-- `execute_sql` com template literal interpolado (hook T-005 bloqueia â€” R-024)
-
-## 7. Identidade visual (NÃƒO Ã© Clearix Lens)
-
-Pulso tem **identidade visual prÃ³pria** â€” nÃ£o segue R-014 / clearix_design.
-
-- **Personagem-mascote:** Pulso (faceless YouTube Shorts content)
-- **Verticais visuais:** Dark explÃ­cito + Dark/MistÃ©rio + Curiosidade + Motivacional + Educacional + Infantil
-- **5 frases proibidas no posicionamento** (oficial em `docs/40_PRODUTO/90_APOIO/`):
-  - âœ— "fÃ¡brica de canais dark"
-  - âœ— "autopost em tudo"
-  - âœ— "viral garantido"
-  - âœ— "monetizaÃ§Ã£o automÃ¡tica"
-  - âœ— "escala sem equipe"
-
-## 8. PendÃªncias de validaÃ§Ã£o manual (do Spec Â§14)
-
-- [ ] Origem dos 507K views (seed? canais externos importados? quais?)
-- [ ] Status dos 9 erros recentes em workflows (resolvÃ­veis? bug de TTS especÃ­fico?)
-- [ ] Status da tabela/migration que estÃ¡ bloqueando `gerar-audio`
-- [ ] **DecisÃ£o estratÃ©gica:** Pulso como motor interno DIGIAI vs canais autÃ´nomos (Backlog Executivo 04/2026)
-- [ ] Confirmar hospedagem (Vercel presumido)
-- [ ] Validar que pg_cron jobid=10 segue processando apÃ³s o fix de 22/05/2026
-
-## 9. Edge Functions / API Routes (`app/api/`)
-
-| Endpoint | FunÃ§Ã£o | Risco |
+| Cron | Horário (UTC) | Função |
 |---|---|---|
-| `/api/automation/coletar-metricas` | Coleta mÃ©tricas das redes sociais | ðŸŸ¡ |
-| `/api/automation/gerar-audio` | TTS via OpenAI/ElevenLabs (WF02) | ðŸŸ¡ |
-| `/api/automation/gerar-ideias` | GeraÃ§Ã£o via GPT-4/Claude (WF00) | ðŸŸ¢ |
-| `/api/automation/gerar-roteiro` | Roteiro via IA (WF01) | ðŸŸ¢ |
-| `/api/automation/orchestrator` | Orquestrador central | ðŸŸ¡ |
-| `/api/automation/publicar` | Publica nas redes (WF04) | ðŸ”´ **R-011 â€” sempre confirmar** |
-| `/api/automation/relatorio` | GeraÃ§Ã£o de relatÃ³rios | ðŸŸ¢ |
-| `/api/automation/webhooks` | Endpoints de retorno (n8n, manus) | ðŸŸ¡ |
+| `reconciliar-publicacoes` | 4×/dia (02:30, 10:50, 18:45*, 21:45*) | auto-descobre vídeo publicado por fora (matching de legenda/Jaccard, âncora IG) |
+| `resolver-post-ids` | 02:40, 10:55 | conserta post_id placeholder |
+| `coletar-metricas` | 11:00 | YouTube Data API + IG Graph + TikTok Display + FB video_insights |
+| `status-contas` | 11:05 | snapshot diário de seguidores das 5 redes (`seguidores_historico`) |
+| `decisor/analisar` | 11:20 | analista LLM do módulo /decisor (cache em configuracoes) |
+| `aprender` | seg 11:30 | digest campeões → cérebro (few-shot do gerador) |
+| `extrato-semanal` | seg 11:15 | custo semanal |
+| `auto-funil` | 12:00 | ideias → roteiros (respeitando buffers) |
+| `agenda/popular` | 12:30 | roteador da agenda (tema > retenção > idade; `lib/agenda/roteador.ts`) |
+| `auto-audio` | 13:00 | TTS dos roteiros aprovados |
 
-## 10. DependÃªncias externas
+Gotcha recorrente: **cron da Vercel chama por GET** — toda rota de cron precisa exportar `GET` (rotas só-POST já congelaram o `aprender` por 23 dias sem ninguém notar).
 
-| ServiÃ§o | VariÃ¡veis | Uso |
+## 7. Comandos
+
+### ✅ Verde (rodar sem confirmar)
+- `npm install` · `npx next dev --port=3004` · `npm run build` · `npm run lint`
+- `git status` / `git diff` / `git log` — leitura git
+- SELECTs no banco via service role
+
+### 🟡 Confirma antes
+- `npm install <pacote>` novo
+- DDL em qualquer schema `pulso_*`
+- Disparar `worker_render.py` fora do horário (gasta crédito se a cascata chegar no Veo)
+- Gerar mídia paga (Higgsfield/Veo): **sempre dry-run de custo antes** (trava de orçamento: 600 cr/dia)
+
+### 🔴 Vermelho (exige autorização explícita do dono)
+- `git commit` / `git push` sem pedido (R-003 — na prática o dono pede push por fase)
+- DELETE em `ideias`/`roteiros`/`pipeline_producao`/`metricas_publicacao`
+- **PUBLICAR em rede social** — R-011; a rota exige `confirmar: true`
+- Mexer em `public.v_espelho_pulso` (contrato do painel digiai) sem despacho R-032
+- Reset/truncate em qualquer schema `pulso_*` · modificar env na Vercel
+
+## 8. Identidade visual (NÃO é Clearix Lens)
+
+- **Personagem-mascote:** Pulso (voz oficial ElevenLabs `GmzLAnPHSUkxG3P5yfca`, criada 14/06; lip-sync local em `motor/lipsync_pulso.py`, custo R$0)
+- **Formato:** faceless, sem pessoas nas cenas (trava no gerador de cenas)
+- 5 frases proibidas no posicionamento: ✗ "fábrica de canais dark" ✗ "autopost em tudo" ✗ "viral garantido" ✗ "monetização automática" ✗ "escala sem equipe"
+
+## 9. API Routes principais (`app/api/`)
+
+| Endpoint | Função | Risco |
 |---|---|---|
-| n8n | 11 vars (URL, API_KEY, LOCAL_URL, MCP_URL, WEBHOOK_BASE + 5 especÃ­ficos + 2 legacy) | Workflows legados (parou nov/2025) |
-| OpenAI | `OPENAI_API_KEY` | GPT-4o + TTS |
-| Anthropic | `ANTHROPIC_API_KEY` | Claude (alternativa) |
-| ElevenLabs | `ELEVENLABS_API_KEY` | TTS premium (opcional) |
-| Manus | `MANUS_WEBHOOK_URL` + `MANUS_API_KEY` | Browser automation pra publicar |
-| YouTube | `YOUTUBE_API_KEY` + `CLIENT_ID` + `CLIENT_SECRET` | PublicaÃ§Ã£o |
-| TikTok | `TIKTOK_CLIENT_KEY` + `CLIENT_SECRET` | PublicaÃ§Ã£o |
-| Instagram | `INSTAGRAM_ACCESS_TOKEN` | PublicaÃ§Ã£o |
+| `/api/automation/publicar` | YT upload + IG Reels + TikTok inbox via API (FB fica de fora — manual) | 🔴 R-011, `confirmar: true` |
+| `/api/automation/coletar-metricas` | métricas 5 redes + retenção + leituras diárias | 🟡 |
+| `/api/automation/reconciliar-publicacoes` | descobre posts feitos por fora | 🟢 |
+| `/api/automation/gerar-ideias` | GPT-4o + trava anti-duplicidade (lexical+semântica) + canal por desempenho | 🟢 |
+| `/api/automation/gerar-roteiro` | roteiro com harness editorial + CTA variável | 🟢 |
+| `/api/decisor` + `/api/decisor/analisar` | fatos determinísticos + analista LLM | 🟢 |
+| `/api/agenda/popular` | roteador da agenda | 🟢 |
+| `/api/metricas/kwai-perfil` | registro validado do perfil Kwai (print → agente; recusa queda >20%) | 🟡 |
+
+## 10. Dependências externas vivas
+
+| Serviço | Uso |
+|---|---|
+| OpenAI (`OPENAI_API_KEY`) | GPT-4o gerador + gpt-4o-mini analista (chave só na Vercel; local vazia) |
+| ElevenLabs | TTS voz oficial do Pulso |
+| Meta Graph API v23 | IG publish + insights; FB video_insights (⚠ `facebook_views` NÃO pode ir na mesma chamada de insights — derruba com "Fatal" subcode 2207086; vai em chamada separada) |
+| YouTube Data v3 + Analytics (OAuth conta projectspulso) | upload, métricas, retenção |
+| TikTok Display API (OAuth) | inbox upload + video.list |
+| Pexels + Pixabay (grátis) | b-roll de acervo |
+| Wan/DashScope (região Singapura) | b-roll barato |
+| Higgsfield CLI (Veo 3.1 Lite) | b-roll pago, último recurso da cascata |
+| ~~n8n~~ · ~~Manus~~ | **aposentados** (workflows legados, pararam em 2025) |
 
 ## 11. Pergunta de Ouro e antipatterns
 
-> *Isso ajuda o Pulso a sair do travamento de 04/12/2025 e voltar a produzir conteÃºdo end-to-end, alinhado com a tese de "motor de mÃ­dia interno da DIGIAI"?*
+> *Isso aumenta a chance de acerto no Facebook (o tema que sorteia), protege a integridade do dado, ou tira trabalho manual do dono — sem quebrar o contrato com o painel digiai?*
 
-### NÃƒO fazer
-
-- Tocar `main` sem resolver WIP de merge primeiro
-- Adicionar 4Âª camada histÃ³rica de workflows (jÃ¡ tem n8n + WF manual + nativa pg_cron + analytics)
-- Publicar em rede social sem aprovaÃ§Ã£o humana (R-011 absoluto)
-- Esquecer que pg_cron tem histÃ³rico de quebrar silenciosamente (jobid=9 caiu por JSON malformado)
-- Tratar Pulso como SaaS â€” Ã© operaÃ§Ã£o interna DIGIAI
+### NÃO fazer
+- Ler `public.posts`/`public.metricas_diarias` como fonte (legado morto — engana)
+- Somar `views` de `metricas_diarias` (snapshots cumulativos — infla ~37×)
+- Publicar reel no Facebook via API (Meta estrangula a ~0; é fluxo manual)
+- Derivar seguidor de métrica de post (`taxa_conversao × reach` errou 7,5×) — fonte é o contador em `seguidores_historico`
+- Deixar erro de API virar 0 no banco (views nunca retrocede; trava no coletor)
+- Criar ideia nova a partir de print do Kwai (legenda ≠ título gera fantasma; casar por número/thumbnail)
+- Exemplo literal em prompt de geração (vira cópia literal — aconteceu com ganchos e CTA)
 
 ## 12. Skill embedded
 
-- Pasta `skills/supabase-postgres-best-practices/` dentro do projeto â€” padrÃ£o de skill versionada junto com cÃ³digo (preservar)
+- `skills/supabase-postgres-best-practices/` — skill versionada junto com o código (preservar)
 
 ---
 
-## Notas para quem mantÃ©m este arquivo
+## Notas para quem mantém este arquivo
 
-- **Ãšltima atualizaÃ§Ã£o:** 2026-05-25
-- **Owner deste arquivo:** quem mantÃ©m Pulso
+- **Última atualização:** 2026-07-31 (reescrita por despacho R-032 do digiai; números verificados no banco nesta data)
+- **Nota:** o aviso antigo de "WIP de merge não resolvido na main" foi verificado e **não procede mais** — working tree limpa, sem paths não-mesclados, main com push rotineiro autorizado.
+- **Owner deste arquivo:** quem mantém Pulso
 
-> Em caso de dÃºvida, **pause e pergunte ao humano**. Pulso publica em rede social pÃºblica da DIGIAI â€” erro vira post real que afeta marca.
-
+> Em caso de dúvida, **pause e pergunte ao humano**. Pulso publica em rede social pública da DIGIAI — erro vira post real que afeta marca.

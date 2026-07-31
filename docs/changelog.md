@@ -152,3 +152,34 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 - Arquivos: OneDrive video_006..010 + UPLOAD no Supabase Storage (lote2_*.mp4) prontos pra publicação via API
 - Kanban: 5 cards em PRONTO_PUBLICACAO (roteiros todos aprovados)
 - Cobertura do experimento: com a publicação do lote 2, 10/10 verticais testadas
+
+## 2026-06-13 → 2026-07-31 — A ERA AUTOMÁTICA (entrada consolidada, registrada em 31/07 por despacho R-032 do digiai)
+
+> O changelog parou em 12/06 e a esteira não parou — este bloco registra a era pra documentação
+> parar de mentir sobre o app (o AGENTS.md dizia "travado desde 04/12/2025" e custou 3 rodadas de
+> correção no painel do dono). Snapshot 2026-07-31: **475 publicações · 289.528 views**
+> (FB 133,5k · Kwai 48,6k · YT 43,5k · TikTok 32,4k · IG 31,5k) · 193 ideias · 13 canais.
+
+### O que substituiu o quê
+- **Vercel Crons (vercel.json) substituíram o pg_cron** — os jobs 1–7/10 do pg_cron estão INATIVOS
+  e apontam pra schemas que nem existem mais; a automação viva são ~10 crons Vercel
+  (reconciliar 4×/dia, coletar 11h, decisor, aprender, auto-funil, auto-audio, agenda).
+- **`pulso_content.*` substituiu `public.*`** como fonte — `public.posts` parou 16/06 e
+  `public.metricas_diarias` 20/07 (snapshots cumulativos; somar infla ~37×). Legado a descomissionar
+  (proposta em docs/20_BANCO/PROPOSTA_LIMPEZA_LEGADO_2026-07-31.md).
+- **Cascata de b-roll grátis substituiu o Seedance/Veo como padrão** — banco de clips (684) →
+  Pexels/Pixabay → Wan/DashScope → Veo só como último recurso. Seedance aposentado (era 81% do gasto).
+- **n8n e Manus aposentados** — publicação via API própria (YT upload OAuth, IG Graph, TikTok inbox);
+  Facebook ficou MANUAL de vez (via API a Meta estrangula reel a ~0 — teste A/B 11/07).
+
+### Marcos do período
+- 10/06 Desafio dos 100 Dias (dia 1) · 14/06 voz oficial ElevenLabs · 17/06 Higgsfield CLI mata
+  gargalo manual de vídeo · 29/06 RLS: anon vira read-only (incidente de escrita aberta) ·
+  11/07 veredito A/B: FB via API = 0, fica manual · 17/07 os 2 primeiros virais de FB (29k + 17k,
+  ambos história/arqueologia) · 22/07 Wan validado (Singapura) · 25/07 curiosidade/mistério
+  vencem sazonal na estratégia · 29/07 tema validado como O sinal (história/arqueologia = 6 de 6
+  estouros; tese de "âncora no título" REFUTADA 0,56×) · 29/07 seguidores só do contador diário
+  (derivar de conversão×reach errava 7,5×) · 30/07 /decisor no ar (radar de estouro + analista
+  com trava anti-invenção) · 30/07 agenda roteada por desempenho (fim da grade fixa por canal) ·
+  31/07 coleta blindada (views nunca retrocede a 0; facebook_views em chamada separada) ·
+  31/07 digiai cria `public.v_espelho_pulso` (contrato consumido pelo painel — não quebrar).
