@@ -291,18 +291,53 @@ async function coletar(request: NextRequest) {
 
         const insights: Record<string, number> = {}
         const insUrl = new URL(`https://graph.facebook.com/v23.0/${pub.post_id}/insights`)
-        // total_views/facebook_views entram só pra RECONCILIAR com o que o dono vê no celular.
-        // O painel do Instagram exibe `total_views`, que é views(IG) + facebook_views(crosspost) —
-        // medido em 30/07 no #106: 248 + 1.157 = 1.405, e o app mostrava 248. Parecia coleta
-        // atrasada e não era: o Instagram junta as duas redes num número só. Guardamos separado
-        // (juntar esconderia qual rede entregou — no #106 o Facebook fez 82%), mas guardamos
-        // também o total pra tela poder explicar a diferença em vez de deixar dúvida.
-        insUrl.searchParams.set('metric', 'views,total_views,facebook_views,reach,saved,shares,ig_reels_avg_watch_time,ig_reels_video_view_total_time,total_interactions')
+        // MÉTRICAS ESSENCIAIS — só o que TODO reel entrega. `facebook_views` NÃO entra aqui:
+        // ele só existe em post crospostado pro Facebook e, pedido junto, derruba a chamada
+        // INTEIRA com "Fatal" (code -1, subcode 2207086). Foi o que quebrou a coleta em 30/07,
+        // quando adicionei os campos de crosspost: 41 de 44 posts passaram a falhar e — como o
+        // código gravava `views: insights.views || 0` mesmo com a chamada falhando — o app zerou
+        // vídeos que tinham views reais. Isolado por bissecção: views/reach/saved/shares/
+        // watch-time/total_views passam; só facebook_views derruba.
+        insUrl.searchParams.set(
+          'metric',
+          'views,total_views,reach,saved,shares,ig_reels_avg_watch_time,ig_reels_video_view_total_time,total_interactions'
+        )
         insUrl.searchParams.set('access_token', token)
-        const insResp = await fetch(insUrl.toString())
-        if (insResp.ok) {
-          const ins = await insResp.json()
-          for (const m of ins.data || []) insights[m.name] = m.values?.[0]?.value || 0
+
+        let insOk = false
+        let ultimoErro = 'sem detalhe'
+        for (let tentativa = 0; tentativa < 3 && !insOk; tentativa++) {
+          if (tentativa > 0) await new Promise((r) => setTimeout(r, 400 * tentativa))
+          const insResp = await fetch(insUrl.toString())
+          const ins = await insResp.json().catch(() => null)
+          if (!insResp.ok || !ins || ins.error || !Array.isArray(ins.data)) {
+            // guardar o erro REAL: a primeira versão dizia "limite de taxa?", o que me fez caçar
+            // cota (estava em 1%) em vez da causa verdadeira.
+            ultimoErro = ins?.error
+              ? `${insResp.status} code=${ins.error.code}/${ins.error.error_subcode ?? '-'} ${String(ins.error.message).slice(0, 90)}`
+              : `HTTP ${insResp.status}`
+            continue
+          }
+          for (const m of ins.data) insights[m.name] = m.values?.[0]?.value || 0
+          insOk = true
+        }
+
+        // CROSSPOST — chamada à parte, e falhar aqui não custa nada. Serve só pra tela explicar
+        // por que o app do Instagram mostra um número maior (ele soma IG + Facebook).
+        try {
+          const fbvUrl = new URL(`https://graph.facebook.com/v23.0/${pub.post_id}/insights`)
+          fbvUrl.searchParams.set('metric', 'facebook_views')
+          fbvUrl.searchParams.set('access_token', token)
+          const fbvResp = await fetch(fbvUrl.toString())
+          const fbv = await fbvResp.json().catch(() => null)
+          const v = fbv?.data?.[0]?.values?.[0]?.value
+          if (typeof v === 'number') insights.facebook_views = v
+        } catch {
+          /* post sem crosspost — segue sem o número de conferência */
+        }
+
+        if (!insOk) {
+          throw new Error(`IG insights: ${ultimoErro}`)
         }
 
         metricas = {
@@ -396,6 +431,21 @@ async function coletar(request: NextRequest) {
         if (pct > 0 && pct <= 100) extras.taxa_retencao = pct
       }
 
+      // TRAVA GERAL — views nunca RETROCEDE a zero. Vale pra todas as redes, não só o Instagram:
+      // view acumulada é monotônica (uma vez contada, não some), então 0 vindo de uma API que já
+      // devolveu número é sempre falha de leitura, nunca fato. Sem esta trava, um erro de rede
+      // apagava o histórico e ainda contaminava o "ganho do dia" (o delta ficava negativo e
+      // depois artificialmente enorme na coleta seguinte).
+      if ((metricas.views ?? 0) === 0 && (pub.views ?? 0) > 0) {
+        resultados.push({
+          id: pub.id,
+          plataforma: pub.plataforma,
+          status: 'IGNORADO',
+          motivo: `API devolveu 0 e a linha tinha ${pub.views} — leitura descartada`,
+        })
+        return
+      }
+
       const update: Record<string, unknown> = { ...metricas, ...extras, ultima_atualizacao: agora.toISOString() }
       if (Object.keys(metaExtra).length) {
         update.metadata = { ...(pub.metadata || {}), ...metaExtra }
@@ -457,7 +507,26 @@ async function coletar(request: NextRequest) {
     }
   }
 
-  await comPool(publicacoes, 16, processarPub)
+  // INSTAGRAM SEPARADO E DEVAGAR (31/07/2026). Com as 100+ publicações no mesmo pool de 16, o
+  // Instagram limitava a taxa e devolvia erro em 81 de 100 — e antes da trava de "zero não
+  // sobrescreve" isso virava 0 no banco, apagando views reais. A Graph API aguenta bem menos
+  // paralelismo que YouTube e TikTok, que vão em lote e não reclamam.
+  //
+  // Então: as outras redes seguem no pool de 16 (rápido), e o Instagram vai com 3 em voo e uma
+  // pausa curta entre as rodadas. Fica mais lento, mas lê de verdade — e maxDuration=60 cobre,
+  // porque o IG é só ~1/3 das publicações.
+  const pubsResto = publicacoes.filter((p) => p.plataforma !== 'instagram')
+  await comPool(pubsResto, 16, processarPub)
+
+  // INSTAGRAM com concorrência menor. Cheguei a construir um rodízio aqui achando que a cota da
+  // Graph API não sustentava ler tudo — estava errado: a cota marcava 1% de uso. O que derrubava
+  // 41 de 44 chamadas era a métrica `facebook_views` na lista (ver acima). Com ela isolada, os
+  // 100 posts leem numa rodada só. Fica 3 em voo por educação com a API, não por necessidade.
+  const igDaVez = publicacoes.filter((p) => p.plataforma === 'instagram')
+  await comPool(igDaVez, 3, async (p) => {
+    await processarPub(p)
+    await new Promise((r) => setTimeout(r, 150))
+  })
 
   return NextResponse.json({
     success: true,
