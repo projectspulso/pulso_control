@@ -261,6 +261,15 @@ def run(ideia_id=None):
     pub = f"{U}/storage/v1/object/public/pulso-assets/videos/{FN}"
     nmd = dict(md); nmd['video_url'] = pub; nmd['caption'] = cap; nmd['numero'] = num
     nmd.pop('render_status', None)  # deu certo — limpa o estado de render
+    # LEDGER: de onde veio cada cena deste render (gerado pelo gen_scenes). É o instrumento que
+    # responde "o b-roll grátis rende igual?" antes de escalar volume — sem ele a decisão é chute.
+    try:
+        _lp = f"D:/tmp/pulso_lote4/{slug}/ledger_render.json"
+        if os.path.exists(_lp):
+            import json as _json
+            nmd['ledger_render'] = _json.load(open(_lp, encoding='utf-8'))
+    except Exception as _e:
+        log("aviso: ledger nao anexado (%s)" % str(_e)[:60])
     if info.get('transcricao'): nmd['transcricao'] = info['transcricao']
     g._db('PATCH', '/rest/v1/pipeline_producao?id=eq.%s' % p['id'], {'status': 'PRONTO_PUBLICACAO', 'metadata': nmd}, schema='pulso_content')
     dest = f"{ONE}/video_{num:03d}_{slug}"; os.makedirs(dest, exist_ok=True)

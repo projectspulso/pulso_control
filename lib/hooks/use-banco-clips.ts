@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase/client'
 
 export interface BancoClipsStats {
   clips: number
@@ -25,6 +26,8 @@ export interface ClipCatalogo {
   dur: number
   usos: number
   thumb: string
+  /** mp4 no storage durável — a galeria toca o clip ao clicar */
+  video_url?: string
   visao?: ClipVisao
   vtags?: string[]
 }
@@ -53,6 +56,41 @@ export function useBancoClips() {
       if (!r.ok) return null
       const { stats } = (await r.json()) as { stats: BancoClipsStats | null }
       return stats
+    },
+  })
+}
+
+export interface LedgerRender {
+  slug: string
+  quando: string
+  cenas: number
+  fontes: Record<string, number>
+  veo_cr: number
+  economizado_cr: number
+}
+
+/**
+ * LEDGER DOS RENDERS — de onde veio cada cena (banco/pexels/pixabay/wan/veo), por vídeo.
+ * Gravado pelo motor local (gen_scenes → worker → metadata.ledger_render do pipeline) a partir
+ * de 31/07/2026. É o instrumento da decisão de escala: só dá pra aumentar o volume com b-roll
+ * grátis quando der pra comparar o desempenho dele com o do gerado — e até aqui ninguém
+ * registrava a fonte.
+ */
+export function useLedgerRender() {
+  return useQuery<LedgerRender[]>({
+    queryKey: ['ledger-render'],
+    refetchInterval: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .schema('pulso_content')
+        .from('pipeline_producao')
+        .select('metadata')
+        .not('metadata->ledger_render', 'is', null)
+      if (error) throw error
+      return ((data || []) as Array<{ metadata: { ledger_render?: LedgerRender } | null }>)
+        .map((p) => p.metadata?.ledger_render)
+        .filter((l): l is LedgerRender => !!l)
+        .sort((a, b) => (a.quando < b.quando ? 1 : -1))
     },
   })
 }

@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ErrorState } from '@/components/ui/error-state'
 import { Desafio100Dias } from '@/components/desafio-100-dias'
 import { InsightDoDia } from '@/components/insight-do-dia'
+import { ParecerAnalista } from '@/components/parecer-analista'
 import { HorariosPanel } from '@/components/horarios-panel'
 import { NotaVsViewsPanel } from '@/components/nota-vs-views-panel'
 import { QualidadePanel } from '@/components/qualidade-panel'
@@ -366,6 +367,7 @@ export default function AnalyticsPage() {
         {/* ══════ VISÃO GERAL ══════ */}
         {aba === 'geral' && (
           <div className="space-y-3.5">
+            <ParecerAnalista />
             <InsightDoDia
               topRede={porRede[0] ? { rede: porRede[0].rede, share: porRede[0].share } : undefined}
               topVertical={rankingVertical[0] && resumo?.views

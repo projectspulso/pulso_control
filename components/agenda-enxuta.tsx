@@ -4,6 +4,7 @@ import { AlertTriangle, CalendarDays, CheckCircle2, ExternalLink, Flame, Layers 
 import Link from 'next/link'
 
 import { classificarTema, PAPEL_NO_FACEBOOK, MEDIANA_FB_MEDIDA, type Tema } from '@/lib/decisor/temas'
+import { useDecisor } from '@/lib/hooks/use-decisor'
 
 /**
  * A AGENDA EM TRÊS BLOCOS — publicar hoje, o que está travando, e o calendário.
@@ -290,3 +291,43 @@ export function ResumoTemas({ itens }: { itens: ItemAgenda[] }) {
 }
 
 export { Layers }
+
+/**
+ * O RADAR MANDA NO PLANO. Plano que ignora o que está acontecendo agora é plano morto: os dois
+ * virais de 17/07 subiram 4 dias seguidos e a agenda continuou tocando a grade como se nada —
+ * ninguém cross-postou nem emendou sequência do tema. Com ~6% de acerto no Facebook, surfar o
+ * bilhete premiado vale mais que cumprir o planejado.
+ *
+ * Aparece SÓ quando há estouro em curso (fatos.radar do /api/decisor, cacheado pelo React Query).
+ * Sem estouro, a agenda fica limpa — banner permanente vira papel de parede.
+ */
+export function BannerEstouro() {
+  const { data } = useDecisor()
+  const radar = data?.fatos.radar ?? []
+  if (radar.length === 0) return null
+  const top = radar[0]
+
+  return (
+    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-5">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="rounded-lg bg-amber-500/10 p-2">
+          <Flame className="h-5 w-5 text-amber-400" />
+        </span>
+        <p className="min-w-0 flex-1 text-sm leading-snug text-zinc-200">
+          <strong className="text-amber-300">Rasga o plano:</strong>{' '}
+          <Link href={`/analytics/videos/${top.ideiaId}`} className="underline decoration-amber-500/40 hover:text-white">
+            {top.titulo}
+          </Link>{' '}
+          está a <strong className="text-amber-300">{top.multiplo}×</strong> a mediana do{' '}
+          {top.plataforma === 'instagram' ? 'Instagram' : top.plataforma} agora
+          {radar.length > 1 && <> (+{radar.length - 1} em alta)</>}. Enquanto está quente: publique{' '}
+          <strong className="text-zinc-100">sequência do tema "{top.tema}"</strong> hoje e confira o
+          cross-post nas outras redes.
+        </p>
+        <Link href="/decisor" className="shrink-0 text-[11px] text-zinc-500 hover:text-zinc-300">
+          ver no Decisor →
+        </Link>
+      </div>
+    </div>
+  )
+}

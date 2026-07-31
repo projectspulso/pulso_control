@@ -347,15 +347,39 @@ if __name__=="__main__":
     except Exception as e:
         print("GUARD bloqueou/erro:",e); sys.exit(1)
     print(f"gerando {len(names)} cenas ({slug}), custo {custo}cr, max 6 concorrentes...",flush=True)
-    res={}
+    res={}; fontes_por_cena={}
     with cf.ThreadPoolExecutor(max_workers=6) as ex:
         futs={ex.submit(gen,n):n for n in names}
         for f in cf.as_completed(futs):
-            n,st,info=f.result(); res[n]=st; print(f"  {n:12} {st}  {info[:70]}",flush=True)
+            n,st,info=f.result(); res[n]=st; fontes_por_cena[n]=info; print(f"  {n:12} {st}  {info[:70]}",flush=True)
     bad=[n for n,s in res.items() if s not in ("OK","SKIP","REUSO")]
     ok=sum(1 for s in res.values() if s=="OK"); skip=sum(1 for s in res.values() if s=="SKIP")
     reuso=sum(1 for s in res.values() if s=="REUSO")
     _cr_eco=sum(_split(SC[n])[1] for n,s in res.items() if s=="REUSO")
+
+    # LEDGER DO RENDER — a pergunta que decide se dá pra escalar volume é "o b-roll grátis rende
+    # igual ao pago?", e até 31/07 NINGUÉM registrava de onde veio cada cena (o custo por vídeo
+    # era chute). Grava aqui; o worker anexa ao metadata do pipeline; o /assets agrega.
+    try:
+        import json as _json, datetime as _dt
+        _fontes={}
+        for _n,_st in res.items():
+            _info=str(fontes_por_cena.get(_n,""))
+            if _st=="REUSO": _f="banco"
+            elif _st=="SKIP": _f="ja_existia"
+            elif _info.startswith("stock:"): _f=_info.split(":")[1] or "stock"
+            elif _info.startswith("wan:"): _f="wan"
+            elif _info.startswith("veo:"): _f="veo"
+            else: _f="outro"
+            _fontes[_f]=_fontes.get(_f,0)+1
+        _veo_cr=sum(_split(SC[_n])[1] for _n,_s in res.items() if _s=="OK" and str(fontes_por_cena.get(_n,"")).startswith("veo:"))
+        _ledger={"slug":slug,"quando":_dt.datetime.now().isoformat(timespec="seconds"),
+                 "cenas":len(names),"fontes":_fontes,"veo_cr":_veo_cr,"economizado_cr":_cr_eco}
+        with open(f"D:/tmp/pulso_lote4/{slug}/ledger_render.json","w",encoding="utf-8") as _fh:
+            _json.dump(_ledger,_fh,ensure_ascii=False)
+        print(f"ledger: {_fontes} veo={_veo_cr}cr eco={_cr_eco}cr",flush=True)
+    except Exception as _e:
+        print("aviso: ledger falhou:",str(_e)[:80],flush=True)
     print(f"(novos Veo={ok}, reusados do banco={reuso} ~{_cr_eco}cr economizados, ja existiam={skip})")
     try:
         import pulso_guard as g

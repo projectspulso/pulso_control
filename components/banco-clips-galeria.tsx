@@ -31,6 +31,7 @@ export function BancoClipsGaleria() {
   const { data, isLoading } = useBancoClipsCatalogo()
   const [busca, setBusca] = useState('')
   const [tema, setTema] = useState('')
+  const [tocando, setTocando] = useState<string | null>(null)
 
   const temas = useMemo(() => {
     const m = new Map<string, number>()
@@ -78,9 +79,19 @@ export function BancoClipsGaleria() {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {filtrados.slice(0, 150).map((c) => (
-          <figure key={c.id} className="group relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 transition-all hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={c.thumb} alt={c.visao?.descricao || c.prompt} loading="lazy" className="aspect-9/16 w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          <figure
+            key={c.id}
+            onClick={() => c.video_url && setTocando(tocando === c.id ? null : c.id)}
+            className={`group relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 transition-all hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10 ${c.video_url ? 'cursor-pointer' : ''}`}
+          >
+            {tocando === c.id && c.video_url ? (
+              // clicar toca o clip no lugar da thumb — pedido antigo do dono ("clip que toca").
+              // clicar de novo volta pra thumb; só 1 tocando por vez (estado único).
+              <video src={c.video_url} autoPlay loop muted playsInline className="aspect-9/16 w-full object-cover" />
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={c.thumb} alt={c.visao?.descricao || c.prompt} loading="lazy" className="aspect-9/16 w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            )}
 
             {c.usos > 0 && (
               <span className="absolute left-2 top-2 flex items-center gap-0.5 rounded-md bg-emerald-500/90 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">

@@ -6,6 +6,7 @@ import { Layers, Film, Music } from 'lucide-react'
 import { BancoClipsPanel } from '@/components/banco-clips-panel'
 import { BancoClipsGaleria } from '@/components/banco-clips-galeria'
 import { CentralPublicacao } from '@/components/central-publicacao'
+import { LedgerRenderResumo } from '@/components/ledger-render-resumo'
 import { MidiasPanel } from '@/components/midias-panel'
 
 export default function AssetsPage() {
@@ -53,6 +54,7 @@ export default function AssetsPage() {
 
         {aba === 'acervo' && (
           <>
+            <LedgerRenderResumo />
             <BancoClipsPanel />
             <BancoClipsGaleria />
           </>

@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
-import { AgendaEnxuta, ResumoTemas, type ItemAgenda } from '@/components/agenda-enxuta'
+import { AgendaEnxuta, BannerEstouro, ResumoTemas, type ItemAgenda } from '@/components/agenda-enxuta'
 import { Desafio100Dias } from '@/components/desafio-100-dias'
 import { useAgenda } from '@/lib/hooks/use-agenda'
 
@@ -74,6 +74,7 @@ export default function AgendaPage() {
         </div>
       ) : (
         <>
+          <BannerEstouro />
           <ResumoTemas itens={itens} />
           <Desafio100Dias />
           <AgendaEnxuta itens={itens} hoje={hoje} />
