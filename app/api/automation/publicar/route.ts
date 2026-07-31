@@ -376,7 +376,14 @@ export async function POST(request: NextRequest) {
   }
 
   const publicou = resultados.some((r) => r.status === 'PUBLICADO')
-  if (publicou) {
+  // GRAVA TAMBÉM O "PROCESSANDO" (31/07/2026). Antes o registro só era escrito quando havia
+  // PUBLICADO — então o Instagram que estourava os 52s e voltava PROCESSANDO não deixava rastro
+  // NENHUM. O reel entrava no ar depois (a reconciliação finaliza o container salvo), mas o
+  // histórico do disparo dizia que o Instagram nunca tinha sido tentado. Foi o que aconteceu com
+  // o #120 e o #107 em 31/07: reels publicados, registro sem a linha do IG — e a tela parecia
+  // indicar rede faltando. Recuperação funcionava; a memória do que houve é que se perdia.
+  const vaisSalvar = publicou || resultados.some((r) => r.status === 'PROCESSANDO' || r.status === 'ERRO')
+  if (vaisSalvar) {
     // MERGE, não sobrescrita: a UI dispara 1 chamada POR REDE em PARALELO, e todas leram a
     // metadata no início. Gravar `{...item.metadata}` fazia a última a terminar APAGAR o que as
     // outras salvaram — inclusive o `ig_container_pending` do Instagram (causa dos gaps de 21-22/07).
@@ -388,14 +395,16 @@ export async function POST(request: NextRequest) {
       ? (metaAtual.publicacao_meta_api as { plataforma: string }[])
       : []
     const merged = [...anteriores.filter((a) => !resultados.some((r) => r.plataforma === a.plataforma)), ...resultados]
+    // status/data só mudam quando ALGO foi publicado de fato — PROCESSANDO e ERRO gravam apenas
+    // o rastro no metadata, sem promover o pipeline.
     await supabase
       .schema('pulso_content')
       .from('pipeline_producao')
-      .update({
-        status: 'PUBLICADO',
-        data_publicacao: agora,
-        metadata: { ...metaAtual, publicacao_meta_api: merged },
-      })
+      .update(
+        publicou
+          ? { status: 'PUBLICADO', data_publicacao: agora, metadata: { ...metaAtual, publicacao_meta_api: merged } }
+          : { metadata: { ...metaAtual, publicacao_meta_api: merged } }
+      )
       .eq('id', pipeline_id)
   }
 
