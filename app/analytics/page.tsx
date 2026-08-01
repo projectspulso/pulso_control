@@ -14,6 +14,7 @@ import { QualidadePanel } from '@/components/qualidade-panel'
 import { ReconciliacaoPanel } from '@/components/reconciliacao-panel'
 import { BoxplotVerticais } from '@/components/boxplot-verticais'
 import { BibliotecaPanel } from '@/components/biblioteca-panel'
+import { MarcosPanel } from '@/components/marcos-panel'
 import { ExtratoSemanalPanel } from '@/components/extrato-semanal-panel'
 import {
   ABAS,
@@ -100,7 +101,7 @@ function NaoSegueFiltro({ filtros, motivo }: { filtros: BiFiltros; motivo: strin
 
 export default function AnalyticsPage() {
   const [filtros, setFiltros] = useState<BiFiltros>({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 })
-  const [aba, setAba] = useState<'geral' | 'conteudo' | 'qualidade' | 'audiencia' | 'crescimento' | 'financeiro' | 'biblioteca' | 'dados'>('geral')
+  const [aba, setAba] = useState<'geral' | 'conteudo' | 'qualidade' | 'audiencia' | 'crescimento' | 'marcos' | 'financeiro' | 'biblioteca' | 'dados'>('geral')
   const [drill, setDrill] = useState<string | null>(null)
   const { data, isLoading, isError, refetch } = useBi(filtros)
   const { data: decisao } = useDecisao()
@@ -427,6 +428,14 @@ export default function AnalyticsPage() {
             <Desafio100Dias />
             <CardExperimento exp={experimento} />
             <CardCrescimento serie={data.serieCumulativa} diaria={data.serieDiaria} alto />
+          </div>
+        )}
+
+        {/* ══════ MARCOS ══════ */}
+        {aba === 'marcos' && (
+          <div className="space-y-3.5">
+            <NaoSegueFiltro filtros={filtros} motivo="marco é do projeto inteiro — recortar por rede ou período descaracteriza o degrau" />
+            <MarcosPanel />
           </div>
         )}
 

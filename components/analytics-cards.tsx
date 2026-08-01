@@ -554,6 +554,9 @@ export const ABAS = [
   { id: 'qualidade' as const, label: 'Qualidade' },
   { id: 'audiencia' as const, label: 'Audiência' },
   { id: 'crescimento' as const, label: 'Crescimento' },
+  // Crescimento mostra a curva; Marcos mostra os degraus (100k views, 100 seguidores) e sobretudo
+  // o INTERVALO entre eles — a única leitura que diz "acelerou ou não" sem depender de ler gráfico.
+  { id: 'marcos' as const, label: 'Marcos' },
   { id: 'financeiro' as const, label: 'Financeiro' },
   // A biblioteca de clips como ATIVO: economia, fadiga, escassez de tema. O /assets navega a
   // galeria; aqui é o valor econômico dela.
