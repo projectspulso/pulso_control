@@ -49,6 +49,32 @@ export interface ExtratoSemana {
   porAgente: ExtratoAgente[]
 }
 
+/**
+ * Extrato REAL da conta Higgsfield, sincronizado pelo worker local depois de cada render.
+ * É a autoridade sobre crédito gasto: o razão do app é escrito por nós e derrapou duas vezes
+ * juntas (taxa de R$ 1,00/cr onde o real é R$ 0,27, e toda cena OK contada como Higgsfield mesmo
+ * quando saiu de Wan, do acervo grátis ou do banco de clips). Já vem líquido de refund.
+ */
+export interface ExtratoHiggsfield {
+  por_dia: Record<string, { cr: number; jobs: number; modelos: Record<string, number> }>
+  credito_brl: number
+  sincronizado_em: string
+  primeiro_dia: string | null
+  ultimo_dia: string | null
+}
+
+/** O que o razão do app diz × o que a conta cobrou, no período em que dá pra comparar. */
+export interface Conciliacao {
+  periodo: string
+  creditosRazao: number
+  creditosReais: number
+  brlRazao: number
+  brlReal: number
+  creditoBRL: number
+  diasDivergentes: Array<{ data: string; razao: number; real: number }>
+  sincronizadoEm: string
+}
+
 export interface FinanceiroData {
   lancamentos: Lancamento[]
   travas: Travas | null
@@ -64,6 +90,10 @@ export interface FinanceiroData {
   extratoSemanal: ExtratoSemana[]
   /** consumo da semana em curso, calculado ao vivo (parcial) */
   semanaAtual: { periodo: string; consumoBRL: number; porAgente: { servico: string; brl: number }[] }
+  /** razão do app × extrato da conta — null enquanto o worker não sincronizou */
+  conciliacao: Conciliacao | null
+  /** gasto por modelo no extrato real (Seedance, Veo, Kling…), em crédito */
+  gastoPorModelo: Array<{ modelo: string; creditos: number; brl: number }>
 }
 
 const AGENTE_LABEL: Record<string, string> = {
@@ -162,6 +192,59 @@ export function useFinanceiro() {
 
       const extratoSemanal: ExtratoSemana[] = Array.isArray(cfgRes?.extratoSemanal) ? cfgRes.extratoSemanal : []
 
+      // ── conciliação: o que escrevemos × o que a conta cobrou ──
+      // Só compara dentro da janela que o extrato cobre. Fora dela não é divergência, é ausência
+      // de fonte — e tratar ausência como divergência inventaria erro que não existe.
+      const hf = (cfgRes?.extratoHiggsfield ?? null) as ExtratoHiggsfield | null
+      let conciliacao: Conciliacao | null = null
+      const gastoPorModelo: Array<{ modelo: string; creditos: number; brl: number }> = []
+      if (hf?.por_dia && hf.primeiro_dia && hf.ultimo_dia) {
+        const taxa = hf.credito_brl || 0.266
+        const dentro = (d: string) => d >= hf.primeiro_dia! && d <= hf.ultimo_dia!
+        const razaoPorDia = new Map<string, number>()
+        for (const l of producao) {
+          if (l.servico !== 'higgsfield' || !dentro(l.data)) continue
+          razaoPorDia.set(l.data, (razaoPorDia.get(l.data) || 0) + (l.creditos || 0))
+        }
+        let crRazao = 0, crReal = 0, brlRazao = 0
+        for (const l of producao) {
+          if (l.servico !== 'higgsfield' || !dentro(l.data)) continue
+          crRazao += l.creditos || 0
+          brlRazao += l.brl
+        }
+        const divergentes: Array<{ data: string; razao: number; real: number }> = []
+        const dias = new Set([...Object.keys(hf.por_dia), ...razaoPorDia.keys()])
+        for (const d of [...dias].sort()) {
+          if (!dentro(d)) continue
+          const real = Math.round((hf.por_dia[d]?.cr || 0) * 10) / 10
+          const razao = razaoPorDia.get(d) || 0
+          crReal += real
+          if (Math.abs(real - razao) > 1) divergentes.push({ data: d, razao, real })
+        }
+        const modelos = new Map<string, number>()
+        for (const d of Object.values(hf.por_dia))
+          for (const [m, cr] of Object.entries(d.modelos || {})) modelos.set(m, (modelos.get(m) || 0) + cr)
+        gastoPorModelo.push(
+          ...[...modelos.entries()]
+            .map(([modelo, creditos]) => ({
+              modelo,
+              creditos: Math.round(creditos),
+              brl: Math.round(creditos * taxa * 100) / 100,
+            }))
+            .sort((a, b) => b.creditos - a.creditos)
+        )
+        conciliacao = {
+          periodo: `${hf.primeiro_dia} a ${hf.ultimo_dia}`,
+          creditosRazao: Math.round(crRazao),
+          creditosReais: Math.round(crReal),
+          brlRazao: Math.round(brlRazao * 100) / 100,
+          brlReal: Math.round(crReal * taxa * 100) / 100,
+          creditoBRL: taxa,
+          diasDivergentes: divergentes,
+          sincronizadoEm: hf.sincronizado_em,
+        }
+      }
+
       return {
         lancamentos,
         travas,
@@ -174,6 +257,8 @@ export function useFinanceiro() {
         porMes,
         extratoSemanal,
         semanaAtual,
+        conciliacao,
+        gastoPorModelo,
         gastoPorServico: [...porServico.entries()]
           .map(([servico, brl]) => ({ servico, brl }))
           .sort((a, b) => b.brl - a.brl),

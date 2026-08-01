@@ -9,7 +9,7 @@ export async function GET() {
     .schema('pulso_core')
     .from('configuracoes')
     .select('chave, valor')
-    .in('chave', ['orcamento_travas', 'higgsfield_saldo', 'extrato_semanal'])
+    .in('chave', ['orcamento_travas', 'higgsfield_saldo', 'extrato_semanal', 'higgsfield_transacoes'])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const map = new Map<string, string>(
@@ -18,9 +18,13 @@ export async function GET() {
   const travasRaw = map.get('orcamento_travas')
   const saldoRaw = map.get('higgsfield_saldo')
   const extratoRaw = map.get('extrato_semanal')
+  // Extrato REAL da conta Higgsfield, sincronizado pelo worker local (o CLI só está autenticado
+  // naquela máquina). É a autoridade sobre crédito gasto — o razão do app é escrito por nós.
+  const txRaw = map.get('higgsfield_transacoes')
   return NextResponse.json({
     travas: travasRaw ? JSON.parse(travasRaw) : null,
     saldoHiggsfield: saldoRaw ? JSON.parse(saldoRaw) : null,
     extratoSemanal: extratoRaw ? JSON.parse(extratoRaw) : [],
+    extratoHiggsfield: txRaw ? JSON.parse(txRaw) : null,
   })
 }

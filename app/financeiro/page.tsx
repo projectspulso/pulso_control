@@ -3,6 +3,7 @@
 import { AlertTriangle, Coins, Film, FileDown, Lock, PiggyBank, Receipt, Repeat, ShieldCheck, TrendingDown } from 'lucide-react'
 
 import { ErrorState } from '@/components/ui/error-state'
+import { ConciliacaoCusto } from '@/components/conciliacao-custo'
 import { PageHeader } from '@/components/layout/page-header'
 import { ASSINATURAS, ASSINATURAS_TOTAL_BRL, CUSTO_POR_VIDEO } from '@/lib/config/custos'
 import { EMPRESA } from '@/lib/config/empresa'
@@ -405,6 +406,8 @@ export default function FinanceiroPage() {
               })}
             </div>
           </div>
+
+          <ConciliacaoCusto />
 
           <div className="glass rounded-2xl border border-zinc-800/50 p-6">
             <h2 className="text-lg font-semibold text-white">Lançamentos</h2>

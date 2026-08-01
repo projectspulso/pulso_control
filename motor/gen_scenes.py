@@ -383,8 +383,13 @@ if __name__=="__main__":
     print(f"(novos Veo={ok}, reusados do banco={reuso} ~{_cr_eco}cr economizados, ja existiam={skip})")
     try:
         import pulso_guard as g
-        _cr=sum(_split(SC[n])[1] for n in names if res.get(n)=="OK")
-        g.registrar_gasto("higgsfield", _cr, _cr*1.0, f"{slug} cenas")
+        # Só o que o Higgsfield REALMENTE cobrou. Cena de Wan, de acervo grátis ou reusada do banco
+        # não queima crédito — e até 31/07 esta linha somava toda cena OK e multiplicava por
+        # R$ 1,00/cr. Os dois erros juntos punham o custo 2,3× acima do extrato da conta (só entre
+        # 22/07 e 01/08 foram 1.964 cr lançados com o saldo real em 10,38 cr). `_veo_cr`, calculado
+        # logo acima pro ledger, já é exatamente a parte que foi pro Higgsfield.
+        if _veo_cr > 0:
+            g.registrar_gasto("higgsfield", _veo_cr, round(_veo_cr * g.credito_brl(), 2), f"{slug} cenas Veo")
     except Exception: pass
     if bad:
         # NADA de DONE com cena faltando — o make_video crasharia adiante de forma críptica.

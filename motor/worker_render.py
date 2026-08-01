@@ -315,6 +315,13 @@ if __name__ == "__main__":
     else:
         run(arg)
     atualizar_saldo_higgsfield()  # saldo DEPOIS do render (captura o gasto)
+    # Extrato REAL da conta — o CLI só está autenticado nesta máquina, então quem sobe é o worker.
+    # É a fonte que o /financeiro usa pra conferir o razão que nós mesmos escrevemos.
+    try:
+        import pulso_guard as _g
+        _g.sync_transacoes()
+    except Exception as _e:
+        log("aviso: sync do extrato Higgsfield falhou: %s" % str(_e)[:100])
     # auto-adiciona vídeos novos do YT nas playlists por vertical (idempotente, ~grátis)
     try:
         subprocess.run(["python", "D:/tmp/yt_playlists.py"], capture_output=True, timeout=180)

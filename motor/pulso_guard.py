@@ -39,6 +39,66 @@ def travas():
     rows = _db("GET", "/rest/v1/configuracoes?chave=eq.orcamento_travas&select=valor", schema="pulso_core")
     return json.loads(rows[0]["valor"]) if rows else {}
 
+# Preço real do crédito: R$ 2.168,48 pagos por 8.144 cr comprados (extrato de topups, mai–jul/26).
+# Fica aqui como piso de segurança; a trava `credito_brl` em configuracoes manda quando existe.
+CREDITO_BRL_PADRAO = 0.266
+
+def credito_brl():
+    try: return float(travas().get("credito_brl") or CREDITO_BRL_PADRAO)
+    except Exception: return CREDITO_BRL_PADRAO
+
+def transacoes_higgsfield(paginas=9):
+    """Extrato REAL da conta — a única fonte que sabe o que foi cobrado de fato.
+
+    Existe porque o razão do app era escrito por nós e derrapou duas vezes ao mesmo tempo:
+    cobrava R$ 1,00/cr (o real é R$ 0,27) e contava como Higgsfield toda cena OK, inclusive as
+    que saíram de Wan, do acervo grátis e do banco de clips. Entre 22/07 e 01/08 isso lançou
+    1.964 cr que a conta nunca gastou — com saldo de 10,38 cr. Aqui não tem opinião: é o que a
+    Higgsfield diz que cobrou, já líquido de refund (job que falha devolve crédito).
+    """
+    tudo, vistos = [], set()
+    for p in range(paginas):
+        out = subprocess.run([HF, "account", "transactions", "--size", "100", "--cursor", str(p * 100), "--json"],
+                             capture_output=True, text=True, timeout=120).stdout
+        try: lote = json.loads(out)
+        except Exception: break
+        if not isinstance(lote, list) or not lote: break
+        for t in lote:
+            k = (t.get("created_at"), t.get("display_name"), t.get("credits"))
+            if k in vistos: continue
+            vistos.add(k); tudo.append(t)
+        if len(lote) < 100: break
+    return tudo
+
+def sync_transacoes():
+    """Sobe o extrato real agregado por dia+modelo pro app — o CLI só existe nesta máquina."""
+    tx = transacoes_higgsfield()
+    if not tx: return None
+    por_dia = {}
+    for t in tx:
+        acao = t.get("action")
+        if acao not in ("spend", "refund"): continue
+        dia = str(t.get("created_at", ""))[:10]
+        cr = -float(t.get("credits") or 0) if acao == "spend" else -float(t.get("credits") or 0)
+        d = por_dia.setdefault(dia, {"cr": 0.0, "jobs": 0, "modelos": {}})
+        d["cr"] += cr
+        if acao == "spend":
+            d["jobs"] += 1
+            m = str(t.get("display_name") or "?")
+            d["modelos"][m] = round(d["modelos"].get(m, 0) + cr, 2)
+    for d in por_dia.values(): d["cr"] = round(d["cr"], 2)
+    val = json.dumps({"por_dia": por_dia, "credito_brl": credito_brl(),
+                      "sincronizado_em": datetime.now(timezone.utc).isoformat(),
+                      "primeiro_dia": min(por_dia) if por_dia else None,
+                      "ultimo_dia": max(por_dia) if por_dia else None})
+    existe = _db("GET", "/rest/v1/configuracoes?chave=eq.higgsfield_transacoes&select=chave", schema="pulso_core")
+    if existe:
+        _db("PATCH", "/rest/v1/configuracoes?chave=eq.higgsfield_transacoes", {"valor": val}, schema="pulso_core")
+    else:
+        _db("POST", "/rest/v1/configuracoes", {"chave": "higgsfield_transacoes", "valor": val}, schema="pulso_core")
+    print(f"[GUARD] extrato real sincronizado: {len(por_dia)} dias, {sum(v['cr'] for v in por_dia.values()):.0f} cr")
+    return por_dia
+
 def saldo_higgsfield():
     out = subprocess.run([HF, "account", "status"], capture_output=True, text=True, timeout=60).stdout
     m = re.search(r"([\d.]+)\s*credits", out)
