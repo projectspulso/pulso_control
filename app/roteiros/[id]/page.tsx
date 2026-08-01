@@ -328,12 +328,20 @@ export default function RoteiroDetalhesPage({
                   </span>
                 )}
                 {roteiro.ideia_id && (
-                  <Link
-                    href={`/ideias/${roteiro.ideia_id}`}
-                    className="text-violet-400 transition-colors hover:text-violet-300"
-                  >
-                    Ver ideia
-                  </Link>
+                  <>
+                    <Link
+                      href={`/ideias/${roteiro.ideia_id}`}
+                      className="text-violet-400 transition-colors hover:text-violet-300"
+                    >
+                      Ver ideia
+                    </Link>
+                    <Link
+                      href={`/video/${roteiro.ideia_id}`}
+                      className="text-zinc-500 transition-colors hover:text-zinc-300"
+                    >
+                      Ficha completa
+                    </Link>
+                  </>
                 )}
               </div>
 

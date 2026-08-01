@@ -47,6 +47,7 @@ export default function AgendaPage() {
           estagio: a?.estagio ?? 'vazio',
           videoUrl: a?.videoUrl ?? null,
           numero: a?.numero ?? null,
+          corpo: a?.corpo ?? null,
         }
       })
       .filter((i) => i.data >= hoje)

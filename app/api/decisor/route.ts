@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdminClient()
     const desde = new Date(Date.now() - DIAS_SERIE * 86_400_000).toISOString().slice(0, 10)
 
-    const [pubQ, leiQ, ideiasQ, filaQ, parecerQ, segQ] = await Promise.all([
+    const [pubQ, leiQ, ideiasQ, filaQ, roteirosQ, parecerQ, segQ] = await Promise.all([
       supabase
         .schema('pulso_content')
         .from('metricas_publicacao')
@@ -59,6 +59,8 @@ export async function GET(request: NextRequest) {
         .from('pipeline_producao')
         .select('ideia_id, status')
         .not('status', 'eq', 'PUBLICADO'),
+      // roteiro entra na classificação de tema: o título sozinho jogava arqueologia em "outros"
+      supabase.schema('pulso_content').from('roteiros').select('ideia_id, conteudo_md'),
       supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', CHAVE_PARECER).maybeSingle(),
       // contador de seguidores medido todo dia — a ÚNICA fonte honesta de seguidor.
       // Não derivar seguidor de métrica de post: taxa_conversao × reach dava 3.093 no Facebook
@@ -83,6 +85,13 @@ export async function GET(request: NextRequest) {
     const rawIdeias = (ideiasQ.data || []) as any[]
 
     const titulos = new Map<string, string | null>(rawIdeias.map((i) => [i.id, i.titulo]))
+    // O corpo do roteiro é o segundo turno da classificação de tema — só entra quando o título
+    // não decide. "A Misteriosa Biblioteca Subterrânea de Paris" caía em "outros" com o título,
+    // e o roteiro dela é catacumba, Segunda Guerra e documento histórico.
+    const corpos = new Map<string, string | null>()
+    for (const r of (roteirosQ.data || []) as Array<{ ideia_id: string; conteudo_md: string | null }>) {
+      if (r.ideia_id && r.conteudo_md && !corpos.has(r.ideia_id)) corpos.set(r.ideia_id, r.conteudo_md)
+    }
 
     const pubs: PubBruta[] = rawPubs.map((p) => ({
       ideiaId: p.ideia_id,
@@ -123,7 +132,7 @@ export async function GET(request: NextRequest) {
     // fila: títulos das ideias que têm pipeline não publicado
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const idsFila = [...new Set(((filaQ.data || []) as any[]).map((f) => f.ideia_id).filter(Boolean))]
-    const titulosFila = idsFila.map((id) => titulos.get(id) ?? null)
+    const itensFila = idsFila.map((id) => ({ titulo: titulos.get(id) ?? null, corpo: corpos.get(id) ?? null }))
 
     const cobertura: CoberturaEntrada[] = rawPubs.map((p) => ({
       plataforma: p.plataforma,
@@ -136,9 +145,9 @@ export async function GET(request: NextRequest) {
       taxaConversao: p.taxa_conversao,
     }))
 
-    const radar = radarDeEstouro(leituras, titulos, publicadoEm)
-    const temasFacebook = desempenhoPorTema(pubs, titulos, 'facebook')
-    const temasGeral = desempenhoPorTema(pubs, titulos)
+    const radar = radarDeEstouro(leituras, titulos, publicadoEm, { corpos })
+    const temasFacebook = desempenhoPorTema(pubs, titulos, 'facebook', corpos)
+    const temasGeral = desempenhoPorTema(pubs, titulos, undefined, corpos)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parecerRaw = (parecerQ.data as any)?.valor ?? null
@@ -161,7 +170,7 @@ export async function GET(request: NextRequest) {
         redes: perfilDasRedes(pubs, historicoSeguidores),
         temasFacebook,
         temasGeral,
-        fila: filaPorTema(titulosFila),
+        fila: filaPorTema(itensFila),
         cobertura: coberturaPorRede(cobertura),
         historicoSeguidores,
         publicadosHoje: contarPublicadosHoje(pubs),

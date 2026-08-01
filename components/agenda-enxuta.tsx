@@ -29,6 +29,8 @@ export interface ItemAgenda {
   /** arquivo do vídeo quando já existe — "ter tudo ligado" era o pedido: a agenda leva ao que vai ao ar */
   videoUrl?: string | null
   numero?: number | null
+  /** roteiro — o tema sai dele quando o título não diz o assunto, igual ao roteador do servidor */
+  corpo?: string | null
 }
 
 const ESTAGIO_ROTULO: Record<string, { txt: string; cor: string }> = {
@@ -71,7 +73,7 @@ function ChipTema({ tema }: { tema: Tema }) {
 
 function Linha({ item, hoje }: { item: ItemAgenda; hoje: string }) {
   const est = ESTAGIO_ROTULO[item.estagio] || ESTAGIO_ROTULO.vazio
-  const tema = item.titulo ? classificarTema(item.titulo) : null
+  const tema = item.titulo ? classificarTema(item.titulo, item.corpo) : null
   const atrasado = diasEntre(hoje, item.data) < (DIAS_ATE_PRONTO[item.estagio] ?? 0)
 
   return (
@@ -79,7 +81,7 @@ function Linha({ item, hoje }: { item: ItemAgenda; hoje: string }) {
       <span className="w-12 shrink-0 text-xs tabular-nums text-zinc-500">{item.horario.slice(0, 5)}</span>
       {item.ideiaId ? (
         <Link
-          href={`/analytics/videos/${item.ideiaId}`}
+          href={`/video/${item.ideiaId}`}
           className="min-w-0 flex-1 truncate text-sm text-zinc-200 hover:text-white hover:underline"
           title={item.titulo || ''}
         >
@@ -222,7 +224,7 @@ function CalendarioAgenda({ itens, hoje }: { itens: ItemAgenda[]; hoje: string }
                 </p>
                 <div className="space-y-1.5">
                   {lista.map((i) => {
-                    const tema = i.titulo ? classificarTema(i.titulo) : null
+                    const tema = i.titulo ? classificarTema(i.titulo, i.corpo) : null
                     const papel = tema ? PAPEL_NO_FACEBOOK[tema] : null
                     const cor =
                       papel === 'sorteia' ? 'border-l-emerald-500' : papel === 'morto' ? 'border-l-red-500/70' : 'border-l-zinc-700'
@@ -241,7 +243,7 @@ function CalendarioAgenda({ itens, hoje }: { itens: ItemAgenda[]; hoje: string }
                           )}
                         </div>
                         {i.ideiaId ? (
-                          <Link href={`/analytics/videos/${i.ideiaId}`} className="block truncate text-[12px] leading-snug text-zinc-300 hover:text-white" title={i.titulo || ''}>
+                          <Link href={`/video/${i.ideiaId}`} className="block truncate text-[12px] leading-snug text-zinc-300 hover:text-white" title={i.titulo || ''}>
                             {i.titulo}
                           </Link>
                         ) : (
@@ -268,8 +270,8 @@ function CalendarioAgenda({ itens, hoje }: { itens: ItemAgenda[]; hoje: string }
 export function ResumoTemas({ itens }: { itens: ItemAgenda[] }) {
   const comTitulo = itens.filter((i) => i.titulo)
   if (comTitulo.length === 0) return null
-  const sorteia = comTitulo.filter((i) => PAPEL_NO_FACEBOOK[classificarTema(i.titulo!)] === 'sorteia').length
-  const morto = comTitulo.filter((i) => PAPEL_NO_FACEBOOK[classificarTema(i.titulo!)] === 'morto').length
+  const sorteia = comTitulo.filter((i) => PAPEL_NO_FACEBOOK[classificarTema(i.titulo!, i.corpo)] === 'sorteia').length
+  const morto = comTitulo.filter((i) => PAPEL_NO_FACEBOOK[classificarTema(i.titulo!, i.corpo)] === 'morto').length
   const pct = Math.round((sorteia / comTitulo.length) * 100)
   const fraco = pct < 20
 
@@ -315,7 +317,7 @@ export function BannerEstouro() {
         </span>
         <p className="min-w-0 flex-1 text-sm leading-snug text-zinc-200">
           <strong className="text-amber-300">Rasga o plano:</strong>{' '}
-          <Link href={`/analytics/videos/${top.ideiaId}`} className="underline decoration-amber-500/40 hover:text-white">
+          <Link href={`/video/${top.ideiaId}`} className="underline decoration-amber-500/40 hover:text-white">
             {top.titulo}
           </Link>{' '}
           está a <strong className="text-amber-300">{top.multiplo}×</strong> a mediana do{' '}

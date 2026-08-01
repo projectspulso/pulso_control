@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import {
   Activity,
   BarChart3,
@@ -158,6 +160,7 @@ export default function ValidacaoPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-zinc-800/50 text-left text-xs uppercase tracking-wider text-zinc-500">
+                  <th className="px-3 py-3">#</th>
                   <th className="px-6 py-3">Vídeo</th>
                   <th className="px-3 py-3">Vertical</th>
                   {ORDEM_PLATAFORMAS.map((p) => (
@@ -172,8 +175,15 @@ export default function ValidacaoPage() {
               <tbody>
                 {data.videos.map((v: VideoAderencia) => (
                   <tr key={v.ideiaId} className="border-b border-zinc-800/30 hover:bg-zinc-900/40">
-                    <td className="max-w-xs truncate px-6 py-3 text-zinc-200" title={v.titulo}>
-                      {v.titulo}
+                    {/* O dono chama o vídeo pelo número ("posta o 118"), não pelo título — e o
+                        número é o mesmo que vai na legenda das redes. */}
+                    <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-zinc-500">
+                      {v.numero != null ? `#${v.numero}` : '—'}
+                    </td>
+                    <td className="max-w-xs truncate px-6 py-3" title={v.titulo}>
+                      <Link href={`/video/${v.ideiaId}`} className="text-zinc-200 hover:text-violet-300 hover:underline">
+                        {v.titulo}
+                      </Link>
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-zinc-400">
                       <div className="flex items-center gap-1.5">

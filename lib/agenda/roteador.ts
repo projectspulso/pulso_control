@@ -32,6 +32,8 @@ export type Faixa = 'perene' | 'sazonal'
 export interface CandidatoAgenda {
   ideiaId: string
   titulo: string
+  /** roteiro (conteudo_md) — desempata o tema quando o título não diz o assunto */
+  corpo?: string | null
   /** vídeo pronto > áudio > roteiro > ideia — desempata, não manda */
   estagio: 'video' | 'audio' | 'roteiro' | 'ideia'
   canalId: string | null
@@ -93,7 +95,7 @@ export function pontuarCandidato(
   slot: SlotParaPreencher,
   temaDoDiaAnterior?: Tema | null
 ): { score: number; motivo: string; tema: Tema } {
-  const tema = classificarTema(c.titulo)
+  const tema = classificarTema(c.titulo, c.corpo)
   const papel = PAPEL_NO_FACEBOOK[tema]
   const partes: string[] = []
   let score = 0

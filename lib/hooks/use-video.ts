@@ -3,15 +3,35 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
 import { dedupePublicacoes } from '@/lib/analytics/dedupe'
+import { classificarTema, type Tema } from '@/lib/decisor/temas'
 
 /**
- * Detalhe de UM vídeo (ideia) para /analytics/videos/[id].
+ * A FICHA COMPLETA de um vídeo, da ideia à publicação — a rota /video/[id].
  *
- * Consolida: o snapshot por rede (metricas_publicacao, deduplicado por repost), a série temporal
- * (leituras_metricas — o dado forte, 47 dias sem buraco) e o percentil de retenção dentro da rede.
+ * Antes, a vida de um vídeo estava espalhada por quatro telas: a ideia em /ideias/[id], o roteiro
+ * em /roteiros/[id], o áudio em /audios, e o desempenho aqui. Ninguém conseguia responder "o que
+ * aconteceu com o 118?" sem abrir tudo. Agora é uma consulta só e uma tela só, e todo o resto do
+ * app (kanban, agenda, aderência, assets, decisor) aponta pra cá.
+ *
+ * O que ESTA tela não faz é editar: /ideias/[id] e /roteiros/[id] continuam sendo os editores, e a
+ * ficha linka pra eles. Ler e escrever são atos diferentes; fundir os dois seria reescrever 1.500
+ * linhas de formulário que hoje seguram a linha de produção, para ganhar zero em leitura.
+ *
  * Marca "indisponível" o que a API da rede não entrega (retenção em TikTok/Kwai, alcance fora de
  * IG/FB) — nunca finge zero.
  */
+
+/** Uma cena do b-roll, com a fonte de onde ela veio (banco, acervo grátis, Wan, Veo). */
+export interface CenaDoVideo {
+  nome: string
+  prompt: string
+}
+
+export interface EtapaFunil {
+  /** existe? quando? */
+  em: string | null
+  detalhe: string | null
+}
 
 export interface RedeDoVideo {
   plataforma: string
@@ -45,6 +65,36 @@ export interface VideoDetalhe {
   notaHook: number | null
   duracaoSeg: number | null
   videoUrl: string | null
+  // ── a ideia ──
+  descricao: string | null
+  statusIdeia: string | null
+  origem: string | null
+  tags: string[]
+  gatilho: string | null
+  potencialViralIA: number | null
+  criadaEm: string | null
+  /** classificado com título + roteiro — o mesmo tema que a agenda usa pra priorizar */
+  tema: Tema
+  // ── roteiro ──
+  roteiroId: string | null
+  roteiroTexto: string | null
+  roteiroEm: string | null
+  duracaoEstimadaSeg: number | null
+  // ── áudio ──
+  audioUrl: string | null
+  audioEm: string | null
+  vozId: string | null
+  // ── produção ──
+  statusPipeline: string | null
+  thumbUrl: string | null
+  cenas: CenaDoVideo[]
+  cenasGeradasEm: string | null
+  /** de onde veio cada cena e quanto custou de verdade (ledger do render) */
+  ledger: { fontes: Record<string, number>; veoCr: number; economizadoCr: number; quando: string | null } | null
+  // ── copy e agenda ──
+  caption: string | null
+  transcricao: string | null
+  previsto: { data: string; horario: string; fixado: boolean } | null
   // consolidado (soma/represália do que faz sentido somar)
   viewsTotal: number
   reachTotal: number | null // só onde há (IG+FB)
@@ -63,19 +113,24 @@ export function useVideo(ideiaId: string) {
     queryKey: ['video', ideiaId],
     enabled: !!ideiaId,
     queryFn: async () => {
-      const [ideiaQ, metQ, todasMetQ, pipeQ, audioQ, canaisQ, roteiroQ, leiturasQ] = await Promise.all([
-        supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id').eq('id', ideiaId).maybeSingle(),
+      const [ideiaQ, metQ, todasMetQ, pipeQ, audioQ, canaisQ, roteiroQ, leiturasQ, agendaQ] = await Promise.all([
+        supabase.schema('pulso_content').from('ideias').select('*').eq('id', ideiaId).maybeSingle(),
         supabase.schema('pulso_content').from('metricas_publicacao')
           .select('plataforma, url_publicacao, views, reach, likes, comentarios, shares, saves, taxa_retencao, taxa_conversao, data_publicacao, metadata')
           .eq('ideia_id', ideiaId),
         // retenção de TODOS os vídeos, por rede, pra calcular o percentil deste dentro da rede
         supabase.schema('pulso_content').from('metricas_publicacao').select('plataforma, taxa_retencao'),
-        supabase.schema('pulso_content').from('pipeline_producao').select('metadata').eq('ideia_id', ideiaId).maybeSingle(),
-        supabase.schema('pulso_content').from('audios').select('duracao_segundos').eq('ideia_id', ideiaId).limit(1),
+        supabase.schema('pulso_content').from('pipeline_producao').select('status, metadata').eq('ideia_id', ideiaId).maybeSingle(),
+        supabase.schema('pulso_content').from('audios')
+          .select('duracao_segundos, public_url, url, voz_id, created_at').eq('ideia_id', ideiaId)
+          .order('created_at', { ascending: false }).limit(1),
         supabase.schema('pulso_core').from('canais').select('id, nome'),
-        supabase.schema('pulso_content').from('roteiros').select('nota_hook').eq('ideia_id', ideiaId).limit(1),
+        supabase.schema('pulso_content').from('roteiros')
+          .select('id, conteudo_md, nota_hook, duracao_estimado_segundos, created_at').eq('ideia_id', ideiaId)
+          .order('created_at', { ascending: false }).limit(1),
         supabase.schema('pulso_analytics').from('leituras_metricas')
           .select('data_ref, views, plataforma').eq('ideia_id', ideiaId).eq('estimado', false).order('data_ref'),
+        supabase.from('vw_agenda_atribuicoes').select('data, horario, fixado').eq('ideia_id', ideiaId).limit(1),
       ])
       if (!ideiaQ.data) return null
 
@@ -149,18 +204,51 @@ export function useVideo(ideiaId: string) {
       const reachRedes = redes.filter((r) => r.reach != null)
       const seguidoresRedes = redes.filter((r) => r.seguidores != null)
 
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const ideia = ideiaQ.data as any
+      const roteiro = (roteiroQ.data as any[])?.[0] ?? null
+      const audio = (audioQ.data as any[])?.[0] ?? null
+      const md = ((pipeQ.data as any)?.metadata || {}) as any
+      const led = md.ledger_render || null
+      const agendado = (agendaQ.data as any[])?.[0] ?? null
+      /* eslint-enable @typescript-eslint/no-explicit-any */
+
       return {
         ideiaId,
-        titulo: ideiaQ.data.titulo || '(sem título)',
-        canalNome: (ideiaQ.data.canal_id && canalNome.get(ideiaQ.data.canal_id)) || '—',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        numero: (pipeQ.data as any)?.metadata?.numero ?? null,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        notaHook: (roteiroQ.data as any[])?.[0]?.nota_hook ?? null,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        duracaoSeg: (audioQ.data as any[])?.[0]?.duracao_segundos ?? null,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        videoUrl: (pipeQ.data as any)?.metadata?.video_url ?? null,
+        titulo: ideia.titulo || '(sem título)',
+        canalNome: (ideia.canal_id && canalNome.get(ideia.canal_id)) || '—',
+        numero: md.numero ?? null,
+        notaHook: roteiro?.nota_hook ?? null,
+        duracaoSeg: audio?.duracao_segundos ?? null,
+        videoUrl: md.video_url ?? null,
+        descricao: ideia.descricao ?? null,
+        statusIdeia: ideia.status ?? null,
+        origem: ideia.origem ?? null,
+        tags: Array.isArray(ideia.tags) ? ideia.tags : [],
+        gatilho: ideia.gatilho_psicologico ?? null,
+        potencialViralIA: ideia.potencial_viral_ia ?? null,
+        criadaEm: ideia.created_at ?? null,
+        // o mesmo classificador do roteador: título primeiro, roteiro só como desempate com prova
+        tema: classificarTema(ideia.titulo, roteiro?.conteudo_md ?? null),
+        roteiroId: roteiro?.id ?? null,
+        roteiroTexto: roteiro?.conteudo_md ?? null,
+        roteiroEm: roteiro?.created_at ?? null,
+        duracaoEstimadaSeg: roteiro?.duracao_estimado_segundos ?? null,
+        audioUrl: audio?.public_url ?? audio?.url ?? null,
+        audioEm: audio?.created_at ?? null,
+        vozId: audio?.voz_id ?? null,
+        statusPipeline: (pipeQ.data as { status?: string } | null)?.status ?? null,
+        thumbUrl: md.thumb ?? null,
+        cenas: Array.isArray(md.cenas?.scenes)
+          ? md.cenas.scenes.map((c: { name?: string; prompt?: string }) => ({ nome: c.name || '', prompt: c.prompt || '' }))
+          : [],
+        cenasGeradasEm: md.cenas_geradas_em ?? null,
+        ledger: led
+          ? { fontes: led.fontes || {}, veoCr: led.veo_cr ?? 0, economizadoCr: led.economizado_cr ?? 0, quando: led.quando ?? null }
+          : null,
+        caption: md.caption ?? null,
+        transcricao: md.transcricao ?? null,
+        previsto: agendado ? { data: agendado.data, horario: agendado.horario, fixado: !!agendado.fixado } : null,
         viewsTotal,
         reachTotal: reachRedes.length ? reachRedes.reduce((s, r) => s + (r.reach || 0), 0) : null,
         seguidoresTotal: seguidoresRedes.length ? seguidoresRedes.reduce((s, r) => s + (r.seguidores || 0), 0) : null,

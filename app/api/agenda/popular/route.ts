@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     const [gradeQ, ideiasQ, roteirosQ, audiosQ, metricasQ, pipeQ, atribQ] = await Promise.all([
       supabase.from('vw_agenda_semanal').select('*').eq('ativo', true),
       supabase.schema('pulso_content').from('ideias').select('id, canal_id, status, titulo'),
-      supabase.schema('pulso_content').from('roteiros').select('ideia_id'),
+      supabase.schema('pulso_content').from('roteiros').select('ideia_id, conteudo_md'),
       supabase.schema('pulso_content').from('audios').select('ideia_id'),
       supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma, taxa_retencao'),
       supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status, metadata, updated_at'),
@@ -42,6 +42,13 @@ export async function POST(request: NextRequest) {
 
     const grade = gradeQ.data || []
     const comRoteiro = new Set((roteirosQ.data || []).map((r: { ideia_id: string }) => r.ideia_id))
+    // O corpo do roteiro entra na classificação de tema: o título sozinho mandava
+    // "A Misteriosa Biblioteca Subterrânea de Paris" (catacumba, Segunda Guerra, documento
+    // histórico) para "outros", e a agenda deixava de priorizar o tema que sorteia no Facebook.
+    const roteiroDaIdeia = new Map<string, string>()
+    for (const r of (roteirosQ.data || []) as Array<{ ideia_id: string; conteudo_md: string | null }>) {
+      if (r.ideia_id && r.conteudo_md && !roteiroDaIdeia.has(r.ideia_id)) roteiroDaIdeia.set(r.ideia_id, r.conteudo_md)
+    }
     const comAudio = new Set((audiosQ.data || []).map((a: { ideia_id: string }) => a.ideia_id))
     const publicado = new Set((metricasQ.data || []).map((m: { ideia_id: string }) => m.ideia_id))
     const videoPronto = new Set(
@@ -109,6 +116,7 @@ export async function POST(request: NextRequest) {
       candidatos.push({
         ideiaId: i.id,
         titulo: i.titulo || '',
+        corpo: roteiroDaIdeia.get(i.id) ?? null,
         estagio,
         canalId: i.canal_id ?? null,
         percentilCanal: i.canal_id ? (percentilCanal.get(i.canal_id) ?? null) : null,

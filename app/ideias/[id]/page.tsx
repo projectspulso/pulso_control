@@ -330,12 +330,16 @@ export default function IdeiaDetalhesPage({
     <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
-          <Link
-            href="/ideias"
-            className="mb-4 inline-block text-sm text-violet-400 hover:text-violet-300"
-          >
-            Voltar para ideias
-          </Link>
+          <div className="mb-4 flex flex-wrap items-center gap-4">
+            <Link href="/ideias" className="text-sm text-violet-400 hover:text-violet-300">
+              Voltar para ideias
+            </Link>
+            {/* Esta tela EDITA a ideia; a ficha MOSTRA a vida inteira do vídeo (roteiro, áudio,
+                cenas, custo, legenda, agendamento, desempenho) num endereço só. */}
+            <Link href={`/video/${resolvedParams.id}`} className="text-sm text-zinc-500 hover:text-zinc-300">
+              Ficha completa do vídeo →
+            </Link>
+          </div>
 
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>

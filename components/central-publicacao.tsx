@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import { useState } from 'react'
 import { Copy, Check, ChevronDown, ChevronUp, Save, Plus, Send, ExternalLink, Smartphone, Camera } from 'lucide-react'
 
@@ -59,7 +61,8 @@ function CartaoVideo({ video }: { video: VideoPub }) {
 
   return (
     <div className="rounded-xl border border-zinc-800/50 bg-zinc-900/40">
-      <button onClick={() => setAberto((v) => !v)} className="flex w-full items-center gap-3 p-4 text-left">
+      <div className="flex w-full items-center gap-3 p-4">
+      <button onClick={() => setAberto((v) => !v)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
         {video.thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={video.thumb} alt="" className="h-12 w-8 shrink-0 rounded object-cover ring-1 ring-zinc-700" loading="lazy" />
@@ -78,6 +81,15 @@ function CartaoVideo({ video }: { video: VideoPub }) {
         </div>
         {aberto ? <ChevronUp className="h-4 w-4 shrink-0 text-zinc-500" /> : <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500" />}
       </button>
+      {/* A lista fica enxuta e o "detalhes" leva pra ficha — ideia, roteiro, áudio, cenas, custo,
+          legenda, agendamento e desempenho num endereço só. */}
+      <Link
+        href={`/video/${video.ideiaId}`}
+        className="shrink-0 rounded-lg border border-zinc-700/60 px-2.5 py-1 text-[11px] text-zinc-400 hover:border-violet-500/40 hover:text-violet-300"
+      >
+        detalhes
+      </Link>
+      </div>
 
       {aberto && (
         <div className="space-y-4 border-t border-zinc-800/50 p-4">

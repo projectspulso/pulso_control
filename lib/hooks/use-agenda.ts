@@ -31,6 +31,9 @@ export interface Atribuicao {
   /** arquivo do vídeo, quando já existe — a agenda linka direto pro que vai ao ar */
   videoUrl: string | null
   numero: number | null
+  /** roteiro — a tela classifica o tema com ele, igual ao roteador do servidor. Sem isto o
+   *  selo na agenda dizia "outros" para um vídeo que o roteador já tratava como arqueologia. */
+  corpo: string | null
 }
 
 export interface EstoqueItem {
@@ -90,7 +93,7 @@ export function useAgenda(horizonteDias = 21) {
         supabase.from('vw_agenda_semanal').select('*').eq('ativo', true),
         supabase.schema('pulso_core').from('canais').select('id, nome').order('nome'),
         supabase.schema('pulso_content').from('ideias').select('id, canal_id, status, titulo, created_at'),
-        supabase.schema('pulso_content').from('roteiros').select('ideia_id, status'),
+        supabase.schema('pulso_content').from('roteiros').select('ideia_id, status, conteudo_md'),
         supabase.schema('pulso_content').from('audios').select('ideia_id'),
         supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, views'),
         supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status, metadata'),
@@ -209,6 +212,11 @@ export function useAgenda(horizonteDias = 21) {
         const md = (p.metadata || {}) as { video_url?: string; numero?: number }
         if (p.ideia_id) midiaPorIdeia.set(p.ideia_id, { videoUrl: md.video_url ?? null, numero: md.numero ?? null })
       }
+      const roteiroDaIdeia = new Map<string, string>()
+      for (const r of roteirosQ.data || []) {
+        const c = (r as { ideia_id: string; conteudo_md?: string | null }).conteudo_md
+        if (r.ideia_id && c && !roteiroDaIdeia.has(r.ideia_id)) roteiroDaIdeia.set(r.ideia_id, c)
+      }
       const atribuicoes: Record<string, Atribuicao> = {}
       for (const a of atribQ.data || []) {
         const m = a.ideia_id ? midiaPorIdeia.get(a.ideia_id) : null
@@ -219,6 +227,7 @@ export function useAgenda(horizonteDias = 21) {
           status: a.status,
           videoUrl: m?.videoUrl ?? null,
           numero: m?.numero ?? null,
+          corpo: a.ideia_id ? (roteiroDaIdeia.get(a.ideia_id) ?? null) : null,
         }
       }
 

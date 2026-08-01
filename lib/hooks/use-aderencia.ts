@@ -20,6 +20,9 @@ export interface PublicacaoMetrica {
 
 export interface VideoAderencia {
   ideiaId: string
+  /** #NNN — o mesmo número que vai na legenda das redes. É por ele que o dono chama o vídeo
+   *  ("posta o 118"), então a tabela precisa mostrá-lo, não só o título. */
+  numero: number | null
   titulo: string
   canalNome: string
   plataformas: Record<string, PublicacaoMetrica>
@@ -67,11 +70,17 @@ export function useAderencia() {
       if (e1) throw e1
       if (e2) throw e2
 
-      const { data: canais, error: e3 } = await supabase
-        .schema('pulso_core')
-        .from('canais')
-        .select('id, nome')
+      const [{ data: canais, error: e3 }, { data: pipe }] = await Promise.all([
+        supabase.schema('pulso_core').from('canais').select('id, nome'),
+        supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, metadata'),
+      ])
       if (e3) throw e3
+
+      const numeroDaIdeia = new Map<string, number>()
+      for (const p of pipe || []) {
+        const md = (p.metadata || {}) as { numero?: number }
+        if (p.ideia_id && typeof md.numero === 'number') numeroDaIdeia.set(p.ideia_id, md.numero)
+      }
 
       const canalNome = new Map((canais || []).map((c) => [c.id, c.nome]))
       const ideiaInfo = new Map(
@@ -92,6 +101,7 @@ export function useAderencia() {
         if (!porVideo.has(m.ideia_id)) {
           porVideo.set(m.ideia_id, {
             ideiaId: m.ideia_id,
+            numero: numeroDaIdeia.get(m.ideia_id) ?? null,
             titulo: info.titulo,
             canalNome: info.canal,
             plataformas: {},

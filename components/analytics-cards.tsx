@@ -478,7 +478,7 @@ export function ModalDrill({ titulo, publicacoes, onClose }: {
         </div>
         <p className="mt-1 text-xs text-[#6e6b7b]">{n(total)} views somando {pubs.length} rede(s)</p>
         {ideiaId && (
-          <Link href={`/analytics/videos/${ideiaId}`} className="mt-2 inline-block rounded-lg bg-violet-500/15 px-3 py-1 text-xs font-semibold text-violet-200 ring-1 ring-violet-500/30 hover:bg-violet-500/25">
+          <Link href={`/video/${ideiaId}`} className="mt-2 inline-block rounded-lg bg-violet-500/15 px-3 py-1 text-xs font-semibold text-violet-200 ring-1 ring-violet-500/30 hover:bg-violet-500/25">
             Abrir página completa do vídeo ↗
           </Link>
         )}

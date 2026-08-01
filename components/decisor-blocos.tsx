@@ -110,7 +110,7 @@ export function BlocoRadar({ radar }: { radar: PostEmAlta[] }) {
               {p.multiplo}×
             </span>
             <Link
-              href={`/analytics/videos/${p.ideiaId}`}
+              href={`/video/${p.ideiaId}`}
               className="min-w-0 flex-1 truncate text-sm text-zinc-200 hover:text-white hover:underline"
               title={p.titulo}
             >

@@ -63,7 +63,7 @@ export function radarDeEstouro(
   leituras: LeituraBruta[],
   titulos: Map<string, string | null>,
   publicadoEm: Map<string, string>, // "ideiaId|plataforma" -> data ISO
-  opts?: { maxIdadeDias?: number; multiplo?: number; hoje?: string }
+  opts?: { maxIdadeDias?: number; multiplo?: number; hoje?: string; corpos?: Map<string, string | null> }
 ): PostEmAlta[] {
   const maxIdade = opts?.maxIdadeDias ?? 4
   const mult = opts?.multiplo ?? MULTIPLO_ESTOURO
@@ -111,7 +111,7 @@ export function radarDeEstouro(
     saida.push({
       ideiaId: v.ideiaId,
       titulo,
-      tema: classificarTema(titulo),
+      tema: classificarTema(titulo, opts?.corpos?.get(v.ideiaId)),
       plataforma: v.plataforma,
       views: v.views,
       idadeDias: v.idade,
@@ -305,7 +305,9 @@ const LIMITE_ESTOURO = 3000
 export function desempenhoPorTema(
   pubs: PubBruta[],
   titulos: Map<string, string | null>,
-  plataforma?: string
+  plataforma?: string,
+  /** roteiro por ideia — desempata o tema quando o título não diz o assunto */
+  corpos?: Map<string, string | null>
 ): DesempenhoTema[] {
   const porIdeia = new Map<string, number>()
   for (const p of pubs) {
@@ -321,7 +323,7 @@ export function desempenhoPorTema(
   const grupos = new Map<Tema, Array<{ titulo: string; views: number }>>()
   for (const [id, views] of porIdeia) {
     const titulo = titulos.get(id) || ''
-    const tema = classificarTema(titulo)
+    const tema = classificarTema(titulo, corpos?.get(id))
     if (!grupos.has(tema)) grupos.set(tema, [])
     grupos.get(tema)!.push({ titulo, views })
   }
@@ -358,16 +360,16 @@ export interface FilaPorTema {
   emTemaQueSorteia: number
 }
 
-export function filaPorTema(titulosFila: Array<string | null>): FilaPorTema {
+export function filaPorTema(fila: Array<{ titulo: string | null; corpo?: string | null }>): FilaPorTema {
   const cont = new Map<Tema, number>()
-  for (const t of titulosFila) {
-    const tema = classificarTema(t)
+  for (const item of fila) {
+    const tema = classificarTema(item.titulo, item.corpo)
     cont.set(tema, (cont.get(tema) || 0) + 1)
   }
   const porTema = [...cont.entries()]
     .map(([tema, n]) => ({ tema, n, papelFacebook: PAPEL_NO_FACEBOOK[tema] }))
     .sort((a, b) => b.n - a.n)
-  const total = titulosFila.length
+  const total = fila.length
   const emTemaMorto = porTema.filter((p) => p.papelFacebook === 'morto').reduce((s, p) => s + p.n, 0)
   const emTemaQueSorteia = porTema.filter((p) => p.papelFacebook === 'sorteia').reduce((s, p) => s + p.n, 0)
   return {
