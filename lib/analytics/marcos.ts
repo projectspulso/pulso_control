@@ -6,11 +6,42 @@
  * INTERVALO entre marcos — 0→100k levou 26 dias, 100k→200k levou 16. Acelerou 1,6×. Por isso a
  * função devolve o intervalo e a variação de ritmo junto de cada marco, e a tela destaca isso.
  *
- * HONESTIDADE DA FONTE: views são reconstituíveis desde 10/06 (leituras_metricas, série diária
+ * HONESTIDADE DA FONTE: views são reconstituíveis desde 18/06 (leituras_metricas, série diária
  * sem buracos). Seguidores só desde 13/07 (seguidores_historico), e nesse primeiro dia já havia
  * 529 — os marcos de 100 a 500 aconteceram antes de existir registro e são IRRECONSTITUÍVEIS.
  * A tela precisa dizer isso; inventar data para eles seria fabricar história.
+ *
+ * O QUE FICOU DE FORA E POR QUÊ (auditoria de 01/08/2026): só vira escada a série cumulativa cujo
+ * DENOMINADOR não muda no meio. `reach` reprovou — em 24/07 os posts que reportavam alcance
+ * pularam de 86 para 172 e o acumulado foi de 22.559 para 131.970 num dia. Aquele degrau seria da
+ * COLETA, não do alcance. `avg_watch_ms` também fica fora, por outro motivo: é média, não
+ * acumulado — não existe "degrau" de média.
  */
+
+export type GrupoEscada = 'alcance' | 'audiencia' | 'engajamento' | 'producao'
+
+/** Uma escada pronta pra tela: a série + como escalonar + o que a fonte não cobre. */
+export interface EscadaSerie {
+  id: string
+  titulo: string
+  unidade: string
+  grupo: GrupoEscada
+  /** degrau padrão */
+  passo: number
+  /** opções de degrau oferecidas ao humano (o padrão precisa estar aqui) */
+  passos: number[]
+  /** de onde veio e o que a fonte NÃO cobre — vai impresso embaixo da escada */
+  nota: string
+  serie: PontoSerie[]
+  /**
+   * O dia em que este contador estava COMPROVADAMENTE em zero, quando ele é anterior à primeira
+   * observação. Views/curtidas/horas nasceram com o primeiro vídeo (10/06) mesmo sem coleta diária
+   * até 19/06 — os 34.697 views que apareceram de uma vez eram reais, só não observados. Sem isso
+   * o primeiro degrau contaria a partir de 18/06 e diria "18 dias" onde foram 26.
+   * Não existe para seguidor nem para views do canal: aquelas contas já tinham número antes.
+   */
+  inicioReal?: string
+}
 
 export interface PontoSerie {
   data: string
@@ -52,12 +83,23 @@ function diasEntre(deISO: string, ateISO: string): number {
   )
 }
 
+/** Acima disso o piso já comeu parte do primeiro degrau e contar dali distorce a etapa. */
+const FRACAO_DE_PISO_TOLERADA = 0.2
+
 /**
  * @param serie cumulativa e ordenada por data (valor só cresce)
  * @param passo tamanho do degrau (100_000 para views, 100 para seguidores)
- * @param janelaRitmo dias usados para estimar o ritmo recente
+ * @param opcoes.inicioReal dia em que o contador estava comprovadamente em zero, quando anterior
+ *   à primeira observação — é o que permite dizer "0→100k levou 26 dias" numa série que só começou
+ *   a ser observada no 9º dia
+ * @param opcoes.janelaRitmo dias usados para estimar o ritmo recente
  */
-export function calcularMarcos(serie: PontoSerie[], passo: number, janelaRitmo = 7): ResumoMarcos {
+export function calcularMarcos(
+  serie: PontoSerie[],
+  passo: number,
+  opcoes: { inicioReal?: string; janelaRitmo?: number } = {}
+): ResumoMarcos {
+  const { inicioReal, janelaRitmo = 7 } = opcoes
   const ordenada = [...serie].filter((p) => Number.isFinite(p.valor)).sort((a, b) => (a.data < b.data ? -1 : 1))
   if (ordenada.length === 0) {
     return {
@@ -73,14 +115,16 @@ export function calcularMarcos(serie: PontoSerie[], passo: number, janelaRitmo =
   // só marcos ACIMA do piso: abaixo dele o cruzamento aconteceu antes da série existir
   let alvo = Math.ceil((primeiro.valor + 1) / passo) * passo
 
-  // Quando a série começa ABAIXO do primeiro degrau (views nasceram em 378, o degrau é 100.000),
-  // ela pegou a subida inteira: o intervalo do primeiro marco pode ser contado do dia 1 e o
-  // primeiro degrau ganha ritmo comparável. Se o piso já passou do degrau (seguidores começaram
-  // em 529 com degrau de 100), o começo dessa etapa é anterior ao registro e fica sem intervalo —
-  // é o caso em que estimar viraria invenção.
-  const comecouDoZero = primeiro.valor < passo
-  let anterior: string | null = comecouDoZero ? primeiro.data : null
-  let primeiroPendente = comecouDoZero
+  // De onde contar o PRIMEIRO degrau, em ordem de confiança:
+  //  1. `inicioReal` — sabemos o dia do zero (o primeiro vídeo foi ao ar em 10/06), mesmo que a
+  //     coleta diária só tenha começado depois. É o caso das views: em 19/06 apareceram 34.697 de
+  //     uma vez, e eram reais. Contar da série diria "18 dias" onde foram 26.
+  //  2. a série nasceu perto de zero (piso ≤ 20% do degrau) — pegou a subida quase inteira.
+  //  3. nada. O começo dessa etapa é anterior a qualquer medição e o degrau sai sem intervalo,
+  //     porque estimar aqui seria invenção (é o caso de seguidores, que já eram 529 no dia 1).
+  const ancora = inicioReal ?? (primeiro.valor <= passo * FRACAO_DE_PISO_TOLERADA ? primeiro.data : null)
+  let anterior: string | null = ancora
+  let primeiroPendente = ancora != null
 
   for (const p of ordenada) {
     while (p.valor >= alvo) {
