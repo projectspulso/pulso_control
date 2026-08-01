@@ -5,7 +5,7 @@ import { Layers, Film, Music } from 'lucide-react'
 
 import { BancoClipsPanel } from '@/components/banco-clips-panel'
 import { BancoClipsGaleria } from '@/components/banco-clips-galeria'
-import { CentralPublicacao } from '@/components/central-publicacao'
+import { ListaVideos } from '@/components/lista-videos'
 import { LedgerRenderResumo } from '@/components/ledger-render-resumo'
 import { MidiasPanel } from '@/components/midias-panel'
 
@@ -22,7 +22,7 @@ export default function AssetsPage() {
           </h1>
           <p className="mt-2 flex items-center gap-2 text-zinc-400">
             <span className="h-2 w-2 rounded-full bg-pink-500 animate-pulse" />
-            Vídeos com descrição por rede, acervo de clips curado por IA e mídias do pipeline
+            Lista dos vídeos (detalhes na ficha), acervo de clips curado por IA e mídias do pipeline
           </p>
         </div>
 
@@ -50,7 +50,7 @@ export default function AssetsPage() {
           })}
         </div>
 
-        {aba === 'videos' && <CentralPublicacao />}
+        {aba === 'videos' && <ListaVideos />}
 
         {aba === 'acervo' && (
           <>

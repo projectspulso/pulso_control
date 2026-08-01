@@ -12,6 +12,7 @@ import {
 
 import { useVideo, type VideoDetalhe } from '@/lib/hooks/use-video'
 import { MEDIANA_FB_MEDIDA, PAPEL_NO_FACEBOOK } from '@/lib/decisor/temas'
+import { PublicarPorRede } from '@/components/publicar-por-rede'
 
 /**
  * A FICHA DO VÍDEO — um endereço só para a vida inteira dele: ideia → roteiro → áudio → cenas →
@@ -172,7 +173,7 @@ export default function FichaDoVideo({ params }: { params: Promise<{ id: string 
           titulo="O vídeo"
           acao={<a href={d.videoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-300">abrir <ExternalLink className="h-3 w-3" /></a>}
         >
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          { }
           <video src={d.videoUrl} poster={d.thumbUrl ?? undefined} controls preload="metadata" className="max-h-[420px] w-full rounded-xl bg-black object-contain" />
         </Secao>
       )}
@@ -213,7 +214,7 @@ export default function FichaDoVideo({ params }: { params: Promise<{ id: string 
       <Secao icone={<Mic className="h-4 w-4" />} titulo="Áudio">
         {d.audioUrl ? (
           <>
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            { }
             <audio src={d.audioUrl} controls preload="none" className="w-full" />
             <p className="mt-2 text-[11px] text-zinc-600">
               gerado em {data_(d.audioEm)}{d.duracaoSeg != null && <> · {d.duracaoSeg}s</>}
@@ -256,11 +257,9 @@ export default function FichaDoVideo({ params }: { params: Promise<{ id: string 
         ) : <Vazio>Cenas ainda não geradas.</Vazio>}
       </Secao>
 
-      {/* ── copy ── */}
-      <Secao icone={<Send className="h-4 w-4" />} titulo="Legenda para as redes" acao={d.caption ? <Copiar texto={d.caption} /> : undefined}>
-        {d.caption
-          ? <p className="whitespace-pre-wrap rounded-xl border border-white/8 bg-black/20 p-3.5 text-sm leading-relaxed text-zinc-300">{d.caption}</p>
-          : <Vazio>Legenda ainda não escrita.</Vazio>}
+      {/* ── o que precisa pra publicar: título/legenda por rede + passo a passo ── */}
+      <Secao icone={<Send className="h-4 w-4" />} titulo="Publicar nas redes">
+        <PublicarPorRede ideiaId={d.ideiaId} />
       </Secao>
 
       {/* ── agenda ── */}

@@ -19,7 +19,6 @@ import { useState } from 'react'
 
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
-import { KitPublicacao } from '@/components/kit-publicacao'
 import { CockpitDia } from '@/components/cockpit-dia'
 import { useAgendarPublicacao, useConteudosProntos } from '@/lib/hooks/use-calendario'
 import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
@@ -419,7 +418,6 @@ export default function PublicarPage() {
         />
 
         {/* Kit de publicação manual — legenda + passo a passo por rede (YT/FB manuais) */}
-        <KitPublicacao />
 
         {feedback && (
           <div className={`rounded-2xl border p-4 ${getFeedbackClasses(feedback.tone)}`}>
