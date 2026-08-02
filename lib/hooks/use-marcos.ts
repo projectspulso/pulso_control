@@ -14,10 +14,10 @@ import type { EscadaSerie, PontoSerie } from '@/lib/analytics/marcos'
  * desde o primeiro dia. Essas passam. `reach` reprovou (cobertura pulou de 86 para 172 posts em
  * 24/07) e está em ESCADAS_REPROVADAS, impressa na tela com o motivo.
  *
- * O acumulado de cada dia é a soma da ÚLTIMA leitura conhecida de cada post até ali — não a soma
- * das leituras do dia, que daria o ganho diário. Efeito colateral bom: o dia em curso (hoje o Kwai
- * ainda não entrou e o IG está pela metade) não derruba a série, porque quem não foi lido hoje
- * mantém o valor de ontem.
+ * O acumulado de cada dia é a soma da ÚLTIMA leitura conhecida de cada vídeo até ali — não a soma
+ * das leituras do dia, que daria o ganho diário. Efeito colateral bom: o dia em curso (com o Kwai
+ * ainda fora e o IG pela metade) não derruba a série, porque quem não foi lido hoje mantém o valor
+ * de ontem. A chave é `plataforma|ideia_id`; ver o comentário de `acumular` para o porquê.
  */
 
 const REDES_SEGUIDOR = ['youtube', 'instagram', 'facebook', 'tiktok', 'kwai'] as const
@@ -42,6 +42,7 @@ const ESCADAS_REPROVADAS = [
 ]
 
 type Leitura = {
+  ideia_id: string | null
   post_id: string | null
   plataforma: string
   data_ref: string
@@ -52,7 +53,15 @@ type Leitura = {
   view_time_ms: number | null
 }
 
-/** Acumulado diário = soma da última leitura conhecida de cada post. */
+/**
+ * A chave do post é `plataforma|ideia_id`, com `post_id` só como reserva.
+ *
+ * NÃO é detalhe. Com `post_id` na chave, o Kwai colapsava inteiro: das 1.081 leituras dele, só 86
+ * têm post_id (a rede não tem API — os números entram por print, sem id do post), então todas as
+ * outras viravam a mesma chave `kwai|null` e a série contava UM post de Kwai em vez de 79.
+ * Faltavam 49 mil views, e o marco de 300k aparecia como "faltam 13 dias" quando já tinha sido
+ * cruzado em 01/08. É a mesma chave que a use-bi usa — as duas telas precisam contar igual.
+ */
 function acumular(leituras: Leitura[], campo: keyof Leitura, transformar?: (v: number) => number): PontoSerie[] {
   const porDia = new Map<string, Leitura[]>()
   for (const l of leituras) {
@@ -65,7 +74,7 @@ function acumular(leituras: Leitura[], campo: keyof Leitura, transformar?: (v: n
   for (const d of [...porDia.keys()].sort()) {
     for (const l of porDia.get(d)!) {
       const v = l[campo]
-      if (typeof v === 'number') ultima.set(`${l.plataforma}|${l.post_id}`, v)
+      if (typeof v === 'number') ultima.set(`${l.plataforma}|${l.ideia_id ?? l.post_id}`, v)
     }
     let soma = 0
     for (const v of ultima.values()) soma += v
@@ -105,7 +114,7 @@ export function useMarcos() {
           supabase
             .schema('pulso_analytics')
             .from('leituras_metricas')
-            .select('post_id, plataforma, data_ref, views, likes, comentarios, compartilhamentos, view_time_ms')
+            .select('ideia_id, post_id, plataforma, data_ref, views, likes, comentarios, compartilhamentos, view_time_ms')
             // Mesmo recorte da use-bi: o backfill de 19/06 carimbou o valor daquele dia sobre
             // 10–17/06 — não muda os marcos, mas falsifica o piso da série.
             .eq('estimado', false)
@@ -157,7 +166,7 @@ export function useMarcos() {
         {
           id: 'views', titulo: 'Views', unidade: 'views', grupo: 'alcance',
           passo: 100_000, passos: [50_000, 100_000, 250_000],
-          nota: 'Soma das 5 redes, reconstruída da leitura diária por post desde 18/06 — 45 dias sem buraco.',
+          nota: 'Soma das 5 redes, reconstruída da leitura diária por vídeo desde 18/06 — 45 dias sem buraco. Bate com a Aderência.',
           serie: acumular(leituras, 'views'),
           inicioReal: primeiroVideo,
         },
