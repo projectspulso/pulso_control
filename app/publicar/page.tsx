@@ -92,6 +92,11 @@ export default function PublicarPage() {
 
   const [aba, setAba] = useState<'plano' | 'fila'>('plano')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
+  // Quais redes disparar. Nasceu de um caso real: em 03/08 o refresh token do YouTube expirou,
+  // os dois vídeos do dia saíram só no IG e no TikTok, e não havia como mandar SÓ o YouTube pela
+  // tela — precisou de script. A rota é idempotente por (vídeo, rede), então repetir tudo também
+  // funcionaria; ter a escolha evita a dúvida de "vai duplicar?" na hora do conserto.
+  const [redesEscolhidas, setRedesEscolhidas] = useState<Set<string>>(new Set(REDES_API_SEGURAS))
   const [mostrarModalAgendar, setMostrarModalAgendar] = useState(false)
   const [mostrarModalPublicar, setMostrarModalPublicar] = useState(false)
   const [publicando, setPublicando] = useState(false)
@@ -205,6 +210,10 @@ export default function PublicarPage() {
       })
       return
     }
+    if (redesEscolhidas.size === 0) {
+      setFeedback({ tone: 'error', title: 'Nenhuma rede marcada', description: 'Marque ao menos uma rede para disparar.' })
+      return
+    }
 
     setPublicando(true)
     const resultadosMsg: string[] = []
@@ -221,7 +230,7 @@ export default function PublicarPage() {
         // Facebook NÃO entra aqui: estrangula reel via API (alcance 0). Definição e motivo em
         // REDES_API / REDES_PROIBIDAS_API no topo do módulo — inclui a trava anti-reintrodução.
         const linhasRede = await Promise.all(
-          REDES_API_SEGURAS.map((rede) =>
+          REDES_API_SEGURAS.filter((r) => redesEscolhidas.has(r)).map((rede) =>
             fetch('/api/automation/publicar', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -687,7 +696,36 @@ export default function PublicarPage() {
                 nativo com som trending) · YouTube: manual via kit (botão copiar).
               </div>
 
-              <div className="mt-6 flex gap-3">
+              <div className="mt-5 rounded-lg border border-zinc-700/60 bg-zinc-900/50 p-3">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Disparar em</p>
+                <div className="flex flex-wrap gap-2">
+                  {REDES_API_SEGURAS.map((rede) => {
+                    const on = redesEscolhidas.has(rede)
+                    return (
+                      <button
+                        key={rede}
+                        type="button"
+                        onClick={() => setRedesEscolhidas((s) => {
+                          const n = new Set(s)
+                          if (n.has(rede)) n.delete(rede); else n.add(rede)
+                          return n
+                        })}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
+                          on ? 'bg-violet-600 text-white' : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'
+                        }`}
+                      >
+                        {on ? '✓ ' : ''}{rede}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="mt-2 text-[10px] leading-relaxed text-zinc-500">
+                  Quem já saiu na rede é pulado automaticamente (a rota é idempotente por vídeo+rede) — dá pra
+                  repetir sem medo de duplicar. Facebook não entra: via API o alcance vai a zero, é sempre pelo Business Suite.
+                </p>
+              </div>
+
+              <div className="mt-4 flex gap-3">
                 <button
                   type="button"
                   onClick={fecharModalPublicar}
