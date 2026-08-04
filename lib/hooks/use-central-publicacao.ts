@@ -21,6 +21,11 @@ export interface VideoPub {
   publicadoEm: string[] // redes que já subiram (de metricas_publicacao)
   publicadoDatas: Record<string, string> // rede -> data (DD/MM) da 1ª publicação
   publicacao: Record<string, PubRede> // overrides salvos por rede
+  /** rede -> mensagem do último disparo que FALHOU. A rota /publicar já gravava isso em
+   *  metadata.publicacao_meta_api, mas nenhuma tela lia: em 03/08/2026 dois vídeos não subiram no
+   *  YouTube (refresh token expirado) e o app seguiu marcando "publicado", porque IG e TikTok
+   *  tinham dado certo. Erro que não aparece é erro que só se descobre pela falta do vídeo. */
+  errosApi: Record<string, string>
 }
 
 export const REDES_PADRAO = ['youtube', 'instagram', 'tiktok', 'facebook', 'kwai'] as const
@@ -86,6 +91,11 @@ export function useCentralPublicacao() {
             Object.entries(rawDatas.get(p.ideia_id) || {}).map(([rede, iso]) => [rede, fmtData(iso)]),
           ),
           publicacao: (md.publicacao as Record<string, PubRede>) || {},
+          errosApi: Object.fromEntries(
+            (Array.isArray(md.publicacao_meta_api) ? md.publicacao_meta_api : [])
+              .filter((r: { status?: string; erro?: string }) => r?.status === 'ERRO' && r?.erro)
+              .map((r: { plataforma: string; erro: string }) => [r.plataforma, r.erro])
+          ),
         }
       }).sort((a, b) => Number(b.pronto) - Number(a.pronto) || (b.numero ?? 0) - (a.numero ?? 0))
     },

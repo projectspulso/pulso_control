@@ -138,8 +138,13 @@ export function PublicarPorRede({ ideiaId }: { ideiaId: string }) {
       {redes.map((rede) => {
         const jaPub = video.publicadoEm.includes(rede)
         const dataPub = video.publicadoDatas[rede]
+        const erro = video.errosApi[rede]
         return (
-          <div key={rede} className={`rounded-xl p-3.5 ${jaPub ? 'border border-amber-500/30 bg-amber-500/[0.05]' : 'border border-white/8 bg-black/20'}`}>
+          <div key={rede} className={`rounded-xl p-3.5 ${
+            erro && !jaPub ? 'border border-red-500/40 bg-red-500/[0.06]'
+            : jaPub ? 'border border-amber-500/30 bg-amber-500/[0.05]'
+            : 'border border-white/8 bg-black/20'
+          }`}>
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wide text-zinc-300">{rede}</span>
               {REDES_MANUAIS.has(rede) && (
@@ -152,6 +157,11 @@ export function PublicarPorRede({ ideiaId }: { ideiaId: string }) {
                   já publicado{dataPub ? ` em ${dataPub}` : ''} — não repostar
                 </span>
               )}
+              {erro && !jaPub && (
+                <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-300">
+                  falhou no disparo
+                </span>
+              )}
               <button
                 onClick={() => setPassos((p) => (p === rede ? null : rede))}
                 className="ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-zinc-500 hover:text-zinc-300"
@@ -159,6 +169,12 @@ export function PublicarPorRede({ ideiaId }: { ideiaId: string }) {
                 {passos === rede ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />} como postar
               </button>
             </div>
+
+            {erro && !jaPub && (
+              <p className="mb-2 rounded-md border border-red-500/25 bg-red-500/[0.07] p-2 text-[11px] leading-relaxed text-red-200/90">
+                O último disparo por API falhou aqui: <code className="break-all text-red-200">{erro}</code>
+              </p>
+            )}
 
             {passos === rede && PASSOS[rede] && (
               <ol className="mb-2 list-decimal space-y-0.5 rounded-lg bg-black/30 p-3 pl-6 text-[11px] text-zinc-300">

@@ -57,13 +57,19 @@ export function ListaVideos() {
             </Link>
             {!v.pronto && <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">a montar</span>}
             <div className="hidden shrink-0 gap-1 sm:flex">
-              {REDES_PADRAO.map((r) => (
-                <span
-                  key={r}
-                  title={v.publicadoEm.includes(r) ? `${r}: publicado${v.publicadoDatas[r] ? ` em ${v.publicadoDatas[r]}` : ''}` : `${r}: ainda não`}
-                  className={`h-2 w-2 rounded-full ${v.publicadoEm.includes(r) ? COR_REDE[r] : 'bg-zinc-700'}`}
-                />
-              ))}
+              {REDES_PADRAO.map((r) => {
+                const pub = v.publicadoEm.includes(r)
+                const erro = !pub && v.errosApi[r]
+                return (
+                  <span
+                    key={r}
+                    title={pub
+                      ? `${r}: publicado${v.publicadoDatas[r] ? ` em ${v.publicadoDatas[r]}` : ''}`
+                      : erro ? `${r}: FALHOU — ${erro}` : `${r}: ainda não`}
+                    className={`h-2 w-2 rounded-full ${pub ? COR_REDE[r] : erro ? 'bg-red-500 ring-1 ring-red-400/50' : 'bg-zinc-700'}`}
+                  />
+                )
+              })}
             </div>
             <Link
               href={`/video/${v.ideiaId}`}
