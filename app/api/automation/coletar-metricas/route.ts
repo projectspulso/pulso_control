@@ -518,15 +518,32 @@ async function coletar(request: NextRequest) {
   const pubsResto = publicacoes.filter((p) => p.plataforma !== 'instagram')
   await comPool(pubsResto, 16, processarPub)
 
-  // INSTAGRAM com concorrência menor. Cheguei a construir um rodízio aqui achando que a cota da
-  // Graph API não sustentava ler tudo — estava errado: a cota marcava 1% de uso. O que derrubava
-  // 41 de 44 chamadas era a métrica `facebook_views` na lista (ver acima). Com ela isolada, os
-  // 100 posts leem numa rodada só. Fica 3 em voo por educação com a API, não por necessidade.
-  const igDaVez = publicacoes.filter((p) => p.plataforma === 'instagram')
-  await comPool(igDaVez, 3, async (p) => {
+  // INSTAGRAM: NOVOS PRIMEIRO, e com folga de concorrência.
+  //
+  // O pool de 3 com pausa de 150ms coube enquanto eram ~100 posts. Em 01/08 o volume passou disso
+  // e o Instagram deixou de caber nos 60s da Vercel: passou a ler 56-67 de 107 todo dia, contra
+  // 105-107 das outras redes. Pior, a consulta não tinha ORDEM — o pool consome o array como vem,
+  // então quem ficava de fora era sempre a CAUDA, isto é, os posts mais novos. Os dois vídeos de
+  // 03/08 ficaram com views=0 no app por dois dias enquanto os antigos atualizavam normalmente.
+  //
+  // Duas correções: ordenar por publicação DESC (post de ontem muda muito, post de junho quase
+  // não muda) e subir o pool para 8 — a cota da Graph marcava 1% de uso, os 3 eram educação, não
+  // necessidade. E um prazo explícito: se ainda assim não couber, para limpo e AVISA quantos
+  // ficaram, em vez de a função morrer calada no meio.
+  const PRAZO_IG_MS = 50_000
+  const igDaVez = publicacoes
+    .filter((p) => p.plataforma === 'instagram')
+    .sort((a, b) => String(b.data_publicacao || '').localeCompare(String(a.data_publicacao || '')))
+  let igLidos = 0
+  let igPulados = 0
+  await comPool(igDaVez, 8, async (p) => {
+    if (Date.now() - agora.getTime() > PRAZO_IG_MS) { igPulados++; return }
     await processarPub(p)
-    await new Promise((r) => setTimeout(r, 150))
+    igLidos++
   })
+  if (igPulados > 0) {
+    avisos.push(`Instagram: ${igLidos} lidos, ${igPulados} ficaram para a próxima rodada (prazo de ${PRAZO_IG_MS / 1000}s). Os mais novos foram primeiro.`)
+  }
 
   return NextResponse.json({
     success: true,
