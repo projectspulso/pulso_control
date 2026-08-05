@@ -557,6 +557,9 @@ export const ABAS = [
   // Crescimento mostra a curva; Marcos mostra os degraus (100k views, 100 seguidores) e sobretudo
   // o INTERVALO entre eles — a única leitura que diz "acelerou ou não" sem depender de ler gráfico.
   { id: 'marcos' as const, label: 'Marcos' },
+  // O inverso do radar de estouro. Separada por MOTIVO, porque "não foi entregue" e "foi entregue
+  // e ninguém quis" pedem ações opostas — e misturar os dois dá conclusão errada.
+  { id: 'flops' as const, label: 'Flops' },
   { id: 'financeiro' as const, label: 'Financeiro' },
   // A biblioteca de clips como ATIVO: economia, fadiga, escassez de tema. O /assets navega a
   // galeria; aqui é o valor econômico dela.
