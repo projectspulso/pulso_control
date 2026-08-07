@@ -20,7 +20,7 @@ Uso:
   python worker_render.py --next          # próximo da fila
   python worker_render.py <ideia_id>      # item específico
 """
-import os, re, json, base64, shutil, subprocess, urllib.request, sys, datetime
+import os, re, json, base64, shutil, subprocess, urllib.request, urllib.error, sys, datetime
 sys.path.insert(0, "D:/tmp"); import pulso_guard as g
 
 ENV = {}
@@ -255,9 +255,42 @@ def run(ideia_id=None):
         nums = [int(x.get('metadata', {}).get('numero')) for x in allp if str((x.get('metadata') or {}).get('numero')).isdigit()]
         num = (max(nums) if nums else 0) + 1
     FN = "%s_%03d.mp4" % (slug, num)
+
+    # TETO DE 50 MB DO STORAGE — a fila inteira parou por causa disto em 02/08 e ninguém viu.
+    # O #112 saiu do render com 66 MB (7,8 Mbps), o POST voltou 413 "Payload too large", e como o
+    # worker engolia o corpo do erro o log só dizia "crashou: HTTP 400". Ele então repetia o MESMO
+    # item a cada rodada e anunciava "fila vazia — fim da rodada", parecendo saudável. Cinco dias
+    # sem estoque novo.
+    #
+    # Não era caso isolado: robo_leitor tinha 49 MB, a um megabyte da parede. O render entrega
+    # muito mais bitrate do que qualquer rede consome — Reels/Shorts re-comprimem para 2-3 Mbps.
+    # Teto de 4 Mbps derruba o #112 de 66 para 31 MB com a mesma duração, resolução e áudio.
+    # A MESMA cópia vai pro Storage e pro OneDrive, senão o vídeo publicado por API e o publicado
+    # à mão passam a ser arquivos diferentes.
+    LIMITE_MB = 45
+    tam_mb = os.path.getsize(final) / 1024 / 1024
+    if tam_mb > LIMITE_MB:
+        enxuto = final.replace(".mp4", "_web.mp4")
+        log("vídeo com %.1f MB (teto %d) — recomprimindo com teto de 4 Mbps" % (tam_mb, LIMITE_MB))
+        subprocess.run(["ffmpeg", "-y", "-i", final, "-c:v", "libx264", "-crf", "24",
+                        "-maxrate", "4M", "-bufsize", "8M", "-preset", "veryfast",
+                        "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", enxuto],
+                       capture_output=True, timeout=900)
+        novo_mb = os.path.getsize(enxuto) / 1024 / 1024 if os.path.exists(enxuto) else 0
+        if 0 < novo_mb <= LIMITE_MB:
+            log("recomprimido: %.1f MB -> %.1f MB" % (tam_mb, novo_mb))
+            final = enxuto
+        else:
+            raise Exception("nao consegui deixar o video abaixo de %d MB (%.1f MB) — confira o render" % (LIMITE_MB, novo_mb or tam_mb))
+
     data = open(final, "rb").read()
-    urllib.request.urlopen(urllib.request.Request(U + "/storage/v1/object/pulso-assets/videos/" + FN, data=data, method="POST",
-        headers={"Authorization": "Bearer " + K, "Content-Type": "video/mp4", "x-upsert": "true"}), timeout=300).read()
+    try:
+        urllib.request.urlopen(urllib.request.Request(U + "/storage/v1/object/pulso-assets/videos/" + FN, data=data, method="POST",
+            headers={"Authorization": "Bearer " + K, "Content-Type": "video/mp4", "x-upsert": "true"}), timeout=300).read()
+    except urllib.error.HTTPError as e:
+        # Ler o corpo é o que faltava: sem isto o motivo real ("Payload too large") morre e sobra
+        # um "HTTP 400" que não diz nada.
+        raise Exception("upload do video falhou (%s): %s" % (e.code, e.read().decode("utf-8", "ignore")[:200]))
     pub = f"{U}/storage/v1/object/public/pulso-assets/videos/{FN}"
     nmd = dict(md); nmd['video_url'] = pub; nmd['caption'] = cap; nmd['numero'] = num
     nmd.pop('render_status', None)  # deu certo — limpa o estado de render
@@ -311,7 +344,15 @@ if __name__ == "__main__":
             try:
                 run(p['ideia_id'])
             except Exception as e:
-                log("item %s crashou: %s" % (p['ideia_id'][:8], str(e)[:120]))
+                motivo = str(e)[:200]
+                log("item %s crashou: %s" % (p['ideia_id'][:8], motivo))
+                # Carimba o erro no item (o app lê metadata.render_status). Sem isto ele reentra
+                # na fila toda rodada como se nada tivesse acontecido — foi assim que o #112
+                # travou a produção por cinco dias sem ninguém ver.
+                try:
+                    set_render_status(p, 'erro', motivo)
+                except Exception:
+                    pass
     else:
         run(arg)
     atualizar_saldo_higgsfield()  # saldo DEPOIS do render (captura o gasto)
