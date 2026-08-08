@@ -25,6 +25,24 @@ import { REDES_API_SEGURAS } from '@/lib/publicacao/redes-api'
 
 export const maxDuration = 60
 
+/**
+ * O FUSO, que quase custou 3 horas de erro silencioso.
+ *
+ * `data_publicacao_planejada` é `timestamp WITHOUT time zone`: o banco guarda "2026-08-08T11:00:00"
+ * e descarta qualquer offset que a gente mande. Um `new Date()` nessa string usa o fuso do
+ * PROCESSO — que aqui na máquina do dono é BRT e na Vercel é UTC. O mesmo agendamento dispararia
+ * às 11h em teste e às 8h em produção, e nada no log denunciaria.
+ *
+ * A intenção de quem marca a hora é sempre horário de Brasília. Então é isso que assumimos,
+ * explicitamente, em vez de deixar o fuso do servidor decidir.
+ */
+const FUSO_DO_DONO = '-03:00'
+
+function horaMarcada(valor: string): Date {
+  // já tem offset (Z ou ±hh:mm)? respeita. Senão, é hora de Brasília.
+  return /[Zz]|[+-]\d{2}:?\d{2}$/.test(valor) ? new Date(valor) : new Date(`${valor}${FUSO_DO_DONO}`)
+}
+
 /** Sem isso um bug de data viraria dez posts numa hora. O teto vem da config da linha. */
 const TETO_PADRAO_POR_DIA = 2
 /** Não ressuscita agendamento antigo: hora que venceu há dias não é plano, é esquecimento. */
@@ -71,7 +89,7 @@ async function publicarAgendados(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const vencidos = ((pipeQ.data || []) as any[])
     .filter((p) => {
-      const quando = new Date(p.data_publicacao_planejada)
+      const quando = horaMarcada(p.data_publicacao_planejada)
       return quando <= agora && quando >= limiteAtraso && !jaSaiu.has(p.ideia_id)
     })
     .sort((a, b) => (a.data_publicacao_planejada < b.data_publicacao_planejada ? -1 : 1))
