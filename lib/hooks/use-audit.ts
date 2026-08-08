@@ -83,7 +83,10 @@ export function useAudit() {
       for (const r of mp) if (r.post_id && !ehPlaceholder(r.post_id)) {
         const k = `${r.plataforma}|${r.post_id}`; seen.set(k, (seen.get(k) || 0) + 1)
       }
-      add('post_dup', 'post_id duplicado na mesma rede',
+      // Desde 08/08/2026 existe UNIQUE(plataforma, post_id) WHERE post_id IS NOT NULL no banco:
+      // duplicata não CONSEGUE mais entrar. Este check virou rede de segurança — se algum dia
+      // acender de novo, é porque o índice caiu, não porque alguém errou o clique.
+      add('post_dup', 'post_id duplicado na mesma rede (barrado por índice único no banco)',
         [...seen.entries()].filter(([, n]) => n > 1).map(([k]) => k))
 
       const okCount = checks.filter((c) => c.ok).length
