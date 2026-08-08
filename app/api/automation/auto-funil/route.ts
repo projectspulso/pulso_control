@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { guardApi } from '@/lib/auth/api-guard'
+import { repassarCredencial } from '@/lib/auth/repassar-credencial'
 
 /**
  * AUTO-FUNIL — enche o estoque SEM tirar a aprovação humana.
@@ -75,13 +76,16 @@ async function autoFunil(request: NextRequest) {
 
   // gera o roteiro de cada (self-call à rota que já existe; repassa o segredo do cron)
   const origin = new URL(request.url).origin
-  const auth = request.headers.get('authorization') || ''
+  // Repassa TODAS as credenciais que o servidor tem — não só o authorization de quem chamou.
+  // Passar só o authorization fazia esta rota devolver `success: true` com `gerados: 0` e
+  // "Nao autorizado" em cada item: ela achava os candidatos certos e não escrevia nada.
+  const credenciais = repassarCredencial(request)
   const gerados: Array<{ titulo: string; canal: string; ok: boolean; erro?: string }> = []
   for (const a of alvos) {
     try {
       const r = await fetch(`${origin}/api/automation/gerar-roteiro`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: auth },
+        headers: credenciais,
         body: JSON.stringify({ ideia_id: a.id }),
       })
       const d = await r.json().catch(() => ({}))

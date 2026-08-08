@@ -247,7 +247,16 @@ def run(ideia_id=None):
     log("QC OK:", json.dumps(info, ensure_ascii=False))
 
     # legenda: cérebro (cenas.caption) -> roteiro.legendas -> título
-    cap = (cenas.get('caption') or "").strip() or ((rot.get('metadata') or {}).get('legendas') or {}).get('legenda_ig_fb') or rot.get('titulo', '')
+    # A legenda JÁ ESCRITA no pipeline vem primeiro. Antes o render caía direto no título quando
+    # o gerador de cenas não trazia caption, e sobrescrevia legenda boa por 63 caracteres. Isso
+    # quebrou duas coisas de uma vez em 07/08: a legenda que iria pras redes virou só o título, e
+    # a reconciliação do Facebook (que casa o reel pela semelhança de texto) passou a não achar
+    # par — o reel do #140 ficou órfão na página porque a âncora tinha 71 chars contra os 328 de
+    # mediana. Legenda escrita à mão não pode ser apagada por um passo posterior.
+    cap = ((md.get('caption') or "").strip()
+           or (cenas.get('caption') or "").strip()
+           or ((rot.get('metadata') or {}).get('legendas') or {}).get('legenda_ig_fb')
+           or rot.get('titulo', ''))
 
     # upload + PRONTO + OneDrive
     if not num:

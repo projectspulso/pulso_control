@@ -55,6 +55,10 @@
     {
       "path": "/api/automation/reconciliar-publicacoes",
       "schedule": "45 0 * * *"
+    },
+    {
+      "path": "/api/automation/publicar-agendados",
+      "schedule": "5 * * * *"
     }
   ]
 }

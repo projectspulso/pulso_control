@@ -21,6 +21,7 @@ import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { CockpitDia } from '@/components/cockpit-dia'
 import { useAgendarPublicacao, useConteudosProntos } from '@/lib/hooks/use-calendario'
+import { REDES_API_SEGURAS } from '@/lib/publicacao/redes-api'
 import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
 
 type FeedbackTone = 'success' | 'error' | 'info'
@@ -31,30 +32,6 @@ interface FeedbackState {
   description: string
 }
 
-/**
- * REDES QUE PUBLICAM VIA API. O Facebook está FORA DE PROPÓSITO — não é esquecimento.
- *
- * TESTE 11/07/2026 (conta aquecida ~20 dias, mesma página, reels published:true): FB via API
- * entregou ALCANCE 0 nos 3 testes, contra 234/265 pela mão. Só o método difere — é política de
- * distribuição do FB pra reel não-nativo (o IG, mesma Graph API, não sofre isso). Confirmado no
- * dado atual: FB MANUAL rende ~2.261 views/post e 65k de alcance/14d — 7× a melhor rede de API.
- *
- * Botar 'facebook' aqui = jogar fora a rede de maior alcance do PULSO. Se um dia quiser reverter,
- * é DECISÃO CONSCIENTE: tem que remover o Facebook de REDES_PROIBIDAS_API abaixo TAMBÉM, e o
- * certo é re-testar o alcance antes. Ver memória teste-alcance-api-vs-manual.
- */
-const REDES_API = ['youtube', 'instagram', 'tiktok'] as const
-const REDES_PROIBIDAS_API = ['facebook'] as const // FB estrangula reel não-nativo via API (0 alcance)
-
-// Trava de segurança: se alguém re-adicionar uma rede proibida em REDES_API sem remover daqui,
-// isto avisa alto no console em vez de silenciosamente matar o alcance daquela rede.
-const REDES_API_SEGURAS = REDES_API.filter((r) => {
-  if ((REDES_PROIBIDAS_API as readonly string[]).includes(r)) {
-    console.error(`[publicar] "${r}" está em REDES_API mas é PROIBIDA (estrangula via API) — removendo. Ver comentário.`)
-    return false
-  }
-  return true
-})
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {

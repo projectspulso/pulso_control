@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { guardApi } from '@/lib/auth/api-guard'
+import { repassarCredencial } from '@/lib/auth/repassar-credencial'
 
 /**
  * AUTO-AUDIO — gera áudio dos roteiros que VOCÊ aprovou e ainda não têm áudio.
@@ -53,14 +54,13 @@ async function autoAudio(request: NextRequest) {
     .slice(0, MAX_POR_RUN)
 
   const origin = new URL(request.url).origin
-  const auth = request.headers.get('authorization') || ''
-  const ws = process.env.WEBHOOK_SECRET || ''
+  const credenciais = repassarCredencial(request)
   const feitos: Array<{ titulo: string; ok: boolean; erro?: string }> = []
   for (const a of alvos) {
     try {
       const r = await fetch(`${origin}/api/automation/gerar-audio`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: auth, 'x-webhook-secret': ws },
+        headers: credenciais,
         body: JSON.stringify({ roteiro_id: a.id }),
       })
       const d = await r.json().catch(() => ({}))
