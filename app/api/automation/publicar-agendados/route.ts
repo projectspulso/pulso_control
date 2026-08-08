@@ -23,6 +23,19 @@ import { REDES_API_SEGURAS } from '@/lib/publicacao/redes-api'
  * ele só toca no que TEM data marcada à mão.
  */
 
+/**
+ * POR QUE O CRON É DIÁRIO E NÃO DE HORA EM HORA.
+ *
+ * A primeira versão registrou `5 * * * *` no vercel.json. O plano é Hobby, e a Vercel **recusa o
+ * deploy inteiro**: "Hobby accounts are limited to daily cron jobs". Pior — pelo caminho do
+ * GitHub ela falha em SILÊNCIO: nenhum build aparece na lista, nem como erro. Cinco commits
+ * ficaram fora de produção por dois dias sem nada denunciando; o que denunciou foi comparar o
+ * HTTP das rotas (404 nesta, 401 nas vizinhas).
+ *
+ * Solução sem upgrade: o Hobby aceita VÁRIOS crons, desde que cada um rode 1×/dia. São três
+ * entradas diárias, uma por horário da grade (12h/18h/21h BRT = 15/21/00 UTC). A janela de
+ * atraso de 12h abaixo cobre a folga de ±1h que o Hobby aplica no disparo.
+ */
 export const maxDuration = 60
 
 /**

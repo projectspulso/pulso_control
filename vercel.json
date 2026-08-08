@@ -58,7 +58,15 @@
     },
     {
       "path": "/api/automation/publicar-agendados",
-      "schedule": "5 * * * *"
+      "schedule": "5 15 * * *"
+    },
+    {
+      "path": "/api/automation/publicar-agendados",
+      "schedule": "5 21 * * *"
+    },
+    {
+      "path": "/api/automation/publicar-agendados",
+      "schedule": "5 0 * * *"
     }
   ]
 }
