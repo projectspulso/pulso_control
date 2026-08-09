@@ -56,6 +56,11 @@ function horaMarcada(valor: string): Date {
   return /[Zz]|[+-]\d{2}:?\d{2}$/.test(valor) ? new Date(valor) : new Date(`${valor}${FUSO_DO_DONO}`)
 }
 
+/** Data no calendário do dono (YYYY-MM-DD em Brasília), não no do servidor. */
+function diaBRT(d: Date): string {
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+}
+
 /** Sem isso um bug de data viraria dez posts numa hora. O teto vem da config da linha. */
 const TETO_PADRAO_POR_DIA = 2
 /** Não ressuscita agendamento antigo: hora que venceu há dias não é plano, é esquecimento. */
@@ -90,11 +95,16 @@ async function publicarAgendados(request: NextRequest) {
   } catch { /* mantém o padrão */ }
 
   // Quantos VÍDEOS já saíram hoje (por ideia, não por linha — 1 vídeo em 3 redes conta 1).
-  const hoje = agora.toISOString().slice(0, 10)
+  //
+  // O DIA É O DE BRASÍLIA, não o do UTC. Contar em UTC engoliu o #138 em 08/08/2026: às 18:05 BRT
+  // a rota somou o #139 (publicado à tarde) com o #140 — que saiu às 23:30 BRT do DIA ANTERIOR e,
+  // em UTC, cai no dia seguinte. Teto cheio, nada disparou, e como nada dispara não grava log:
+  // some sem deixar rastro. Qualquer publicação depois das 21h BRT roubava a vaga do dia seguinte.
+  const hoje = diaBRT(agora)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pubs = (pubQ.data || []) as any[]
   const publicadosHoje = new Set(
-    pubs.filter((p) => (p.data_publicacao || '').slice(0, 10) === hoje).map((p) => p.ideia_id)
+    pubs.filter((p) => p.data_publicacao && diaBRT(new Date(p.data_publicacao)) === hoje).map((p) => p.ideia_id)
   )
   // Já publicado em ALGUMA rede = não é mais candidato do agendamento (o resto é escolha manual).
   const jaSaiu = new Set(pubs.filter((p) => p.data_publicacao).map((p) => p.ideia_id))
