@@ -125,8 +125,11 @@ async function publicarAgendados(request: NextRequest) {
     })
     .sort((a, b) => (a.data_publicacao_planejada < b.data_publicacao_planejada ? -1 : 1))
 
+  // UM VÍDEO POR RODADA. A função morre aos 60s (teto do Hobby) e um vídeo já consome quase isso
+  // por causa do Instagram. Dois na mesma rodada garantiriam timeout no segundo. Como o cron bate
+  // de hora em hora e a janela de atraso é de 12h, o acúmulo se resolve nas rodadas seguintes.
   const vagas = Math.max(0, tetoDia - publicadosHoje.size)
-  const aDisparar = vencidos.slice(0, vagas)
+  const aDisparar = vencidos.slice(0, Math.min(vagas, 1))
 
   const origin = new URL(request.url).origin
   const credenciais = repassarCredencial(request)
@@ -138,30 +141,47 @@ async function publicarAgendados(request: NextRequest) {
       resultados.push({ numero: md.numero ?? null, marcado: p.data_publicacao_planejada, redes: 'sem video_url — pulado', ok: false })
       continue
     }
-    // Uma chamada por rede, igual à tela faz: assim uma rede que falha não derruba as outras.
-    const porRede: string[] = []
-    for (const rede of REDES_API_SEGURAS) {
-      try {
-        const r = await fetch(`${origin}/api/automation/publicar`, {
-          method: 'POST',
-          headers: credenciais,
-          body: JSON.stringify({
-            pipeline_id: p.id, video_url: md.video_url, caption: md.caption,
-            plataformas: [rede], confirmar: true,
-          }),
-        })
-        const d = await r.json().catch(() => ({}))
-        const r0 = (d.resultados || [])[0]
-        porRede.push(`${rede}:${r0?.status || (d.error ? 'ERRO' : '?')}`)
-      } catch (e) {
-        porRede.push(`${rede}:FALHOU(${e instanceof Error ? e.message.slice(0, 40) : 'erro'})`)
-      }
-    }
+    // AS TRÊS REDES EM PARALELO — e cada uma com prazo próprio.
+    //
+    // Em sequência isto perdia o TikTok todo dia. Medido em 10/08/2026 no #114: YouTube e
+    // Instagram publicaram às 12:05, o TikTok não saiu e a rodada nem chegou a gravar log. O
+    // Instagram espera o container ficar pronto (30-60s) e sozinho estourava os 60s da função;
+    // como o TikTok é o último da lista, era sempre ele que ficava para trás. Não era escolha,
+    // era a função sendo morta no meio.
+    //
+    // Em paralelo o tempo total passa a ser o da rede mais lenta, não a soma. O AbortController
+    // garante que uma rede pendurada não leve as outras junto nem impeça o log no fim.
+    const PRAZO_POR_REDE_MS = 45_000
+    const porRede = await Promise.all(
+      REDES_API_SEGURAS.map(async (rede) => {
+        const cancelar = AbortSignal.timeout(PRAZO_POR_REDE_MS)
+        try {
+          const r = await fetch(`${origin}/api/automation/publicar`, {
+            method: 'POST',
+            headers: credenciais,
+            signal: cancelar,
+            body: JSON.stringify({
+              pipeline_id: p.id, video_url: md.video_url, caption: md.caption,
+              plataformas: [rede], confirmar: true,
+            }),
+          })
+          const d = await r.json().catch(() => ({}))
+          const r0 = (d.resultados || [])[0]
+          return `${rede}:${r0?.status || (d.error ? 'ERRO' : '?')}`
+        } catch (e) {
+          const msg = e instanceof Error && e.name === 'TimeoutError' ? `PRAZO(${PRAZO_POR_REDE_MS / 1000}s)` : e instanceof Error ? e.message.slice(0, 40) : 'erro'
+          return `${rede}:FALHOU(${msg})`
+        }
+      })
+    )
+    // `ok` exige TODAS as redes, não "alguma". Com `some`, o #114 de 10/08 — que saiu no YouTube
+    // e no Instagram e não saiu no TikTok — teria sido registrado como sucesso pleno, e a rede
+    // faltando só apareceria dias depois na Aderência. Rede que ficou de fora tem que doer no log.
     resultados.push({
       numero: md.numero ?? null,
       marcado: p.data_publicacao_planejada,
       redes: porRede.join(' · '),
-      ok: porRede.some((x) => x.includes('PUBLICADO')),
+      ok: porRede.every((x) => x.includes('PUBLICADO') || x.includes('PROCESSANDO')),
     })
   }
 
