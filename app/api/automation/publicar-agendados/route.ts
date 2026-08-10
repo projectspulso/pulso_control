@@ -24,17 +24,25 @@ import { REDES_API_SEGURAS } from '@/lib/publicacao/redes-api'
  */
 
 /**
- * POR QUE O CRON É DIÁRIO E NÃO DE HORA EM HORA.
+ * QUEM CHAMA ESTA ROTA: pg_cron dentro do Postgres — NÃO o cron da Vercel.
  *
- * A primeira versão registrou `5 * * * *` no vercel.json. O plano é Hobby, e a Vercel **recusa o
- * deploy inteiro**: "Hobby accounts are limited to daily cron jobs". Pior — pelo caminho do
- * GitHub ela falha em SILÊNCIO: nenhum build aparece na lista, nem como erro. Cinco commits
- * ficaram fora de produção por dois dias sem nada denunciando; o que denunciou foi comparar o
- * HTTP das rotas (404 nesta, 401 nas vizinhas).
+ * Duas tentativas fracassaram no plano Hobby, cada uma falhando em silêncio de um jeito
+ * diferente, e as duas custaram dias:
  *
- * Solução sem upgrade: o Hobby aceita VÁRIOS crons, desde que cada um rode 1×/dia. São três
- * entradas diárias, uma por horário da grade (12h/18h/21h BRT = 15/21/00 UTC). A janela de
- * atraso de 12h abaixo cobre a folga de ±1h que o Hobby aplica no disparo.
+ *  1. `5 * * * *` no vercel.json → a Vercel RECUSA O DEPLOY INTEIRO ("Hobby accounts are limited
+ *     to daily cron jobs"). Pelo GitHub a recusa é muda: nenhum build na lista, nem como erro.
+ *     Cinco commits ficaram fora do ar por dois dias.
+ *  2. Três crons diários (15/21/00 UTC) → o deploy passou, os três apareceram no painel e
+ *     NENHUM executou. Outros crons do mesmo projeto rodaram no mesmo dia (o `coletar-metricas`
+ *     renovou o token do TikTok às 11:40 UTC), então não é o projeto: é limite de cron do Hobby
+ *     mordendo os jobs novos. Resultado: o dia 61 do desafio ficou sem publicação.
+ *
+ * Agora o agendamento mora no banco (`cron.schedule` + `net.http_post`, segredo no Vault), igual
+ * ao limelight. O Postgres não tem plano Hobby: aceita a frequência que quisermos e não depende
+ * de deploy. De hora em hora — qualquer horário da grade é alcançado em no máximo 60 minutos, e
+ * as travas abaixo (teto diário + janela de 12h) é que decidem o que sai.
+ *
+ * Ver docs/20_BANCO/CRON_PUBLICACAO.md.
  */
 export const maxDuration = 60
 
@@ -164,16 +172,25 @@ async function publicarAgendados(request: NextRequest) {
     fetch(`${origin}/api/automation/reconciliar-publicacoes`, { method: 'POST', headers: credenciais }).catch(() => {})
   }
 
-  // Registro no razão. A publicação nunca escreveu em logs_workflows, e foi por isso que o erro
-  // do YouTube (token expirado) passou dois dias invisível. Automático sem rastro é pior que
-  // manual: ninguém está olhando na hora.
-  if (resultados.length > 0) {
-    await supabase.schema('pulso_content').from('logs_workflows').insert({
-      workflow_name: 'PUBLICAR_AGENDADOS',
-      status: resultados.every((r) => r.ok) ? 'sucesso' : 'parcial',
-      detalhes: { disparados: resultados.length, teto_dia: tetoDia, ja_hoje: publicadosHoje.size, resultados },
-    }).then(() => {}, () => {})
-  }
+  // PROVA DE VIDA: grava SEMPRE, inclusive quando não há nada a publicar.
+  //
+  // A primeira versão só logava quando disparava algo. Nos dias 08 e 09/08/2026 a rota ficou muda
+  // e não deu para distinguir "não tinha o que publicar" de "o cron nunca rodou" — custou dois
+  // dias e o dia 61 do desafio. Uma linha dizendo "0 vencidos, nada a fazer" não é ruído: é a
+  // única diferença entre um sistema silencioso e um sistema morto.
+  // Princípio emprestado do tick_log do limelight: cron nunca falha em silêncio.
+  await supabase.schema('pulso_content').from('logs_workflows').insert({
+    workflow_name: 'PUBLICAR_AGENDADOS',
+    status: resultados.length === 0 ? 'ocioso' : resultados.every((r) => r.ok) ? 'sucesso' : 'parcial',
+    detalhes: {
+      disparados: resultados.length,
+      agendados_vencidos: vencidos.length,
+      teto_dia: tetoDia,
+      ja_hoje: publicadosHoje.size,
+      dia_brt: hoje,
+      resultados,
+    },
+  }).then(() => {}, () => {})
 
   return NextResponse.json({
     success: true,
