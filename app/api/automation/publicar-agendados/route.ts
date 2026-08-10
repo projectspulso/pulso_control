@@ -179,7 +179,11 @@ async function publicarAgendados(request: NextRequest) {
   // dias e o dia 61 do desafio. Uma linha dizendo "0 vencidos, nada a fazer" não é ruído: é a
   // única diferença entre um sistema silencioso e um sistema morto.
   // Princípio emprestado do tick_log do limelight: cron nunca falha em silêncio.
-  await supabase.schema('pulso_content').from('logs_workflows').insert({
+  // O erro do insert NÃO é engolido. A primeira versão fazia `.then(()=>{},()=>{})` e o próprio
+  // log-de-prova-de-vida morreu calado: `status` tinha CHECK aceitando só sucesso/erro/em_andamento,
+  // então 'ocioso' — e 'parcial', que já estava no código — eram rejeitados sem ninguém ver.
+  // O CHECK foi ampliado no banco; ainda assim, quem grava o razão não pode falhar em segredo.
+  const { error: erroLog } = await supabase.schema('pulso_content').from('logs_workflows').insert({
     workflow_name: 'PUBLICAR_AGENDADOS',
     status: resultados.length === 0 ? 'ocioso' : resultados.every((r) => r.ok) ? 'sucesso' : 'parcial',
     detalhes: {
@@ -190,7 +194,8 @@ async function publicarAgendados(request: NextRequest) {
       dia_brt: hoje,
       resultados,
     },
-  }).then(() => {}, () => {})
+  })
+  if (erroLog) console.error('[publicar-agendados] falhou ao gravar log:', erroLog.message)
 
   return NextResponse.json({
     success: true,
