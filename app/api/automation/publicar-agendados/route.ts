@@ -84,9 +84,10 @@ async function publicarAgendados(request: NextRequest) {
   const limiteAtraso = new Date(agora.getTime() - JANELA_ATRASO_HORAS * 3600_000)
 
   const [pipeQ, pubQ, cfgQ] = await Promise.all([
+    // Sem filtro de status: o teto precisa enxergar TAMBÉM os já publicados de hoje para saber
+    // quantas vagas da grade sobraram. Filtrar PRONTO_PUBLICACAO acontece depois.
     supabase.schema('pulso_content').from('pipeline_producao')
       .select('id, ideia_id, status, metadata, data_publicacao_planejada')
-      .eq('status', 'PRONTO_PUBLICACAO')
       .not('data_publicacao_planejada', 'is', null),
     supabase.schema('pulso_content').from('metricas_publicacao')
       .select('ideia_id, plataforma, data_publicacao'),
@@ -111,15 +112,25 @@ async function publicarAgendados(request: NextRequest) {
   const hoje = diaBRT(agora)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pubs = (pubQ.data || []) as any[]
-  const publicadosHoje = new Set(
-    pubs.filter((p) => p.data_publicacao && diaBRT(new Date(p.data_publicacao)) === hoje).map((p) => p.ideia_id)
-  )
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pipeTodos = (pipeQ.data || []) as any[]
   // Já publicado em ALGUMA rede = não é mais candidato do agendamento (o resto é escolha manual).
   const jaSaiu = new Set(pubs.filter((p) => p.data_publicacao).map((p) => p.ideia_id))
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const vencidos = ((pipeQ.data || []) as any[])
+  // O TETO CONTA A GRADE DE HOJE, não "linhas de publicação criadas hoje".
+  //
+  // Medido em 10/08/2026: o #115 é de 26/07 e estava sem TikTok — a Aderência apontou, alguém
+  // completou a rede às 17:22, e essa linha nova fez a conta chegar a 3. Resultado: o #133, que
+  // era da grade das 21h, não saiu por "teto cheio". Completar uma rede atrasada de um vídeo
+  // ANTIGO não pode roubar a vaga de um vídeo NOVO — são coisas diferentes.
+  //
+  // Agora conta só vídeos cujo agendamento é de hoje e que já têm alguma publicação.
+  const daGradeDeHoje = pipeTodos.filter((p) => diaBRT(horaMarcada(p.data_publicacao_planejada)) === hoje)
+  const publicadosHoje = new Set(daGradeDeHoje.filter((p) => jaSaiu.has(p.ideia_id)).map((p) => p.ideia_id))
+
+  const vencidos = pipeTodos
     .filter((p) => {
+      if (p.status !== 'PRONTO_PUBLICACAO') return false
       const quando = horaMarcada(p.data_publicacao_planejada)
       return quando <= agora && quando >= limiteAtraso && !jaSaiu.has(p.ideia_id)
     })
@@ -141,39 +152,46 @@ async function publicarAgendados(request: NextRequest) {
       resultados.push({ numero: md.numero ?? null, marcado: p.data_publicacao_planejada, redes: 'sem video_url — pulado', ok: false })
       continue
     }
-    // AS TRÊS REDES EM PARALELO — e cada uma com prazo próprio.
+    // AS REDES EM SEQUÊNCIA, DA MAIS RÁPIDA PARA A MAIS LENTA — e cada uma com orçamento próprio.
     //
-    // Em sequência isto perdia o TikTok todo dia. Medido em 10/08/2026 no #114: YouTube e
-    // Instagram publicaram às 12:05, o TikTok não saiu e a rodada nem chegou a gravar log. O
-    // Instagram espera o container ficar pronto (30-60s) e sozinho estourava os 60s da função;
-    // como o TikTok é o último da lista, era sempre ele que ficava para trás. Não era escolha,
-    // era a função sendo morta no meio.
+    // Duas medições ensinaram esta ordem:
+    //  · 10/08 12:05 (sequencial, IG antes do TikTok): o Instagram consumiu os 60s da função e o
+    //    TikTok nunca foi chamado. A função morreu antes até de gravar o log.
+    //  · 10/08 18:05 (paralelo, 45s cada): IG e TikTok estouraram JUNTOS. Três invocações
+    //    simultâneas baixam o mesmo vídeo ao mesmo tempo e atrapalham umas às outras — paralelo
+    //    piorou em vez de melhorar.
     //
-    // Em paralelo o tempo total passa a ser o da rede mais lenta, não a soma. O AbortController
-    // garante que uma rede pendurada não leve as outras junto nem impeça o log no fim.
-    const PRAZO_POR_REDE_MS = 45_000
-    const porRede = await Promise.all(
-      REDES_API_SEGURAS.map(async (rede) => {
-        const cancelar = AbortSignal.timeout(PRAZO_POR_REDE_MS)
-        try {
-          const r = await fetch(`${origin}/api/automation/publicar`, {
-            method: 'POST',
-            headers: credenciais,
-            signal: cancelar,
-            body: JSON.stringify({
-              pipeline_id: p.id, video_url: md.video_url, caption: md.caption,
-              plataformas: [rede], confirmar: true,
-            }),
-          })
-          const d = await r.json().catch(() => ({}))
-          const r0 = (d.resultados || [])[0]
-          return `${rede}:${r0?.status || (d.error ? 'ERRO' : '?')}`
-        } catch (e) {
-          const msg = e instanceof Error && e.name === 'TimeoutError' ? `PRAZO(${PRAZO_POR_REDE_MS / 1000}s)` : e instanceof Error ? e.message.slice(0, 40) : 'erro'
-          return `${rede}:FALHOU(${msg})`
-        }
-      })
-    )
+    // A chave é uma observação do 18:05: o Instagram apareceu publicado às 18:05 mesmo tendo
+    // "falhado" por prazo. Abortar do nosso lado NÃO cancela o trabalho do outro lado. Então o
+    // Instagram vai por último, com prazo curto — a gente solta o pedido e segue, e a
+    // reconciliação amarra o post depois. Assim ele nunca mais come o tempo do TikTok.
+    const ORCAMENTO_MS: Record<string, number> = { tiktok: 18_000, youtube: 22_000, instagram: 10_000 }
+    const ORDEM = ['tiktok', 'youtube', 'instagram'].filter((r) => (REDES_API_SEGURAS as readonly string[]).includes(r))
+    const porRede: string[] = []
+    for (const rede of ORDEM) {
+      const prazo = ORCAMENTO_MS[rede] ?? 20_000
+      try {
+        const r = await fetch(`${origin}/api/automation/publicar`, {
+          method: 'POST',
+          headers: credenciais,
+          signal: AbortSignal.timeout(prazo),
+          body: JSON.stringify({
+            pipeline_id: p.id, video_url: md.video_url, caption: md.caption,
+            plataformas: [rede], confirmar: true,
+          }),
+        })
+        const d = await r.json().catch(() => ({}))
+        const r0 = (d.resultados || [])[0]
+        porRede.push(`${rede}:${r0?.status || (d.error ? 'ERRO' : '?')}`)
+      } catch (e) {
+        // Prazo estourado não é fracasso: o pedido continua correndo no servidor. Quem confirma
+        // é a reconciliação. Chamar isso de FALHOU faria toda rodada parecer parcial sem ser.
+        const expirou = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError')
+        porRede.push(expirou
+          ? `${rede}:ENVIADO(sem confirmacao em ${prazo / 1000}s)`
+          : `${rede}:FALHOU(${e instanceof Error ? e.message.slice(0, 40) : 'erro'})`)
+      }
+    }
     // `ok` exige TODAS as redes, não "alguma". Com `some`, o #114 de 10/08 — que saiu no YouTube
     // e no Instagram e não saiu no TikTok — teria sido registrado como sucesso pleno, e a rede
     // faltando só apareceria dias depois na Aderência. Rede que ficou de fora tem que doer no log.
@@ -181,14 +199,14 @@ async function publicarAgendados(request: NextRequest) {
       numero: md.numero ?? null,
       marcado: p.data_publicacao_planejada,
       redes: porRede.join(' · '),
-      ok: porRede.every((x) => x.includes('PUBLICADO') || x.includes('PROCESSANDO')),
+      ok: porRede.every((x) => x.includes('PUBLICADO') || x.includes('PROCESSANDO') || x.includes('ENVIADO')),
     })
   }
 
   // O Instagram costuma voltar PROCESSANDO (o container leva 30-60s e a Vercel corta em 60).
   // Na tela, quem fecha isso é o próprio navegador chamando reconciliar 40s e 90s depois. Aqui
   // não há navegador, então o cron chama uma vez — o cron de reconciliação segue de backstop.
-  if (resultados.some((r) => r.redes.includes('PROCESSANDO'))) {
+  if (resultados.some((r) => r.redes.includes('PROCESSANDO') || r.redes.includes('ENVIADO'))) {
     fetch(`${origin}/api/automation/reconciliar-publicacoes`, { method: 'POST', headers: credenciais }).catch(() => {})
   }
 
