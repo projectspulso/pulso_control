@@ -3,6 +3,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getYoutubeAccessToken } from '@/lib/youtube/oauth'
 import { fetchYoutubeRetention, fetchYoutubeWatchTime } from '@/lib/youtube/retention'
+import { resolverRascunhosTikTok } from '@/lib/publicacao/tiktok-rascunho'
 
 /**
  * POST|GET /api/automation/coletar-metricas
@@ -216,6 +217,19 @@ async function coletar(request: NextRequest) {
   // (que só ATUALIZA por post_id) não o pega ("não aparece nada"). Aqui descobrimos os órfãos: vídeos
   // do video.list não registrados, casados por palavra-chave com ideias que têm publicação em OUTRA
   // rede mas SEM TikTok (match único = seguro) → cria a linha. Mesmo padrão da reconciliação do FB.
+  // ANTES de qualquer palpite: perguntar ao TikTok. Todo rascunho que geramos tem um publish_id
+  // guardado; o endpoint de status devolve o id do post real assim que o dono finaliza. Resolvido
+  // aqui, o vídeo nunca chega a ser órfão — e o matcher abaixo vira só rede de segurança para o
+  // que foi publicado fora do app.
+  try {
+    const rascunhos = await resolverRascunhosTikTok(supabase)
+    if (rascunhos.resolvidos) avisos.push(`TikTok: ${rascunhos.resolvidos} rascunho(s) resolvido(s) pelo publish_id`)
+    if (rascunhos.pendentes) avisos.push(`TikTok: ${rascunhos.pendentes} rascunho(s) ainda não finalizado(s) no celular`)
+    for (const a of rascunhos.avisos) avisos.push(a)
+  } catch (e) {
+    avisos.push(`Rascunhos TikTok: ${e instanceof Error ? e.message.slice(0, 60) : 'erro'}`)
+  }
+
   try {
     if (ttVideos.length > 0) {
       const ttIdsReg = new Set(publicacoes.filter((p) => p.plataforma === 'tiktok').map((p) => p.post_id))
@@ -227,14 +241,34 @@ async function coletar(request: NextRequest) {
       if (orfaos.length > 0 && candIds.length > 0) {
         const { data: candIdeias } = await supabase
           .schema('pulso_content').from('ideias').select('id, titulo').in('id', candIds)
+        // PALAVRA COMUM NÃO É PROVA. A versão anterior aceitava UM token de 4+ letras em comum e,
+        // se só uma candidata batesse, gravava como certeza. Em 10/08/2026 a legenda da lagosta
+        // (#114) dizia "Quer entender COMO isso afeta a economia" e o título do #115 era "COMO a
+        // Assinatura Digital..." — casou por "como" e creditou 254 views ao vídeo errado.
+        // Agora: fora as palavras vazias, e são precisos DOIS termos distintos.
+        const VAZIAS = new Set([
+          'como', 'para', 'porque', 'sobre', 'quando', 'onde', 'quem', 'esse', 'essa', 'este',
+          'esta', 'isso', 'mais', 'menos', 'muito', 'pode', 'ser', 'sua', 'seu', 'nao', 'não',
+          'voce', 'você', 'sabia', 'todos', 'toda', 'todo', 'foi', 'era', 'anos', 'ano', 'vida',
+          'mundo', 'pulso', 'segue', 'conta', 'ninguem', 'ninguém', 'mesmo', 'ainda', 'depois',
+        ])
+        const MIN_TERMOS = 2
         const cands = ((candIdeias || []) as Array<{ id: string; titulo: string }>).map((i) => ({
           id: i.id,
-          tokens: (i.titulo || '').toLowerCase().split(/[^a-zà-ú0-9]+/i).filter((t) => t.length >= 4),
+          tokens: [...new Set(
+            (i.titulo || '').toLowerCase().split(/[^a-zà-ú0-9]+/i).filter((t) => t.length >= 5 && !VAZIAS.has(t))
+          )],
         }))
         const usadas = new Set<string>()
         for (const v of orfaos) {
           const cap = (v.title || '').toLowerCase()
-          const matches = cands.filter((c) => !usadas.has(c.id) && c.tokens.some((t) => cap.includes(t)))
+          const matches = cands.filter((c) => !usadas.has(c.id) && c.tokens.filter((t) => cap.includes(t)).length >= MIN_TERMOS)
+          if (matches.length !== 1 && orfaos.length) {
+            // Sem prova suficiente o órfão FICA VISÍVEL em vez de ser chutado. Buraco a gente vê;
+            // preenchimento errado a gente acredita e leva pra análise de tema.
+            if (matches.length === 0) avisos.push(`TikTok órfão sem dono claro: ${v.id} — "${(v.title || '').slice(0, 40)}"`)
+            else avisos.push(`TikTok órfão ambíguo (${matches.length} candidatas): ${v.id}`)
+          }
           if (matches.length === 1) {
             const iid = matches[0].id
             usadas.add(iid)
