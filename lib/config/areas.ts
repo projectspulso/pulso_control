@@ -3,7 +3,6 @@ import {
   BarChart3,
   Clapperboard,
   Compass,
-  LayoutDashboard,
   Send,
   Target,
   TrendingUp,
@@ -32,16 +31,12 @@ export interface Area {
 }
 
 export const AREAS: Area[] = [
-  // PRIMEIRO de propósito: é a pergunta que se faz ao abrir o app ("o que faço agora e por quê?").
-  // As outras áreas são a biblioteca de consulta; esta é a camada de decisão. Ver /decisor.
-  { href: '/decisor', nome: 'Decisor', icon: Compass,
+  // A HOME é o Decisor desde 14/08/2026 — antes eram duas telas respondendo metades da mesma
+  // pergunta. As outras áreas são a biblioteca de consulta; esta é a camada de decisão.
+  { href: '/', nome: 'Decisor', icon: Compass,
     navGradient: 'from-indigo-600 to-violet-600', navGlow: 'shadow-indigo-500/25',
     text: 'text-indigo-300', dot: 'bg-indigo-500', ring: 'ring-indigo-500/30', soft: 'bg-indigo-500/10',
     headerGlow: 'from-indigo-600/20 via-violet-600/5 to-transparent', iconBox: 'from-indigo-500 to-violet-500' },
-  { href: '/', nome: 'Dashboard', icon: LayoutDashboard,
-    navGradient: 'from-violet-600 to-pink-600', navGlow: 'shadow-violet-500/25',
-    text: 'text-violet-300', dot: 'bg-violet-500', ring: 'ring-violet-500/30', soft: 'bg-violet-500/10',
-    headerGlow: 'from-violet-600/20 via-fuchsia-600/5 to-transparent', iconBox: 'from-violet-500 to-pink-500' },
   { href: '/validacao', nome: 'Validação', icon: Target,
     navGradient: 'from-cyan-600 to-blue-600', navGlow: 'shadow-cyan-500/25',
     text: 'text-cyan-300', dot: 'bg-cyan-500', ring: 'ring-cyan-500/30', soft: 'bg-cyan-500/10',
@@ -72,14 +67,14 @@ export const AREAS: Area[] = [
     headerGlow: 'from-rose-600/20 via-red-600/5 to-transparent', iconBox: 'from-rose-500 to-red-500' },
 ]
 
-// por href, não por índice: o Decisor entrou na frente e AREAS[0] deixou de ser o Dashboard
-const DASHBOARD = AREAS.find((a) => a.href === '/')!
+// por href: '/' é a home (Decisor). Mantido explícito porque areaFor() cai aqui no fallback.
+const HOME = AREAS.find((a) => a.href === '/')!
 
 /** Acha a área pela rota (exata pra '/', senão maior prefixo). */
 export function areaFor(pathname: string): Area {
-  if (pathname === '/') return DASHBOARD
+  if (pathname === '/') return HOME
   const match = AREAS.filter((a) => a.href !== '/' && pathname.startsWith(a.href)).sort(
     (a, b) => b.href.length - a.href.length,
   )[0]
-  return match || DASHBOARD
+  return match || HOME
 }

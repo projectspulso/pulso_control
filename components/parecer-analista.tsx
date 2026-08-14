@@ -42,7 +42,7 @@ export function ParecerAnalista() {
           )}
         </div>
         <div className="shrink-0 text-right">
-          <Link href="/decisor" className="text-[11px] text-zinc-500 hover:text-zinc-300">
+          <Link href="/" className="text-[11px] text-zinc-500 hover:text-zinc-300">
             ver no Decisor →
           </Link>
           <p className="mt-1 text-[10px] text-zinc-600">analisado {quando}</p>

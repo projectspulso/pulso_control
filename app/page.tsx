@@ -1,200 +1,179 @@
 'use client'
 
-import Link from 'next/link'
-import {
-  ArrowUpRight,
-  CheckCircle2,
-  Clapperboard,
-  Lightbulb,
-  Rocket,
-} from 'lucide-react'
+import { useState } from 'react'
 
-import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
+import { ErrorState } from '@/components/ui/error-state'
+import {
+  BlocoBriefing,
+  BlocoCobertura,
+  BlocoFila,
+  BlocoRadar,
+  BlocoRedes,
+  BlocoTemas,
+  BlocoTendencia,
+} from '@/components/decisor-blocos'
+import { useDecisor, useReanalisar } from '@/lib/hooks/use-decisor'
 import { AlertasOperacao } from '@/components/alertas-operacao'
-import { useDashboard } from '@/lib/hooks/use-dashboard'
+import { PrecisaDeVoce } from '@/components/precisa-de-voce'
 
-function n(value: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    notation: value >= 10000 ? 'compact' : 'standard',
-    maximumFractionDigits: 1,
-  }).format(value)
-}
+/**
+ * DECISOR — a HOME do app desde 14/08/2026.
+ *
+ * As outras áreas são a biblioteca de consulta: respondem "quanto foi?". Esta responde a pergunta
+ * que se faz ao abrir o app: "o que eu faço agora, e por quê?".
+ *
+ * ANTES eram DUAS telas. O Dashboard listava o que o pipeline pede (publicar N prontos, aprovar N
+ * roteiros, estoque zerado) e o Decisor, o que o desempenho pede (Faça / Evite / Observe). Não
+ * eram duplicatas — eram as duas METADES da mesma resposta, e quem quisesse saber o que fazer
+ * tinha que abrir as duas. Agora a metade operacional (AlertasOperacao + PrecisaDeVoce) abre a
+ * tela, e a leitura editorial vem logo abaixo. A contagem por etapa do pipeline não veio junto:
+ * é assunto da /producao, a um clique daqui.
+ *
+ * POR QUE NEM TUDO É ABA (diferente do /analytics): o analytics é biblioteca — você vai lá
+ * procurar uma coisa e aba é o certo. Este é briefing: a graça é ver de relance. Se o radar de
+ * estouro estiver atrás de uma aba não clicada, o viral passa — que é exatamente o que ele existe
+ * pra impedir. Então a CABEÇA (radar + leitura do dia) fica sempre visível, e só a evidência de
+ * apoio vai pra abas, agrupada por responsabilidade:
+ *   Assunto      — o que produzir (tema que sorteia + o que vem na fila)
+ *   Distribuição — pra onde mandar (papel de cada rede)
+ *   Ritmo        — como estamos (tendência + concentração)
+ */
 
-const ETAPAS_PIPELINE = [
-  { status: 'AGUARDANDO_ROTEIRO', label: 'Aguardando roteiro' },
-  { status: 'ROTEIRO_PRONTO', label: 'Roteiro pronto' },
-  { status: 'AUDIO_GERADO', label: 'Áudio gerado' },
-  { status: 'EM_EDICAO', label: 'Em edição' },
-  { status: 'PRONTO_PUBLICACAO', label: 'Pronto p/ publicar' },
-  { status: 'PUBLICADO', label: 'Publicado' },
+const ABAS = [
+  { id: 'assunto' as const, label: 'Assunto' },
+  { id: 'distribuicao' as const, label: 'Distribuição' },
+  { id: 'ritmo' as const, label: 'Ritmo' },
+  // A honestidade do módulo: de onde vem cada número, o que a API não entrega e o que é
+  // digitado à mão. Pedido do dono — conclusão sobre Kwai não pode parecer medida por API.
+  { id: 'cobertura' as const, label: 'Cobertura' },
 ]
 
-function tempoRelativo(iso: string | null): string {
-  if (!iso) return 'nunca'
-  const diff = Date.now() - new Date(iso).getTime()
-  const min = Math.floor(diff / 60000)
-  if (min < 60) return `${min}min atrás`
-  const hrs = Math.floor(min / 60)
-  if (hrs < 24) return `${hrs}h atrás`
-  return `${Math.floor(hrs / 24)}d atrás`
-}
+type AbaId = (typeof ABAS)[number]['id']
 
 export default function Home() {
-  const { data, isLoading, isError, refetch } = useDashboard()
+  const { data, isLoading, error, refetch } = useDecisor()
+  const reanalisar = useReanalisar()
+  const [aba, setAba] = useState<AbaId>('assunto')
 
-  if (isError) {
+  // Alerta por aba: o que, DENTRO dela, pede ação. Vira ponto no botão + uma linha acima do
+  // conteúdo — é o que impede a aba de virar esconderijo.
+  const fila = data?.fatos.fila
+  const tend = data?.fatos.tendencia
+  const dep = data?.fatos.dependencia
+  const filaSorteia = fila && fila.total > 0 ? Math.round((fila.emTemaQueSorteia / fila.total) * 100) : 100
+  const alertas: Record<AbaId, string | null> = {
+    assunto:
+      fila && fila.total >= 5 && filaSorteia < 20
+        ? `Só ${fila.emTemaQueSorteia} de ${fila.total} na fila estão no tema que sorteia no Facebook.`
+        : null,
+    distribuicao: null,
+    cobertura: (() => {
+      const c = data?.fatos.cobertura || []
+      const atras = c.filter((x) => (x.atrasoDias ?? 0) >= 2)
+      if (atras.length) return `${atras.map((x) => x.plataforma).join(', ')} sem atualizar há 2+ dias.`
+      return null
+    })(),
+    ritmo:
+      tend && tend.variacao <= -20
+        ? `Novas views caíram ${Math.abs(tend.variacao)}% vs a semana anterior.`
+        : dep?.dependente
+          ? `${dep.concentracaoTop2}% do crescimento vem de 2 vídeos — cai quando eles saturam.`
+          : null,
+  }
+
+  if (error) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
-          <ErrorState
-            title="Erro ao carregar o Centro de Comando"
-            message="Não foi possível carregar os dados reais. Verifique a conexão."
-            onRetry={() => refetch()}
-          />
-        </div>
+      <div className="space-y-6">
+        <PageHeader titulo="Decisor" subtitulo="O que fazer agora, e por quê" />
+        <ErrorState title="Não deu pra calcular os fatos" message={String(error)} onRetry={() => refetch()} />
       </div>
     )
   }
-
-  if (isLoading || !data) {
-    return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <div className="skeleton h-12 w-72" />
-          <div className="grid gap-4 md:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="glass rounded-2xl border border-zinc-800/50 p-6">
-                <div className="skeleton h-5 w-24" />
-                <div className="mt-4 skeleton h-9 w-24" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const acoes: { label: string; detalhe: string; href: string; urgente: boolean }[] = []
-  if (data.prontosParaPublicar > 0)
-    acoes.push({
-      label: `Publicar ${data.prontosParaPublicar} vídeo(s) pronto(s)`,
-      detalhe: 'IG sai pela API; FB/TikTok/YouTube no fluxo assistido',
-      href: '/publicar',
-      urgente: true,
-    })
-  if (data.roteirosParaAprovar > 0)
-    acoes.push({
-      label: `Aprovar ${data.roteirosParaAprovar} roteiro(s)`,
-      detalhe: 'Roteiros em rascunho aguardando seu OK',
-      href: '/esteira',
-      urgente: false,
-    })
-  if (data.estoqueIdeias.aprovadasLivres === 0)
-    acoes.push({
-      label: 'Estoque de ideias aprovadas zerado',
-      detalhe: `${data.estoqueIdeias.rascunhos} rascunhos aguardando curadoria`,
-      href: '/esteira',
-      urgente: false,
-    })
 
   return (
-    <main className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-8">
-        <PageHeader
-          titulo="Centro de Comando"
-          subtitulo={`${n(data.viewsTotal)} views · ${data.videosPublicados} vídeos · ${data.publicacoesTotal} posts em 5 redes`}
-          acoes={
-            <div className="glass rounded-2xl px-5 py-3 text-right">
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Última coleta</p>
-              <p className="text-lg font-bold text-green-400">{tempoRelativo(data.ultimaColeta)}</p>
-            </div>
-          }
-        />
+    <div className="space-y-4">
+      <PageHeader titulo="Decisor" subtitulo="O que fazer agora, e por quê — a decisão, não o gráfico" />
 
-        <AlertasOperacao />
+      {/* A METADE OPERACIONAL, primeiro: o que a esteira pede não espera análise. Só depois vem a
+          leitura de desempenho. Antes isso morava numa segunda tela, e saber o que fazer exigia
+          abrir as duas. */}
+      <AlertasOperacao />
+      <PrecisaDeVoce />
 
-        {/* Esteira + Ações */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Esteira de produção */}
-          <Link
-            href="/producao"
-            className="glass group rounded-2xl border border-zinc-800/50 p-6 transition-colors hover:border-violet-500/40 lg:col-span-2"
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
-                <Clapperboard className="h-5 w-5 text-violet-400" /> Esteira de produção
-              </h2>
-              <ArrowUpRight className="h-5 w-5 text-zinc-600 group-hover:text-violet-400" />
-            </div>
-            <div className="mt-5 grid grid-cols-3 gap-3 md:grid-cols-6">
-              {ETAPAS_PIPELINE.map((e) => (
-                <div key={e.status} className="rounded-xl bg-zinc-900/60 p-3 text-center">
-                  <p className="text-2xl font-black tabular-nums text-white">{data.pipeline[e.status] || 0}</p>
-                  <p className="mt-1 text-[11px] leading-tight text-zinc-500">{e.label}</p>
-                </div>
-              ))}
-            </div>
-            <p className="mt-4 text-sm text-zinc-500">
-              Estoque: <span className="text-zinc-300">{data.estoqueIdeias.aprovadasLivres} ideias aprovadas livres</span> ·{' '}
-              <span className="text-zinc-400">{data.estoqueIdeias.rascunhos} rascunhos</span>
-            </p>
-          </Link>
-
-          {/* Ações pendentes */}
-          <div className="glass rounded-2xl border border-zinc-800/50 p-6">
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
-              <Rocket className="h-5 w-5 text-amber-400" /> Precisa de você
-            </h2>
-            <div className="mt-4 space-y-3">
-              {acoes.length === 0 && (
-                <p className="flex items-center gap-2 text-sm text-green-400">
-                  <CheckCircle2 className="h-4 w-4" /> Tudo em dia — esteira rodando.
-                </p>
-              )}
-              {acoes.map((a) => (
-                <Link
-                  key={a.label}
-                  href={a.href}
-                  className={`block rounded-xl border p-3 transition-colors ${
-                    a.urgente
-                      ? 'border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20'
-                      : 'border-zinc-700/60 bg-zinc-900/50 hover:bg-zinc-800/60'
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-white">{a.label}</p>
-                  <p className="mt-0.5 text-xs text-zinc-400">{a.detalhe}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
+      {isLoading || !data ? (
+        <div className="space-y-4">
+          <div className="h-32 animate-pulse rounded-2xl bg-[#1a1922]" />
+          <div className="h-64 animate-pulse rounded-2xl bg-[#1a1922]" />
+          <div className="h-48 animate-pulse rounded-2xl bg-[#1a1922]" />
         </div>
+      ) : (
+        <>
+          {/* ══════ CABEÇA — nunca em aba: é alerta e decisão ══════ */}
+          <BlocoRadar radar={data.fatos.radar} />
 
-        {/* Últimas publicações — o que saiu hoje. Ranking e alcance por rede vivem no /analytics. */}
-        <div className="grid gap-6">
-          <div className="glass rounded-2xl border border-zinc-800/50 p-6">
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
-              <Lightbulb className="h-5 w-5 text-violet-400" /> Últimas publicações
-            </h2>
-            <div className="mt-4 space-y-2">
-              {data.ultimasPublicacoes.map((v, i) => (
-                <a
-                  key={`${v.url}-${i}`}
-                  href={v.url || '#'}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-3 rounded-lg p-2 hover:bg-zinc-900/60"
-                >
-                  <span className="flex-1 truncate text-sm text-zinc-200">{v.ideiaTitulo}</span>
-                  <span className="text-xs text-zinc-500">{v.canalNome}</span>
-                  <span className="text-xs capitalize text-zinc-500">{v.plataforma}</span>
-                  <span className="w-14 text-right text-sm text-zinc-300">{n(v.views)}</span>
-                </a>
-              ))}
-            </div>
+          <BlocoBriefing
+            parecer={data.parecer}
+            onReanalisar={() => reanalisar.mutate()}
+            reanalisando={reanalisar.isPending}
+          />
+
+          {reanalisar.isError && (
+            <p className="text-xs text-red-400">Falhou ao reanalisar: {String(reanalisar.error)}</p>
+          )}
+
+          {/* ══════ ABAS — a evidência de apoio, por responsabilidade ══════
+              Cada aba carrega um ponto quando o que está DENTRO dela pede ação: sem isso, uma
+              fila sem tema vencedor ficaria invisível pra quem está na aba de Distribuição, e a
+              aba viraria esconderijo em vez de organização. */}
+          <div className="flex gap-1 overflow-x-auto rounded-full border border-white/8 bg-[#1a1922] p-1">
+            {ABAS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setAba(t.id)}
+                aria-selected={aba === t.id}
+                role="tab"
+                className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] transition-colors ${
+                  aba === t.id ? 'bg-[#9085e9] font-medium text-[#0f0e16]' : 'text-[#6e6b7b] hover:text-[#a3a0b0]'
+                }`}
+              >
+                {t.label}
+                {alertas[t.id] && (
+                  <span
+                    title={alertas[t.id]!}
+                    className={`h-1.5 w-1.5 rounded-full ${aba === t.id ? 'bg-[#0f0e16]' : 'bg-amber-400'}`}
+                  />
+                )}
+              </button>
+            ))}
           </div>
-        </div>
-      </div>
-    </main>
+
+          {alertas[aba] && (
+            <p className="-mt-1 px-1 text-[11px] text-amber-300/80">{alertas[aba]}</p>
+          )}
+
+          {aba === 'assunto' && (
+            <div className="grid gap-3.5 lg:grid-cols-2">
+              <BlocoTemas temas={data.fatos.temasFacebook} />
+              <BlocoFila fila={data.fatos.fila} />
+            </div>
+          )}
+
+          {aba === 'distribuicao' && <BlocoRedes redes={data.fatos.redes} />}
+
+          {aba === 'ritmo' && (
+            <BlocoTendencia tendencia={data.fatos.tendencia} dependencia={data.fatos.dependencia} />
+          )}
+
+          {aba === 'cobertura' && <BlocoCobertura cobertura={data.fatos.cobertura} />}
+
+          <p className="pt-1 text-center text-[10px] text-zinc-600">
+            Fatos calculados em código sobre {data.janelaDias} dias de série · atualizado{' '}
+            {new Date(data.geradoEm).toLocaleString('pt-BR')}
+          </p>
+        </>
+      )}
+    </div>
   )
 }

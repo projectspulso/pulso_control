@@ -8,7 +8,6 @@ import {
   BarChart3,
   Clapperboard,
   Compass,
-  LayoutDashboard,
   LogOut,
   Menu,
   Send,
@@ -25,7 +24,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser'
 import { useUsuario } from '@/lib/hooks/use-usuario'
 import { areaFor } from '@/lib/config/areas'
 
-// 14 -> 10 em 14/08/2026. Saíram /agenda e /aprendizado: as duas únicas telas com ZERO botões e
+// 14 -> 9 em 14/08/2026. Saíram /agenda e /aprendizado: as duas únicas telas com ZERO botões e
 // zero mutations — só exibiam. O calendário virou aba da Central de Publicação (onde a data é de
 // fato marcada) e o radar de estouro já vivia no Decisor. A trilha do /aprendizado era um JSON
 // que ninguém editava pelo app: 11 itens, nenhum concluído, parada havia 6 dias.
@@ -36,8 +35,7 @@ import { areaFor } from '@/lib/config/areas'
 const navigation = [
   // PRIMEIRO de propósito: é a pergunta que se faz ao abrir o app ("o que faço agora e por quê?").
   // As demais áreas são a biblioteca de consulta; o Decisor é a camada de decisão.
-  { name: 'Decisor', href: '/decisor', icon: Compass, badge: 'ai', soAdmin: false },
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, badge: null, soAdmin: false },
+  { name: 'Decisor', href: '/', icon: Compass, badge: 'ai', soAdmin: false },
   { name: 'Aderência', href: '/validacao', icon: Target, badge: 'mvp', soAdmin: false },
   { name: 'Trend Tops', href: '/trends', icon: TrendingUp, badge: 'ai', soAdmin: false },
   { name: 'Esteira', href: '/esteira', icon: Workflow, badge: null, soAdmin: false },

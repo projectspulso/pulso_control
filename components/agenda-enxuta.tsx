@@ -195,7 +195,7 @@ export function ResumoTemas({ itens }: { itens: ItemAgenda[] }) {
         do que está planejado é história/arqueologia — o único tema que estourou no Facebook.
         {morto > 0 && <span className="text-zinc-500"> {morto} em tema sem estouro registrado.</span>}
       </p>
-      <Link href="/decisor" className="ml-auto shrink-0 text-[11px] text-zinc-500 hover:text-zinc-300">
+      <Link href="/" className="ml-auto shrink-0 text-[11px] text-zinc-500 hover:text-zinc-300">
         ver no Decisor →
       </Link>
     </div>
@@ -236,7 +236,7 @@ export function BannerEstouro() {
           <strong className="text-zinc-100">sequência do tema &ldquo;{top.tema}&rdquo;</strong> hoje e confira o
           cross-post nas outras redes.
         </p>
-        <Link href="/decisor" className="shrink-0 text-[11px] text-zinc-500 hover:text-zinc-300">
+        <Link href="/" className="shrink-0 text-[11px] text-zinc-500 hover:text-zinc-300">
           ver no Decisor →
         </Link>
       </div>
