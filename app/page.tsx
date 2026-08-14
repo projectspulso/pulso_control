@@ -87,14 +87,14 @@ export default function Home() {
     acoes.push({
       label: `Aprovar ${data.roteirosParaAprovar} roteiro(s)`,
       detalhe: 'Roteiros em rascunho aguardando seu OK',
-      href: '/roteiros',
+      href: '/esteira',
       urgente: false,
     })
   if (data.estoqueIdeias.aprovadasLivres === 0)
     acoes.push({
       label: 'Estoque de ideias aprovadas zerado',
       detalhe: `${data.estoqueIdeias.rascunhos} rascunhos aguardando curadoria`,
-      href: '/ideias',
+      href: '/esteira',
       urgente: false,
     })
 
