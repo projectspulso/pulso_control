@@ -25,6 +25,9 @@ export interface VideoAderencia {
   numero: number | null
   titulo: string
   canalNome: string
+  /** Estreia do vídeo: a publicação mais antiga entre as redes. A consulta já vem ordenada por
+   *  data crescente, então é a primeira linha que cai aqui. É por ela que a tabela ordena. */
+  dataPublicacao: string
   plataformas: Record<string, PublicacaoMetrica>
   totalViews: number
   totalLikes: number
@@ -104,6 +107,7 @@ export function useAderencia() {
             numero: numeroDaIdeia.get(m.ideia_id) ?? null,
             titulo: info.titulo,
             canalNome: info.canal,
+            dataPublicacao: m.data_publicacao,
             plataformas: {},
             totalViews: 0,
             totalLikes: 0,
