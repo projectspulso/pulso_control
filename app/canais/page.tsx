@@ -32,8 +32,8 @@ export default function CanaisPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
+      <div>
+        <div>
           <ErrorState title="Erro ao carregar canais" message="Nao foi possivel listar os canais." onRetry={() => refetch()} />
         </div>
       </div>
@@ -50,8 +50,8 @@ export default function CanaisPage() {
   }, {} as Record<string, number>)
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl">
+    <div>
+      <div>
         <div className="mb-8">
           <div className="mb-2 flex items-center gap-3">
             <div className="h-2 w-2 rounded-full bg-pink-500 animate-pulse" />

@@ -92,7 +92,7 @@ export function EsteiraRoteiros() {
 
   if (isLoading) {
     return (
-      <div className="">
+      <div>
         <div className="max-w-7xl mx-auto">
           <div className="glass rounded-2xl p-8 text-center space-y-4">
             <div className="skeleton h-8 w-32 mx-auto" />
@@ -105,7 +105,7 @@ export function EsteiraRoteiros() {
 
   if (isError) {
     return (
-      <div className="">
+      <div>
         <div className="max-w-7xl mx-auto">
           <ErrorState
             title="Erro ao carregar roteiros"
@@ -118,7 +118,7 @@ export function EsteiraRoteiros() {
   }
 
   return (
-    <div className="">
+    <div>
       <div className="max-w-7xl mx-auto space-y-8">
         <PageHeader titulo="Roteiros" subtitulo={`${(stats?.total ?? 0) - qtdPostadas} a produzir · ${stats?.total ?? 0} no total${qtdPostadas ? ` (${qtdPostadas} já postados)` : ''}`} />
 

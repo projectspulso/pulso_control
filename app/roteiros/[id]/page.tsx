@@ -243,16 +243,16 @@ export default function RoteiroDetalhesPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-4xl text-zinc-400">Carregando roteiro...</div>
+      <div>
+        <div className="text-zinc-400">Carregando roteiro...</div>
       </div>
     )
   }
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-4xl">
+      <div>
+        <div>
           <ErrorState
             title="Erro ao carregar roteiro"
             message="Nao foi possivel carregar os detalhes do roteiro. Tente novamente."
@@ -270,8 +270,8 @@ export default function RoteiroDetalhesPage({
 
   if (!roteiro) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-4xl">
+      <div>
+        <div>
           <p className="text-zinc-400">Roteiro nao encontrado.</p>
           <Link href="/roteiros" className="text-violet-400 hover:text-violet-300">
             Voltar para roteiros
@@ -297,8 +297,8 @@ export default function RoteiroDetalhesPage({
     : []
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-5xl space-y-6">
+    <div>
+      <div className="space-y-6">
         <div>
           <Link
             href="/roteiros"
@@ -528,29 +528,7 @@ export default function RoteiroDetalhesPage({
                 />
               ) : (
                 <article
-                  className="
-                    prose prose-invert prose-sm max-w-none
-                    prose-headings:text-white prose-headings:font-semibold
-                    prose-h1:text-2xl prose-h1:mb-4 prose-h1:border-b prose-h1:border-zinc-700 prose-h1:pb-2
-                    prose-h2:text-xl prose-h2:mb-3 prose-h2:mt-6
-                    prose-h3:text-lg prose-h3:mb-2 prose-h3:mt-4
-                    prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:mb-4
-                    prose-strong:text-white prose-strong:font-semibold
-                    prose-em:text-zinc-300 prose-em:italic
-                    prose-ul:list-disc prose-ul:ml-6 prose-ul:text-zinc-300
-                    prose-ol:list-decimal prose-ol:ml-6 prose-ol:text-zinc-300
-                    prose-li:mb-1
-                    prose-blockquote:border-l-4 prose-blockquote:border-violet-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-zinc-400
-                    prose-code:text-violet-400 prose-code:bg-zinc-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
-                    prose-pre:bg-zinc-800 prose-pre:border prose-pre:border-zinc-700 prose-pre:rounded-lg prose-pre:p-4 prose-pre:overflow-x-auto
-                    prose-a:text-violet-400 prose-a:no-underline hover:prose-a:text-violet-300 hover:prose-a:underline
-                    prose-hr:border-zinc-700 prose-hr:my-6
-                    prose-table:w-full prose-table:border-collapse prose-table:border prose-table:border-zinc-700
-                    prose-thead:bg-zinc-800
-                    prose-th:border prose-th:border-zinc-700 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-medium
-                    prose-td:border prose-td:border-zinc-700 prose-td:px-3 prose-td:py-2
-                    prose-img:rounded-lg prose-img:border prose-img:border-zinc-700
-                  "
+                  className="prose prose-invert prose-sm max-w-none prose-headings:text-white prose-headings:font-semibold prose-h1:text-2xl prose-h1:mb-4 prose-h1:border-b prose-h1:border-zinc-700 prose-h1:pb-2 prose-h2:text-xl prose-h2:mb-3 prose-h2:mt-6 prose-h3:text-lg prose-h3:mb-2 prose-h3:mt-4 prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:mb-4 prose-strong:text-white prose-strong:font-semibold prose-em:text-zinc-300 prose-em:italic prose-ul:list-disc prose-ul:ml-6 prose-ul:text-zinc-300 prose-ol:list-decimal prose-ol:ml-6 prose-ol:text-zinc-300 prose-li:mb-1 prose-blockquote:border-l-4 prose-blockquote:border-violet-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-zinc-400 prose-code:text-violet-400 prose-code:bg-zinc-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-pre:bg-zinc-800 prose-pre:border prose-pre:border-zinc-700 prose-pre:rounded-lg prose-pre:p-4 prose-pre:overflow-x-auto prose-a:text-violet-400 prose-a:no-underline hover:prose-a:text-violet-300 hover:prose-a:underline prose-hr:border-zinc-700 prose-hr:my-6 prose-table:w-full prose-table:border-collapse prose-table:border prose-table:border-zinc-700 prose-thead:bg-zinc-800 prose-th:border prose-th:border-zinc-700 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-medium prose-td:border prose-td:border-zinc-700 prose-td:px-3 prose-td:py-2 prose-img:rounded-lg prose-img:border prose-img:border-zinc-700"
                 >
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {roteiro.conteudo_md || '*Sem conteudo*'}

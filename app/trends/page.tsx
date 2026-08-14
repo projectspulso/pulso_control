@@ -150,8 +150,8 @@ export default function TrendsPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-6xl">
+      <div>
+        <div>
           <ErrorState
             title="Erro ao carregar o Trend Tops"
             message="Não foi possível coletar as tendências agora."
@@ -201,8 +201,8 @@ export default function TrendsPage() {
   )
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-6xl">
+    <div>
+      <div>
         {/* header */}
         <div className="mb-6">
           <div className="mb-2 flex items-center gap-3">

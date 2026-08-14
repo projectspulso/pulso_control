@@ -25,8 +25,8 @@ export default function FinanceiroPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <div>
+        <div className="space-y-6">
           <div className="skeleton h-10 w-56" />
           <div className="grid gap-4 md:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -43,8 +43,8 @@ export default function FinanceiroPage() {
 
   if (isError || !data) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
+      <div>
+        <div>
           <ErrorState title="Erro ao carregar o financeiro" message="Tente novamente." onRetry={() => refetch()} />
         </div>
       </div>
@@ -103,8 +103,8 @@ export default function FinanceiroPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <div>
+      <div className="space-y-8">
         <PageHeader
           titulo="Financeiro"
           subtitulo="Controle completo de custos de produção — com travas duras nos orquestradores."

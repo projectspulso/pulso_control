@@ -24,7 +24,7 @@ export default function SettingsPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
+      <div>
         <div className="max-w-7xl mx-auto">
           <ErrorState
             title="Erro ao carregar configurações"
@@ -37,7 +37,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
+    <div>
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 animate-fade-in">
           <div className="flex items-center gap-3 mb-2">

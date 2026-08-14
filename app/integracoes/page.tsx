@@ -23,8 +23,8 @@ export default function IntegracoesPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-5xl">
+      <div>
+        <div>
           <ErrorState title="Erro ao carregar integrações" message="Não foi possível checar as integrações." onRetry={() => refetch()} />
         </div>
       </div>
@@ -34,8 +34,8 @@ export default function IntegracoesPage() {
   const cats = Object.keys(CAT) as Integracao['categoria'][]
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-5xl">
+    <div>
+      <div>
         <div className="mb-8">
           <div className="mb-2 flex items-center gap-3">
             <Plug className="h-7 w-7 text-cyan-400" />

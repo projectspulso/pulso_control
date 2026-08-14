@@ -37,8 +37,8 @@ export default function EsteiraPage() {
   const [aba, setAba] = useState<Aba>('ideias')
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div>
+      <div className="space-y-6">
         <div>
           <div className="mb-2 flex items-center gap-3">
             <div className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />

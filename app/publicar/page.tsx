@@ -370,8 +370,8 @@ export default function PublicarPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
+      <div>
+        <div>
           <div className="glass rounded-2xl p-8 text-center space-y-4">
             <div className="skeleton h-8 w-48 mx-auto" />
             <div className="skeleton h-4 w-64 mx-auto" />
@@ -383,8 +383,8 @@ export default function PublicarPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
+      <div>
+        <div>
           <ErrorState
             title="Erro ao carregar conteudos"
             message="Nao foi possivel carregar os conteudos prontos para publicacao. Tente novamente."
@@ -396,8 +396,8 @@ export default function PublicarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div>
+      <div className="space-y-6">
         {/* Header + abas: Plano do dia (cockpit) × Fila de publicação */}
         <div>
           <div className="mb-2 flex items-center gap-3">

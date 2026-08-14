@@ -125,9 +125,9 @@ export default function FichaDoVideo({ params }: { params: Promise<{ id: string 
   const { id } = use(params)
   const { data: d, isLoading } = useVideo(id)
 
-  if (isLoading) return <div className="mx-auto max-w-4xl p-6"><div className="h-96 animate-pulse rounded-2xl bg-[#1a1922]" /></div>
+  if (isLoading) return <div className="p-6"><div className="h-96 animate-pulse rounded-2xl bg-[#1a1922]" /></div>
   if (!d) return (
-    <div className="mx-auto max-w-4xl p-6 text-center text-zinc-400">
+    <div className="p-6 text-center text-zinc-400">
       Vídeo não encontrado. <Link href="/analytics" className="text-violet-400 hover:underline">Voltar</Link>
     </div>
   )
@@ -141,7 +141,7 @@ export default function FichaDoVideo({ params }: { params: Promise<{ id: string 
   const hojeISO = new Date().toISOString().slice(0, 10)
 
   return (
-    <div className="mx-auto max-w-4xl space-y-3.5 p-6">
+    <div className="space-y-3.5 p-6">
       <Link href="/analytics" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>

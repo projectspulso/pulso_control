@@ -80,7 +80,7 @@ export function EsteiraIdeias() {
 
   if (isLoading) {
     return (
-      <div className="">
+      <div>
         <div className="max-w-7xl mx-auto">
           <div className="glass rounded-2xl p-8 text-center">
             <div className="skeleton h-8 w-32 mx-auto mb-2" />
@@ -93,7 +93,7 @@ export function EsteiraIdeias() {
 
   if (isError) {
     return (
-      <div className="">
+      <div>
         <div className="max-w-7xl mx-auto">
           <ErrorState
             title="Erro ao carregar ideias"
@@ -106,7 +106,7 @@ export function EsteiraIdeias() {
   }
 
   return (
-    <div className="">
+    <div>
       <div className="max-w-7xl mx-auto space-y-8">
         <PageHeader
           titulo="Ideias"

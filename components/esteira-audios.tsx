@@ -172,8 +172,8 @@ export function EsteiraAudios() {
 
   if (isError) {
     return (
-      <div className="">
-        <div className="mx-auto max-w-5xl">
+      <div>
+        <div>
           <ErrorState title="Erro ao carregar áudios" message="Não foi possível carregar os áudios." onRetry={() => refetch()} />
         </div>
       </div>
@@ -181,8 +181,8 @@ export function EsteiraAudios() {
   }
 
   return (
-    <div className="">
-      <div className="mx-auto max-w-5xl">
+    <div>
+      <div>
         {/* header */}
         <div className="mb-6">
           <div className="mb-2 flex items-center gap-3">

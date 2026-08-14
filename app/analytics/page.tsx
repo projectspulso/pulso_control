@@ -285,8 +285,8 @@ export default function AnalyticsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <div>
+        <div className="space-y-6">
           <div className="skeleton h-10 w-56" />
           <div className="grid gap-4 md:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -303,8 +303,8 @@ export default function AnalyticsPage() {
 
   if (isError || !data || !resumo) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
+      <div>
+        <div>
           <ErrorState
             title="Erro ao carregar o BI"
             message="Não foi possível montar o painel. Tente novamente."
@@ -317,7 +317,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="min-h-screen bg-[#100f16] p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-3.5">
+      <div className="space-y-3.5">
 
         {/* ── cabeçalho ── */}
         <div className="flex flex-wrap items-baseline justify-between gap-3">

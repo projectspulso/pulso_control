@@ -34,7 +34,7 @@ const travas = [
 export default function MotorProducaoPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-6 sm:p-8">
-      <div className="mx-auto max-w-6xl space-y-8">
+      <div className="space-y-8">
         <div>
           <Link href="/producao" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-zinc-400 transition hover:text-white">
             <ArrowLeft className="h-4 w-4" /> Voltar para produção

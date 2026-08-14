@@ -149,8 +149,8 @@ function NovaIdeiaPageContent() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
+      <div>
+        <div>
           <ErrorState
             title="Erro ao carregar dados"
             message="Nao foi possivel carregar os canais necessarios para criar uma nova ideia."
@@ -162,8 +162,8 @@ function NovaIdeiaPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-5xl">
+    <div>
+      <div>
         <div className="mb-8 animate-fade-in">
           <Link
             href="/ideias"
@@ -405,8 +405,8 @@ function NovaIdeiaPageContent() {
 
 function LoadingState() {
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-5xl">
+    <div>
+      <div>
         <div className="h-10 w-64 animate-pulse rounded bg-zinc-800" />
       </div>
     </div>
