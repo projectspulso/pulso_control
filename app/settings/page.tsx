@@ -25,7 +25,7 @@ export default function SettingsPage() {
   if (isError) {
     return (
       <div>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <ErrorState
             title="Erro ao carregar configurações"
             message="Não foi possível carregar as configurações do sistema. Tente novamente."
@@ -38,7 +38,7 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <div className="max-w-7xl mx-auto">
+      <div>
         <div className="mb-8 animate-fade-in">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-2 h-2 rounded-full bg-zinc-500 animate-pulse-glow" />

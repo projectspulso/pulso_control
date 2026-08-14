@@ -93,7 +93,7 @@ export function EsteiraRoteiros() {
   if (isLoading) {
     return (
       <div>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <div className="glass rounded-2xl p-8 text-center space-y-4">
             <div className="skeleton h-8 w-32 mx-auto" />
             <div className="skeleton h-4 w-48 mx-auto" />
@@ -106,7 +106,7 @@ export function EsteiraRoteiros() {
   if (isError) {
     return (
       <div>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <ErrorState
             title="Erro ao carregar roteiros"
             message="Não foi possível carregar a lista de roteiros. Tente novamente."
@@ -119,7 +119,7 @@ export function EsteiraRoteiros() {
 
   return (
     <div>
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="space-y-8">
         <PageHeader titulo="Roteiros" subtitulo={`${(stats?.total ?? 0) - qtdPostadas} a produzir · ${stats?.total ?? 0} no total${qtdPostadas ? ` (${qtdPostadas} já postados)` : ''}`} />
 
         {/* Gerar roteiros — pra ideias aprovadas sem roteiro (trava de hook embutida) */}

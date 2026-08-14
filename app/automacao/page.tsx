@@ -74,7 +74,7 @@ export default function AutomacaoPage() {
 
   return (
     <div>
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="space-y-8">
         <PageHeader
           titulo="Automação"
           subtitulo="Gatilhos manuais — os crons da Vercel rodam sozinhos (coleta 11h, funil 12h, áudio 13h)"

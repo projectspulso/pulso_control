@@ -350,7 +350,7 @@ export default function ProducaoPage() {
   if (isLoading) {
     return (
       <div>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <div className="glass rounded-2xl p-8 text-center">
             <div className="text-zinc-400 animate-pulse">Carregando pipeline...</div>
           </div>
@@ -362,7 +362,7 @@ export default function ProducaoPage() {
   if (isError) {
     return (
       <div>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <ErrorState
             title="Erro ao carregar pipeline"
             message="Não foi possível carregar o pipeline de produção. Tente novamente."

@@ -81,7 +81,7 @@ export function EsteiraIdeias() {
   if (isLoading) {
     return (
       <div>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <div className="glass rounded-2xl p-8 text-center">
             <div className="skeleton h-8 w-32 mx-auto mb-2" />
             <div className="skeleton h-4 w-48 mx-auto" />
@@ -94,7 +94,7 @@ export function EsteiraIdeias() {
   if (isError) {
     return (
       <div>
-        <div className="max-w-7xl mx-auto">
+        <div>
           <ErrorState
             title="Erro ao carregar ideias"
             message="Não foi possível conectar ao banco de dados. Verifique sua conexão e tente novamente."
@@ -107,7 +107,7 @@ export function EsteiraIdeias() {
 
   return (
     <div>
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="space-y-8">
         <PageHeader
           titulo="Ideias"
           subtitulo={`${(stats?.total ?? 0) - qtdPostadas} a produzir · ${stats?.total ?? 0} no total${qtdPostadas ? ` (${qtdPostadas} já postadas)` : ''}`}
