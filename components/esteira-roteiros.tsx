@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import Link from 'next/link'
 import { useState } from 'react'
 
-export default function RoteirosPage() {
+export function EsteiraRoteiros() {
   const { data: roteiros, isLoading, isError, refetch } = useRoteiros()
   const { data: stats } = useRoteirosStats()
   const { data: canais } = useCanais()
@@ -92,7 +92,7 @@ export default function RoteirosPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
+      <div className="">
         <div className="max-w-7xl mx-auto">
           <div className="glass rounded-2xl p-8 text-center space-y-4">
             <div className="skeleton h-8 w-32 mx-auto" />
@@ -105,7 +105,7 @@ export default function RoteirosPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
+      <div className="">
         <div className="max-w-7xl mx-auto">
           <ErrorState
             title="Erro ao carregar roteiros"
@@ -118,7 +118,7 @@ export default function RoteirosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
+    <div className="">
       <div className="max-w-7xl mx-auto space-y-8">
         <PageHeader titulo="Roteiros" subtitulo={`${(stats?.total ?? 0) - qtdPostadas} a produzir · ${stats?.total ?? 0} no total${qtdPostadas ? ` (${qtdPostadas} já postados)` : ''}`} />
 

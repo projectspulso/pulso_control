@@ -45,7 +45,26 @@ const cfg = (s: string) => STATUS[s] || { label: s, cls: 'text-zinc-400 bg-zinc-
 const fmtDur = (s: number | null) =>
   s ? `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}` : '—'
 
-export default function AudiosPage() {
+/**
+ * Fora do render de propósito. Definido lá dentro, o React tratava um Chip NOVO a cada ciclo:
+ * remonta o botão, perde foco e estado. O lint pegava como erro e estava certo.
+ */
+function Chip({
+  v, label, n, ativo, onSelect,
+}: { v: string; label: string; n?: number; ativo: boolean; onSelect: (v: string) => void }) {
+  return (
+    <button
+      onClick={() => onSelect(v)}
+      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+        ativo ? 'bg-teal-600 text-white' : 'bg-zinc-900/60 text-zinc-400 ring-1 ring-zinc-700/50 hover:text-white'
+      }`}
+    >
+      {label} {n !== undefined && <span className="opacity-70">({n})</span>}
+    </button>
+  )
+}
+
+export function EsteiraAudios() {
   const qc = useQueryClient()
   const [filtro, setFiltro] = useState<string>('todos')
   const [mostrarPostadas, setMostrarPostadas] = useState(false)
@@ -153,7 +172,7 @@ export default function AudiosPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
+      <div className="">
         <div className="mx-auto max-w-5xl">
           <ErrorState title="Erro ao carregar áudios" message="Não foi possível carregar os áudios." onRetry={() => refetch()} />
         </div>
@@ -161,19 +180,8 @@ export default function AudiosPage() {
     )
   }
 
-  const Chip = ({ v, label, n }: { v: string; label: string; n?: number }) => (
-    <button
-      onClick={() => setFiltro(v)}
-      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-        filtro === v ? 'bg-teal-600 text-white' : 'bg-zinc-900/60 text-zinc-400 ring-1 ring-zinc-700/50 hover:text-white'
-      }`}
-    >
-      {label} {n !== undefined && <span className="opacity-70">({n})</span>}
-    </button>
-  )
-
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
+    <div className="">
       <div className="mx-auto max-w-5xl">
         {/* header */}
         <div className="mb-6">
@@ -246,11 +254,11 @@ export default function AudiosPage() {
 
         {/* filtros */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <Chip v="todos" label="Todos" n={audios.length} />
-          <Chip v="AUDIO_GERADO" label="🟢 Aguardando render" n={contagem.AUDIO_GERADO || 0} />
-          <Chip v="EM_EDICAO" label="🎬 Na fila de render" n={contagem.EM_EDICAO || 0} />
-          <Chip v="PRONTO_PUBLICACAO" label="Renderizados" n={contagem.PRONTO_PUBLICACAO || 0} />
-          <Chip v="PUBLICADO" label="Publicados" n={contagem.PUBLICADO || 0} />
+          <Chip v="todos" label="Todos" n={audios.length} ativo={filtro === 'todos'} onSelect={setFiltro} />
+          <Chip v="AUDIO_GERADO" label="🟢 Aguardando render" n={contagem.AUDIO_GERADO || 0} ativo={filtro === 'AUDIO_GERADO'} onSelect={setFiltro} />
+          <Chip v="EM_EDICAO" label="🎬 Na fila de render" n={contagem.EM_EDICAO || 0} ativo={filtro === 'EM_EDICAO'} onSelect={setFiltro} />
+          <Chip v="PRONTO_PUBLICACAO" label="Renderizados" n={contagem.PRONTO_PUBLICACAO || 0} ativo={filtro === 'PRONTO_PUBLICACAO'} onSelect={setFiltro} />
+          <Chip v="PUBLICADO" label="Publicados" n={contagem.PUBLICADO || 0} ativo={filtro === 'PUBLICADO'} onSelect={setFiltro} />
           {/* de ideia já postada ficam ocultos por padrão (desentulha) — este botão revela */}
           <button
             onClick={() => setMostrarPostadas((v) => !v)}

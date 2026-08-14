@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import Link from 'next/link'
 import { useState } from 'react'
 
-export default function IdeiasPage() {
+export function EsteiraIdeias() {
   const { data: ideias, isLoading, isError, refetch } = useIdeias()
   const { data: stats } = useIdeiasStats()
   const { data: canais } = useCanais()
@@ -80,7 +80,7 @@ export default function IdeiasPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
+      <div className="">
         <div className="max-w-7xl mx-auto">
           <div className="glass rounded-2xl p-8 text-center">
             <div className="skeleton h-8 w-32 mx-auto mb-2" />
@@ -93,7 +93,7 @@ export default function IdeiasPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
+      <div className="">
         <div className="max-w-7xl mx-auto">
           <ErrorState
             title="Erro ao carregar ideias"
@@ -106,7 +106,7 @@ export default function IdeiasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 sm:p-6 lg:p-8">
+    <div className="">
       <div className="max-w-7xl mx-auto space-y-8">
         <PageHeader
           titulo="Ideias"

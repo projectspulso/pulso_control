@@ -5,13 +5,10 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import {
-  AudioLines,
   BarChart3,
   Clapperboard,
   Compass,
-  FileEdit,
   LayoutDashboard,
-  Lightbulb,
   LogOut,
   Menu,
   Send,
@@ -19,6 +16,7 @@ import {
   Sparkles,
   Target,
   TrendingUp,
+  Workflow,
   Library,
   X,
 } from 'lucide-react'
@@ -27,10 +25,14 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser'
 import { useUsuario } from '@/lib/hooks/use-usuario'
 import { areaFor } from '@/lib/config/areas'
 
-// 14 -> 12 em 14/08/2026. Saíram /agenda e /aprendizado: as duas únicas telas com ZERO botões e
+// 14 -> 10 em 14/08/2026. Saíram /agenda e /aprendizado: as duas únicas telas com ZERO botões e
 // zero mutations — só exibiam. O calendário virou aba da Central de Publicação (onde a data é de
 // fato marcada) e o radar de estouro já vivia no Decisor. A trilha do /aprendizado era um JSON
 // que ninguém editava pelo app: 11 itens, nenhum concluído, parada havia 6 dias.
+//
+// E /ideias + /roteiros + /audios viraram a Esteira: três entradas para três estágios do MESMO
+// pipeline. As 229 ideias têm criado_por NULO — nenhuma nasceu de humano no app —, então essas
+// telas nunca foram de criação, e sim de conferência do que a máquina fez.
 const navigation = [
   // PRIMEIRO de propósito: é a pergunta que se faz ao abrir o app ("o que faço agora e por quê?").
   // As demais áreas são a biblioteca de consulta; o Decisor é a camada de decisão.
@@ -38,9 +40,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, badge: null, soAdmin: false },
   { name: 'Aderência', href: '/validacao', icon: Target, badge: 'mvp', soAdmin: false },
   { name: 'Trend Tops', href: '/trends', icon: TrendingUp, badge: 'ai', soAdmin: false },
-  { name: 'Ideias', href: '/ideias', icon: Lightbulb, badge: null, soAdmin: false },
-  { name: 'Roteiros', href: '/roteiros', icon: FileEdit, badge: null, soAdmin: false },
-  { name: 'Áudios', href: '/audios', icon: AudioLines, badge: null, soAdmin: false },
+  { name: 'Esteira', href: '/esteira', icon: Workflow, badge: null, soAdmin: false },
   { name: 'Assets', href: '/assets', icon: Library, badge: null, soAdmin: false },
   { name: 'Produção', href: '/producao', icon: Clapperboard, badge: null, soAdmin: false },
   { name: 'Central de Publicação', href: '/publicar', icon: Send, badge: 'ai', soAdmin: false },
