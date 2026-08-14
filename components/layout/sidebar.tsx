@@ -7,11 +7,9 @@ import { useState } from 'react'
 import {
   AudioLines,
   BarChart3,
-  CalendarDays,
   Clapperboard,
   Compass,
   FileEdit,
-  GraduationCap,
   LayoutDashboard,
   Lightbulb,
   LogOut,
@@ -29,6 +27,10 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser'
 import { useUsuario } from '@/lib/hooks/use-usuario'
 import { areaFor } from '@/lib/config/areas'
 
+// 14 -> 12 em 14/08/2026. Saíram /agenda e /aprendizado: as duas únicas telas com ZERO botões e
+// zero mutations — só exibiam. O calendário virou aba da Central de Publicação (onde a data é de
+// fato marcada) e o radar de estouro já vivia no Decisor. A trilha do /aprendizado era um JSON
+// que ninguém editava pelo app: 11 itens, nenhum concluído, parada havia 6 dias.
 const navigation = [
   // PRIMEIRO de propósito: é a pergunta que se faz ao abrir o app ("o que faço agora e por quê?").
   // As demais áreas são a biblioteca de consulta; o Decisor é a camada de decisão.
@@ -41,10 +43,8 @@ const navigation = [
   { name: 'Áudios', href: '/audios', icon: AudioLines, badge: null, soAdmin: false },
   { name: 'Assets', href: '/assets', icon: Library, badge: null, soAdmin: false },
   { name: 'Produção', href: '/producao', icon: Clapperboard, badge: null, soAdmin: false },
-  { name: 'Agenda', href: '/agenda', icon: CalendarDays, badge: null, soAdmin: false },
   { name: 'Central de Publicação', href: '/publicar', icon: Send, badge: 'ai', soAdmin: false },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null, soAdmin: false },
-  { name: 'Aprendizado', href: '/aprendizado', icon: GraduationCap, badge: 'ai', soAdmin: false },
   { name: 'Configurações', href: '/settings', icon: Settings, badge: null, soAdmin: false },
 ]
 

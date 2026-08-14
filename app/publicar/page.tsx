@@ -15,12 +15,14 @@ import {
   X,
   Youtube,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { CockpitDia } from '@/components/cockpit-dia'
 import { useAgendarPublicacao, useConteudosProntos } from '@/lib/hooks/use-calendario'
+import { useAgenda } from '@/lib/hooks/use-agenda'
+import { CalendarioAgenda, SlotsTravando, type ItemAgenda } from '@/components/agenda-enxuta'
 import { REDES_API_SEGURAS } from '@/lib/publicacao/redes-api'
 import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
 
@@ -62,12 +64,56 @@ function getFeedbackClasses(tone: FeedbackTone) {
   return 'border-blue-500/30 bg-blue-500/10 text-blue-100'
 }
 
+/**
+ * ABA CALENDÁRIO — herdeira da tela /agenda, eliminada em 14/08/2026.
+ *
+ * A /agenda tinha zero botões e zero mutations: só exibia. O que ela mostrava de exclusivo eram
+ * os slots travados e o calendário à frente; o "publicar hoje" duplicava o Plano do dia, e o
+ * banner de estouro duplicava o radar do Decisor. As duas peças que sobraram vêm morar aqui,
+ * onde a data é de fato marcada.
+ *
+ * Quem escolhe o conteúdo de cada slot continua sendo lib/agenda/roteador.ts, via /api/agenda/popular.
+ */
+function AbaCalendario() {
+  const { data, isLoading } = useAgenda(28)
+  const hoje = new Date().toISOString().slice(0, 10)
+
+  const itens: ItemAgenda[] = useMemo(() => {
+    if (!data) return []
+    return data.slots
+      .map((s) => {
+        const a = data.atribuicoes[s.chave]
+        return {
+          data: s.data,
+          horario: s.horario,
+          faixa: s.faixa,
+          ideiaId: a?.ideiaId ?? null,
+          titulo: a?.ideiaTitulo ?? null,
+          estagio: a?.estagio ?? 'vazio',
+          videoUrl: a?.videoUrl ?? null,
+          numero: a?.numero ?? null,
+          corpo: a?.corpo ?? null,
+        }
+      })
+      .filter((i) => i.data >= hoje)
+  }, [data, hoje])
+
+  if (isLoading) return <div className="skeleton h-64 w-full rounded-2xl" />
+
+  return (
+    <div className="space-y-4">
+      <SlotsTravando itens={itens} hoje={hoje} />
+      <CalendarioAgenda itens={itens} hoje={hoje} />
+    </div>
+  )
+}
+
 export default function PublicarPage() {
   const { data: conteudos, isLoading, isError, refetch } = useConteudosProntos()
   const agendarPublicacao = useAgendarPublicacao()
   const apr = useAprendizados()
 
-  const [aba, setAba] = useState<'plano' | 'fila'>('plano')
+  const [aba, setAba] = useState<'plano' | 'fila' | 'calendario'>('plano')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   // Quais redes disparar. Nasceu de um caso real: em 03/08 o refresh token do YouTube expirou,
   // os dois vídeos do dia saíram só no IG e no TikTok, e não havia como mandar SÓ o YouTube pela
@@ -358,14 +404,19 @@ export default function PublicarPage() {
             <div className="h-2 w-2 animate-pulse rounded-full bg-violet-500" />
             <h1 className="bg-linear-to-r from-violet-400 to-purple-400 bg-clip-text text-3xl sm:text-4xl font-black text-transparent">Central de Publicação</h1>
           </div>
-          <p className="text-zinc-400">Plano do dia e fila de publicação assistida.</p>
+          <p className="text-zinc-400">Plano do dia, calendário e fila de publicação assistida.</p>
         </div>
         <div className="flex w-fit gap-1 rounded-xl bg-zinc-900/60 p-1">
           <button type="button" onClick={() => setAba('plano')} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${aba === 'plano' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-white'}`}>📅 Plano do dia</button>
+          <button type="button" onClick={() => setAba('calendario')} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${aba === 'calendario' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-white'}`}>🗓️ Calendário</button>
           <button type="button" onClick={() => setAba('fila')} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${aba === 'fila' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-white'}`}>📤 Fila de publicação</button>
         </div>
 
         {aba === 'plano' && <CockpitDia mostrarLinkPublicar={false} />}
+
+        {/* CALENDÁRIO — veio da tela /agenda, eliminada em 14/08/2026 por não ter ação nenhuma.
+            Fica aqui porque quem marca data é esta tela: ver o plano e mudá-lo no mesmo lugar. */}
+        {aba === 'calendario' && <AbaCalendario />}
 
         {aba === 'fila' && (
         <div className="space-y-8">

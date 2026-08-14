@@ -3,15 +3,16 @@
 import { AlertTriangle, CalendarDays, CheckCircle2, ExternalLink, Flame, Layers } from 'lucide-react'
 import Link from 'next/link'
 
-import { classificarTema, PAPEL_NO_FACEBOOK, MEDIANA_FB_MEDIDA, type Tema } from '@/lib/decisor/temas'
+import { classificarTema, PAPEL_NO_FACEBOOK } from '@/lib/decisor/temas'
 import { useDecisor } from '@/lib/hooks/use-decisor'
 
 /**
- * A AGENDA EM TRÊS BLOCOS — publicar hoje, o que está travando, e o calendário.
+ * AS PEÇAS DA AGENDA — o que está travando e o calendário.
  *
- * A tela anterior era uma grade de 28 dias com filtros (canal, faixa, grid/lista) e a trilha do
- * funil: 336 linhas onde a decisão do dia se escondia. Grade grande parece completa e não é —
- * ninguém lê 84 células pra descobrir o que publicar hoje.
+ * A tela /agenda foi eliminada em 14/08/2026: tinha zero botões e zero mutations, e o único
+ * conteúdo exclusivo dela eram estas duas seções. Quem agenda de fato é a Central de Publicação,
+ * então é lá que elas passam a viver, como a aba Calendário. O "Publicar hoje" não veio junto —
+ * duplicava o Plano do dia da própria Central.
  *
  * Cada item vem com o TEMA e o que ele significa no Facebook, porque é o sinal que decide:
  * história/arqueologia detém os 6 estouros de 48 dias, e nenhum outro tema produziu um.
@@ -50,137 +51,46 @@ function diasEntre(deISO: string, ateISO: string) {
   )
 }
 
-function ChipTema({ tema }: { tema: Tema }) {
-  const papel = PAPEL_NO_FACEBOOK[tema]
-  const cor =
-    papel === 'sorteia'
-      ? 'bg-emerald-500/10 text-emerald-300'
-      : papel === 'morto'
-        ? 'bg-red-500/10 text-red-300'
-        : 'bg-zinc-800/70 text-zinc-400'
-  const titulo =
-    papel === 'sorteia'
-      ? `mediana ${MEDIANA_FB_MEDIDA[tema]} no Facebook — os 6 estouros de 48 dias saíram deste tema`
-      : papel === 'morto'
-        ? `mediana ${MEDIANA_FB_MEDIDA[tema]} no Facebook e zero estouros em 48 dias`
-        : `mediana ${MEDIANA_FB_MEDIDA[tema]} no Facebook, sem estouro registrado`
-  return (
-    <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${cor}`} title={titulo}>
-      {tema}
-    </span>
-  )
-}
-
-function Linha({ item, hoje }: { item: ItemAgenda; hoje: string }) {
-  const est = ESTAGIO_ROTULO[item.estagio] || ESTAGIO_ROTULO.vazio
-  const tema = item.titulo ? classificarTema(item.titulo, item.corpo) : null
-  const atrasado = diasEntre(hoje, item.data) < (DIAS_ATE_PRONTO[item.estagio] ?? 0)
-
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/8 bg-black/20 px-3.5 py-2.5">
-      <span className="w-12 shrink-0 text-xs tabular-nums text-zinc-500">{item.horario.slice(0, 5)}</span>
-      {item.ideiaId ? (
-        <Link
-          href={`/video/${item.ideiaId}`}
-          className="min-w-0 flex-1 truncate text-sm text-zinc-200 hover:text-white hover:underline"
-          title={item.titulo || ''}
-        >
-          {item.numero != null && <span className="mr-1.5 text-zinc-500">#{item.numero}</span>}
-          {item.titulo}
-        </Link>
-      ) : (
-        <span className="min-w-0 flex-1 text-sm text-red-300/80">sem conteúdo atribuído</span>
-      )}
-      {tema && <ChipTema tema={tema} />}
-      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${est.cor}`}>{est.txt}</span>
-      {item.videoUrl && (
-        <a
-          href={item.videoUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="abrir o arquivo do vídeo"
-          className="shrink-0 text-zinc-600 transition-colors hover:text-zinc-300"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      )}
-      {atrasado && (
-        <span className="shrink-0 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-300" title="não dá tempo de ficar pronto até a data">
-          não fica pronto
-        </span>
-      )}
-    </div>
-  )
-}
-
-export function AgendaEnxuta({ itens, hoje }: { itens: ItemAgenda[]; hoje: string }) {
-  const doDia = itens.filter((i) => i.data === hoje)
-
-  // TRAVANDO: slot sem conteúdo, ou com item que não fica pronto a tempo. É o que exige ação —
-  // o resto é só o plano seguindo.
+/**
+ * SLOTS TRAVADOS — slot sem conteúdo, ou com item que não fica pronto até a data.
+ *
+ * Exportado à parte porque a tela /agenda foi eliminada (não tinha ação nenhuma: zero botões,
+ * zero mutations) e estas duas seções eram a única coisa que só existia lá. Agora vivem na aba
+ * Calendário da Central de Publicação, junto de quem de fato agenda. O "Publicar hoje" da antiga
+ * agenda não veio junto: duplicava o Plano do dia da mesma tela.
+ */
+export function SlotsTravando({ itens, hoje }: { itens: ItemAgenda[]; hoje: string }) {
   const travando = itens.filter(
     (i) => !i.ideiaId || diasEntre(hoje, i.data) < (DIAS_ATE_PRONTO[i.estagio] ?? 0)
   )
-
+  if (travando.length === 0) return null
   const fmt = (iso: string) =>
     new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })
 
   return (
-    <div className="space-y-4">
-      {/* ══════ HOJE ══════ */}
-      <div className="rounded-2xl border border-white/8 bg-[#1a1922] p-6">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <span className="rounded-lg bg-violet-500/10 p-2">
-            <Flame className="h-5 w-5 text-violet-400" />
-          </span>
-          <h2 className="text-lg font-semibold text-white">Publicar hoje</h2>
-          <span className="ml-auto text-[11px] text-zinc-500">{fmt(hoje)}</span>
-        </div>
-        {doDia.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500">Nenhum slot hoje na grade.</p>
-        ) : (
-          <div className="mt-4 space-y-2">
-            {doDia.map((i) => (
-              <Linha key={i.data + i.horario} item={i} hoje={hoje} />
-            ))}
-          </div>
-        )}
-        <p className="mt-3 text-[10px] text-zinc-600">
-          O tema decide: os 6 estouros do Facebook em 48 dias saíram todos de história/arqueologia;
-          tecnologia/IA e produtividade nunca produziram um. Passe o mouse no chip pra ver o número.
-        </p>
+    <div className="rounded-2xl border border-red-500/25 bg-red-500/[0.04] p-6">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="rounded-lg bg-red-500/10 p-2">
+          <AlertTriangle className="h-5 w-5 text-red-400" />
+        </span>
+        <h2 className="text-lg font-semibold text-white">O que está travando</h2>
+        <span className="ml-auto text-[11px] text-zinc-500">{travando.length} slot(s)</span>
       </div>
-
-      {/* ══════ TRAVANDO ══════ */}
-      {travando.length > 0 && (
-        <div className="rounded-2xl border border-red-500/25 bg-red-500/[0.04] p-6">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span className="rounded-lg bg-red-500/10 p-2">
-              <AlertTriangle className="h-5 w-5 text-red-400" />
+      <p className="mt-1.5 text-xs text-zinc-400">
+        Slot sem conteúdo, ou com item que não fica pronto até a data — cada etapa (roteiro,
+        áudio, render) leva cerca de um dia.
+      </p>
+      <div className="mt-4 space-y-2">
+        {travando.slice(0, 6).map((i) => (
+          <div key={i.data + i.horario} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span className="w-24 shrink-0 text-xs text-zinc-500">{fmt(i.data)}</span>
+            <span className="min-w-0 flex-1 truncate text-zinc-300">
+              {i.titulo || <span className="text-red-300/80">sem conteúdo atribuído</span>}
             </span>
-            <h2 className="text-lg font-semibold text-white">O que está travando</h2>
-            <span className="ml-auto text-[11px] text-zinc-500">{travando.length} slot(s)</span>
+            <span className="shrink-0 text-[11px] text-zinc-500">{i.estagio}</span>
           </div>
-          <p className="mt-1.5 text-xs text-zinc-400">
-            Slot sem conteúdo, ou com item que não fica pronto até a data — cada etapa (roteiro,
-            áudio, render) leva cerca de um dia.
-          </p>
-          <div className="mt-4 space-y-2">
-            {travando.slice(0, 6).map((i) => (
-              <div key={i.data + i.horario} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                <span className="w-24 shrink-0 text-xs text-zinc-500">{fmt(i.data)}</span>
-                <span className="min-w-0 flex-1 truncate text-zinc-300">
-                  {i.titulo || <span className="text-red-300/80">sem conteúdo atribuído</span>}
-                </span>
-                <span className="shrink-0 text-[11px] text-zinc-500">{i.estagio}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ══════ CALENDÁRIO — a agenda inteira, num lugar só ══════ */}
-      <CalendarioAgenda itens={itens} hoje={hoje} />
+        ))}
+      </div>
     </div>
   )
 }
@@ -191,7 +101,7 @@ export function AgendaEnxuta({ itens, hoje }: { itens: ItemAgenda[]; hoje: strin
  * emagrecer é ter um local só para ver as coisas". Ficou um só: cada dia mostra seus slots com
  * horário, tema e o link do arquivo, então dá pra ir da data até o vídeo sem trocar de tela.
  */
-function CalendarioAgenda({ itens, hoje }: { itens: ItemAgenda[]; hoje: string }) {
+export function CalendarioAgenda({ itens, hoje }: { itens: ItemAgenda[]; hoje: string }) {
   const futuros = itens.filter((i) => i.data > hoje)
   const porData = new Map<string, ItemAgenda[]>()
   for (const i of futuros) {
@@ -323,7 +233,7 @@ export function BannerEstouro() {
           está a <strong className="text-amber-300">{top.multiplo}×</strong> a mediana do{' '}
           {top.plataforma === 'instagram' ? 'Instagram' : top.plataforma} agora
           {radar.length > 1 && <> (+{radar.length - 1} em alta)</>}. Enquanto está quente: publique{' '}
-          <strong className="text-zinc-100">sequência do tema "{top.tema}"</strong> hoje e confira o
+          <strong className="text-zinc-100">sequência do tema &ldquo;{top.tema}&rdquo;</strong> hoje e confira o
           cross-post nas outras redes.
         </p>
         <Link href="/decisor" className="shrink-0 text-[11px] text-zinc-500 hover:text-zinc-300">
