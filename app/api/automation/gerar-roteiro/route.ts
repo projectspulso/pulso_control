@@ -3,6 +3,7 @@ import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarRoteiro, buildPromptLegendas } from '@/lib/automation/prompts'
+import { contarFormas, proximaForma, INSTRUCAO_POR_FORMA } from '@/lib/automation/forma-hook'
 import { validarRoteiro } from '@/lib/automation/ai-clients'
 import { avaliarHook } from '@/lib/automation/hook-score'
 
@@ -143,8 +144,17 @@ export async function POST(request: NextRequest) {
       /* teaser é opcional */
     }
 
+    // FORMA DO GANCHO POR RODÍZIO — a variável do experimento, decidida aqui e não pelo modelo.
+    // Quando ele escolhia, convergia: curiosity_gap 25 usos contra 1 de pergunta_identificadora.
+    // Sempre a menos usada até agora, então os braços enchem parelhos e ficam comparáveis.
+    const usosForma = await contarFormas(supabase)
+    const forma = proximaForma(usosForma)
+
     // Gerar roteiro via GPT
-    const prompt = buildPromptGerarRoteiro(canal, ideiaCtx, undefined, aprendizado, proximoTema)
+    const prompt = buildPromptGerarRoteiro(canal, ideiaCtx, undefined, aprendizado, proximoTema, {
+      forma,
+      instrucao: INSTRUCAO_POR_FORMA[forma],
+    })
     const { content: roteiro, usage } = await callOpenAI(prompt, {
       temperature: 0.7,
       max_tokens: 2048,
@@ -220,6 +230,9 @@ export async function POST(request: NextRequest) {
         metadata: {
           ...(numero != null ? { numero } : {}),
           hook_motivos: hook.motivos,
+          // A forma fica NO ROTEIRO, não só na ideia: o roteiro é o texto que vira narração, e
+          // era exatamente esse elo que faltava para cruzar gancho com retenção.
+          forma_hook: forma,
           ai_modelo: 'gpt-4o',
           gerado_em: new Date().toISOString(),
           gerado_via: 'automation',

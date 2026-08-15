@@ -209,7 +209,13 @@ export function buildPromptGerarRoteiro(
   ideia: IdeiaContext,
   plataformas: string[] = ['youtube_shorts', 'tiktok', 'instagram_reels'],
   aprendizado?: string,
-  proximoTema?: string
+  proximoTema?: string,
+  /**
+   * Forma do gancho DECIDIDA DE FORA (rodízio em lib/automation/forma-hook.ts). Antes o modelo
+   * escolhia e convergia: de 67 ideias, curiosity_gap tinha 25 e pergunta_identificadora 1 — sem
+   * amostra não há comparação. Agora cada forma enche no mesmo ritmo e vira experimento medível.
+   */
+  formaHook?: { forma: string; instrucao: string }
 ): string {
   const duracaoAlvo = ideia.duracao_estimada || 35
   const palavrasAlvo = Math.round(duracaoAlvo * 2.5) // ~2.5 palavras/segundo pt-BR
@@ -229,7 +235,15 @@ export function buildPromptGerarRoteiro(
     ? `\n   - FOMO do próximo (use SE couber natural, e só se ficar fluido): o próximo vídeo é sobre "${proximoTema}". Provoque curiosidade sobre ele em poucas palavras, com as SUAS palavras — não copie o título cru nem encaixe "por que" à força. Não entregue a resposta, só a isca. Nada de prometer dia exato.`
     : ''
 
-  return `Você é o roteirista-chefe do PULSO e segue o HARNESS editorial do projeto (Atenção → Lacuna → Dopamina): o hook prende em ≤2 segundos, abre uma lacuna de curiosidade que SÓ fecha no final, e tudo é fato real verificável — nunca invente.
+  const blocoForma = formaHook
+    ? `
+
+FORMA DO GANCHO — OBRIGATÓRIA NESTE ROTEIRO: ${formaHook.forma}
+${formaHook.instrucao}
+Não troque de forma. Ela é a variável do experimento em curso; a trava dos 3 segundos continua valendo por cima dela.`
+    : ''
+
+  return `Você é o roteirista-chefe do PULSO e segue o HARNESS editorial do projeto (Atenção → Lacuna → Dopamina): o hook prende em ≤2 segundos, abre uma lacuna de curiosidade que SÓ fecha no final, e tudo é fato real verificável — nunca invente.${blocoForma}
 
 CANAL: ${canal.nome}
 FORMATO: Vídeo curto vertical para ${plataformas.join(', ')} (${duracaoAlvo} segundos)

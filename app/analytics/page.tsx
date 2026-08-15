@@ -11,6 +11,7 @@ import { ParecerAnalista } from '@/components/parecer-analista'
 import { HorariosPanel } from '@/components/horarios-panel'
 import { NotaVsViewsPanel } from '@/components/nota-vs-views-panel'
 import { QualidadePanel } from '@/components/qualidade-panel'
+import { FormasHookPanel } from '@/components/formas-hook-panel'
 import { ReconciliacaoPanel } from '@/components/reconciliacao-panel'
 import { BoxplotVerticais } from '@/components/boxplot-verticais'
 import { BibliotecaPanel } from '@/components/biblioteca-panel'
@@ -409,7 +410,15 @@ export default function AnalyticsPage() {
         )}
 
         {/* ══════ QUALIDADE ══════ */}
-        {aba === 'qualidade' && <QualidadePanel filtros={filtros} />}
+        {aba === 'qualidade' && (
+          <div className="space-y-6">
+            {/* O experimento do gancho fica AQUI, junto do resto de qualidade: é a mesma pergunta
+                ("o vídeo prende?") e o painel ao lado, nota_hook × views, é justamente a régua que
+                não funcionou — ver as duas juntas mostra por que a régua mudou. */}
+            <FormasHookPanel />
+            <QualidadePanel filtros={filtros} />
+          </div>
+        )}
 
         {/* ══════ AUDIÊNCIA ══════ */}
         {aba === 'audiencia' && (
