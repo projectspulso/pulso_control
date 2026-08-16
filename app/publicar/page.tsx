@@ -23,6 +23,7 @@ import { CockpitDia } from '@/components/cockpit-dia'
 import { useAgendarPublicacao, useConteudosProntos } from '@/lib/hooks/use-calendario'
 import { useAgenda } from '@/lib/hooks/use-agenda'
 import { CalendarioAgenda, SlotsTravando, type ItemAgenda } from '@/components/agenda-enxuta'
+import { AutoAgendar } from '@/components/auto-agendar'
 import { REDES_API_SEGURAS } from '@/lib/publicacao/redes-api'
 import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
 
@@ -102,6 +103,9 @@ function AbaCalendario() {
 
   return (
     <div className="space-y-4">
+      {/* Primeiro a ação, depois o retrato: o calendário passa a ser conferência do que foi
+          agendado, não o lugar onde se agenda um a um. */}
+      <AutoAgendar />
       <SlotsTravando itens={itens} hoje={hoje} />
       <CalendarioAgenda itens={itens} hoje={hoje} />
     </div>

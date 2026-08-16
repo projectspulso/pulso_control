@@ -3,7 +3,7 @@ import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarRoteiro, buildPromptLegendas } from '@/lib/automation/prompts'
-import { contarFormas, proximaForma, INSTRUCAO_POR_FORMA } from '@/lib/automation/forma-hook'
+import { contarFormas, desempenhoPorForma, escolherForma, INSTRUCAO_POR_FORMA } from '@/lib/automation/forma-hook'
 import { validarRoteiro } from '@/lib/automation/ai-clients'
 import { avaliarHook } from '@/lib/automation/hook-score'
 
@@ -147,8 +147,11 @@ export async function POST(request: NextRequest) {
     // FORMA DO GANCHO POR RODÍZIO — a variável do experimento, decidida aqui e não pelo modelo.
     // Quando ele escolhia, convergia: curiosity_gap 25 usos contra 1 de pergunta_identificadora.
     // Sempre a menos usada até agora, então os braços enchem parelhos e ficam comparáveis.
-    const usosForma = await contarFormas(supabase)
-    const forma = proximaForma(usosForma)
+    const [usosForma, desempForma] = await Promise.all([
+      contarFormas(supabase),
+      desempenhoPorForma(supabase),
+    ])
+    const { forma, motivo: motivoForma } = escolherForma(usosForma, desempForma)
 
     // Gerar roteiro via GPT
     const prompt = buildPromptGerarRoteiro(canal, ideiaCtx, undefined, aprendizado, proximoTema, {
@@ -233,6 +236,8 @@ export async function POST(request: NextRequest) {
           // A forma fica NO ROTEIRO, não só na ideia: o roteiro é o texto que vira narração, e
           // era exatamente esse elo que faltava para cruzar gancho com retenção.
           forma_hook: forma,
+          // rodizio (ainda medindo) | exploracao | melhor (ja aprendeu)
+          forma_hook_motivo: motivoForma,
           ai_modelo: 'gpt-4o',
           gerado_em: new Date().toISOString(),
           gerado_via: 'automation',

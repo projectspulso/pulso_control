@@ -69,3 +69,81 @@ export async function contarFormas(supabase: any): Promise<Record<string, number
   }
   return usos
 }
+
+/** Abaixo disto a diferença entre formas ainda é sorte — mesma régua do painel. */
+export const N_MINIMO_POR_FORMA = 5
+/** Quanto do tráfego continua explorando depois que as formas amadurecem. */
+export const FATIA_EXPLORACAO = 0.3
+
+export interface DesempenhoForma {
+  n: number
+  ret5: number | null
+}
+
+/**
+ * Retenção mediana aos 5 segundos de cada forma — a régua do experimento.
+ * Só YouTube e Facebook entregam curva; TikTok e Kwai não entram na conta.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function desempenhoPorForma(supabase: any): Promise<Record<string, DesempenhoForma>> {
+  const [{ data: roteiros }, { data: metricas }] = await Promise.all([
+    supabase.schema('pulso_content').from('roteiros').select('ideia_id, metadata'),
+    supabase.schema('pulso_content').from('metricas_publicacao')
+      .select('ideia_id, retention_graph').in('plataforma', ['youtube', 'facebook']),
+  ])
+
+  const formaDa = new Map<string, string>()
+  for (const r of roteiros || []) {
+    const f = (r.metadata || {}).forma_hook
+    if (f && r.ideia_id) formaDa.set(r.ideia_id, f)
+  }
+
+  const balde: Record<string, number[]> = {}
+  for (const m of metricas || []) {
+    const f = m.ideia_id ? formaDa.get(m.ideia_id) : undefined
+    if (!f) continue
+    const g = typeof m.retention_graph === 'string' ? JSON.parse(m.retention_graph) : m.retention_graph
+    const v = g?.['5']
+    if (typeof v === 'number' && v > 0) (balde[f] = balde[f] || []).push(v * 100)
+  }
+
+  const saida: Record<string, DesempenhoForma> = {}
+  for (const f of FORMAS_HOOK) {
+    const a = balde[f] || []
+    const s = [...a].sort((x, y) => x - y)
+    const m = s.length >> 1
+    saida[f] = { n: a.length, ret5: s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : null }
+  }
+  return saida
+}
+
+/**
+ * EXPLORAR, DEPOIS FAVORECER — e nunca parar de explorar de vez.
+ *
+ * Enquanto alguma forma tiver menos de N_MINIMO_POR_FORMA medições, é rodízio puro: sem amostra
+ * não há vencedor, e escolher cedo congela a estratégia em cima de sorte — foi assim que a
+ * `nota_hook` passou 154 roteiros parecendo útil.
+ *
+ * Depois que todas amadurecem, a melhor leva a maior parte, mas FATIA_EXPLORACAO das gerações
+ * continua no rodízio. Sem isso o sistema nunca descobriria que uma forma preterida melhorou —
+ * e a audiência muda.
+ *
+ * `sorteio` entra por parâmetro para o teste ser determinístico.
+ */
+export function escolherForma(
+  usos: Record<string, number>,
+  desempenho: Record<string, DesempenhoForma>,
+  sorteio: number = Math.random(),
+): { forma: FormaHook; motivo: 'rodizio' | 'exploracao' | 'melhor' } {
+  const imaturas = FORMAS_HOOK.filter((f) => (desempenho[f]?.n ?? 0) < N_MINIMO_POR_FORMA)
+  if (imaturas.length > 0) return { forma: proximaForma(usos), motivo: 'rodizio' }
+  if (sorteio < FATIA_EXPLORACAO) return { forma: proximaForma(usos), motivo: 'exploracao' }
+
+  let melhor: FormaHook = FORMAS_HOOK[0]
+  let maior = -Infinity
+  for (const f of FORMAS_HOOK) {
+    const r = desempenho[f]?.ret5 ?? -Infinity
+    if (r > maior) { maior = r; melhor = f }
+  }
+  return { forma: melhor, motivo: 'melhor' }
+}

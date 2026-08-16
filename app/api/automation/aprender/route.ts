@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { desempenhoPorForma, ROTULO_FORMA, N_MINIMO_POR_FORMA, type FormaHook } from '@/lib/automation/forma-hook'
 
 /**
  * POST /api/automation/aprender
@@ -218,6 +219,33 @@ export async function POST(request: NextRequest) {
       ...titulosPublicados,
     ]
 
+    // FORMA DO GANCHO — o experimento entra no cerebro so quando tem amostra. Enquanto mede, a
+    // linha diz que esta medindo, em vez de sugerir vencedor com n=1 (o erro da nota_hook).
+    let blocoForma = ''
+    try {
+      const desemp = await desempenhoPorForma(supabase)
+      const maduras = (Object.keys(desemp) as FormaHook[])
+        .filter((f) => desemp[f].n >= N_MINIMO_POR_FORMA && desemp[f].ret5 != null)
+        .sort((a, b) => (desemp[b].ret5 as number) - (desemp[a].ret5 as number))
+      if (maduras.length >= 2) {
+        const linhas = maduras
+          .map((f) => `- ${ROTULO_FORMA[f]}: ${(desemp[f].ret5 as number).toFixed(0)}% de retencao aos 5s (n=${desemp[f].n})`)
+          .join('\n')
+        blocoForma = `
+
+FORMA DE GANCHO QUE MAIS SEGURA (medido por RETENCAO aos 5 segundos, nao por views):
+${linhas}
+Prefira a forma do topo quando ela couber no assunto. Nao force: gancho que nao combina com o
+tema perde mais do que a forma ganha.`
+      } else {
+        blocoForma = `
+
+FORMA DE GANCHO: experimento em curso, ainda sem ${N_MINIMO_POR_FORMA} medicoes por forma. Nenhuma preferencia ate la.`
+      }
+    } catch {
+      /* o digest nao pode quebrar por causa do experimento */
+    }
+
     const texto = `${PLANO_CRESCIMENTO}
 APRENDIZADO DA NOSSA AUDIÊNCIA (referência de PADRÃO — não copie tema nem frase literal):
 GANCHOS QUE MAIS RETIVERAM (replique a ESTRUTURA do gancho, NUNCA o assunto):
@@ -230,7 +258,7 @@ e chamar de ideia nova — "relojoeiro suíço em 1923" é o mesmo vídeo que "r
 ${assuntosQueimados.map((s) => `- ${s}`).join('\n')}
 
 TEMA × REDE (o que cada rede mais premiou em views — priorize ao distribuir/escolher tema):
-${linhasTemaRede}`
+${linhasTemaRede}${blocoForma}`
 
     const valor = {
       texto,
