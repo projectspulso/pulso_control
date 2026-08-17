@@ -23,6 +23,7 @@ import {
 import { getSupabaseBrowser } from '@/lib/supabase/browser'
 import { useUsuario } from '@/lib/hooks/use-usuario'
 import { areaFor } from '@/lib/config/areas'
+import { Relogio } from '@/components/layout/relogio'
 
 // 14 -> 9 em 14/08/2026. Saíram /agenda e /aprendizado: as duas únicas telas com ZERO botões e
 // zero mutations — só exibiam. O calendário virou aba da Central de Publicação (onde a data é de
@@ -107,6 +108,9 @@ function Rodape() {
 
   return (
     <div className="relative border-t border-zinc-800/50 p-4">
+      {/* Relógio antes do usuário: é referência de leitura, não enfeite — a agenda e os crons
+          trabalham em Brasília, e a tela precisa dizer em que fuso os horários estão. */}
+      <Relogio />
       <div className="mb-2 flex items-center gap-3 rounded-xl bg-zinc-900/50 p-3">
         <div className="h-9 w-9 shrink-0 rounded-lg bg-linear-to-br from-purple-500 to-pink-500 p-0.5">
           <div className="flex h-full w-full items-center justify-center rounded-[7px] bg-zinc-950 text-xs font-bold text-white">
