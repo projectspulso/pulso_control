@@ -192,14 +192,19 @@ async function publicarAgendados(request: NextRequest) {
           : `${rede}:FALHOU(${e instanceof Error ? e.message.slice(0, 40) : 'erro'})`)
       }
     }
-    // `ok` exige TODAS as redes, não "alguma". Com `some`, o #114 de 10/08 — que saiu no YouTube
-    // e no Instagram e não saiu no TikTok — teria sido registrado como sucesso pleno, e a rede
-    // faltando só apareceria dias depois na Aderência. Rede que ficou de fora tem que doer no log.
+    // `ok` exige TODAS as redes CONFIRMADAS. Duas correções sofridas moram aqui:
+    //
+    // 1) com `some`, o #114 de 10/08 — YouTube e Instagram sim, TikTok não — virava sucesso pleno.
+    // 2) `ENVIADO` (prazo estourado) NÃO é sucesso, é DESCONHECIDO. Eu o tratava como ok e o
+    //    resultado foi medido em 16-17/08: das três rodadas com Instagram em ENVIADO, DUAS
+    //    chegaram sozinhas e UMA (#141) nunca chegou — e as três foram registradas como
+    //    "sucesso". Um terço de perda invisível. Agora incerteza vira `parcial`, que é o que ela
+    //    é, e a varredura abaixo conserta o buraco na rodada seguinte.
     resultados.push({
       numero: md.numero ?? null,
       marcado: p.data_publicacao_planejada,
       redes: porRede.join(' · '),
-      ok: porRede.every((x) => x.includes('PUBLICADO') || x.includes('PROCESSANDO') || x.includes('ENVIADO')),
+      ok: porRede.every((x) => x.includes('PUBLICADO') || x.includes('PROCESSANDO')),
     })
   }
 
@@ -208,6 +213,66 @@ async function publicarAgendados(request: NextRequest) {
   // não há navegador, então o cron chama uma vez — o cron de reconciliação segue de backstop.
   if (resultados.some((r) => r.redes.includes('PROCESSANDO') || r.redes.includes('ENVIADO'))) {
     fetch(`${origin}/api/automation/reconciliar-publicacoes`, { method: 'POST', headers: credenciais }).catch(() => {})
+  }
+
+  // ══════ REMENDO DAS REDES QUE FICARAM PARA TRÁS ══════
+  //
+  // O Instagram é lento por natureza (cria container, espera ficar pronto) e a função morre aos
+  // 60s. A gente aborta em 10s e segue — mas abortar não garante que o outro lado terminou.
+  // MEDIDO em 16-17/08/2026: das três rodadas com `instagram:ENVIADO`, duas chegaram sozinhas e
+  // uma (#141) nunca chegou. Um terço perdido, e o log dizia "sucesso" nas três.
+  //
+  // Antes disto, rede perdida NUNCA era retentada: assim que uma rede dá certo o pipeline vira
+  // PUBLICADO e sai do filtro de `vencidos`. Quem completava era eu, à mão, quando alguém notava.
+  //
+  // Agora toda rodada olha para trás: vídeo agendado que saiu nas últimas 24h e está sem alguma
+  // rede de API ganha nova tentativa. A rota de publicar é idempotente por (ideia, rede), então
+  // repetir é seguro — no pior caso ela responde que já existe.
+  const remendos: Array<{ numero: number | null; rede: string; resultado: string }> = []
+  if (aDisparar.length === 0) {
+    const limite24h = new Date(agora.getTime() - 24 * 3600_000)
+    const redesPorIdeia = new Map<string, Set<string>>()
+    const quandoSaiu = new Map<string, string>()
+    for (const p of pubs) {
+      if (!p.data_publicacao) continue
+      if (!redesPorIdeia.has(p.ideia_id)) redesPorIdeia.set(p.ideia_id, new Set())
+      redesPorIdeia.get(p.ideia_id)!.add(p.plataforma)
+      const atual = quandoSaiu.get(p.ideia_id)
+      if (!atual || p.data_publicacao < atual) quandoSaiu.set(p.ideia_id, p.data_publicacao)
+    }
+
+    const incompletos = pipeTodos.filter((p) => {
+      const q = quandoSaiu.get(p.ideia_id)
+      if (!q || new Date(q) < limite24h) return false
+      const tem = redesPorIdeia.get(p.ideia_id) || new Set()
+      return REDES_API_SEGURAS.some((r) => !tem.has(r))
+    })
+
+    // Uma rede por rodada: o cron bate de hora em hora, então o remendo se completa sozinho sem
+    // arriscar o orçamento de 60s da função.
+    const alvo = incompletos[0]
+    if (alvo) {
+      const md = alvo.metadata || {}
+      const tem = redesPorIdeia.get(alvo.ideia_id) || new Set()
+      const rede = REDES_API_SEGURAS.find((r) => !tem.has(r))
+      if (rede && md.video_url) {
+        try {
+          const r = await fetch(`${origin}/api/automation/publicar`, {
+            method: 'POST',
+            headers: credenciais,
+            signal: AbortSignal.timeout(40_000),
+            body: JSON.stringify({
+              pipeline_id: alvo.id, video_url: md.video_url, caption: md.caption,
+              plataformas: [rede], confirmar: true,
+            }),
+          })
+          const d = await r.json().catch(() => ({}))
+          remendos.push({ numero: md.numero ?? null, rede, resultado: (d.resultados || [])[0]?.status || d.error || '?' })
+        } catch (e) {
+          remendos.push({ numero: md.numero ?? null, rede, resultado: e instanceof Error ? e.name : 'erro' })
+        }
+      }
+    }
   }
 
   // PROVA DE VIDA: grava SEMPRE, inclusive quando não há nada a publicar.
@@ -223,7 +288,11 @@ async function publicarAgendados(request: NextRequest) {
   // O CHECK foi ampliado no banco; ainda assim, quem grava o razão não pode falhar em segredo.
   const { error: erroLog } = await supabase.schema('pulso_content').from('logs_workflows').insert({
     workflow_name: 'PUBLICAR_AGENDADOS',
-    status: resultados.length === 0 ? 'ocioso' : resultados.every((r) => r.ok) ? 'sucesso' : 'parcial',
+    status: resultados.length === 0 && remendos.length === 0
+      ? 'ocioso'
+      : resultados.every((r) => r.ok) && remendos.every((r) => r.resultado === 'PUBLICADO')
+        ? 'sucesso'
+        : 'parcial',
     detalhes: {
       disparados: resultados.length,
       agendados_vencidos: vencidos.length,
@@ -231,6 +300,7 @@ async function publicarAgendados(request: NextRequest) {
       ja_hoje: publicadosHoje.size,
       dia_brt: hoje,
       resultados,
+      ...(remendos.length ? { remendos } : {}),
     },
   })
   if (erroLog) console.error('[publicar-agendados] falhou ao gravar log:', erroLog.message)
