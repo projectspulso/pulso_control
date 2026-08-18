@@ -3,6 +3,7 @@ import { guardApi } from '@/lib/auth/api-guard'
 import { repassarCredencial } from '@/lib/auth/repassar-credencial'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { REDES_API_SEGURAS } from '@/lib/publicacao/redes-api'
+import { experimentoFbAtivo, vaiPorApi } from '@/lib/publicacao/experimento-fb'
 
 /**
  * O DESPERTADOR DA PUBLICAÇÃO — a metade que faltava do botão "Agendar".
@@ -142,6 +143,10 @@ async function publicarAgendados(request: NextRequest) {
   const vagas = Math.max(0, tetoDia - publicadosHoje.size)
   const aDisparar = vencidos.slice(0, Math.min(vagas, 1))
 
+  // RE-TESTE DO FACEBOOK: exceção explícita, com prazo, que se desliga sozinha ao vencer.
+  // A trava de REDES_PROIBIDAS_API continua de pé — ver lib/publicacao/experimento-fb.ts.
+  const expFb = await experimentoFbAtivo(supabase)
+
   const origin = new URL(request.url).origin
   const credenciais = repassarCredencial(request)
   const resultados: Array<{ numero: number | null; marcado: string; redes: string; ok: boolean }> = []
@@ -165,8 +170,12 @@ async function publicarAgendados(request: NextRequest) {
     // "falhado" por prazo. Abortar do nosso lado NÃO cancela o trabalho do outro lado. Então o
     // Instagram vai por último, com prazo curto — a gente solta o pedido e segue, e a
     // reconciliação amarra o post depois. Assim ele nunca mais come o tempo do TikTok.
-    const ORCAMENTO_MS: Record<string, number> = { tiktok: 18_000, youtube: 22_000, instagram: 10_000 }
+    const ORCAMENTO_MS: Record<string, number> = { tiktok: 18_000, youtube: 22_000, instagram: 10_000, facebook: 12_000 }
     const ORDEM = ['tiktok', 'youtube', 'instagram'].filter((r) => (REDES_API_SEGURAS as readonly string[]).includes(r))
+    // Facebook entra só se o experimento estiver valendo E este vídeo for do braço da API.
+    // Fica por ÚLTIMO: se o orçamento de 60s acabar, quem perde é o experimento, não a operação.
+    const fbNesteVideo = !!expFb && vaiPorApi(md.numero, expFb)
+    if (fbNesteVideo) ORDEM.push('facebook')
     const porRede: string[] = []
     for (const rede of ORDEM) {
       const prazo = ORCAMENTO_MS[rede] ?? 20_000
@@ -203,6 +212,7 @@ async function publicarAgendados(request: NextRequest) {
     resultados.push({
       numero: md.numero ?? null,
       marcado: p.data_publicacao_planejada,
+      ...(expFb ? { braco_fb: fbNesteVideo ? 'api' : 'manual' } : {}),
       redes: porRede.join(' · '),
       ok: porRede.every((x) => x.includes('PUBLICADO') || x.includes('PROCESSANDO')),
     })
