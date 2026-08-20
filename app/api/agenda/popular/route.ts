@@ -133,22 +133,16 @@ export async function POST(request: NextRequest) {
 
     // já atribuídos: preserva slots + não reusa ideias
     const slotsExistentes = new Set((atribQ.data || []).map((a: { data: string; horario: string }) => `${a.data}|${a.horario}`))
-    // QUEIMAVA ESTOQUE: `usados` marcava como gasta QUALQUER ideia que um dia esteve num slot —
-    // inclusive slot VENCIDO que nunca virou publicação. Vídeo pronto que perdeu a data ficava
-    // inagendável pra sempre (5 dos 12 prontos estavam nesse estado). Agora só conta slot de
-    // hoje pra frente; o que já foi ao ar continua barrado pelo set `publicado`, que é a
-    // fonte de verdade do "já postamos".
     const hojeISO = new Date().toISOString().slice(0, 10)
-    // OCUPADAS = só as ideias presas em slot que o roteador NÃO vai reescrever (fixado pelo dono
-    // ou no passado). As que estão em slot futuro reavaliável voltam pro bolo.
-    //
-    // BUG CORRIGIDO EM 30/07: isto marcava como ocupada QUALQUER ideia em slot futuro — mas esses
-    // slots são justamente os que estão sendo reavaliados. O roteador então não podia devolver a
-    // um slot nem a ideia que ele já tinha, e ficava com 33 candidatos livres para 56 slots: 24
-    // vagas viravam "sem conteúdo" com 41 vídeos parados no estoque. O dono viu na tela.
+    // OCUPADAS = só ideia presa em slot FUTURO fixado pelo dono. Slot VENCIDO não queima estoque:
+    // se a ideia tivesse ido ao ar, o set `publicado` (fonte de verdade do "já postamos") barra;
+    // se não foi, o vídeo precisa voltar pro bolo. Em 19/08 os 12 prontos do estoque estavam
+    // TODOS inagendáveis porque um dia sentaram num slot que venceu sem publicar — o filtro
+    // `a.data < hojeISO` daqui marcava slot passado como ocupação eterna, exatamente o bug que
+    // o comentário antigo dizia ter consertado.
     const usados = new Set<string>(
       (atribQ.data || [])
-        .filter((a: { data: string; fixado?: boolean }) => a.data < hojeISO || a.fixado === true)
+        .filter((a: { data: string; fixado?: boolean }) => a.fixado === true && a.data >= hojeISO)
         .map((a: { ideia_id: string | null }) => a.ideia_id)
         .filter((x: string | null): x is string => !!x)
     )
@@ -249,14 +243,26 @@ export async function POST(request: NextRequest) {
     const porEstagio: Record<string, number> = {}
     for (const n of novos) porEstagio[n.estagio as string] = (porEstagio[n.estagio as string] || 0) + 1
 
-    return NextResponse.json({
-      success: true,
+    const resumo = {
       criados: novos.length,
       reavaliados, // slots futuros que apontavam vídeo já publicado ou fora do estoque
       preenchidos: novos.filter((n) => n.ideia_id).length,
       vazios: novos.filter((n) => !n.ideia_id).length,
       por_estagio: porEstagio,
-    })
+    }
+
+    // Cron nunca falha em silêncio: TODA rodada deixa registro, inclusive a que não mudou nada.
+    // Sem isto, o dia em que o pg_cron parar de chamar esta rota é indistinguível do dia calmo.
+    await supabase.schema('pulso_content').from('logs_workflows').insert({
+      workflow_name: 'POPULAR_AGENDA',
+      status: novos.length || reavaliados ? 'sucesso' : 'ocioso',
+      detalhes: resumo,
+    }).then(
+      () => {},
+      (e: unknown) => console.error('[popular] falha ao logar rodada:', e)
+    )
+
+    return NextResponse.json({ success: true, ...resumo })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erro desconhecido'
     return NextResponse.json({ error: msg }, { status: 500 })

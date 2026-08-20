@@ -187,7 +187,10 @@ export async function POST(request: NextRequest) {
 
     const autoApprove = autoApproveConfig?.valor === true || autoApproveConfig?.valor === 'true'
     const autoApproveThreshold = 80
-    const shouldAutoApprove = autoApprove && qualidade.score >= autoApproveThreshold && hook.nota >= 3
+    // tem_cta é bloqueante: sem "segue/siga o PULSO" no fecho, o render não tem âncora pra
+    // janela do mascote (regra PULSO-CTA) — roteiro assim só sai com aprovação humana.
+    const shouldAutoApprove =
+      autoApprove && qualidade.score >= autoApproveThreshold && hook.nota >= 3 && qualidade.tem_cta
 
     // NUMERO AUTOMÁTICO: respeita o número já gravado na ideia; senão, próximo da sequência canônica.
     let numero: number | null =

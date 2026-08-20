@@ -228,7 +228,13 @@ export function validarRoteiro(
   const duracaoEstimada = Math.round(palavras / 2.5)
 
   const tem_hook = paragrafos >= 2
-  const tem_cta = /segue|comenta|salva|marca|pulso|canal/i.test(roteiro)
+  // CTA DE VERDADE, NO LUGAR CERTO: o fecho (último quarto do texto) precisa pedir o follow com
+  // o nome da marca — "segue/siga/seguir o PULSO". O teste antigo (/segue|...|pulso|canal/ no
+  // texto INTEIRO) nunca reprovava: todo roteiro menciona "PULSO", e "consegue" contém "segue".
+  // Foi assim que o #143 saiu sem fecho e o mascote do render abriu aos 51% da narração
+  // (o render ancora a janela do CTA nessa frase — ver motor/make_video.py, regra PULSO-CTA).
+  const fecho = roteiro.slice(Math.floor(roteiro.length * 0.75))
+  const tem_cta = /\b(segue|siga|seguir)\s+(o\s+)?pulso\b/i.test(fecho)
   const duracao_adequada = Math.abs(duracaoEstimada - duracaoAlvo) < 20
   const tamanho_ok = palavras >= 40 && palavras <= 600
 

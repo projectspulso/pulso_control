@@ -77,13 +77,26 @@ def vis_at(al,t):
             c=c.lower(); return "MBP" if not c.strip() else VM.get(c,"AEI")
     return "MBP"
 al=json.load(open(ALIGN,encoding="utf-8")); dur=SCENES[-1][1]
-# REGRA PULSO-CTA: janela do CTA = ultimo "segue" (...o pulso) ate o fim da narracao
-_full="".join(al["characters"]).lower(); _idx=_full.rfind("segue")
+# REGRA PULSO-CTA: janela do CTA = inicio do FECHO de CTA na narracao ate o fim.
+# O fecho e procurado por variantes reais com fronteira de palavra — rfind("segue") cru casava
+# dentro de "consegue"/"persegue": no #143 o ultimo match foi "ninguem conSEGUE explicar" aos 51%
+# e o mascote gigante ocupou metade do video. Alem disso o gerador passou a escrever
+# "siga o PULSO" (imperativo), que o rfind antigo nem via -> caia no fallback de 3s.
+import re as _re
+_full="".join(al["characters"]).lower(); _idx=-1
+for _pat in (r"(?<![a-zç])segue\s+o\s+pulso", r"(?<![a-zç])siga\s+o\s+pulso",
+             r"(?<![a-zç])seguir\s+o\s+pulso", r"(?<![a-zç])segue\s+a\s+gente",
+             r"(?<![a-zç])siga(?![a-zç])", r"(?<![a-zç])segue(?![a-zç])"):
+    _hits=list(_re.finditer(_pat,_full))
+    if _hits: _idx=_hits[-1].start(); break
 CTA_T0 = al["character_start_times_seconds"][_idx] if _idx>=0 else dur
+# TRAVA ANTI-MEIO-DA-NARRACAO: a janela nunca passa de 25% do video. Match antes disso e falso
+# (fecho no lugar errado ou palavra parecida) — clampa e avisa em vez de engolir o video.
+if CTA_T0 < dur*0.75:
+    print(f"[CTA] AVISO {slug}: fecho detectado aos {CTA_T0:.1f}s ({CTA_T0/dur*100:.0f}% do video) — janela clampada aos 25% finais")
+    CTA_T0 = dur*0.75
 # PISO DE CONVERSAO: o CTA visual (mascote + botao Seguir) precisa de >=3s pra registrar e
-# converter. Alguns roteiros dizem "segue" so no ultimo 1s (janela de 1.0-1.4s) -> o mascote
-# nem termina de aparecer. Aqui garantimos que o visual comeca no minimo 3s antes do fim,
-# mesmo que a palavra "segue" venha depois. Videos com CTA ja >=3s nao mudam.
+# converter. Alguns roteiros dizem o fecho so no ultimo 1s -> o mascote nem termina de aparecer.
 CTA_T0 = min(CTA_T0, dur-3.0)
 print(f"{slug}: dur {dur:.1f}s | CTA janela {CTA_T0:.2f}s->fim ({dur-CTA_T0:.1f}s)")
 FFP=FF.replace("ffmpeg.exe","ffprobe.exe")
