@@ -70,15 +70,21 @@ export async function resolverRascunhosTikTok(supabase: Sb): Promise<ResultadoRa
   let resolvidos = 0
   for (const r of lista) {
     try {
-      const resp = await fetch(ENDPOINT, {
+      // LER COMO TEXTO, NUNCA .json(): o TikTok manda o id do post como NÚMERO e ele tem 19
+      // dígitos — acima de Number.MAX_SAFE_INTEGER (9,007×10^15). O parse arredonda ANTES de
+      // qualquer código nosso tocar no valor: ...9466514 virava ...9466000. Foi o que deixou
+      // #144, #156 e #157 sem vínculo na Aderência em 20-21/08/2026 — o coletor procurava um
+      // id que não existe na conta, e o vídeo publicado ficava marcado com zero views.
+      // O regex no texto cru preserva os dígitos. (O TikTok escreve "publicaly" mesmo, typo
+      // deles — o padrão aceita as duas grafias.)
+      const bruto = await fetch(ENDPOINT, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ publish_id: r.post_id }),
-      }).then((x) => x.json())
+      }).then((x) => x.text())
 
-      // O TikTok escreve "publicaly" mesmo (typo deles). Aceito as duas grafias por segurança.
-      const ids: string[] = resp?.data?.publicaly_available_post_id || resp?.data?.publicly_available_post_id || []
-      const idReal = Array.isArray(ids) ? ids[0] : ids
+      const achado = bruto.match(/"publ[a-z]*_available_post_id"\s*:\s*\[?\s*"?(\d+)"?/)
+      const idReal = achado?.[1] || null
       if (!idReal) continue
 
       const { error } = await supabase.schema('pulso_content').from('metricas_publicacao').update({
