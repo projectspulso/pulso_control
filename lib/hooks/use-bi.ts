@@ -71,7 +71,7 @@ export function useBi(filtros: BiFiltros) {
     queryFn: async () => {
       const [metricasQ, ideiasQ, canaisQ, audiosQ, diariasQ, retencaoQ] = await Promise.all([
         supabase.schema('pulso_content').from('metricas_publicacao').select('*'),
-        supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
+        supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id, formato'),
         supabase.schema('pulso_core').from('canais').select('id, nome').order('nome'),
         supabase.schema('pulso_content').from('audios').select('ideia_id, duracao_segundos'),
         supabase
@@ -97,6 +97,11 @@ export function useBi(filtros: BiFiltros) {
       if (retencaoQ.error) throw retencaoQ.error
 
       const ideias = new Map((ideiasQ.data || []).map((i) => [i.id, i]))
+      // Vídeo longo (bastidores) fora do BI de Shorts: métrica dele é hora de exibição, não
+      // views — na mediana/percentil ele seria "fracasso" e achataria a régua dos Shorts.
+      const idsLongo = new Set(
+        (ideiasQ.data || []).filter((i) => (i as { formato?: string }).formato === 'longo').map((i) => i.id)
+      )
       const canais = new Map((canaisQ.data || []).map((c) => [c.id, c.nome]))
       const duracaoPorIdeia = new Map<string, number>()
       for (const a of audiosQ.data || []) {
@@ -110,7 +115,10 @@ export function useBi(filtros: BiFiltros) {
       // repostados (linha antiga ~4 views, nova com views reais); somar as duas dobra o vídeo.
       // Fica a de maior views. Ver lib/analytics/dedupe.ts.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { unicas: metricasUnicas, republicacoes } = dedupePublicacoes((metricasQ.data || []) as any[])
+      const { unicas: metricasUnicas, republicacoes } = dedupePublicacoes(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ((metricasQ.data || []) as any[]).filter((m) => !idsLongo.has(m.ideia_id))
+      )
 
       const publicacoes: BiPublicacao[] = []
       let ultimaColeta: string | null = null

@@ -115,6 +115,9 @@ export interface Database {
           // Os demais são legado do tipo gerado (nunca aceitos pelo enum) — mantidos só p/ não
           // cascatear nos mapas de display; DESCARTADA é o único terminal válido (arquivar/rejeitar).
           status: 'RASCUNHO' | 'APROVADA' | 'DESCARTADA' | 'EM_PRODUCAO' | 'CONCLUIDA' | 'ARQUIVADA'
+          // short = esteira automática (default de todo registro). longo = série de bastidores,
+          // FORA da esteira (roteador/auto-agendar/cron ignoram). Migration add_formato_ideias.sql.
+          formato: 'short' | 'longo'
           tags: string[] | null
           linguagem: string | null
           criado_por: string | null
@@ -122,7 +125,7 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['pulso_content']['Tables']['ideias']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Insert: Omit<Database['pulso_content']['Tables']['ideias']['Row'], 'id' | 'created_at' | 'updated_at' | 'formato'> & { formato?: 'short' | 'longo' }
         Update: Partial<Database['pulso_content']['Tables']['ideias']['Insert']>
       }
       roteiros: {

@@ -158,7 +158,10 @@ async function tokenYoutube(supabase: any): Promise<string> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function publicarYouTube(videoUrl: string, titulo: string, descricao: string, supabase: any) {
+async function publicarYouTube(videoUrl: string, titulo: string, descricao: string, supabase: any, formato: 'short' | 'longo' = 'short') {
+  // formato=longo (serie de bastidores): NADA de #Shorts — nem tag, nem descricao — e a URL e
+  // watch?v=. E o caminho das 3.000 horas do YPP; classificar como Short mataria as horas.
+  const ehLongo = formato === 'longo'
   const at = await tokenYoutube(supabase)
   const vid = await fetch(videoUrl)
   if (!vid.ok) throw new Error(`Não baixei o vídeo (${vid.status})`)
@@ -170,11 +173,11 @@ async function publicarYouTube(videoUrl: string, titulo: string, descricao: stri
     ...new Set([
       ...(descricao.match(/#([\p{L}\w]+)/gu) || []).map((h) => h.slice(1)),
       'pulso',
-      'shorts',
+      ...(ehLongo ? [] : ['shorts']),
       'curiosidades',
     ]),
   ].slice(0, 15)
-  const desc = /#shorts/i.test(descricao) ? descricao : `${descricao}\n\n#Shorts`
+  const desc = ehLongo || /#shorts/i.test(descricao) ? descricao : `${descricao}\n\n#Shorts`
   const meta = {
     snippet: {
       title: titulo.slice(0, 100),
@@ -204,7 +207,7 @@ async function publicarYouTube(videoUrl: string, titulo: string, descricao: stri
   })
   const d = await r.json()
   if (!r.ok || !d.id) throw new Error(`YT upload: ${d?.error?.message || r.status}`)
-  return { post_id: d.id as string, url: `https://youtube.com/shorts/${d.id}` }
+  return { post_id: d.id as string, url: ehLongo ? `https://youtube.com/watch?v=${d.id}` : `https://youtube.com/shorts/${d.id}` }
 }
 
 // ---- TikTok (inbox/rascunho via Content Posting API) ----
@@ -304,7 +307,7 @@ export async function POST(request: NextRequest) {
   const { data: ideia } = await supabase
     .schema('pulso_content')
     .from('ideias')
-    .select('id, titulo')
+    .select('id, titulo, formato')
     .eq('id', item.ideia_id)
     .single()
 
@@ -353,7 +356,7 @@ export async function POST(request: NextRequest) {
       } else if (plataforma === 'facebook') {
         res = await publicarFacebook(video_url, legenda, token, pageId)
       } else if (plataforma === 'youtube') {
-        res = await publicarYouTube(video_url, ideia?.titulo || 'PULSO', legenda, supabase)
+        res = await publicarYouTube(video_url, ideia?.titulo || 'PULSO', legenda, supabase, ideia?.formato === 'longo' ? 'longo' : 'short')
       } else if (plataforma === 'tiktok') {
         res = await publicarTikTok(video_url, supabase)
       } else {

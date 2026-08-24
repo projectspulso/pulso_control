@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   try {
     const [gradeQ, ideiasQ, roteirosQ, audiosQ, metricasQ, pipeQ, atribQ] = await Promise.all([
       supabase.from('vw_agenda_semanal').select('*').eq('ativo', true),
-      supabase.schema('pulso_content').from('ideias').select('id, canal_id, status, titulo'),
+      supabase.schema('pulso_content').from('ideias').select('id, canal_id, status, titulo, formato'),
       supabase.schema('pulso_content').from('roteiros').select('ideia_id, conteudo_md'),
       supabase.schema('pulso_content').from('audios').select('ideia_id'),
       supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma, taxa_retencao'),
@@ -106,6 +106,9 @@ export async function POST(request: NextRequest) {
     const candidatos: CandidatoAgenda[] = []
     for (const i of ideiasQ.data || []) {
       if (publicado.has(i.id)) continue
+      // formato=longo fica FORA da grade de Shorts: a série de bastidores tem cadência e canal
+      // próprios (1/semana, só YouTube) e só entra na agenda quando o formato se provar.
+      if ((i as { formato?: string }).formato === 'longo') continue
       let estagio: CandidatoAgenda['estagio'] | null = null
       if (videoPronto.has(i.id)) estagio = 'video'
       else if (comAudio.has(i.id)) estagio = 'audio'

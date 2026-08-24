@@ -96,7 +96,7 @@ export function useHoje() {
     queryFn: async () => {
       const [ppRes, ideiasRes, canaisRes, metRes, rotRes, cfgRes, kwaiCfgRes, kwaiPubRes, todasPubRes] = await Promise.all([
         supabase.schema('pulso_content').from('pipeline_producao').select('id, ideia_id, status, metadata'),
-        supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
+        supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id, formato'),
         supabase.schema('pulso_core').from('canais').select('id, nome'),
         supabase
           .schema('pulso_content')
@@ -117,6 +117,9 @@ export function useHoje() {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ideiaMap = new Map<string, any>((ideiasRes.data || []).map((i: any) => [i.id, i]))
+      // Vídeo longo (bastidores) fora da régua do dia: retenção/pontuação aqui é régua de Short.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const idsLongo = new Set((ideiasRes.data || []).filter((i: any) => i.formato === 'longo').map((i: any) => i.id))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const canalNome = new Map<string, string>((canaisRes.data || []).map((c: any) => [c.id, c.nome]))
       // nota_hook por ideia (a força do gancho segue do roteiro até a ordem de publicação)
@@ -124,8 +127,10 @@ export function useHoje() {
       for (const r of (rotRes.data || []) as { ideia_id: string; nota_hook: number | null }[]) {
         if (r.ideia_id && typeof r.nota_hook === 'number' && !notaHookMap.has(r.ideia_id)) notaHookMap.set(r.ideia_id, r.nota_hook)
       }
+      // /hoje é o painel da operação de SHORTS — o vídeo longo tem cadência própria (1/semana,
+      // publicação deliberada) e não entra nem na lista de prontos nem na régua de retenção.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pp = (ppRes.data || []) as any[]
+      const pp = ((ppRes.data || []) as any[]).filter((p) => !idsLongo.has(p.ideia_id))
 
       const prontos: ItemPronto[] = pp
         .filter((p) => p.status === 'PRONTO_PUBLICACAO' && p.metadata?.video_url)
@@ -158,7 +163,7 @@ export function useHoje() {
           prontoDesde:
             (pp.find((x) => x.ideia_id === p.ideiaId)?.metadata?.cenas_geradas_em as string) ?? null,
         })),
-        ((todasPubRes.data || []) as { plataforma: string; taxa_retencao: number | null; ideia_id: string }[]).map(
+        ((todasPubRes.data || []) as { plataforma: string; taxa_retencao: number | null; ideia_id: string }[]).filter((m) => !idsLongo.has(m.ideia_id)).map(
           (m) => ({
             plataforma: m.plataforma,
             taxaRetencao: m.taxa_retencao ?? null,

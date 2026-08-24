@@ -45,13 +45,16 @@ async function comprometer(request: NextRequest) {
     supabase.schema('pulso_content').from('pipeline_producao')
       .select('id, ideia_id, status, metadata, data_publicacao_planejada'),
     supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, data_publicacao'),
-    supabase.schema('pulso_content').from('ideias').select('id, titulo'),
+    supabase.schema('pulso_content').from('ideias').select('id, titulo, formato'),
     supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle(),
   ])
   if (planoQ.error) return NextResponse.json({ error: `plano: ${planoQ.error.message}` }, { status: 500 })
   if (pipeQ.error) return NextResponse.json({ error: `pipeline: ${pipeQ.error.message}` }, { status: 500 })
 
   const titulo = Object.fromEntries((ideiasQ.data || []).map((i: { id: string; titulo: string }) => [i.id, i.titulo]))
+  const ehLongo = new Set(
+    ((ideiasQ.data || []) as Array<{ id: string; formato?: string }>).filter((i) => i.formato === 'longo').map((i) => i.id)
+  )
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pipePorIdeia = new Map<string, any>()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -91,6 +94,9 @@ async function comprometer(request: NextRequest) {
     const rot = { numero: md.numero ?? null, titulo: String(titulo[slot.ideia_id] || '').slice(0, 50) }
 
     if (!p) { pulados.push({ ...rot, motivo: 'sem linha no pipeline' }); continue }
+    // Vídeo longo não recebe data por aqui: publicação dele é deliberada (só YouTube, fora do
+    // teto da grade). Carimbar data faria o cron despachá-lo nas 5 redes como se fosse Short.
+    if (ehLongo.has(slot.ideia_id)) { pulados.push({ ...rot, motivo: 'formato longo — fora da esteira automática' }); continue }
     if (jaPublicado.has(slot.ideia_id)) { pulados.push({ ...rot, motivo: 'já publicado' }); continue }
     // O plano inclui itens ainda em roteiro/áudio. Data só em quem o cron consegue publicar —
     // carimbar data em vídeo inexistente é promessa que a rodada das 18h não cumpre.

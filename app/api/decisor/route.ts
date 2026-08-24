@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         .from('leituras_metricas')
         .select('ideia_id, plataforma, post_id, data_ref, views')
         .gte('data_ref', desde),
-      supabase.schema('pulso_content').from('ideias').select('id, titulo, status'),
+      supabase.schema('pulso_content').from('ideias').select('id, titulo, status, formato'),
       // fila = o que está pronto ou em produção e ainda não publicou
       supabase
         .schema('pulso_content')
@@ -78,11 +78,14 @@ export async function GET(request: NextRequest) {
     if (ideiasQ.error) throw ideiasQ.error
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawPubs = (pubQ.data || []) as any[]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawLei = (leiQ.data || []) as any[]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawIdeias = (ideiasQ.data || []) as any[]
+    // Vídeo longo (bastidores) fora do radar de Shorts: com menos views que a mediana da rede,
+    // todo longo viraria "fracasso" no radar e contaminaria a régua dos dois formatos.
+    const idsLongo = new Set(rawIdeias.filter((i) => i.formato === 'longo').map((i) => i.id))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawPubs = ((pubQ.data || []) as any[]).filter((p) => !idsLongo.has(p.ideia_id))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawLei = ((leiQ.data || []) as any[]).filter((l) => !idsLongo.has(l.ideia_id))
 
     const titulos = new Map<string, string | null>(rawIdeias.map((i) => [i.id, i.titulo]))
     // O corpo do roteiro é o segundo turno da classificação de tema — só entra quando o título

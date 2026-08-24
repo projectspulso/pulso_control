@@ -113,13 +113,16 @@ export async function POST(request: NextRequest) {
           .schema('pulso_content')
           .from('roteiros')
           .select('ideia_id, conteudo_md, nota_hook'),
-        supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id'),
+        supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id, formato'),
         supabase.schema('pulso_core').from('canais').select('id, nome'),
       ])
 
     const canalNome = new Map<string, string>((canais || []).map((c: { id: string; nome: string }) => [c.id, c.nome]))
+    // Vídeo longo (bastidores) fora do aprendizado de Shorts: a métrica dele é hora de exibição.
+    const idsLongo = new Set((ideias || []).filter((i: { formato?: string }) => i.formato === 'longo').map((i: { id: string }) => i.id))
     const ideiaCanal = new Map<string, string>()
     const ideiaTitulo = new Map<string, string>()
+    const metricasShort = (metricas || []).filter((m: { ideia_id: string }) => !idsLongo.has(m.ideia_id))
     for (const i of ideias || []) {
       ideiaCanal.set(i.id, i.canal_id)
       ideiaTitulo.set(i.id, i.titulo)
@@ -135,7 +138,7 @@ export async function POST(request: NextRequest) {
     // ocupar o pódio inteiro por artefato de escala. Aqui cada vídeo é medido contra os
     // outros DA MESMA REDE: 0..1 = posição relativa. Aí sim as redes se somam.
     const porRede = new Map<string, number[]>()
-    for (const m of metricas || []) {
+    for (const m of metricasShort) {
       if (!m.taxa_retencao) continue
       if (!porRede.has(m.plataforma)) porRede.set(m.plataforma, [])
       porRede.get(m.plataforma)!.push(m.taxa_retencao)
@@ -153,7 +156,7 @@ export async function POST(request: NextRequest) {
     const porIdeia = new Map<string, { views: number; ret: number }>()
     // --- tema×rede: views por (plataforma, vertical) ---
     const temaRede = new Map<string, Map<string, number>>()
-    for (const m of metricas || []) {
+    for (const m of metricasShort) {
       const ag = porIdeia.get(m.ideia_id) || { views: 0, ret: 0 }
       ag.views += m.views || 0
       ag.ret = Math.max(ag.ret, percentil(m.plataforma, m.taxa_retencao))
@@ -206,7 +209,7 @@ export async function POST(request: NextRequest) {
     // não estava entre os ganchos (ele é campeão de VIEWS, e a lista vinha da RETENÇÃO).
     const titulosPublicados = [
       ...new Set(
-        (metricas || [])
+        metricasShort
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .map((m: any) => ideiaTitulo.get(m.ideia_id) as string | undefined)
           .filter((t: string | undefined): t is string => typeof t === 'string' && t.length > 8)

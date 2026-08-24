@@ -84,7 +84,7 @@ async function publicarAgendados(request: NextRequest) {
   const agora = new Date()
   const limiteAtraso = new Date(agora.getTime() - JANELA_ATRASO_HORAS * 3600_000)
 
-  const [pipeQ, pubQ, cfgQ] = await Promise.all([
+  const [pipeQ, pubQ, cfgQ, longosQ] = await Promise.all([
     // Sem filtro de status: o teto precisa enxergar TAMBÉM os já publicados de hoje para saber
     // quantas vagas da grade sobraram. Filtrar PRONTO_PUBLICACAO acontece depois.
     supabase.schema('pulso_content').from('pipeline_producao')
@@ -93,6 +93,11 @@ async function publicarAgendados(request: NextRequest) {
     supabase.schema('pulso_content').from('metricas_publicacao')
       .select('ideia_id, plataforma, data_publicacao'),
     supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle(),
+    // VÍDEO LONGO NÃO É DESTE CRON. A série de bastidores (formato=longo) publica deliberada e
+    // manualmente só no YouTube — se entrasse aqui, sairia nas 5 redes (TikTok/Kwai com 10min!)
+    // e comeria uma vaga do teto da grade de Shorts. Filtrado na ORIGEM: some do teto, dos
+    // vencidos e do remendo de uma vez. Ver _DESPACHO_VIDEOS_LONGOS_2026-08-24.md.
+    supabase.schema('pulso_content').from('ideias').select('id').eq('formato', 'longo'),
   ])
   if (pipeQ.error) return NextResponse.json({ error: `pipeline: ${pipeQ.error.message}` }, { status: 500 })
   if (pubQ.error) return NextResponse.json({ error: `publicacoes: ${pubQ.error.message}` }, { status: 500 })
@@ -113,8 +118,9 @@ async function publicarAgendados(request: NextRequest) {
   const hoje = diaBRT(agora)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pubs = (pubQ.data || []) as any[]
+  const ehLongo = new Set(((longosQ.data || []) as Array<{ id: string }>).map((i) => i.id))
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pipeTodos = (pipeQ.data || []) as any[]
+  const pipeTodos = ((pipeQ.data || []) as any[]).filter((p) => !ehLongo.has(p.ideia_id))
   // Já publicado em ALGUMA rede = não é mais candidato do agendamento (o resto é escolha manual).
   const jaSaiu = new Set(pubs.filter((p) => p.data_publicacao).map((p) => p.ideia_id))
 
