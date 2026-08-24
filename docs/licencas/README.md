@@ -30,8 +30,8 @@ docs/licencas/
 | **Pexels** | b-roll de acervo real (tier 0) | PULSO | Free | ❌ | 🟡 termos não arquivados |
 | **Pixabay** | b-roll de acervo real (tier 0) | PULSO (`56826734`) | Free | ❌ | 🟡 termos não arquivados |
 | **Wan / DashScope** | geração de b-roll (tier 1) | PULSO (região Singapura) | **cota gratuita** | ❌ | 🔴 tier grátis em conteúdo monetizado — verificar se permite |
-| **Veo 3.1 lite / Higgsfield** | b-roll caro (fallback) | PULSO | pago — R$ 2.168,48 por 8.144 cr (mai–jul/26) | ❌ | 🟡 plano a confirmar |
-| **ElevenLabs** | voz oficial (`GmzLAnPHSUkxG3P5yfca`) | PULSO | **a confirmar** | ❌ | 🟡 direito comercial depende do plano |
+| **Veo 3.1 lite / Higgsfield** | b-roll caro (fallback) | PULSO | pago — R$ 2.168,48 por 8.144 cr (mai–jul/26) · **saldo 2,38 cr** | ❌ | 🟡 plano a confirmar · ⚠️ saldo quase zerado |
+| **ElevenLabs** | voz oficial (`GmzLAnPHSUkxG3P5yfca`) | PULSO | **Creator US$22/mês** | ⚠️ falta o print | 🟢 plano Creator inclui uso comercial |
 | **OpenAI** | roteiro (GPT-4o) + TTS alternativo | — | pago | ❌ | 🟡 |
 
 ## 🔴 Pendência crítica — a trilha sonora
