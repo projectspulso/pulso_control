@@ -1,7 +1,9 @@
 const { createClient } = require('@supabase/supabase-js')
 
-const supabaseUrl = 'https://nlcisbfdiokmipyihtuz.supabase.co'
-const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sY2lzYmZkaW9rbWlweWlodHV6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzU4OTQ5OSwiZXhwIjoyMDc5MTY1NDk5fQ.kcWYlOZ8Jn_c4Hb1uw-SVkzW-eXUkr-k2zFiEn7vHQ4'
+const { exigir } = require('../../../scripts/_env')
+
+const supabaseUrl = exigir('SUPABASE_URL')
+const serviceRoleKey = exigir('SUPABASE_SERVICE_ROLE_KEY')
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
 

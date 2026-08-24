@@ -1,5 +1,6 @@
 const https = require('https');
-const TOKEN = 'sbp_7bf5d64c75fd147515b0b30aa0dee9b250e3a85a';
+const { exigir } = require('./_env');
+const TOKEN = exigir('ACCESS_TOKEN_SUPABASE');
 const PROJECT = 'nlcisbfdiokmipyihtuz';
 const PL_YOUTUBE = '15b09439-1ce8-4952-89b6-9e94808c4900';
 const PL_TIKTOK  = 'cf51935a-02ec-48a9-8822-cfd86bb6e902';

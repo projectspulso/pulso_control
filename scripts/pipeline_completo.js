@@ -20,7 +20,7 @@ for (const line of envContent.split('\n')) {
 const OPENAI_KEY = env.OPENAI_API_KEY;
 const SUPABASE_URL = 'https://nlcisbfdiokmipyihtuz.supabase.co';
 const SERVICE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
-const MGMT_TOKEN = 'sbp_7bf5d64c75fd147515b0b30aa0dee9b250e3a85a';
+const MGMT_TOKEN = env.ACCESS_TOKEN_SUPABASE;
 const PROJECT = 'nlcisbfdiokmipyihtuz';
 
 // IDs do seed anterior

@@ -1,5 +1,6 @@
 const https = require('https');
-const TOKEN = 'sbp_7bf5d64c75fd147515b0b30aa0dee9b250e3a85a';
+const { exigir } = require('./_env');
+const TOKEN = exigir('ACCESS_TOKEN_SUPABASE');
 const PROJECT = 'nlcisbfdiokmipyihtuz';
 
 function runSQL(sql, label) {
