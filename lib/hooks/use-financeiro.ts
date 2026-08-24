@@ -75,6 +75,14 @@ export interface Conciliacao {
   sincronizadoEm: string
 }
 
+export interface Receita {
+  plataforma: string
+  programa: string | null
+  competencia: string
+  valorBRL: number
+  status: 'estimado' | 'confirmado' | 'recebido'
+}
+
 export interface FinanceiroData {
   lancamentos: Lancamento[]
   travas: Travas | null
@@ -94,6 +102,10 @@ export interface FinanceiroData {
   conciliacao: Conciliacao | null
   /** gasto por modelo no extrato real (Seedance, Veo, Kling…), em crédito */
   gastoPorModelo: Array<{ modelo: string; creditos: number; brl: number }>
+  /** receita dos programas das redes — zero até o 1º gate abrir (migration 057) */
+  receitas: Receita[]
+  receitaMesBRL: number
+  receitaRecebidaBRL: number
 }
 
 const AGENTE_LABEL: Record<string, string> = {
@@ -113,7 +125,7 @@ export function useFinanceiro() {
     queryKey: ['financeiro'],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const [logsQ, cfgRes, clipsQ] = await Promise.all([
+      const [logsQ, cfgRes, clipsQ, receitasQ] = await Promise.all([
         supabase
           .schema('pulso_content')
           .from('logs_workflows')
@@ -123,6 +135,11 @@ export function useFinanceiro() {
         // configuracoes tem RLS — leitura via rota server (service role)
         fetch('/api/automation/financeiro-config').then((r) => r.json()),
         supabase.schema('pulso_content').from('videos').select('id', { count: 'exact', head: true }).eq('tipo', 'CLIP_CENA'),
+        supabase
+          .schema('pulso_content')
+          .from('receitas')
+          .select('plataforma, programa, competencia, valor_brl, status')
+          .order('competencia', { ascending: false }),
       ])
       if (logsQ.error) throw logsQ.error
 
@@ -174,6 +191,21 @@ export function useFinanceiro() {
         meses.set(m, acc)
       }
       const porMes = [...meses.values()].sort((a, b) => a.mes.localeCompare(b.mes))
+
+      // Receita dos programas das redes (migration 057). Fica em zero até o 1º gate abrir —
+      // o mais próximo é o Estrelas do Facebook, que libera com 500 seguidores.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const receitas: Receita[] = ((receitasQ.data as any[]) || []).map((r) => ({
+        plataforma: r.plataforma,
+        programa: r.programa ?? null,
+        competencia: r.competencia,
+        valorBRL: Number(r.valor_brl) || 0,
+        status: r.status,
+      }))
+      const receitaMesBRL = receitas
+        .filter((r) => r.competencia?.startsWith(mes))
+        .reduce((a, r) => a + r.valorBRL, 0)
+      const receitaRecebidaBRL = receitas.filter((r) => r.status === 'recebido').reduce((a, r) => a + r.valorBRL, 0)
 
       // semana em curso (ao vivo): consumo desde a segunda-feira desta semana
       const segISO = segundaDaSemana(new Date())
@@ -259,6 +291,9 @@ export function useFinanceiro() {
         semanaAtual,
         conciliacao,
         gastoPorModelo,
+        receitas,
+        receitaMesBRL,
+        receitaRecebidaBRL,
         gastoPorServico: [...porServico.entries()]
           .map(([servico, brl]) => ({ servico, brl }))
           .sort((a, b) => b.brl - a.brl),

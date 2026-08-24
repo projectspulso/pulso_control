@@ -144,7 +144,7 @@ export default function AnalyticsPage() {
       custoPorView: views > 0 ? custoProducao / views : 0,
       economiaBiblioteca,
       reusos,
-      receita: 0, // gate de monetização (CNPJ/AdSense) ainda não aberto — ver CONFIG_REDES §3.3
+      receita: fin?.receitaMesBRL ?? 0, // live de pulso_content.receitas (migration 057); zero até o 1º gate abrir
     }
   }, [data, fin, filtros.periodoDias, catalogoClips])
 
