@@ -57,6 +57,27 @@ número de memória. Se não dá para mostrar, não entra no roteiro.
 
 ---
 
+## Segredo empresarial — a linha que não se cruza (26/08)
+
+A série mostra telas reais — e isso NÃO inclui a receita do negócio. 1.000 pessoas copiando a
+fórmula dividem o bolo por 1.000; outra IA assiste ao episódio e replica em uma tarde.
+
+**Regra: RESULTADO e JORNADA sim; RECEITA nunca.**
+
+- ✅ Pode na tela: views, seguidores, custo total, gráficos, o bug, a fila travada, "existe um
+  cérebro que decide" — a prova de que aconteceu.
+- 🚫 Nunca na tela: prompts-mestre, pesos/thresholds do decisor e do roteador, o placar
+  tema×rede (o alfa do canal), cascata de custo motor a motor, configs exatas de modelo/voz,
+  harness editorial, horários otimizados da grade.
+- 🌫️ Meio-termo: tela real com a parte sensível BORRADA (blur é honesto; mockup não) e
+  insight só com janela de defasagem — conta-se a descoberta que já não é vantagem.
+
+No app, todo episódio nasce com o item 🔒 no checklist — e checklist aberto trava a
+promoção para publicação. Episódios de risco marcado: EP06 (alto — placar tema×rede),
+EP07 (médio — processo sim, prompt não), EP02 (custo total sim, unitário não).
+
+---
+
 ## Temporada 1 — 10 episódios
 
 | # | Título de trabalho | Gancho central | Material real disponível |

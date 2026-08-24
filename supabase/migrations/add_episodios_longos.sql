@@ -29,6 +29,7 @@ create table if not exists pulso_content.episodios (
 );
 create index if not exists idx_episodios_status on pulso_content.episodios (status);
 
+grant all on pulso_content.episodios to service_role;
 grant select on pulso_content.episodios to anon;
 grant select, insert, update on pulso_content.episodios to authenticated;
 
