@@ -113,6 +113,36 @@ function Kpi({ valor, label, cor = 'text-[#f5f4f8]' }: { valor: string; label: s
   )
 }
 
+
+/* ── HORAS DOS LONGOS: só existe quando há dado (dashboard de zero é ruído) ─── */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function CardHorasLongos({ dados }: { dados: any }) {
+  if (!dados) return null
+  const pct = Math.min(100, (dados.horasTotal / 3000) * 100)
+  return (
+    <Card titulo="Rumo às 3.000 horas · vídeos longos" sub="A métrica-norte da série Bastidores — views não fecham este gate"
+      rodape={<>44 episódios de ~10min a 40% de retenção fecham as 3.000h. Critério de morte: 4 eps abaixo de 30% de retenção.</>}>
+      <div className="mb-2 flex items-end justify-between">
+        <b className="text-[26px] font-medium tabular-nums text-[#f5f4f8]">{dados.comHoras ? dados.horasTotal.toFixed(1) : '—'}<span className="text-sm font-normal text-[#6e6b7b]"> / 3.000 h</span></b>
+        <span className="text-xs tabular-nums text-[#a3a0b0]">{dados.comHoras ? `${pct.toFixed(1)}%` : 'horas ainda sem coleta'}</span>
+      </div>
+      <div className="h-2.5 overflow-hidden rounded-full bg-[#2a2836]">
+        <div className="h-full rounded-full bg-[#fab219]" style={{ width: `${Math.max(1, pct)}%` }} />
+      </div>
+      <div className="mt-3 space-y-1">
+        {dados.eps.map((e: { titulo: string; views: number; horas: number | null; retencao: number | null }) => (
+          <div key={e.titulo} className="grid grid-cols-[1fr_60px_70px_60px] items-center gap-2 text-xs">
+            <span className="truncate text-[#a3a0b0]">{e.titulo}</span>
+            <span className="text-right tabular-nums text-[#f5f4f8]">{n(e.views)} v</span>
+            <span className="text-right tabular-nums text-[#a3a0b0]">{e.horas != null ? `${e.horas.toFixed(1)} h` : '—'}</span>
+            <span className="text-right tabular-nums text-[#a3a0b0]">{e.retencao != null ? `${e.retencao.toFixed(0)}% ret` : '—'}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
 /* ── BARRAS CATEGÓRICAS: identidade (rede) ──────────────────────────────── */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function CardAlcancePorRede({ porRede, totalViews }: { porRede: any[]; totalViews: number }) {

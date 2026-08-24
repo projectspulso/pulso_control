@@ -34,9 +34,11 @@ import {
   CardVerticais,
   HeroMonetizacao,
   ModalDrill,
+  CardHorasLongos,
 } from '@/components/analytics-cards'
 import { ASSINATURAS_MENSAIS_BRL } from '@/lib/config/custos'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
+import { useHorasLongos } from '@/lib/hooks/use-horas-longos'
 import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
 import { useDecisao } from '@/lib/hooks/use-decisao'
 import { useFinanceiro } from '@/lib/hooks/use-financeiro'
@@ -207,6 +209,7 @@ export default function AnalyticsPage() {
     return m
   }, [data])
 
+  const { data: horasLongos } = useHorasLongos()
   const gatesCalc = useMemo(() => {
     return GATES_MONETIZACAO.map((g) => {
       const atual = statusContas?.contas?.[g.plataforma]?.seguidores ?? null
@@ -385,6 +388,7 @@ export default function AnalyticsPage() {
               conversaoYt={gatesCalc.find((c) => c.g.plataforma === 'youtube')?.conv ?? null}
             />
             <HeroMonetizacao gatesCalc={gatesCalc} />
+            <CardHorasLongos dados={horasLongos} />
             <div className="grid gap-3.5 lg:grid-cols-2">
               <CardAlcancePorRede porRede={porRede} totalViews={resumo?.views ?? 0} />
               <CardCrescimento serie={data.serieCumulativa} />

@@ -20,6 +20,7 @@ import { useMemo, useState } from 'react'
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { CockpitDia } from '@/components/cockpit-dia'
+import { LongosProntos } from '@/components/longos-prontos'
 import { useAgendarPublicacao, useConteudosProntos } from '@/lib/hooks/use-calendario'
 import { useAgenda } from '@/lib/hooks/use-agenda'
 import { CalendarioAgenda, SlotsTravando, type ItemAgenda } from '@/components/agenda-enxuta'
@@ -416,7 +417,12 @@ export default function PublicarPage() {
           <button type="button" onClick={() => setAba('fila')} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${aba === 'fila' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-white'}`}>📤 Fila de publicação</button>
         </div>
 
-        {aba === 'plano' && <CockpitDia mostrarLinkPublicar={false} />}
+        {aba === 'plano' && (
+          <>
+            <LongosProntos />
+            <CockpitDia mostrarLinkPublicar={false} />
+          </>
+        )}
 
         {/* CALENDÁRIO — veio da tela /agenda, eliminada em 14/08/2026 por não ter ação nenhuma.
             Fica aqui porque quem marca data é esta tela: ver o plano e mudá-lo no mesmo lugar. */}
