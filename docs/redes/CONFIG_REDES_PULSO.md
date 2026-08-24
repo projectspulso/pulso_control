@@ -25,8 +25,12 @@ rebranding, é assumir o nome que a audiência já digita. Detalhes:
 | Facebook (nome da Página + bio) | ✅ 24/08 |
 | Instagram (nome de exibição) | ✅ 24/08 |
 | Hub `pulsohub.netlify.app` | ✅ 24/08 (commit `bc56121`, no ar) |
-| **TikTok** | ⚠️ **pendente** — ainda exibe "PULSO" |
+| TikTok (nome de exibição) | ✅ 24/08 — **não era cache**: o formulário de edição mostrava `PULSO` como valor real. Trocado pela web. ⚠️ TikTok só permite mudar o apelido **1× a cada 7 dias** |
 | **Kwai** | ⚠️ **pendente** — web dá 404, só app |
+
+**TikTok — verificado em 24/08:** região da conta = **Brazil** ✅ e conta **pública** ✅ (dois requisitos do
+Creator Rewards). O **tipo de conta (pessoal × Business) NÃO é visível pela web** — só no app:
+Perfil → ⚙️ → Gerenciar conta. Se aparecer "Mudar para conta Business", está em pessoal (correto).
 
 ⚠️ **YouTube só permite 2 mudanças de nome a cada 14 dias.** Uma já foi usada em 24/08.
 
