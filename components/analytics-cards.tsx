@@ -45,42 +45,60 @@ export function Card({ titulo, sub, children, rodape, className = '' }: {
 }
 const B = ({ children }: { children: React.ReactNode }) => <b className="font-medium text-[#f5f4f8]">{children}</b>
 
-/* ── HERÓI: a única pergunta que decide dinheiro ─────────────────────────── */
+/* ── HERÓI: todas as linhas de chegada, liderando pela mais próxima ──────── */
+// A versão anterior era 100% YouTube, hardcoded — e em 24/08 o gate REALMENTE mais próximo era
+// o das Estrelas do Facebook (faltavam 17 seguidores) e a tela não mostrava. Agora a manchete é
+// calculada: quem estiver mais perto de pagar lidera, e as outras redes ficam visíveis ao lado.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function HeroMonetizacao({ gatesCalc }: { gatesCalc: any[] }) {
+  const comDado = gatesCalc.filter((c) => c.atual !== null && c.faltam !== null)
+  if (comDado.length === 0) return null
+  const maisPerto = [...comDado].sort((a, b) => a.faltam - b.faltam)[0]
+  const eta = maisPerto.proj?.etaSemanas
+  const ritmo = maisPerto.proj?.porSemana
+  const programa = maisPerto.usaAtalho ? maisPerto.g.gateRapido!.label : maisPerto.g.programa
+  const cor = COR_REDE[maisPerto.g.plataforma] ?? '#9085e9'
   const yt = gatesCalc.find((c) => c.g.plataforma === 'youtube')
-  if (!yt) return null
-  const eta = yt.proj?.etaSemanas
-  const ritmo = yt.proj?.porSemana
   return (
     <section className="rounded-2xl border-2 border-[#9085e9]/40 bg-linear-to-b from-[#1d1b2b] to-[#1a1922] p-[18px] sm:p-6">
       <div className="grid items-center gap-6 lg:grid-cols-[minmax(230px,330px)_1fr]">
         <div>
-          <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#9085e9]">Rumo à monetização</div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#9085e9]">Rumo à monetização · linha de chegada mais próxima</div>
+          <div className="mt-1.5 text-[13px] text-[#a3a0b0]">{maisPerto.g.emoji} <B>{maisPerto.g.label}</B> — {programa}</div>
           <div className="mt-2 text-[clamp(48px,8vw,72px)] font-medium leading-[.95] tracking-[-0.04em] tabular-nums text-[#f5f4f8]">
-            {yt.atual === null ? '—' : n(yt.atual)}
-            <span className="text-[0.32em] font-normal tracking-normal text-[#6e6b7b]"> / {n(yt.metaEfetiva)} inscritos</span>
+            {n(maisPerto.atual)}
+            <span className="text-[0.32em] font-normal tracking-normal text-[#6e6b7b]"> / {n(maisPerto.metaEfetiva)} seguidores</span>
           </div>
           <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[#2a2836]">
-            <div className="h-full rounded-full bg-[#9085e9]" style={{ width: `${Math.max(1.5, yt.pct)}%` }} />
+            <div className="h-full rounded-full" style={{ width: `${Math.max(1.5, maisPerto.pct)}%`, background: cor }} />
           </div>
           <div className="mt-2 flex justify-between text-xs">
-            <span className="text-[#a3a0b0]">{yt.pct.toFixed(0)}% do 1º gate</span>
-            <span className="tabular-nums text-[#fab219]">{yt.faltam !== null ? `faltam ${n(yt.faltam)}` : '—'}</span>
+            <span className="text-[#a3a0b0]">{maisPerto.pct.toFixed(0)}% do gate · {ritmo != null ? `${ritmo > 0 ? '+' : ''}${ritmo}/sem` : 'ritmo: medindo'}</span>
+            <span className="tabular-nums text-[#fab219]">faltam {n(maisPerto.faltam)}{eta != null ? ` · ~${eta <= 8 ? `${eta} sem` : `${Math.round(eta / 4.3)} meses`}` : ''}</span>
           </div>
+          <p className="mt-3.5 rounded-lg bg-[#9085e9]/8 p-2 text-[11px] leading-snug text-[#c4b5fd]">⚡ <B>Alavanca:</B> {maisPerto.g.alavanca}</p>
         </div>
         <div>
-          <p className="mb-3.5 max-w-[52ch] text-[13px] text-[#a3a0b0]">
-            O YouTube é a única rede com porta de monetização própria — e <B>inscrito</B> é o gargalo, não view.
-            {yt.conv != null && <> O canal converte <B>{yt.conv.toFixed(1)}%</B> das views em inscrito; faceless bom faz 1–3%.</>}
-          </p>
-          <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
-            <Kpi valor={ritmo != null ? `${ritmo > 0 ? '+' : ''}${ritmo}` : 'medindo'} label="ritmo /semana" cor={ritmo != null ? 'text-[#0ca30c]' : 'text-[#6e6b7b]'} />
-            <Kpi valor={eta != null ? (eta <= 8 ? `~${eta} sem` : `~${Math.round(eta / 4.3)} meses`) : '—'} label="ETA p/ o gate" />
-            <Kpi valor={n(yt.pr?.views ?? 0)} label="views no YT" />
-            <Kpi valor={`${n(yt.v90)} / ${n(yt.g.metaSecundariaNum ?? 0)}`} label="2º gate · 90d" cor="text-[#a3a0b0]" />
+          <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.12em] text-[#6e6b7b]">Todas as linhas de chegada</p>
+          <div className="space-y-1">
+            {gatesCalc.map((c) => (
+              <div key={c.g.plataforma} className={`grid grid-cols-[86px_1fr_150px] items-center gap-2.5 rounded-lg px-2 py-[7px] ${c === maisPerto ? 'bg-white/4' : ''}`}>
+                <span className="text-xs text-[#a3a0b0]">{c.g.emoji} {c.g.label}</span>
+                <div className="h-[9px] overflow-hidden rounded-full bg-[#2a2836]">
+                  <div className="h-full rounded-full" style={{ width: `${Math.max(1, c.pct)}%`, background: COR_REDE[c.g.plataforma] ?? NEUTRO }} />
+                </div>
+                <span className="text-right text-[11px] leading-tight tabular-nums text-[#a3a0b0]">
+                  {c.atual === null ? 'sem contador' : <>{n(c.atual)}/{n(c.metaEfetiva)} · <span className="text-[#fab219]">faltam {n(c.faltam)}</span></>}
+                  <br /><span className="text-[10px] text-[#6e6b7b]">{c.usaAtalho ? c.g.gateRapido!.label : c.g.programa}</span>
+                </span>
+              </div>
+            ))}
           </div>
-          <p className="mt-3.5 rounded-lg bg-[#9085e9]/8 p-2 text-[11px] leading-snug text-[#c4b5fd]">⚡ <B>Alavanca:</B> {yt.g.alavanca}</p>
+          {yt && yt.g.metaSecundariaNum != null && (
+            <p className="mt-2.5 text-[11px] leading-snug text-[#6e6b7b]">
+              YouTube exige também o 2º gate: <B>{n(yt.v90)}</B> de {n(yt.g.metaSecundariaNum)} views/90d — ou 3.000h de exibição, o caminho da série de vídeos longos.
+            </p>
+          )}
         </div>
       </div>
     </section>
@@ -252,10 +270,11 @@ export function CardCrescimento({ serie, diaria, alto }: {
 /* ── BULLET: distância até o gate ───────────────────────────────────────── */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function CardGates({ gatesCalc }: { gatesCalc: any[] }) {
-  const kwai = gatesCalc.find((c) => c.g.plataforma === 'kwai')
+  const comDado = gatesCalc.filter((c) => c.faltam != null)
+  const maisPerto = comDado.length ? [...comDado].sort((a, b) => a.faltam - b.faltam)[0] : null
   return (
     <Card titulo="Distância até monetizar" sub="Seguidores vs. 1º gate de cada rede"
-      rodape={kwai?.faltam != null ? <>O <B>Kwai está a {n(kwai.faltam)} seguidores</B> de liberar Lives (receita) — o gate mais perto. O YouTube é o mais valioso.</> : undefined}>
+      rodape={maisPerto ? <>O gate mais perto é o do <B>{maisPerto.g.label}</B> — faltam <B>{n(maisPerto.faltam)}</B> seguidores. O YouTube é o mais valioso.</> : undefined}>
       {gatesCalc.map((c) => (
         <div key={c.g.plataforma} className="grid grid-cols-[76px_1fr_62px] items-center gap-2.5 py-[5px]">
           <span className="text-xs text-[#a3a0b0]">{c.g.label}{c.usaAtalho ? ' ⚡' : ''}</span>
@@ -409,7 +428,7 @@ export function CardCustos({ resumo }: { resumo: any }) {
 export function CardQuandoPaga({ gatesCalc }: { gatesCalc: any[] }) {
   return (
     <Card titulo="Quando isso se paga" sub="Progresso até o 1º gate de cada rede · receita ainda é R$ 0"
-      rodape={<>O <B>Kwai</B> é o gate mais perto; o <B>YouTube</B> é o que paga de verdade. Ver o plano em <span className="text-[#a3a0b0]">docs/40_PRODUTO/18_PLANO_MONETIZACAO.md</span>.</>}>
+      rodape={<>O gate muda de dono conforme as redes crescem — a manchete lá de cima diz quem lidera. O <B>YouTube</B> é o que paga de verdade. Plano em <span className="text-[#a3a0b0]">docs/40_PRODUTO/18_PLANO_MONETIZACAO.md</span>.</>}>
       {gatesCalc.map((c) => (
         <div key={c.g.plataforma} className="grid grid-cols-[76px_1fr_44px] items-center gap-2.5 py-[5px]">
           <span className="text-xs text-[#a3a0b0]">{c.g.label}{c.usaAtalho ? ' ⚡' : ''}</span>

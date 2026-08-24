@@ -33,7 +33,7 @@ export const GATES_MONETIZACAO: GateMonetizacao[] = [
     metaSecundariaNum: 3_000_000,
     metaSecundariaUnidade: 'views/90d',
     recompensa: 'fan funding → depois anúncios (1k insc + 10M/90d)',
-    alavanca: 'Gate mais perto e melhor engajamento — CTA de inscrição fixo + no fim do vídeo. Converter quem já ama.',
+    alavanca: 'Dois caminhos: 3M views de Shorts/90d (hoje 91× longe) OU 3.000h de exibição — destravadas pela série de vídeos longos (Bastidores). CTA de inscrição converte quem já ama.',
   },
   {
     plataforma: 'kwai',
@@ -52,9 +52,12 @@ export const GATES_MONETIZACAO: GateMonetizacao[] = [
     emoji: '📘',
     programa: 'Content Monetization (CMP)',
     metaSeguidores: 5000,
-    metaSecundaria: '+ 60.000 min assistidos',
-    recompensa: 'R$ por engajamento em reels/posts',
-    alavanca: 'Maior alcance de todas, mas view não vira seguidor. CTA de seguir + série recorrente pra fidelizar.',
+    // Auditoria 24/08: Estrelas liberam com 500 seguidores — em 24/08 faltavam 17 e o app não
+    // mostrava, porque este gate não existia na config. O CMP (5.000) é o gate cheio.
+    gateRapido: { meta: 500, label: 'Estrelas (receita direta) liberam com 500' },
+    metaSecundaria: '+ 60.000 min assistidos (CMP)',
+    recompensa: 'Estrelas já aos 500 · depois R$ por engajamento (CMP)',
+    alavanca: 'A linha de chegada mais próxima de todas. CTA de seguir + série recorrente pra converter o alcance gigante em seguidor.',
   },
   {
     plataforma: 'tiktok',
