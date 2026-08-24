@@ -22,7 +22,7 @@ import { useCentralPublicacao, useSalvarPublicacao, REDES_PADRAO, type PubRede }
 // Redes 100% manuais (sem API/coletor) — o "já publicado" só entra quando você marca no app.
 const REDES_MANUAIS = new Set(['kwai'])
 const HASHTAGS_KWAI = '#curiosidades #misterios #voceSabia #pulso #fyp #viral'
-const HUB_EXTERNO = 'https://pulsohub.vercel.app'
+const HUB_EXTERNO = 'https://pulsohub.netlify.app'
 const FB_COMPOSER = 'https://business.facebook.com/latest/reels_composer'
 
 /** Macetes que só existem porque doeram: COPPA, portfólio errado, alcance suprimido. */

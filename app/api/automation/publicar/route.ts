@@ -184,7 +184,12 @@ async function publicarYouTube(videoUrl: string, titulo: string, descricao: stri
       defaultAudioLanguage: 'pt-BR',
       tags,
     },
-    status: { privacyStatus: 'public', selfDeclaredMadeForKids: false },
+    // containsSyntheticMedia: as cenas vêm de Wan/Veo e a voz é sintética (ElevenLabs) —
+    // cai em "simulação realista de algo que não aconteceu de verdade", que a política do
+    // YouTube manda declarar. Sem este campo o vídeo sobe com a pergunta EM BRANCO no Studio
+    // (verificado no painel em 24/08/2026), e os motores embutem marcadores que a plataforma
+    // lê de qualquer forma — omitir não esconde, só parece tentativa de esconder.
+    status: { privacyStatus: 'public', selfDeclaredMadeForKids: false, containsSyntheticMedia: true },
   }
   const boundary = '----pulso' + Math.random().toString(16).slice(2)
   const pre = Buffer.from(
@@ -240,7 +245,14 @@ async function publicarTikTok(videoUrl: string, supabase: any) {
     body: buf,
   })
   if (!put.ok) throw new Error(`TikTok upload (${put.status})`)
-  return { post_id: init.data.publish_id as string, url: 'rascunho no app TikTok (finalize no celular)' }
+  // O endpoint /inbox/ manda o vídeo como rascunho e não aceita metadados — o campo `is_aigc`
+  // só existe no /publish/video/init/ (direct post, que exige app auditado). Então o rótulo de
+  // conteúdo gerado por IA depende do humano marcar no app, e por isso vai no texto de retorno:
+  // é a única trava possível neste caminho.
+  return {
+    post_id: init.data.publish_id as string,
+    url: 'rascunho no app TikTok — ao finalizar, LIGUE "conteúdo gerado por IA" (obrigatório)',
+  }
 }
 
 export const maxDuration = 60
