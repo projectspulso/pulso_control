@@ -1,7 +1,53 @@
-# Configuração das Redes Sociais — PULSO
+# Configuração das Redes Sociais — PULSO Histórias
 
 > **Regra Cockpit:** finalizar tudo, atualizar tudo, não deixar rabos. Este doc é o controle único do estado de cada rede.
-> **Atualizado:** 09 de junho de 2026
+> **Atualizado:** 24 de agosto de 2026
+
+---
+
+## 0. ⚠️ MUDANÇA DE NOME — 2026-08-24
+
+O canal passou de **PULSO** para **PULSO Histórias**.
+
+**Por quê:** busca no INPI (24/08) mostrou que a **Editora Globo** tem **5 registros de "PULSO"
+EM VIGOR** — três na **classe 41** (entretenimento/produção audiovisual) e dois na **38**
+(difusão), exatamente as classes que o canal precisaria. Foram prorrogados em 2023/24, e o INPI
+**indeferiu dois terceiros** que tentaram registrar "PULSO" (PULSO COMUNICAÇÃO VISUAL 2022,
+FELITRON 2024).
+
+**"PULSO HISTÓRIAS" está livre no INPI**, é mais distintivo, e já era o handle — não é
+rebranding, é assumir o nome que a audiência já digita. Detalhes:
+[`Cockpit/auditorias/conformidade-receita-pulso-2026-08-23.md`](../../../Cockpit/auditorias/conformidade-receita-pulso-2026-08-23.md) §Bloco 4 + ADENDO.
+
+| Onde | Estado |
+|---|---|
+| YouTube (nome do canal) | ✅ 24/08 — público propaga em algumas horas |
+| Facebook (nome da Página + bio) | ✅ 24/08 |
+| Instagram (nome de exibição) | ✅ 24/08 |
+| Hub `pulsohub.netlify.app` | ✅ 24/08 (commit `bc56121`, no ar) |
+| **TikTok** | ⚠️ **pendente** — ainda exibe "PULSO" |
+| **Kwai** | ⚠️ **pendente** — web dá 404, só app |
+
+⚠️ **YouTube só permite 2 mudanças de nome a cada 14 dias.** Uma já foi usada em 24/08.
+
+## 0.1. Outros ajustes de 24/08 (Facebook)
+
+- 🔴 **Endereço residencial do dono removido** — a Página publicava `rua alfredo batista pizolato
+  148`, endereço pessoal. Trocado pela sede: Rua General Francisco Glicério, 940 — Térreo Sala 02,
+  Jardim Guaio, CEP 08674-000.
+- **Telefone** trocado para `+55 11 98602-7415`.
+- ⚠️ **O nome da Página NÃO é editável pela web** — o modal "Editar Página" do Business Suite tem
+  foto, capa, bio, categoria, telefone, e-mail, endereço, site e links sociais, mas **nenhum campo
+  de nome**. Foi feito pelo app.
+
+## 0.2. Seguidores em 24/08
+
+| Rede | Seguidores | Gate mais próximo |
+|---|---|---|
+| **Facebook** | **483** | **Estrelas: 500** — faltam **17** ⬅️ o mais perto de todos |
+| YouTube | 321 inscritos | YPP: 500 inscritos **E** 3M views Shorts/90d (está em 33 mil) |
+| Instagram | 248 | Assinaturas: ~10.000 |
+| TikTok | 221 | Creator Rewards: 10.000 |
 
 ---
 
