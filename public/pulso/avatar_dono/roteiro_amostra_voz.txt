@@ -1,0 +1,38 @@
+AMOSTRA DE VOZ — ler este texto em voz alta (Bloco 0 + Bloco 1 do EP01)
+========================================================================
+
+COMO GRAVAR (para o Instant Voice Clone sair bom):
+- Ambiente silencioso, sem música, sem eco, sem ventilador perto.
+- Celular ou microfone a ~20 cm da boca, volume constante.
+- Tom de conversa — o mesmo tom que você quer nos vídeos. Sem "voz de locutor".
+- Ler o texto abaixo inteiro, com calma, respeitando as pausas. Se errar uma
+  frase, repete a frase e segue — dá para cortar depois.
+- Alvo: 1 a 3 minutos de áudio. Este texto rende ~1min30. Se quiser margem,
+  leia duas vezes.
+- Formato: qualquer um comum (m4a, mp3, wav). Sem compressão agressiva.
+
+------------------------------------------------------------------------
+
+Esse erro apareceu duzentas e quarenta e uma vezes.
+Todo dia. Cinco em cinco minutos. Durante seis meses.
+E eu não vi nenhuma delas.
+
+Porque ele não aparecia em lugar nenhum. Falhava calado.
+
+Deixa eu te mostrar o que era pra estar acontecendo aqui.
+
+Eu construí uma esteira. Uma ideia entra de um lado, e do outro sai um vídeo
+publicado em cinco redes. Roteiro, narração, cenas, montagem, publicação,
+coleta de métrica. Tudo automático, menos uma coisa: nada é publicado sem eu
+confirmar. Isso foi decisão, não limitação.
+
+No meio dessa esteira tem um trabalhador. A cada cinco minutos ele acorda,
+olha a fila, pega o próximo item e empurra pra frente. É o coração da coisa.
+
+Em trinta e um de março, ele parou. E continuou parecendo vivo.
+
+Quatrocentos e três itens parados. A fila só enchia.
+
+------------------------------------------------------------------------
+Este mesmo texto é o que a voz clonada vai narrar no teste A/B — assim você
+compara a sua leitura real com a versão clonada, frase a frase.
