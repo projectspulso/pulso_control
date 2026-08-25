@@ -134,10 +134,17 @@ def autorizar(creditos_lote, override=None):
     print("[GUARD] autorizado.")
     return True
 
-def registrar_gasto(servico, creditos, brl, descricao):
+def registrar_gasto(servico, creditos, brl, descricao, natureza=None):
+    # natureza: 'caixa' (dinheiro saiu: topup, assinatura, pay-per-use direto) ou
+    # 'consumo' (uso de credito/assinatura ja pagos). Sem ela, a v_custos_mes (mig 058)
+    # cai no fallback por servico — que so conhece higgsfield e elevenlabs. Fornecedor
+    # novo com pre-pago: SEMPRE passar natureza, senao nasce classificado errado.
+    if natureza is None:
+        natureza = "consumo" if servico in ("higgsfield", "elevenlabs") else "caixa"
     _db("POST", "/rest/v1/logs_workflows", {
         "workflow_name": "GASTO_SERVICO", "status": "sucesso",
         "detalhes": {"servico": servico, "creditos": creditos, "brl": brl, "descricao": descricao,
+                     "natureza": natureza,
                      "data": datetime.now(timezone.utc).date().isoformat()},
     })
     if servico == "higgsfield":
