@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { escolherCanalPorDesempenho, type CanalCandidato } from '@/lib/automation/escolher-canal'
+import { montarBriefing } from '@/lib/automation/briefing-do-momento'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarIdeias } from '@/lib/automation/prompts'
@@ -15,6 +16,9 @@ import { filtrarDuplicatas, filtrarDuplicatasSemantica } from '@/lib/automation/
  * Se canal_id não fornecido, seleciona automaticamente
  * o próximo canal na rotação.
  */
+/** duas quebras entre os blocos de contexto do prompt (aprendizado + briefing) */
+const SEPARADOR = '\n\n'
+
 export async function POST(request: NextRequest) {
   const denied = await guardApi(request)
   if (denied) return denied
@@ -108,8 +112,38 @@ export async function POST(request: NextRequest) {
       /* aprendizado é opcional — segue sem ele */
     }
 
+    // BRIEFING DO MOMENTO — o dado de HOJE, não o resumo salvo dias atrás.
+    // O aprendizado (texto) diz COMO escrever; o briefing diz SOBRE O QUE faz sentido escrever
+    // agora: o que rende, o que já está na fila e o que não pode repetir. Ver
+    // lib/automation/briefing-do-momento.ts. Falha aqui não derruba a geração — só perde contexto.
+    let briefing: string | undefined
+    try {
+      const [pubsQ, ideiasQ, rotQ] = await Promise.all([
+        supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma, views'),
+        supabase.schema('pulso_content').from('ideias').select('id, titulo, status'),
+        supabase.schema('pulso_content').from('roteiros').select('ideia_id, conteudo_md'),
+      ])
+      const corpos = new Map<string, string | null>()
+      for (const r of (rotQ.data || []) as Array<{ ideia_id: string; conteudo_md: string | null }>) {
+        if (r.ideia_id && !corpos.has(r.ideia_id)) corpos.set(r.ideia_id, r.conteudo_md)
+      }
+      const publicadas = new Set(
+        ((pubsQ.data || []) as Array<{ ideia_id: string | null }>).map((p) => p.ideia_id).filter((x): x is string => !!x)
+      )
+      briefing = montarBriefing(
+        (pubsQ.data || []) as Array<{ ideia_id: string | null; plataforma: string; views: number | null }>,
+        (ideiasQ.data || []) as Array<{ id: string; titulo: string | null; status: string }>,
+        publicadas,
+        corpos,
+        canal.nome
+      ).texto
+    } catch (e) {
+      console.error('[gerar-ideias] briefing indisponível, seguindo sem ele:', e)
+    }
+
     // Gerar ideias via GPT
-    const prompt = buildPromptGerarIdeias(canal, serie, quantidade, aprendizado)
+    const contexto = [aprendizado, briefing].filter(Boolean).join(SEPARADOR)
+    const prompt = buildPromptGerarIdeias(canal, serie, quantidade, contexto || undefined)
     const { content, usage } = await callOpenAI(prompt, {
       temperature: 0.8,
       json_mode: true,
