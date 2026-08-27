@@ -62,10 +62,17 @@ export async function POST(request: NextRequest) {
     const fatosUrl = `${base.origin}/api/decisor`
     const auth = request.headers.get('authorization')
     const cookie = request.headers.get('cookie')
+    // SEGREDO DE SERVIDOR COMO ÚLTIMO RECURSO: repassar só authorization/cookie deixava a
+    // chamada interna sem credencial quando o analisar era acionado por cron, script ou
+    // webhook (que autenticam por x-webhook-secret) — a rota de fatos devolvia 401 e a tela
+    // via "fatos indisponíveis (401)" em 500. O guard aceita este header; usá-lo aqui torna a
+    // chamada interna independente de como o analisar foi chamado.
+    const segredo = request.headers.get('x-webhook-secret') || process.env.WEBHOOK_SECRET
     const r = await fetch(fatosUrl, {
       headers: {
         ...(auth ? { authorization: auth } : {}),
         ...(cookie ? { cookie } : {}),
+        ...(segredo ? { 'x-webhook-secret': segredo } : {}),
       },
       cache: 'no-store',
     })

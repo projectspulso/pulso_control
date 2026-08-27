@@ -46,14 +46,25 @@ async function coletar(request: NextRequest) {
   const denied = await guardApi(request)
   if (denied) return denied
 
+  // FATIAMENTO POR REDE (27/08/2026). O volume passou de ~760 publicacoes e a coleta inteira
+  // deixou de caber nos 60s do plano Hobby: a funcao morria em FUNCTION_INVOCATION_TIMEOUT (504)
+  // sem gravar nada e sem log — o dono via 504 no console e o banco nao dizia por que.
+  // Agora `?rede=` (ou body {rede}) coleta uma rede so, e cada fatia cabe folgada. Sem parametro
+  // o comportamento antigo continua, mas com prazo global que para limpo e AVISA.
+  const url = new URL(request.url)
+  const corpo = request.method === 'POST' ? await request.json().catch(() => ({})) : {}
+  const redeAlvo: string | null = url.searchParams.get('rede') || corpo?.rede || null
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
 
-  const { data: linhas, error: fetchError } = await supabase
+  let consulta = supabase
     .schema('pulso_content')
     .from('metricas_publicacao')
     .select('id, ideia_id, plataforma, post_id, url_publicacao, data_publicacao, views, metadata')
     .not('post_id', 'is', null)
+  if (redeAlvo) consulta = consulta.eq('plataforma', redeAlvo)
+  const { data: linhas, error: fetchError } = await consulta
 
   if (fetchError) {
     return NextResponse.json({ error: `Erro ao buscar publicações: ${fetchError.message}` }, { status: 500 })
@@ -549,8 +560,18 @@ async function coletar(request: NextRequest) {
   // Então: as outras redes seguem no pool de 16 (rápido), e o Instagram vai com 3 em voo e uma
   // pausa curta entre as rodadas. Fica mais lento, mas lê de verdade — e maxDuration=60 cobre,
   // porque o IG é só ~1/3 das publicações.
+  // PRAZO GLOBAL: a funcao morre aos 60s. Parar limpo aos 45s e avisar o que ficou vale mais do
+  // que um 504 mudo — a rodada seguinte (ou a fatia por rede) pega o resto.
+  const PRAZO_GERAL_MS = 45_000
+  let restoPulados = 0
   const pubsResto = publicacoes.filter((p) => p.plataforma !== 'instagram')
-  await comPool(pubsResto, 16, processarPub)
+  await comPool(pubsResto, 16, async (p) => {
+    if (Date.now() - agora.getTime() > PRAZO_GERAL_MS) { restoPulados++; return }
+    await processarPub(p)
+  })
+  if (restoPulados > 0) {
+    avisos.push(`${restoPulados} publicacao(oes) ficaram para a proxima rodada (prazo geral de ${PRAZO_GERAL_MS / 1000}s). Use ?rede= para fatiar.`)
+  }
 
   // INSTAGRAM: NOVOS PRIMEIRO, e com folga de concorrência.
   //
@@ -579,8 +600,28 @@ async function coletar(request: NextRequest) {
     avisos.push(`Instagram: ${igLidos} lidos, ${igPulados} ficaram para a próxima rodada (prazo de ${PRAZO_IG_MS / 1000}s). Os mais novos foram primeiro.`)
   }
 
+  const resumo = {
+    rede: redeAlvo || 'todas',
+    total: publicacoes.length,
+    coletados: resultados.filter((r) => r.status === 'SUCESSO').length,
+    erros: resultados.filter((r) => r.status === 'ERRO').length,
+    pulados_por_prazo: restoPulados + igPulados,
+    duracao_ms: Date.now() - agora.getTime(),
+  }
+  // Cron nunca falha em silencio: toda rodada deixa rastro, inclusive a que nao coletou nada.
+  await supabase.schema('pulso_content').from('logs_workflows').insert({
+    workflow_name: 'COLETAR_METRICAS',
+    status: resumo.erros > 0 || resumo.pulados_por_prazo > 0 ? 'parcial' : resumo.coletados > 0 ? 'sucesso' : 'ocioso',
+    detalhes: { ...resumo, avisos: avisos.slice(0, 12) },
+  }).then(
+    () => {},
+    (e: unknown) => console.error('[coletar-metricas] falha ao logar rodada:', e)
+  )
+
   return NextResponse.json({
     success: true,
+    rede: resumo.rede,
+    pulados_por_prazo: resumo.pulados_por_prazo,
     total: publicacoes.length,
     duracao_ms: Date.now() - agora.getTime(),
     coletados: resultados.filter((r) => r.status === 'SUCESSO').length,
