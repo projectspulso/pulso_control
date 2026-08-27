@@ -35,10 +35,12 @@ import {
   HeroMonetizacao,
   ModalDrill,
   CardHorasLongos,
+  CardPinterest,
 } from '@/components/analytics-cards'
 import { ASSINATURAS_MENSAIS_BRL } from '@/lib/config/custos'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
 import { useHorasLongos } from '@/lib/hooks/use-horas-longos'
+import { usePinterest } from '@/lib/hooks/use-pinterest'
 import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
 import { useDecisao } from '@/lib/hooks/use-decisao'
 import { useFinanceiro } from '@/lib/hooks/use-financeiro'
@@ -210,6 +212,7 @@ export default function AnalyticsPage() {
   }, [data])
 
   const { data: horasLongos } = useHorasLongos()
+  const { data: pinterest } = usePinterest()
   const gatesCalc = useMemo(() => {
     return GATES_MONETIZACAO.map((g) => {
       const atual = statusContas?.contas?.[g.plataforma]?.seguidores ?? null
@@ -223,7 +226,27 @@ export default function AnalyticsPage() {
       const v90 = views90dPorRede.get(g.plataforma) || 0
       const pctSec = g.metaSecundariaNum ? Math.min(100, (v90 / g.metaSecundariaNum) * 100) : null
       const conv = pr && pr.views && atual ? (atual / pr.views) * 100 : null
-      return { g, atual, proj, pr, media, usaAtalho, metaEfetiva, pct, faltam, v90, pctSec, conv }
+
+      // CARÊNCIA DE DIAS CONSECUTIVOS — o gate não abre ao cruzar a linha.
+      // A Meta pede "500 seguidores por 30 dias consecutivos" (painel, 27/08/2026): cair abaixo
+      // reinicia a contagem. Sem isto o card cantava vitória no dia do cruzamento.
+      // Conta a sequência a partir do fim da série de seguidores; null quando a rede não exige
+      // carência ou quando ainda não cruzamos a meta.
+      let carencia: { exigidos: number; cumpridos: number; faltam: number; desde: string } | null = null
+      const exigidos = g.diasConsecutivos ?? 0
+      if (exigidos > 0 && atual !== null && atual >= metaEfetiva) {
+        const serie = (statusContas?.historico || [])
+          .filter((h) => typeof h[g.plataforma] === 'number')
+          .sort((a, b) => String(a.data).localeCompare(String(b.data)))
+        let cumpridos = 0
+        let desde = ''
+        for (let i = serie.length - 1; i >= 0; i--) {
+          if (Number(serie[i][g.plataforma]) >= metaEfetiva) { cumpridos++; desde = String(serie[i].data) }
+          else break
+        }
+        carencia = { exigidos, cumpridos, faltam: Math.max(0, exigidos - cumpridos), desde }
+      }
+      return { g, atual, proj, pr, media, usaAtalho, metaEfetiva, pct, faltam, v90, pctSec, conv, carencia }
     })
   }, [statusContas, porRede, views90dPorRede])
 
@@ -389,6 +412,7 @@ export default function AnalyticsPage() {
             />
             <HeroMonetizacao gatesCalc={gatesCalc} />
             <CardHorasLongos dados={horasLongos} />
+            <CardPinterest dados={pinterest} />
             <div className="grid gap-3.5 lg:grid-cols-2">
               <CardAlcancePorRede porRede={porRede} totalViews={resumo?.views ?? 0} />
               <CardCrescimento serie={data.serieCumulativa} />

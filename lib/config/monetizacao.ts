@@ -14,6 +14,10 @@ export interface GateMonetizacao {
   metaSeguidores: number
   /** gate mais fácil primeiro (ex.: Kwai Lives libera com 100). null = só o principal */
   gateRapido?: { meta: number; label: string }
+  /** Dias CONSECUTIVOS acima da meta que a rede exige antes de liberar. Verificado no painel da
+   *  Meta em 27/08/2026: Estrelas pedem "500 seguidores por 30 dias consecutivos" — cruzar a
+   *  linha nao basta, e cair abaixo reinicia a contagem. Sem isto o app cantava vitoria cedo. */
+  diasConsecutivos?: number
   metaSecundaria: string
   /** meta numérica do 2º gate quando dá pra medir progresso (views acumuladas) */
   metaSecundariaNum?: number
@@ -55,6 +59,7 @@ export const GATES_MONETIZACAO: GateMonetizacao[] = [
     // Auditoria 24/08: Estrelas liberam com 500 seguidores — em 24/08 faltavam 17 e o app não
     // mostrava, porque este gate não existia na config. O CMP (5.000) é o gate cheio.
     gateRapido: { meta: 500, label: 'Estrelas (receita direta) liberam com 500' },
+    diasConsecutivos: 30, // painel da Meta, 27/08/2026: "500 seguidores por 30 dias consecutivos"
     metaSecundaria: '+ 60.000 min assistidos (CMP)',
     recompensa: 'Estrelas já aos 500 · depois R$ por engajamento (CMP)',
     alavanca: 'A linha de chegada mais próxima de todas. CTA de seguir + série recorrente pra converter o alcance gigante em seguidor.',

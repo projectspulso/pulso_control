@@ -53,7 +53,14 @@ const B = ({ children }: { children: React.ReactNode }) => <b className="font-me
 export function HeroMonetizacao({ gatesCalc }: { gatesCalc: any[] }) {
   const comDado = gatesCalc.filter((c) => c.atual !== null && c.faltam !== null)
   if (comDado.length === 0) return null
-  const maisPerto = [...comDado].sort((a, b) => a.faltam - b.faltam)[0]
+  // Quem já cruzou a linha e só cumpre carência lidera: é a linha de chegada mais próxima de
+  // virar dinheiro (falta tempo, não audiência).
+  const maisPerto = [...comDado].sort((a, b) => {
+    const aFalta = a.carencia ? -1 : a.faltam
+    const bFalta = b.carencia ? -1 : b.faltam
+    if (aFalta !== bFalta) return aFalta - bFalta
+    return (a.carencia?.faltam ?? 0) - (b.carencia?.faltam ?? 0)
+  })[0]
   const eta = maisPerto.proj?.etaSemanas
   const ritmo = maisPerto.proj?.porSemana
   const programa = maisPerto.usaAtalho ? maisPerto.g.gateRapido!.label : maisPerto.g.programa
@@ -74,8 +81,21 @@ export function HeroMonetizacao({ gatesCalc }: { gatesCalc: any[] }) {
           </div>
           <div className="mt-2 flex justify-between text-xs">
             <span className="text-[#a3a0b0]">{maisPerto.pct.toFixed(0)}% do gate · {ritmo != null ? `${ritmo > 0 ? '+' : ''}${ritmo}/sem` : 'ritmo: medindo'}</span>
-            <span className="tabular-nums text-[#fab219]">faltam {n(maisPerto.faltam)}{eta != null ? ` · ~${eta <= 8 ? `${eta} sem` : `${Math.round(eta / 4.3)} meses`}` : ''}</span>
+            {maisPerto.carencia ? (
+              <span className="tabular-nums text-[#0ca30c]">meta batida · faltam {maisPerto.carencia.faltam} dia(s)</span>
+            ) : (
+              <span className="tabular-nums text-[#fab219]">faltam {n(maisPerto.faltam)}{eta != null ? ` · ~${eta <= 8 ? `${eta} sem` : `${Math.round(eta / 4.3)} meses`}` : ''}</span>
+            )}
           </div>
+          {maisPerto.carencia && (
+            <div className="mt-2.5 rounded-lg border border-[#0ca30c]/25 bg-[#0ca30c]/8 p-2.5 text-[11px] leading-snug text-[#bff0bf]">
+              <B>Contagem de carência em curso.</B> A meta de {n(maisPerto.metaEfetiva)} seguidores precisa se
+              manter por {maisPerto.carencia.exigidos} dias consecutivos — vão {maisPerto.carencia.cumpridos}
+              {maisPerto.carencia.desde ? ` (desde ${maisPerto.carencia.desde.split('-').reverse().slice(0, 2).join('/')})` : ''}.
+              <br />⚠️ Cair abaixo de {n(maisPerto.metaEfetiva)} <B>reinicia a contagem do zero</B>: nesta janela,
+              seguidor perdido custa mais que view ganha.
+            </div>
+          )}
           <p className="mt-3.5 rounded-lg bg-[#9085e9]/8 p-2 text-[11px] leading-snug text-[#c4b5fd]">⚡ <B>Alavanca:</B> {maisPerto.g.alavanca}</p>
         </div>
         <div>
@@ -88,7 +108,11 @@ export function HeroMonetizacao({ gatesCalc }: { gatesCalc: any[] }) {
                   <div className="h-full rounded-full" style={{ width: `${Math.max(1, c.pct)}%`, background: COR_REDE[c.g.plataforma] ?? NEUTRO }} />
                 </div>
                 <span className="text-right text-[11px] leading-tight tabular-nums text-[#a3a0b0]">
-                  {c.atual === null ? 'sem contador' : <>{n(c.atual)}/{n(c.metaEfetiva)} · <span className="text-[#fab219]">faltam {n(c.faltam)}</span></>}
+                  {c.atual === null ? 'sem contador' : c.carencia ? (
+                    <>{n(c.atual)}/{n(c.metaEfetiva)} · <span className="text-[#0ca30c]">{c.carencia.cumpridos}/{c.carencia.exigidos} dias</span></>
+                  ) : (
+                    <>{n(c.atual)}/{n(c.metaEfetiva)} · <span className="text-[#fab219]">faltam {n(c.faltam)}</span></>
+                  )}
                   <br /><span className="text-[10px] text-[#6e6b7b]">{c.usaAtalho ? c.g.gateRapido!.label : c.g.programa}</span>
                 </span>
               </div>
@@ -314,6 +338,40 @@ export function CardGates({ gatesCalc }: { gatesCalc: any[] }) {
           <span className="text-right text-xs tabular-nums text-[#a3a0b0]">{c.atual === null ? '—' : n(c.atual)}/{n(c.metaEfetiva)}</span>
         </div>
       ))}
+    </Card>
+  )
+}
+
+
+/* ── PINTEREST: rede espelho ─ alcance de bônus, medido por censo manual ──── */
+// O Pinterest republica sozinho o que sai no Instagram (IG reivindicado + auto-publish nativo).
+// NÃO entra na cobertura da Aderência nem nas medianas de decisão: não é escolha editorial
+// nossa, é bônus. Mas conta pra AUTORIDADE — e o que não se mede não vira prova.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function CardPinterest({ dados }: { dados: any }) {
+  if (!dados) return null
+  const u = dados.ultima
+  const v = dados.variacao
+  const seta = (d: number | null) => (d == null ? '' : d > 0 ? ` ↑${n(d)}` : d < 0 ? ` ↓${n(-d)}` : ' →')
+  const dataBr = String(u.data).split('-').reverse().join('/')
+  const tudoZero = !u.impressoes && !u.engajamentos && !u.pins_salvos && !u.cliques_saida
+  return (
+    <Card titulo="Pinterest · rede espelho" sub={`Republicação automática do Instagram · censo de ${dataBr} (últimos ${u.janela_dias} dias)`}
+      rodape={tudoZero
+        ? <>Conta ativada em 26/08 — os pins nasceram agora e o alcance leva semanas pra aparecer. Esta é a <B>linha de base</B>: sem ela não dá pra provar crescimento depois.</>
+        : <>Alcance que chega <B>sem custo e sem trabalho</B> — o vídeo vai inteiro e a legenda vira descrição do pin. Fora das medianas de decisão: é bônus, não escolha editorial.</>}>
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
+        <Kpi valor={`${n(u.impressoes)}${seta(v.impressoes)}`} label="impressões" />
+        <Kpi valor={`${n(u.engajamentos)}${seta(v.engajamentos)}`} label="engajamentos" />
+        <Kpi valor={`${n(u.pins_salvos)}${seta(v.pins_salvos)}`} label="pins salvos" />
+        <Kpi valor={`${n(u.cliques_saida)}${seta(v.cliques_saida)}`} label="cliques de saída" cor="text-[#fab219]" />
+        <Kpi valor={n(u.publico_total)} label="público total" cor="text-[#a3a0b0]" />
+        <Kpi valor={u.pins_criados != null ? n(u.pins_criados) : '—'} label="pins publicados" cor="text-[#a3a0b0]" />
+      </div>
+      {dados.serie.length > 1 && (
+        <p className="mt-3 text-[11px] text-[#6e6b7b]">{dados.serie.length} leituras desde {String(dados.serie[0].data).split('-').reverse().join('/')}</p>
+      )}
+      {u.nota && <p className="mt-2 text-[11px] italic text-[#6e6b7b]">{u.nota}</p>}
     </Card>
   )
 }
