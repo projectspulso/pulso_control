@@ -149,6 +149,39 @@ async function publicarAgendados(request: NextRequest) {
   const vagas = Math.max(0, tetoDia - publicadosHoje.size)
   const aDisparar = vencidos.slice(0, Math.min(vagas, 1))
 
+  // ═══ TRAVA DE CADÊNCIA — o erro que custou caro em 30/08 e 01/09 ═══
+  //
+  // O QUE ACONTECEU: a fila tinha 11 vídeos PRONTOS, mas todos carimbados para dias à frente.
+  // Como nada vencia hoje, esta rota rodava 23 vezes ao dia gravando "ocioso" e o canal ficava
+  // sem post. Dois dias com 1 vídeo em vez de 2 — e o YouTube respondeu na hora: de ~2.500
+  // views/dia (com 2 posts) para 766 (com 1) e 119 (com quase nenhum). Publicar é o insumo mais
+  // barato que existe; deixar de publicar com estoque cheio é o pior erro possível.
+  //
+  // A REGRA: passadas as 19h BRT, se o dia ainda não bateu a meta e existe vídeo pronto agendado
+  // para o FUTURO, ele é antecipado. Cadência vale mais que a data exata — a data é uma
+  // preferência, a publicação diária é o que sustenta a distribuição.
+  //
+  // TRAVAS: só antecipa dentro do teto do dia (nunca publica a mais), um por rodada como o resto,
+  // pega sempre o mais próximo (não fura a ordem editorial), e grava `antecipado: true` no log
+  // para o dono saber que a data foi puxada — antecipação silenciosa seria outro erro.
+  const horaBRT = Number(
+    agora.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false })
+  )
+  let antecipado: { numero: number | null; de: string } | null = null
+  if (aDisparar.length === 0 && vagas > 0 && horaBRT >= 19) {
+    const futuros = pipeTodos
+      .filter((p) => {
+        if (p.status !== 'PRONTO_PUBLICACAO' || !p.metadata?.video_url) return false
+        if (jaSaiu.has(p.ideia_id)) return false
+        return horaMarcada(p.data_publicacao_planejada) > agora
+      })
+      .sort((a, b) => (a.data_publicacao_planejada < b.data_publicacao_planejada ? -1 : 1))
+    if (futuros.length > 0) {
+      aDisparar.push(futuros[0])
+      antecipado = { numero: futuros[0].metadata?.numero ?? null, de: futuros[0].data_publicacao_planejada }
+    }
+  }
+
   // RE-TESTE DO FACEBOOK: exceção explícita, com prazo, que se desliga sozinha ao vencer.
   // A trava de REDES_PROIBIDAS_API continua de pé — ver lib/publicacao/experimento-fb.ts.
   const expFb = await experimentoFbAtivo(supabase)
@@ -315,6 +348,7 @@ async function publicarAgendados(request: NextRequest) {
       teto_dia: tetoDia,
       ja_hoje: publicadosHoje.size,
       dia_brt: hoje,
+      antecipado,
       resultados,
       ...(remendos.length ? { remendos } : {}),
     },
