@@ -19,7 +19,6 @@ export function EsteiraIdeias() {
   const [busca, setBusca] = useState('')
   const [mostrarPostadas, setMostrarPostadas] = useState(false)
 
-  const [canalGerar, setCanalGerar] = useState<string>('')
   const [qtdGerar, setQtdGerar] = useState<number>(5)
   const [gerando, setGerando] = useState(false)
   const [gerarMsg, setGerarMsg] = useState<string | null>(null)
@@ -37,8 +36,9 @@ export function EsteiraIdeias() {
     setGerarMsg(null)
     setGerarDetalhe(null)
     try {
-      const body: { quantidade: number; canal_id?: string } = { quantidade: qtdGerar }
-      if (canalGerar) body.canal_id = canalGerar
+      // sem canal_id de proposito: a escolha e do Decisor (desempenho medido). A rota ainda
+      // aceita canal_id para uso por script/API, mas a tela nao sobrepoe mais a decisao.
+      const body = { quantidade: qtdGerar }
       const res = await fetch('/api/automation/gerar-ideias', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,22 +124,15 @@ export function EsteiraIdeias() {
           }
         />
 
-        {/* Gerar ideias com IA — escolhe o canal (travas de hook + gatilho embutidas) */}
+        {/* Gerar ideias com IA. O RÓTULO MENTIA: dizia "rotação automática (canal com menos
+            ideias)", que é como funcionava até 29/07/2026. Hoje quem escolhe é
+            escolherCanalPorDesempenho (pondera views de Facebook por canal), e o prompt recebe o
+            briefing do momento — desempenho por tema medido agora, estoque por tema (freio contra
+            clone) e o contrato por rede (o gancho vale 2,07× no TikTok e 0,68× no Facebook).
+            Rótulo errado ensina o dono errado: ele escolheria manualmente achando que a máquina
+            está sorteando, quando ela está decidindo por dado. */}
         <div className="glass flex flex-wrap items-end gap-3 rounded-2xl border border-violet-500/30 bg-violet-500/5 p-4 animate-fade-in">
           <span className="text-xl">✨</span>
-          <div>
-            <label className="block text-xs text-zinc-400 mb-1">Gerar ideias para o canal</label>
-            <select
-              value={canalGerar}
-              onChange={(e) => setCanalGerar(e.target.value)}
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
-            >
-              <option value="">🔄 Rotação automática (canal com menos ideias)</option>
-              {canais?.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
-              ))}
-            </select>
-          </div>
           <div>
             <label className="block text-xs text-zinc-400 mb-1">Qtd</label>
             <select
@@ -152,6 +145,12 @@ export function EsteiraIdeias() {
               ))}
             </select>
           </div>
+          <p className="w-full text-[11px] leading-snug text-zinc-500">
+            O <b className="text-zinc-400">Decisor escolhe o canal</b> por desempenho medido (mediana
+            de views no Facebook, com sorteio ponderado e um piso de exploração para não cegar no que
+            já vence). O prompt recebe o retrato de agora: tema que rende, estoque por tema (freio
+            contra repetir o que já espera na fila) e o que cada rede premia.
+          </p>
           <button
             type="button"
             onClick={handleGerarIdeias}

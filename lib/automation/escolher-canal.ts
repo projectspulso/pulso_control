@@ -36,7 +36,17 @@ export interface DesempenhoCanal {
 }
 
 const SHRINK_K = 5 // publicações necessárias pra confiar na mediana do canal
-const PISO_EXPLORACAO = 0.25 // fração do peso médio que todo canal mantém, mesmo indo mal
+// PISO DE EXPLORAÇÃO — quanto de peso todo canal mantém, mesmo indo mal.
+//
+// Era 0,25. Baixado para 0,10 em 02/09/2026, em recuperação: o canal caiu de ~2.500 para 119
+// views/dia depois de 3 dias publicando pela metade, e com o piso alto o sorteio deu 5% a um
+// canal de mediana 280 enquanto história/arqueologia faz ~2.900. Em recuperação, cada ideia
+// conta demais para gastar em aposta.
+//
+// NÃO é zero de propósito: cegar no que já vence congela o acervo e mata a chance de achar o
+// próximo campeão — a amostra por canal ainda é pequena (n=3 a 11) para cravar que algum é ruim.
+// REVISITAR quando as views voltarem ao patamar de ~2.000/dia: aí o piso volta para 0,25.
+const PISO_EXPLORACAO = 0.10
 
 function mediana(a: number[]): number {
   if (!a.length) return 0
