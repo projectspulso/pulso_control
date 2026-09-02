@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { classificarTema, PAPEL_NO_FACEBOOK, type Tema } from '@/lib/decisor/temas'
+import { montarContratoRedes, type ContratoRedes } from '@/lib/decisor/contrato-redes'
 
 /**
  * O ELO QUE FALTAVA — o gerador de ideias passa a consultar o DADO DE HOJE, não só o resumo salvo.
@@ -22,6 +23,7 @@ export interface BriefingDoMomento {
   temaQuente: Tema | null
   estoquePorTema: Record<string, number>
   titulosRecentes: string[]
+  contratoRedes: ContratoRedes
 }
 
 interface Pub {
@@ -45,7 +47,11 @@ export function montarBriefing(
   ideias: IdeiaLeve[],
   publicadas: Set<string>,
   corpos: Map<string, string | null>,
-  canalNome: string
+  canalNome: string,
+  /** duração do áudio e nota de hook por ideia — alimentam o contrato por rede */
+  duracoes: Map<string, number> = new Map(),
+  notasHook: Map<string, number> = new Map(),
+  quantidade = 0
 ): BriefingDoMomento {
   const tituloPorId = new Map(ideias.map((i) => [i.id, i.titulo]))
 
@@ -96,6 +102,25 @@ export function montarBriefing(
 
   const mortos = (Object.keys(PAPEL_NO_FACEBOOK) as Tema[]).filter((t) => PAPEL_NO_FACEBOOK[t] === 'morto')
 
+  // CONTRATO POR REDE — a medição de 01/09 mostrou que o TEMA não separa as redes (todas querem
+  // história/mistério), mas a FORMA separa muito: o gancho vale 2,07× no TikTok e 0,68× no
+  // Facebook. Então cada ideia nasce mirando UMA rede, e a mira é a forma, não o assunto.
+  const contratoRedes = montarContratoRedes(
+    pubs.map((p) => ({ ideia_id: p.ideia_id, plataforma: p.plataforma, views: p.views, taxa_retencao: null })),
+    tituloPorId,
+    duracoes,
+    notasHook,
+    corpos
+  )
+  const redesOrdenadas = Object.entries(contratoRedes)
+    .filter(([, v]) => v.pesoHook != null || v.duracaoCampea || v.temaTop)
+    .sort((a, b) => (b[1].pesoHook ?? 1) - (a[1].pesoHook ?? 1))
+  const linhasRede = redesOrdenadas.map(([, v]) => `- ${v.instrucao}`).join('\n')
+  // reparte as ideias entre as redes com sinal: a 1ª mira a rede mais exigente, e assim por diante
+  const mira = quantidade > 0 && redesOrdenadas.length
+    ? Array.from({ length: quantidade }, (_, i) => `Ideia ${i + 1} → mirar ${redesOrdenadas[i % redesOrdenadas.length][0]}`).join(' · ')
+    : ''
+
   const texto = `RETRATO DO MOMENTO (medido no banco agora — vale mais que qualquer preferência):
 
 DESEMPENHO REAL POR TEMA (mediana de views no Facebook, a rede que mais sorteia alcance):
@@ -105,6 +130,15 @@ Temas que a medição já mostrou fracos: ${mortos.join(', ')}.
 
 ESTOQUE NÃO PUBLICADO POR TEMA (o que já está na fila esperando):
 ${linhaEstoque}
+
+O QUE CADA REDE PREMIA (medido, com a amostra entre parênteses):
+${linhasRede || '- ainda sem amostra suficiente por rede'}
+
+MIRA DESTA RODADA — cada ideia nasce pensada para UMA rede:
+${mira || '- sem mira definida nesta rodada'}
+O ASSUNTO continua o mesmo para todas (a medição mostrou que as redes concordam no tema);
+o que muda por rede é a FORMA: onde o gancho decide, a primeira frase precisa ser a melhor
+possível; onde não decide, invista no assunto e no desenvolvimento.
 
 COMO USAR ISTO (regra dura):
 - O tema forte indica a DIREÇÃO, nunca o assunto. É proibido reescrever um campeão com outras
@@ -118,5 +152,5 @@ ${titulosRecentes.map((t) => `- ${t}`).join('\n') || '- (fila vazia)'}
 
 Canal desta rodada: ${canalNome}.`
 
-  return { texto, temaQuente, estoquePorTema, titulosRecentes }
+  return { texto, temaQuente, estoquePorTema, titulosRecentes, contratoRedes }
 }

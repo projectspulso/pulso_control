@@ -118,14 +118,23 @@ export async function POST(request: NextRequest) {
     // lib/automation/briefing-do-momento.ts. Falha aqui não derruba a geração — só perde contexto.
     let briefing: string | undefined
     try {
-      const [pubsQ, ideiasQ, rotQ] = await Promise.all([
+      const [pubsQ, ideiasQ, rotQ, audiosQ] = await Promise.all([
         supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma, views'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo, status'),
-        supabase.schema('pulso_content').from('roteiros').select('ideia_id, conteudo_md'),
+        // nota_hook alimenta o peso do gancho por rede — o eixo que mais separa as redes
+        supabase.schema('pulso_content').from('roteiros').select('ideia_id, conteudo_md, nota_hook'),
+        supabase.schema('pulso_content').from('audios').select('ideia_id, duracao_segundos'),
       ])
       const corpos = new Map<string, string | null>()
-      for (const r of (rotQ.data || []) as Array<{ ideia_id: string; conteudo_md: string | null }>) {
-        if (r.ideia_id && !corpos.has(r.ideia_id)) corpos.set(r.ideia_id, r.conteudo_md)
+      const notasHook = new Map<string, number>()
+      for (const r of (rotQ.data || []) as Array<{ ideia_id: string; conteudo_md: string | null; nota_hook: number | null }>) {
+        if (!r.ideia_id) continue
+        if (!corpos.has(r.ideia_id)) corpos.set(r.ideia_id, r.conteudo_md)
+        if (typeof r.nota_hook === 'number' && !notasHook.has(r.ideia_id)) notasHook.set(r.ideia_id, r.nota_hook)
+      }
+      const duracoes = new Map<string, number>()
+      for (const a of (audiosQ.data || []) as Array<{ ideia_id: string; duracao_segundos: number | null }>) {
+        if (a.ideia_id && a.duracao_segundos != null && !duracoes.has(a.ideia_id)) duracoes.set(a.ideia_id, a.duracao_segundos)
       }
       const publicadas = new Set(
         ((pubsQ.data || []) as Array<{ ideia_id: string | null }>).map((p) => p.ideia_id).filter((x): x is string => !!x)
@@ -135,7 +144,10 @@ export async function POST(request: NextRequest) {
         (ideiasQ.data || []) as Array<{ id: string; titulo: string | null; status: string }>,
         publicadas,
         corpos,
-        canal.nome
+        canal.nome,
+        duracoes,
+        notasHook,
+        quantidade
       ).texto
     } catch (e) {
       console.error('[gerar-ideias] briefing indisponível, seguindo sem ele:', e)
