@@ -314,7 +314,14 @@ def gen(name):
             return (name,"OK","wan:"+modelo)
     except Exception as e:
         print(f"      [wan] excecao {e}",flush=True)
-    # FALLBACK Veo (Higgsfield) — só se o Wan não entregou
+    # VEO (Higgsfield) DESLIGADO — decisão do dono em 02/09/2026: a produção passa a ser
+    # 100% gratuita (banco de clips + acervo Pexels + Wan). O Veo era o único passo que
+    # custava credito e virou gargalo: com 2,38 creditos na conta, 7 videos ficaram parados
+    # esperando um render que nunca vinha. Sem ele a cena falha honestamente e o vídeo espera
+    # material grátis, em vez de travar a fila inteira.
+    # Para religar (só com crédito e decisão explícita): PULSO_VEO=1 no ambiente.
+    if os.environ.get("PULSO_VEO") != "1":
+        return (name, "ERRO", "sem clip gratis (banco/acervo/wan nao acharam) — Veo desligado")
     for tent in range(2):
         r=subprocess.run([HF,"generate","create","veo3_1_lite","--prompt",full,
             "--aspect_ratio","9:16","--duration",str(dur),"--wait","--wait-timeout","18m","--wait-interval","10s"],

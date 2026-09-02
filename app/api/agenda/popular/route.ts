@@ -23,7 +23,10 @@ export async function POST(request: NextRequest) {
   if (denied) return denied
 
   const body = await request.json().catch(() => ({}))
-  const horizonte = Math.min(Math.max(Number(body.horizonte) || 21, 7), 60)
+  // 28 DIAS por padrão, alinhado com a tela. A /publicar projeta useAgenda(28) e o planejador
+  // preenchia 21: os 7 dias de diferença viravam 14 slots "sem conteúdo" no card "O que está
+  // travando" — alarme estrutural que aparecia mesmo com a fila cheia e escondia o alarme real.
+  const horizonte = Math.min(Math.max(Number(body.horizonte) || 28, 7), 60)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
