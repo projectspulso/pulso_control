@@ -26,6 +26,9 @@ interface Resposta {
   simulacao?: boolean
   agendaria?: number
   gravados?: number
+  realinhados?: number
+  divergentes?: number
+  realinhamentos?: Array<{ numero: number | null; de: string; para: string }>
   plano: ItemPlano[]
   pulados: number | Array<{ numero: number | null; titulo: string; motivo: string }>
   erros?: string[]
@@ -42,14 +45,14 @@ export function AutoAgendar() {
   const [res, setRes] = useState<Resposta | null>(null)
   const [erro, setErro] = useState<string | null>(null)
 
-  async function chamar(confirmar: boolean) {
+  async function chamar(confirmar: boolean, realinhar = false) {
     setErro(null)
     setEstado(confirmar ? 'gravando' : 'simulando')
     try {
       const r = await fetch('/api/agenda/comprometer', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ confirmar }),
+        body: JSON.stringify({ confirmar, realinhar }),
       })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
@@ -117,6 +120,30 @@ export function AutoAgendar() {
                   </div>
                 ))}
               </div>
+              {(res.divergentes ?? 0) > 0 && (
+                <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] p-3 text-xs text-amber-200">
+                  <b>{res.divergentes} vídeo(s) com data que diverge do plano.</b> Data velha vira buraco na
+                  grade: em 01/09 a fila estava carimbada para 5 dias à frente e o cron ficou ocioso enquanto
+                  havia vídeo pronto.
+                  <button
+                    type="button"
+                    onClick={() => chamar(false, true)}
+                    className="mt-2 block rounded-lg bg-amber-600/80 px-3 py-1.5 font-semibold text-white hover:bg-amber-600"
+                  >
+                    Ver plano realinhando essas datas
+                  </button>
+                </div>
+              )}
+              {(res.realinhamentos?.length ?? 0) > 0 && (
+                <div className="mt-3 rounded-lg border border-violet-500/30 bg-violet-500/[0.06] p-3 text-xs text-violet-200">
+                  <b>Realinhando {res.realinhamentos!.length} data(s):</b>
+                  {res.realinhamentos!.slice(0, 6).map((r) => (
+                    <span key={`${r.numero}-${r.para}`} className="ml-1 block tabular-nums">
+                      #{r.numero ?? '—'}: {r.de.replace('T', ' ')} → {r.para.replace('T', ' ')}
+                    </span>
+                  ))}
+                </div>
+              )}
               <p className="mt-2 text-[11px] text-zinc-600">
                 {pulados > 0 && `${pulados} do plano ficaram de fora (ainda em produção, sem vídeo ou já com data). `}
                 O horário vem da grade; o vídeo de cada slot, do desempenho de tema.
@@ -124,7 +151,7 @@ export function AutoAgendar() {
               <div className="mt-3 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => chamar(true)}
+                  onClick={() => chamar(true, (res.realinhamentos?.length ?? 0) > 0)}
                   disabled={estado !== 'previa'}
                   className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
                 >

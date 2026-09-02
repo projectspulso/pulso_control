@@ -295,7 +295,7 @@ def run(ideia_id=None):
     data = open(final, "rb").read()
     try:
         urllib.request.urlopen(urllib.request.Request(U + "/storage/v1/object/pulso-assets/videos/" + FN, data=data, method="POST",
-            headers={"Authorization": "Bearer " + K, "Content-Type": "video/mp4", "x-upsert": "true"}), timeout=300).read()
+            headers={"apikey": K, "Authorization": "Bearer " + K, "Content-Type": "video/mp4", "x-upsert": "true"}), timeout=300).read()
     except urllib.error.HTTPError as e:
         # Ler o corpo é o que faltava: sem isto o motivo real ("Payload too large") morre e sobra
         # um "HTTP 400" que não diz nada.

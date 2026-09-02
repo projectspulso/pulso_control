@@ -34,6 +34,12 @@ async function comprometer(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}))
   const confirmar = body?.confirmar === true
+  // REALINHAR: por padrao quem ja tem data e intocavel — mas a data velha pode ter virado
+  // buraco. Em 01/09/2026 os 11 prontos estavam carimbados para 05-11/09 enquanto o plano
+  // mandava publicar a partir de 01/09: o cron ficou ocioso 4 dias e a cadencia caiu pela
+  // metade. Com realinhar:true a data do pipeline volta a seguir o plano (so para quem ainda
+  // NAO foi publicado). Sem a flag, o comportamento antigo continua.
+  const realinhar = body?.realinhar === true
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
@@ -84,6 +90,7 @@ async function comprometer(request: NextRequest) {
   }
 
   const aGravar: Array<{ id: string; numero: number | null; titulo: string; quando: string }> = []
+  const aRealinhar: Array<{ numero: number | null; de: string; para: string }> = []
   const pulados: Array<{ numero: number | null; titulo: string; motivo: string }> = []
   const vistos = new Set<string>()
 
@@ -102,7 +109,16 @@ async function comprometer(request: NextRequest) {
     // carimbar data em vídeo inexistente é promessa que a rodada das 18h não cumpre.
     if (p.status !== 'PRONTO_PUBLICACAO') { pulados.push({ ...rot, motivo: `ainda em ${p.status}` }); continue }
     if (!md.video_url) { pulados.push({ ...rot, motivo: 'sem video_url' }); continue }
-    if (p.data_publicacao_planejada) { pulados.push({ ...rot, motivo: 'já tem data' }); continue }
+    if (p.data_publicacao_planejada) {
+      const planejado = quandoBRT(slot.data, slot.horario)
+      const divergente = String(p.data_publicacao_planejada).slice(0, 16) !== planejado.slice(0, 16)
+      if (!realinhar || !divergente) {
+        pulados.push({ ...rot, motivo: divergente ? `já tem data (${String(p.data_publicacao_planejada).slice(0, 16)}) — diverge do plano` : 'já tem data' })
+        continue
+      }
+      // realinhando: cai no fluxo normal abaixo e recebe a data do plano
+      aRealinhar.push({ numero: rot.numero, de: String(p.data_publicacao_planejada).slice(0, 16), para: planejado })
+    }
     if (vistos.has(slot.ideia_id)) { pulados.push({ ...rot, motivo: 'repetido no plano' }); continue }
     if ((ocupacao[slot.data] || 0) >= tetoDia) {
       pulados.push({ ...rot, motivo: `dia ${slot.data} já cheio (teto ${tetoDia})` })
@@ -120,6 +136,8 @@ async function comprometer(request: NextRequest) {
       simulacao: true,
       agendaria: aGravar.length,
       plano: aGravar,
+      realinhamentos: aRealinhar,
+      divergentes: pulados.filter((x) => x.motivo.includes('diverge do plano')).length,
       pulados,
       nota: 'Nada foi gravado. Reenvie com confirmar: true para comprometer estas datas.',
     })
@@ -140,7 +158,7 @@ async function comprometer(request: NextRequest) {
     detalhes: { gravados, pulados: pulados.length, erros, plano: aGravar },
   }).then(() => {}, () => {})
 
-  return NextResponse.json({ success: true, gravados, pulados: pulados.length, erros, plano: aGravar })
+  return NextResponse.json({ success: true, gravados, realinhados: aRealinhar.length, pulados: pulados.length, erros, plano: aGravar })
 }
 
 export async function POST(request: NextRequest) {
