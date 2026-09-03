@@ -63,9 +63,27 @@ export function ancorasBatem(a: string, b: string, raro?: (termo: string) => boo
   const B = new Set(b.split('-'))
   const comuns: string[] = []
   for (const t of A) if (B.has(t)) comuns.push(t)
-  // proporção sobre o MENOR conjunto: "zeigarnik" sozinho ainda bate com "bluma-zeigarnik-1927"
+  if (!raro) return comuns.length / Math.min(A.size, B.size) >= 0.75
+
+  const raros = comuns.filter(raro)
+
+  // SEGUNDA VIA — dois termos distintivos iguais nos dois lados são um NOME, e nome não coincide
+  // por acaso. Sem ela, "Roy Cleveland Sullivan" e "Roy Sullivan Parque Nacional de Shenandoah"
+  // não casavam: a proporção dava 0,67 (dois termos em comum sobre três) e ficava abaixo do corte.
+  // É a MESMA PESSOA, e o par tinha virado vídeo duas vezes.
+  //
+  // O veto por termo exclusivo NÃO se aplica aqui, de propósito: é justamente o sobrenome extra de
+  // um lado e o lugar do outro que fazem a proporção falhar.
+  //
+  // Medido no acervo: a segunda via leva as colisões de 3 para 7, ganhando três repetições reais
+  // (Roy Sullivan #8/#108, Rota da Seda #113/#111, Dia dos Pais #139/#140) e um falso positivo
+  // conhecido — "biblioteca secreta Paris Segunda Guerra Mundial" × "carta de amor Segunda Guerra
+  // Mundial 1975", que dividem uma ÉPOCA e não um caso. A troca é deliberada e segue a assimetria
+  // do módulo de dedup: errar pra mais custa uma aprovação manual, errar pra menos custa um render
+  // duplicado.
+  if (raros.length >= 2) return true
+
   if (comuns.length / Math.min(A.size, B.size) < 0.75) return false
-  if (!raro) return true
 
   // VETO POR TERMO EXCLUSIVO — o sinal mais forte, e o mais barato.
   // Quando CADA lado carrega um termo distintivo que o outro não tem, isso não é ausência de
@@ -76,7 +94,7 @@ export function ancorasBatem(a: string, b: string, raro?: (termo: string) => boo
   const exclusivoRaro = (X: Set<string>, Y: Set<string>) => [...X].some((t) => !Y.has(t) && raro(t))
   if (exclusivoRaro(A, B) && exclusivoRaro(B, A)) return false
 
-  return comuns.some(raro)
+  return raros.length >= 1
 }
 
 const PROMPT_EXTRACAO = [

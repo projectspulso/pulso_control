@@ -8,7 +8,10 @@
       "mcp__90582afd-1ceb-4ebd-af94-0643a3ac3bd7__execute_sql",
       "mcp__90582afd-1ceb-4ebd-af94-0643a3ac3bd7__list_projects",
       "Bash(PYTHONIOENCODING=utf-8 python)",
-      "Bash(timeout 60 sed -n '1,60p' /d/tmp/pulso_guard.py)"
+      "Bash(timeout 60 sed -n '1,60p' /d/tmp/pulso_guard.py)",
+      "Bash(PYTHONIOENCODING=utf-8 python confere_legendas.py)",
+      "Bash(PYTHONIOENCODING=utf-8 python -c ' *)",
+      "Bash(PYTHONIOENCODING=utf-8 python kwai_0209_completo.py)"
     ]
   },
   "enableAllProjectMcpServers": true,
