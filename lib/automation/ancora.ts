@@ -42,17 +42,41 @@ export function normalizarAncora(texto: string | null | undefined): string {
   return partes.sort().join('-')
 }
 
-/** Duas âncoras batem quando compartilham a maior parte dos termos — não só quando são idênticas.
- *  `bluma-zeigarnik-1927` × `bluma-zeigarnik` batem; `roy-sullivan` × `mary-celeste` não. */
-export function ancorasBatem(a: string, b: string): boolean {
+/**
+ * Duas âncoras batem quando compartilham a maior parte dos termos E pelo menos um termo que
+ * DISTINGUE — o nome próprio, o lugar, a data.
+ *
+ * A segunda condição nasceu do teste em produção (02/09/2026), que acusou como iguais:
+ *   "cidade submersa perto de Cádiz 2021"  ×  "cidade submersa Yonaguni 2021"
+ * São duas cidades diferentes, em dois países diferentes. O que sobrou em comum — `cidade`,
+ * `submersa`, `2021` — é o VOCABULÁRIO do canal, não a identidade da história; e como ele
+ * preenchia o conjunto menor inteiro, a proporção dava 100%. O termo que separava (Cádiz ×
+ * Yonaguni) foi voto vencido.
+ *
+ * `raro` responde quantos itens do acervo usam aquele termo. Sem essa função (chamada solta,
+ * fora de um acervo) o comportamento antigo continua — é o caso de comparar duas âncoras isoladas.
+ */
+export function ancorasBatem(a: string, b: string, raro?: (termo: string) => boolean): boolean {
   if (!a || !b) return false
   if (a === b) return true
   const A = new Set(a.split('-'))
   const B = new Set(b.split('-'))
-  let inter = 0
-  for (const t of A) if (B.has(t)) inter++
+  const comuns: string[] = []
+  for (const t of A) if (B.has(t)) comuns.push(t)
   // proporção sobre o MENOR conjunto: "zeigarnik" sozinho ainda bate com "bluma-zeigarnik-1927"
-  return inter / Math.min(A.size, B.size) >= 0.75
+  if (comuns.length / Math.min(A.size, B.size) < 0.75) return false
+  if (!raro) return true
+
+  // VETO POR TERMO EXCLUSIVO — o sinal mais forte, e o mais barato.
+  // Quando CADA lado carrega um termo distintivo que o outro não tem, isso não é ausência de
+  // prova: é prova de que são casos diferentes. `cadiz` de um lado e `yonaguni` do outro dizem,
+  // sozinhos, que são duas cidades submersas — não a mesma contada duas vezes.
+  // Não vale quando um lado é subconjunto do outro ("pavlopetri-1967" ⊂ "pavlopetri-1967-cidade
+  // -submersa"): aí o lado curto não tem nada exclusivo, e o par continua sendo o mesmo caso.
+  const exclusivoRaro = (X: Set<string>, Y: Set<string>) => [...X].some((t) => !Y.has(t) && raro(t))
+  if (exclusivoRaro(A, B) && exclusivoRaro(B, A)) return false
+
+  return comuns.some(raro)
 }
 
 const PROMPT_EXTRACAO = [
@@ -100,17 +124,44 @@ export interface ColisaoAncora {
   colideCom: { id: string; titulo: string; ancora: string }
 }
 
-/** Procura a primeira âncora existente que bate com a candidata. */
+/**
+ * Em quantas âncoras do acervo um termo pode aparecer e ainda ser considerado distintivo.
+ *
+ * Medido nas 189 âncoras do acervo em 02/09/2026: 472 termos aparecem em uma âncora só, 62 em
+ * duas, 23 em três e 12 em quatro ou mais. O corte em 3 deixava passar `submersa` (3 âncoras), e
+ * foi por ele que "cidade submersa Cádiz" casou com "cidade submersa Yonaguni". Em 2, `submersa`
+ * vira vocabulário e os nomes que importam continuam distintivos: `pavlopetri` (2), `nino` (2),
+ * `gpt` (2).
+ */
+const RARO_MAX = 2
+
+/**
+ * Procura a primeira âncora existente que bate com a candidata.
+ *
+ * A raridade de cada termo é medida NO PRÓPRIO ACERVO, não numa lista fixa de palavras genéricas:
+ * o que é vocabulário comum depende do canal. Num canal de arqueologia submarina, `submersa` é
+ * ruído; num de psicologia, seria um sinal e tanto.
+ */
 export function acharColisao(
   candidata: string,
   existentes: Array<{ id: string; titulo: string | null; ancora?: string | null }>
 ): ColisaoAncora | null {
   const alvo = normalizarAncora(candidata)
   if (!alvo) return null
+
+  const freq = new Map<string, number>()
+  const normalizadas: Array<{ e: (typeof existentes)[number]; n: string }> = []
   for (const e of existentes) {
-    const outra = normalizarAncora(e.ancora)
-    if (outra && ancorasBatem(alvo, outra)) {
-      return { ancora: alvo, colideCom: { id: e.id, titulo: e.titulo || '(sem título)', ancora: outra } }
+    const n = normalizarAncora(e.ancora)
+    if (!n) continue
+    normalizadas.push({ e, n })
+    for (const t of new Set(n.split('-'))) freq.set(t, (freq.get(t) || 0) + 1)
+  }
+  const raro = (t: string) => (freq.get(t) || 0) <= RARO_MAX
+
+  for (const { e, n } of normalizadas) {
+    if (ancorasBatem(alvo, n, raro)) {
+      return { ancora: alvo, colideCom: { id: e.id, titulo: e.titulo || '(sem título)', ancora: n } }
     }
   }
   return null
