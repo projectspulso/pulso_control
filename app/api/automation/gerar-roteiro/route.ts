@@ -206,7 +206,9 @@ export async function POST(request: NextRequest) {
     let colisaoAncora: ColisaoAncora | null = null
     try {
       ancora = await extrairAncora(roteiro, (pr) =>
-        callOpenAI(pr, { json_mode: true, temperature: 0, max_tokens: 200 }).then((r) => r.content)
+        // gpt-4o-mini de proposito: a tarefa e nomear o caso que ESTA no texto, nao raciocinar.
+        // Em 189 roteiros a diferenca e ~R$ 2,20 (4o) contra ~R$ 0,12 (mini).
+        callOpenAI(pr, { model: 'gpt-4o-mini', json_mode: true, temperature: 0, max_tokens: 200 }).then((r) => r.content)
       )
       if (ancora) {
         const { data: outras } = await supabase

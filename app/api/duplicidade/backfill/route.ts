@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     for (const i of alvo) {
       const a = await extrairAncora(corpo.get(i.id)!, (p) =>
-        callOpenAI(p, { json_mode: true, temperature: 0, max_tokens: 200 }).then((r) => r.content)
+        callOpenAI(p, { model: 'gpt-4o-mini', json_mode: true, temperature: 0, max_tokens: 200 }).then((r) => r.content)
       )
       if (!a) { semResposta++; continue }
       const { error } = await supabase
