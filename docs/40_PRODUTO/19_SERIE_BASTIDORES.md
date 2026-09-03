@@ -4,6 +4,15 @@
 > **Criado em:** 2026-08-24
 > **Origem:** decisão do dono após a auditoria de conformidade — ver
 > [`Cockpit/auditorias/conformidade-receita-pulso-2026-08-23.md`](../../../Cockpit/auditorias/conformidade-receita-pulso-2026-08-23.md)
+>
+> **Status 03/09/2026 — contrato fechado, série em `planejado`.** A série **mora no Pulso**
+> (`pulso_content.episodios`); o **Limelight conduz** como executor criativo; o estado só avança na
+> esteira daqui. Linha de corte por estágio e regra de segredo em
+> `Cockpit/_RESPOSTA_DO_PULSO_BASTIDORES_2026-09-03.md` (responde às 3 perguntas do orquestrador).
+> Os roteiros abaixo (EP01/04/09) **também vivem em `episodios.roteiro_md`** desde 03/09 — antes o campo
+> estava vazio nos 10 episódios e a transição `planejado → roteiro_ok` não tinha o que aprovar.
+> **Bloqueio material:** amostra de voz do dono. **Gap conhecido:** não há render para `formato=longo`;
+> a montagem é fora do app (EP01 manual, automatizar só após um episódio publicado).
 
 ---
 
