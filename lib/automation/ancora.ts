@@ -113,8 +113,30 @@ const PROMPT_EXTRACAO = [
   'Se o roteiro não tiver um caso concreto (fala de um fenômeno geral), devolva o fenômeno com',
   'o máximo de especificidade que houver — nunca invente um nome que não está no texto.',
   '',
-  'Responda APENAS JSON: {"ancora":"<3 a 8 palavras>"}',
+  'Responda TAMBÉM se o roteiro FECHA A PROMESSA que ele mesmo abre:',
+  '- nomeado = true → o texto identifica o caso de forma verificável: diz o nome do lugar, da',
+  '  pessoa, do objeto, do efeito, do país ou a data. O espectador sai sabendo O QUÊ.',
+  '- nomeado = false → o texto fala de "uma cidade", "um homem", "um artefato" do começo ao fim,',
+  '  sem nunca dizer qual. Abre a curiosidade e não entrega.',
+  'Julgue o TEXTO, não a plausibilidade: um roteiro pode estar bem escrito e mesmo assim nunca',
+  'dizer o nome. Um termo técnico específico (confabulação, bismuto, néfrons) CONTA como nomear.',
+  '',
+  'Responda APENAS JSON: {"ancora":"<3 a 8 palavras>","nomeado":true|false}',
 ].join('\n')
+
+export interface AncoraExtraida {
+  ancora: string
+  /**
+   * O roteiro FECHA a promessa que abre? Medido no acervo em 03/09/2026, quando o dono perguntou
+   * "qual o nome da cidade? nunca falamos": 26 dos 208 roteiros nunca nomeavam o caso — abriam a
+   * lacuna ("uma cidade lendária foi descoberta numa selva densa") e terminavam sem dizer qual.
+   *
+   * O CUSTO, medido: 439 views medianos e 30,3% de retenção quando o roteiro nomeia, contra 230 e
+   * 19,6% quando não nomeia — 1,9× e 1,5×. Faz sentido mecânico: promessa aberta e não paga faz o
+   * espectador sair, a retenção cai, e a retenção é o que paga 4× no Facebook e no Instagram.
+   */
+  nomeado: boolean
+}
 
 /**
  * Extrai a âncora de um roteiro. Devolve null quando a checagem não pôde ser feita — e null aqui
@@ -124,14 +146,16 @@ const PROMPT_EXTRACAO = [
 export async function extrairAncora(
   corpo: string,
   callLLM: (prompt: string) => Promise<string>
-): Promise<string | null> {
+): Promise<AncoraExtraida | null> {
   const texto = (corpo || '').slice(0, 2500)
   if (!texto.trim()) return null
   try {
     const bruto = await callLLM(`${PROMPT_EXTRACAO}\n\nROTEIRO:\n${texto}`)
-    const j = JSON.parse(bruto) as { ancora?: string }
+    const j = JSON.parse(bruto) as { ancora?: string; nomeado?: boolean }
     const a = (j.ancora || '').trim()
-    return a.length >= 2 ? a : null
+    if (a.length < 2) return null
+    // ausência do campo não vira "nomeado" por omissão: na dúvida, o roteiro passa por gente
+    return { ancora: a, nomeado: j.nomeado === true }
   } catch {
     return null
   }

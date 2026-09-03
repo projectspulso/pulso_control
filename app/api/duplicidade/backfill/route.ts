@@ -61,10 +61,10 @@ export async function POST(request: NextRequest) {
       const { error } = await supabase
         .schema('pulso_content')
         .from('ideias')
-        .update({ metadata: { ...(i.metadata || {}), ancora: a } })
+        .update({ metadata: { ...(i.metadata || {}), ancora: a.ancora, ancora_nomeada: a.nomeado } })
         .eq('id', i.id)
       if (error) { semResposta++; continue }
-      feitas.push({ titulo: i.titulo || '(sem título)', ancora: a })
+      feitas.push({ titulo: i.titulo || '(sem título)', ancora: a.ancora })
     }
 
     return NextResponse.json({

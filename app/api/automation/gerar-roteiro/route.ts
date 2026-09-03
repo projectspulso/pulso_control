@@ -203,13 +203,20 @@ export async function POST(request: NextRequest) {
     // Colisão NÃO joga o roteiro fora — ele fica gravado e vai para aprovação humana com o motivo.
     // O que ela impede é a auto-aprovação, que é o que empurra o item para a esteira paga sozinho.
     let ancora: string | null = null
+    /** o roteiro fecha a promessa que abre, ou termina sem dizer QUAL é o caso? */
+    let promessaAberta = false
     let colisaoAncora: ColisaoAncora | null = null
     try {
-      ancora = await extrairAncora(roteiro, (pr) =>
+      const extraida = await extrairAncora(roteiro, (pr) =>
         // gpt-4o-mini de proposito: a tarefa e nomear o caso que ESTA no texto, nao raciocinar.
         // Em 189 roteiros a diferenca e ~R$ 2,20 (4o) contra ~R$ 0,12 (mini).
         callOpenAI(pr, { model: 'gpt-4o-mini', json_mode: true, temperature: 0, max_tokens: 200 }).then((r) => r.content)
       )
+      ancora = extraida?.ancora ?? null
+      // PROMESSA EM ABERTO — "uma cidade lendária foi descoberta numa selva densa", e o roteiro
+      // acaba sem dizer qual. Medido em 03/09/2026: 439 views e 30,3% de retenção quando o roteiro
+      // nomeia o caso, contra 230 e 19,6% quando não nomeia. Não é estilo, é 1,9× de alcance.
+      promessaAberta = extraida != null && !extraida.nomeado
       if (ancora) {
         const { data: outras } = await supabase
           .schema('pulso_content')
@@ -274,7 +281,7 @@ export async function POST(request: NextRequest) {
 
     const shouldAutoApprove =
       autoApprove && qualidade.score >= autoApproveThreshold && hook.nota >= 3 && qualidade.tem_cta &&
-      !colisaoAncora && !gemeoNoAcervo
+      !colisaoAncora && !gemeoNoAcervo && !promessaAberta
 
     // NUMERO AUTOMÁTICO: respeita o número já gravado na ideia; senão, próximo da sequência canônica.
     let numero: number | null =
@@ -428,6 +435,9 @@ export async function POST(request: NextRequest) {
       const statusPipe = shouldAutoApprove ? 'ROTEIRO_PRONTO' : 'AGUARDANDO_ROTEIRO'
       const metaExtra: Record<string, unknown> = {}
       if (numero != null) metaExtra.numero = numero
+      if (promessaAberta) {
+        metaExtra.promessa_aberta = { ancora, quando: new Date().toISOString() }
+      }
       if (gemeoNoAcervo) {
         metaExtra.gemeo_no_acervo = {
           titulo: gemeoNoAcervo.titulo,
@@ -474,6 +484,10 @@ export async function POST(request: NextRequest) {
         ? { ancora: colisaoAncora.ancora, colide_com: colisaoAncora.colideCom.titulo }
         : null,
       gemeo_no_acervo: gemeoNoAcervo,
+      promessa_aberta: promessaAberta,
+      aviso_promessa: promessaAberta
+        ? 'O roteiro abre uma curiosidade e nunca diz QUAL é o caso (sem nome, lugar ou data verificável). Foi para aprovação humana: roteiro assim rende 230 views contra 439 dos que nomeiam.'
+        : null,
       aviso_ancora: colisaoAncora
         ? `Conta a mesma história de "${colisaoAncora.colideCom.titulo}" — foi para aprovação humana em vez de seguir para a esteira.`
         : gemeoNoAcervo

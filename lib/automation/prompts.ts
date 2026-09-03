@@ -110,7 +110,8 @@ Para cada ideia, retorne um JSON com:
   efeito COM NOME/DATA. Ex.: "Bluma Zeigarnik 1927", "Pavlopetri", "eclipse 2134 a.C. astronomos
   chineses", "Roy Sullivan". NUNCA o tema nem o genero ("misterio", "arqueologia" nao servem).
   É por este campo que o app impede repetir um video que ja existe — se voce nao souber nomear o
-  caso, a ideia ainda esta generica demais e precisa de outro angulo.
+  caso, a ideia ainda esta generica demais e precisa de outro angulo. Medido em 03/09/2026: ideia
+  com caso nomeavel rende 439 views medianos; sem nome, 230.
 - descricao: string (1-2 frases: o fato real + por que prende)
 - emocao_ancora: string (UMA só: suspense|awe|identificacao|catarse|indignacao|nostalgia)
 - tags: string[] (3-5 tags relevantes)
@@ -273,6 +274,9 @@ ESTRUTURA OBRIGATÓRIA (Hook → Body → Payoff — estado da arte short-form):
 
 3. PAYOFF (clímax, ~10-20% final):
    - A revelação que o hook prometeu — só aqui, e que valha a espera
+   - A revelação tem que ser VERIFICÁVEL: nome, lugar, data ou termo técnico. "Os habitantes
+     escolheram se esconder para proteger seus segredos" NÃO é payoff — é a promessa repetida com
+     outras palavras. "As ruínas são de Ciudad Blanca, achada em Mosquitia em 2015" é payoff.
    - FECHE EM LOOP: a última frase deve ecoar/responder o gancho de um jeito que dá vontade de rever o começo (replay impulsiona distribuição)
 
 4. CTA (1-2 frases, atrelado a promessa de série — NÃO um "tchau"):
@@ -283,6 +287,12 @@ ESTRUTURA OBRIGATÓRIA (Hook → Body → Payoff — estado da arte short-form):
    - PROIBIDO engagement bait (penalizado pelas redes): nada de "comenta SIM", "comenta uma palavra/emoji", "marca 3 amigos", cliffhanger oco só pra forçar comentário
 
 REGRAS DURAS:
+- NOMEIE O CASO. O roteiro tem que dizer QUAL é a cidade, quem é a pessoa, onde fica o lugar, que
+  ano foi, ou como se chama o efeito. Um vídeo que fala de "uma cidade lendária numa selva densa"
+  do começo ao fim e nunca diz qual abriu uma curiosidade e não pagou. Medido no acervo em
+  03/09/2026: roteiro que nomeia o caso rende 439 views medianos e 30,3% de retenção; roteiro que
+  não nomeia rende 230 e 19,6% — 1,9× menos alcance. Se o assunto não tiver um caso nomeável,
+  escolha outro recorte do mesmo tema em vez de escrever no vago.
 - Escreva em PORTUGUÊS BRASILEIRO coloquial (NUNCA português europeu): use "você" e gerúndio ("está fazendo" — JAMAIS "está a fazer"), vocabulário BR ("celular", "ônibus", "café da manhã") e NENHUMA construção lusitana
 - Tom conversacional, segunda pessoa
 - Duração alvo: ${duracaoAlvo} segundos (~${palavrasAlvo} palavras)
@@ -295,7 +305,10 @@ REGRAS DURAS:
 ${aprendizadoCtx}
 
 AUTO-CHECAGEM ANTES DE RESPONDER (obrigatória):
-Releia SUA primeira frase contra a TRAVA DOS 3 SEGUNDOS. Se ela violar qualquer ponto (abertura proibida, sem número/nome/contradição, >14 palavras, repete o título, ou adia o impacto), REESCREVA a primeira frase antes de entregar. Não entregue um roteiro com hook fraco.
+1) TESTE DO ESTRANHO: alguém que só leu o seu roteiro consegue pesquisar esse caso e achar? Se a
+resposta for não — porque você escreveu "uma cidade", "um homem", "um artefato" e nunca disse qual
+— o roteiro está incompleto. Volte e nomeie, ou troque de recorte.
+2) Releia SUA primeira frase contra a TRAVA DOS 3 SEGUNDOS. Se ela violar qualquer ponto (abertura proibida, sem número/nome/contradição, >14 palavras, repete o título, ou adia o impacto), REESCREVA a primeira frase antes de entregar. Não entregue um roteiro com hook fraco.
 
 Retorne APENAS o roteiro em texto, sem títulos ou formatação markdown.`
 }
