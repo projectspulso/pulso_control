@@ -46,8 +46,18 @@ export async function POST(request: NextRequest) {
       titulo: string | null
       status: string
       formato: string | null
-      metadata: { ancora?: string } | null
-    }>).filter((i) => i.status !== 'DESCARTADA' && i.formato !== 'longo' && corpo.has(i.id) && !i.metadata?.ancora)
+      metadata: { ancora?: string; ancora_nomeada?: boolean } | null
+    }>).filter(
+      (i) =>
+        i.status !== 'DESCARTADA' &&
+        i.formato !== 'longo' &&
+        corpo.has(i.id) &&
+        // sem âncora ainda, OU com âncora antiga que não sabe se o roteiro FECHA a promessa.
+        // O julgamento de "nomeado" nasceu em 03/09/2026; o acervo anterior não o tem, e uma
+        // heurística de capitalização não serve de substituto: ela marca "levitação diamagnética
+        // 1939 bismuto" como vago, e isso é específico. Quem lê o roteiro inteiro é o modelo.
+        (!i.metadata?.ancora || i.metadata?.ancora_nomeada === undefined)
+    )
 
     const alvo = pendentes.slice(0, lote)
     const feitas: Array<{ titulo: string; ancora: string }> = []
