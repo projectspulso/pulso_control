@@ -232,6 +232,7 @@ export default function ProducaoPage() {
   const [destaque, setDestaque] = useState<string | null>(null)
   const conteudosModoFoco = conteudos ?? []
   const [processandoCards, setProcessandoCards] = useState<Set<string>>(new Set())
+  const [kanbanMsg, setKanbanMsg] = useState<string | null>(null)
 
   // Avança o card pelo BOTÃO (clique confiável, não depende do arraste):
   // Aguardando Roteiro → gera roteiro | Roteiro Pronto → gera áudio | Áudio Gerado → Em Edição (render).
@@ -251,7 +252,7 @@ export default function ProducaoPage() {
       }
       await refetch()
     } catch (e) {
-      alert('Falha: ' + (e instanceof Error ? e.message : 'erro'))
+      setKanbanMsg('❌ ' + (e instanceof Error ? e.message : 'erro'))
     } finally {
       setProcessandoCards((p) => { const n = new Set(p); n.delete(c.pipeline_id); return n })
     }
@@ -270,6 +271,61 @@ export default function ProducaoPage() {
     setActiveId(id)
     const conteudo = conteudosModoFoco.find(c => c.pipeline_id === id)
     setActiveConteudo(conteudo)
+  }
+
+  /**
+   * ARRASTAR É PEDIR A AÇÃO — e a coluna só muda depois que ela deu certo.
+   *
+   * Antes, `atualizarStatus.mutate()` disparava JUNTO com a geração, sem esperar. Duas mentiras
+   * saíam daí: roteiro que falhava deixava o card em "Roteiro Pronto" SEM roteiro, e roteiro que
+   * precisava de aprovação era forçado a "pronto" mesmo assim (a rota devolve AGUARDANDO_ROTEIRO
+   * quando não auto-aprova). A tela passava a discordar do banco no exato lugar em que o dono
+   * confia nela para decidir o que produzir.
+   *
+   * Agora: quem gera é quem promove. O kanban dispara, espera e refaz a leitura — o status que
+   * vale é o que o servidor gravou. A exceção é "Em Edição": ali não existe endpoint, o arrasto
+   * É a decisão (autorizar o render caro), então o status é gravado aqui mesmo.
+   */
+  const aplicarColuna = async (conteudo: any, novoStatus: StatusProducao) => {
+    const id = conteudo.pipeline_id
+    if (processandoCards.has(id)) return
+    setProcessandoCards((p) => new Set(p).add(id))
+    setKanbanMsg(null)
+
+    const num = conteudo.metadata?.numero != null ? `#${String(conteudo.metadata.numero).padStart(3, '0')} ` : ''
+    try {
+      if (novoStatus === 'ROTEIRO_PRONTO' && !conteudo.roteiro_id) {
+        await pedir('/api/automation/gerar-roteiro', { ideia_id: conteudo.ideia_id }, 'roteiro')
+        setKanbanMsg(`✅ ${num}roteiro gerado — a coluna segue o que o servidor gravou (pode ficar em "Aguardando Roteiro" se precisar da sua aprovação).`)
+      } else if (novoStatus === 'AUDIO_GERADO') {
+        if (!conteudo.roteiro_id) throw new Error('esse card não tem roteiro — gere o roteiro primeiro')
+        await pedir('/api/automation/gerar-audio', { roteiro_id: conteudo.roteiro_id }, 'áudio')
+        setKanbanMsg(`✅ ${num}áudio gerado na voz PULSO.`)
+      } else if (novoStatus === 'EM_EDICAO') {
+        await atualizarStatus.mutateAsync({ id, novoStatus })
+        setKanbanMsg(`✅ ${num}liberado pra renderizar. O render é o passo caro — o worker local pega na próxima rodada (08/16/23h).`)
+      } else {
+        await atualizarStatus.mutateAsync({ id, novoStatus })
+        setKanbanMsg(`✅ ${num}movido para "${COLUNAS.find((c) => c.id === novoStatus)?.titulo ?? novoStatus}".`)
+      }
+      await refetch()
+    } catch (e) {
+      // o card FICA onde estava: nada foi gravado, e a tela não pode sugerir que foi
+      setKanbanMsg(`❌ ${num}${e instanceof Error ? e.message : 'falhou'} — o card continua na coluna de origem.`)
+    } finally {
+      setProcessandoCards((p) => { const n = new Set(p); n.delete(id); return n })
+    }
+  }
+
+  /** POST que trata 409 como sucesso (já existia) e transforma o resto em erro de verdade. */
+  const pedir = async (endpoint: string, payload: Record<string, unknown>, oQue: string) => {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok && res.status !== 409) throw new Error(data.error || `${oQue}: HTTP ${res.status}`)
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -300,45 +356,15 @@ export default function ProducaoPage() {
     // BLOQUEIO: esses status são AUTOMÁTICOS (o render seta PRONTO_PUBLICACAO; a
     // publicação seta PUBLICADO). Arrastar pra cá pularia o render → "pronto" sem vídeo.
     if (novoStatus === 'PRONTO_PUBLICACAO' || novoStatus === 'PUBLICADO') {
-      alert('Essa coluna é automática:\n\n• "Pronto p/ Publicar" vem do RENDER\n• "Publicado" vem da publicação\n\nPra produzir o vídeo, arraste só até "Em Edição".')
+      setKanbanMsg('❌ Essa coluna é automática: "Pronto p/ Publicar" vem do RENDER e "Publicado" vem da publicação. Pra produzir o vídeo, arraste só até "Em Edição".')
       setActiveId(null)
       setActiveConteudo(null)
       return
     }
 
-    // Só atualiza se mudou de coluna
-    const conteudo = conteudosModoFoco.find(c => c.pipeline_id === conteudoId)
-    if (conteudo && conteudo.pipeline_status !== novoStatus) {
-      atualizarStatus.mutate({ id: conteudoId, novoStatus })
+    const conteudo = conteudosModoFoco.find(c => c.pipeline_status !== novoStatus && c.pipeline_id === conteudoId)
+    if (conteudo) void aplicarColuna(conteudo, novoStatus)
 
-      // kanban operacional: arrastar TAMBÉM dispara a geração correspondente
-      const disparar = async (endpoint: string, payload: Record<string, unknown>, oQue: string) => {
-        try {
-          const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          })
-          const data = await res.json()
-          if (!res.ok && res.status !== 409) {
-            alert(`Falha ao gerar ${oQue}: ${data.error || res.status}`)
-          }
-          refetch()
-        } catch {
-          alert(`Falha ao gerar ${oQue} — tente pelo botão da tela.`)
-        }
-      }
-      if (novoStatus === 'ROTEIRO_PRONTO' && !conteudo.roteiro_id) {
-        disparar('/api/automation/gerar-roteiro', { ideia_id: conteudo.ideia_id }, 'roteiro')
-      } else if (novoStatus === 'AUDIO_GERADO' && conteudo.roteiro_id) {
-        disparar('/api/automation/gerar-audio', { roteiro_id: conteudo.roteiro_id }, 'áudio (voz PULSO)')
-      } else if (novoStatus === 'EM_EDICAO') {
-        // GATE DE RENDER: arrastar pra "Em Edição" autoriza o vídeo (passo caro/Veo).
-        // O render roda no worker LOCAL (08/16/23h), não na hora.
-        alert('✅ Enviado pra renderizar!\n\nO render é o passo caro (Veo) — o worker local gera o vídeo na próxima rodada (08/16/23h). Os cards em "Áudio Gerado" ficam esperando até você arrastá-los pra cá.')
-      }
-    }
-    
     setActiveId(null)
     setActiveConteudo(null)
   }
@@ -430,6 +456,18 @@ export default function ProducaoPage() {
             <FilaProducao onSelecionar={setDestaque} selecionado={destaque} />
           </div>
         </div>
+
+        {kanbanMsg && (
+          <div
+            className={`mb-3 rounded-lg px-3 py-2 text-sm ring-1 ${
+              kanbanMsg.startsWith('❌')
+                ? 'bg-red-500/10 text-red-300 ring-red-500/30'
+                : 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/30'
+            }`}
+          >
+            {kanbanMsg}
+          </div>
+        )}
 
         <DndContext
           sensors={sensors}
