@@ -3,7 +3,7 @@ import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptDoMomento } from '@/lib/automation/prompts'
-import { filtrarDuplicatas } from '@/lib/automation/dedup'
+import { filtrarDuplicatas, filtrarDuplicatasSemantica } from '@/lib/automation/dedup'
 
 /**
  * POST /api/automation/do-momento
@@ -74,22 +74,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Ideia sem título', raw: content }, { status: 422 })
     }
 
-    // Anti-duplicidade lexical contra ideias existentes
+    // ANTI-DUPLICIDADE — as DUAS camadas, como no gerador de ideias.
+    //
+    // Esta rota ficou só com a lexical até 02/09/2026, e o Jaccard de título perde justamente o
+    // que a raia "do Momento" mais produz: o mesmo assunto em alta descrito com outras palavras.
+    // Uma ideia por clique parecia risco pequeno — mas duplicata que entra aqui custa o render
+    // inteiro lá na frente, igual às que já viraram vídeo repetido (#85×#76, #9×#73, #113×#111).
     const { data: existentes } = await supabase
       .schema('pulso_content')
       .from('ideias')
       .select('titulo, descricao')
-    const { aceitas } = filtrarDuplicatas(
-      [{ titulo: ideia.titulo as string, descricao: (ideia.descricao as string) || '' }],
-      existentes || []
-    )
-    if (aceitas.length === 0) {
-      return NextResponse.json({
+    const candidata = [{ titulo: ideia.titulo as string, descricao: (ideia.descricao as string) || '' }]
+    const barrada = (motivo: string) =>
+      NextResponse.json({
         success: true,
         duplicada: true,
-        aviso: 'Ideia já existe (trava anti-duplicidade).',
+        aviso: motivo,
         titulo: ideia.titulo,
       })
+
+    const { aceitas } = filtrarDuplicatas(candidata, existentes || [])
+    if (aceitas.length === 0) {
+      return barrada('Ideia já existe (trava anti-duplicidade).')
+    }
+    const semantica = await filtrarDuplicatasSemantica(aceitas, existentes || [], (pr) =>
+      callOpenAI(pr, { json_mode: true, temperature: 0, max_tokens: 1200 }).then((r) => r.content)
+    )
+    if (semantica.aceitas.length === 0) {
+      const igual = semantica.ignoradas[0]?.similar_a
+      return barrada(`Conta a mesma história de "${igual ?? 'uma ideia existente'}" (trava semântica).`)
     }
 
     const precisaRevisao = ideia.precisa_revisao === true
