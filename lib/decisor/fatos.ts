@@ -21,6 +21,8 @@ export interface PubBruta {
   likes: number | null
   reach: number | null
   taxaConversao: number | null
+  /** o que a plataforma devolve medido — TikTok e Kwai não entregam e vêm null */
+  taxaRetencao?: number | null
 }
 
 export interface LeituraBruta {

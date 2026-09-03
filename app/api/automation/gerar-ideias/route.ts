@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     let briefing: string | undefined
     try {
       const [pubsQ, ideiasQ, rotQ, audiosQ] = await Promise.all([
-        supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma, views'),
+        supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma, views, taxa_retencao'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo, status'),
         // nota_hook alimenta o peso do gancho por rede — o eixo que mais separa as redes
         supabase.schema('pulso_content').from('roteiros').select('ideia_id, conteudo_md, nota_hook'),
@@ -140,7 +140,12 @@ export async function POST(request: NextRequest) {
         ((pubsQ.data || []) as Array<{ ideia_id: string | null }>).map((p) => p.ideia_id).filter((x): x is string => !!x)
       )
       briefing = montarBriefing(
-        (pubsQ.data || []) as Array<{ ideia_id: string | null; plataforma: string; views: number | null }>,
+        (pubsQ.data || []) as Array<{
+          ideia_id: string | null
+          plataforma: string
+          views: number | null
+          taxa_retencao: number | null
+        }>,
         (ideiasQ.data || []) as Array<{ id: string; titulo: string | null; status: string }>,
         publicadas,
         corpos,

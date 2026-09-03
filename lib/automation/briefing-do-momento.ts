@@ -30,6 +30,8 @@ interface Pub {
   ideia_id: string | null
   plataforma: string
   views: number | null
+  /** o que a plataforma devolve medido; TikTok e Kwai não entregam e vêm null */
+  taxa_retencao?: number | null
 }
 
 interface IdeiaLeve {
@@ -106,7 +108,14 @@ export function montarBriefing(
   // história/mistério), mas a FORMA separa muito: o gancho vale 2,07× no TikTok e 0,68× no
   // Facebook. Então cada ideia nasce mirando UMA rede, e a mira é a forma, não o assunto.
   const contratoRedes = montarContratoRedes(
-    pubs.map((p) => ({ ideia_id: p.ideia_id, plataforma: p.plataforma, views: p.views, taxa_retencao: null })),
+    pubs.map((p) => ({
+      ideia_id: p.ideia_id,
+      plataforma: p.plataforma,
+      views: p.views,
+      // até 02/09/2026 esta linha era `taxa_retencao: null` — o dado existia em 456 publicações
+      // e nenhuma chegava ao gerador. Ver o cabeçalho de lib/decisor/contrato-redes.ts.
+      taxa_retencao: p.taxa_retencao ?? null,
+    })),
     tituloPorId,
     duracoes,
     notasHook,

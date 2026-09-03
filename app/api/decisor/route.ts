@@ -15,6 +15,7 @@ import {
   type LeituraBruta,
   type PubBruta,
 } from '@/lib/decisor/fatos'
+import { montarContratoRedes } from '@/lib/decisor/contrato-redes'
 
 /**
  * GET /api/decisor
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdminClient()
     const desde = new Date(Date.now() - DIAS_SERIE * 86_400_000).toISOString().slice(0, 10)
 
-    const [pubQ, leiQ, ideiasQ, filaQ, roteirosQ, parecerQ, segQ] = await Promise.all([
+    const [pubQ, leiQ, ideiasQ, filaQ, roteirosQ, parecerQ, segQ, audiosQ] = await Promise.all([
       supabase
         .schema('pulso_content')
         .from('metricas_publicacao')
@@ -59,8 +60,9 @@ export async function GET(request: NextRequest) {
         .from('pipeline_producao')
         .select('ideia_id, status')
         .not('status', 'eq', 'PUBLICADO'),
-      // roteiro entra na classificação de tema: o título sozinho jogava arqueologia em "outros"
-      supabase.schema('pulso_content').from('roteiros').select('ideia_id, conteudo_md'),
+      // roteiro entra na classificação de tema: o título sozinho jogava arqueologia em "outros".
+      // nota_hook entra no contrato por rede — é o outro lado do eixo da retenção.
+      supabase.schema('pulso_content').from('roteiros').select('ideia_id, conteudo_md, nota_hook'),
       supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', CHAVE_PARECER).maybeSingle(),
       // contador de seguidores medido todo dia — a ÚNICA fonte honesta de seguidor.
       // Não derivar seguidor de métrica de post: taxa_conversao × reach dava 3.093 no Facebook
@@ -71,6 +73,8 @@ export async function GET(request: NextRequest) {
         .select('valor')
         .eq('chave', 'seguidores_historico')
         .maybeSingle(),
+      // duração alimenta a faixa campeã por rede no contrato
+      supabase.schema('pulso_content').from('audios').select('ideia_id, duracao_segundos'),
     ])
 
     if (pubQ.error) throw pubQ.error
@@ -92,8 +96,21 @@ export async function GET(request: NextRequest) {
     // não decide. "A Misteriosa Biblioteca Subterrânea de Paris" caía em "outros" com o título,
     // e o roteiro dela é catacumba, Segunda Guerra e documento histórico.
     const corpos = new Map<string, string | null>()
-    for (const r of (roteirosQ.data || []) as Array<{ ideia_id: string; conteudo_md: string | null }>) {
-      if (r.ideia_id && r.conteudo_md && !corpos.has(r.ideia_id)) corpos.set(r.ideia_id, r.conteudo_md)
+    const notasHook = new Map<string, number>()
+    for (const r of (roteirosQ.data || []) as Array<{
+      ideia_id: string
+      conteudo_md: string | null
+      nota_hook: number | null
+    }>) {
+      if (!r.ideia_id) continue
+      if (r.conteudo_md && !corpos.has(r.ideia_id)) corpos.set(r.ideia_id, r.conteudo_md)
+      if (typeof r.nota_hook === 'number' && !notasHook.has(r.ideia_id)) notasHook.set(r.ideia_id, r.nota_hook)
+    }
+    const duracoes = new Map<string, number>()
+    for (const a of (audiosQ.data || []) as Array<{ ideia_id: string; duracao_segundos: number | null }>) {
+      if (a.ideia_id && a.duracao_segundos != null && !duracoes.has(a.ideia_id)) {
+        duracoes.set(a.ideia_id, a.duracao_segundos)
+      }
     }
 
     const pubs: PubBruta[] = rawPubs.map((p) => ({
@@ -104,6 +121,7 @@ export async function GET(request: NextRequest) {
       likes: p.likes,
       reach: p.reach,
       taxaConversao: p.taxa_conversao,
+      taxaRetencao: p.taxa_retencao,
     }))
 
     const leituras: LeituraBruta[] = rawLei.map((l) => ({
@@ -177,6 +195,21 @@ export async function GET(request: NextRequest) {
         cobertura: coberturaPorRede(cobertura),
         historicoSeguidores,
         publicadosHoje: contarPublicadosHoje(pubs),
+        // O CONTRATO POR REDE mora aqui porque o Decisor é o dono da verdade: a mesma função que
+        // o gerador de ideias consome (lib/decisor/contrato-redes.ts) é a que alimenta esta tela.
+        // Duas contas para a mesma pergunta foi exatamente o erro que criou o gerador cego.
+        contratoRedes: montarContratoRedes(
+          rawPubs.map((p) => ({
+            ideia_id: p.ideia_id,
+            plataforma: p.plataforma,
+            views: p.views,
+            taxa_retencao: p.taxa_retencao,
+          })),
+          titulos,
+          duracoes,
+          notasHook,
+          corpos
+        ),
       },
       parecer,
     })
