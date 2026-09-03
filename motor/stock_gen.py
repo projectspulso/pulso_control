@@ -35,6 +35,51 @@ def _termos(prompt):
     return saida
 
 
+_ABRE_FRASE = ("A", "An", "The", "Ancient", "Archaeological", "Aerial", "Close", "Wide",
+               "Slow", "Mysterious", "Underwater", "Satellite", "Overhead", "Dark", "Old",
+               "Cinematic", "Macro", "Drone", "Empty", "Abandoned", "Vast", "Giant", "Huge")
+
+
+def _nomes(prompt):
+    """Nomes próprios do prompt — o que o vídeo PRECISA mostrar na tela.
+
+    O dono apontou o buraco em 03/09/2026: "se falássemos do Taj Mahal teríamos que ter pelo menos
+    uma cena dele". O nome JÁ estava no prompt da cena ("Archaeological site in Petra", "near
+    Antikythera island") — quem o jogava fora era a escada de fallback daqui, que mantinha as
+    palavras na ordem em que aparecem e cortava do fim: `archaeological site petra` virava
+    `archaeological site`, e o acervo devolvia qualquer ruína genérica.
+
+    Runs de palavras capitalizadas viram um nome só ("Mont Saint Michel", "Taj Mahal"). Uma
+    palavra capitalizada sozinha no início da frase é abertura, não nome — por isso a lista acima.
+    """
+    palavras = re.findall(r"[A-Za-z][A-Za-z'-]*", prompt or "")
+    nomes, atual = [], []
+    for i, w in enumerate(palavras):
+        eh_nome = w[:1].isupper() and len(w) > 2
+        if eh_nome and not (i == 0 and w in _ABRE_FRASE):
+            atual.append(w)
+            continue
+        if len(atual) >= 2 or (len(atual) == 1 and atual[0] not in _ABRE_FRASE):
+            nomes.append(" ".join(atual))
+        atual = []
+    if len(atual) >= 2 or (len(atual) == 1 and atual[0] not in _ABRE_FRASE):
+        nomes.append(" ".join(atual))
+    # nome que também é palavra comum não distingue nada
+    return [n for n in nomes if n.lower() not in _RUIDO and n.lower() not in _PESSOAS]
+
+
+def _confere(texto, nome):
+    """O resultado é MESMO do lugar pedido? Sem isto, 'Pavlopetri' devolve
+    `spraying-colored-liquid-into-a-petri-dish` e 'Fordlandia' devolve `classic-ford-car-show`:
+    o acervo casa por pedaço de palavra e entrega com confiança a coisa errada. Uma cena errada
+    é pior que uma cena genérica — a genérica não contradiz a narração."""
+    t = (texto or "").lower().replace("-", " ")
+    partes = [w for w in nome.lower().split() if len(w) >= 4]
+    if not partes:
+        return False
+    return all(re.search(r"\b" + re.escape(w), t) for w in partes)
+
+
 def _queries(prompt):
     """Consultas do específico ao geral. O acervo casa TODAS as palavras (AND), então
     'ancient parchment map wooden' quase sempre volta vazio enquanto 'parchment map' acha.
@@ -100,7 +145,7 @@ def _get(url, headers=None):
         return {}
 
 
-def _pexels(q, dur, orientacao="portrait"):
+def _pexels(q, dur, orientacao="portrait", exigir=None):
     key = _env("PEXELS_API_KEY")
     if not key:
         return None
@@ -112,6 +157,8 @@ def _pexels(q, dur, orientacao="portrait"):
             continue
         if _tem_pessoa(v.get("url", "")):       # o slug da URL traz o assunto (faceless)
             continue
+        if exigir and not _confere(v.get("url", ""), exigir):
+            continue                            # veio por semelhança de letra, não é o lugar
         arquivos = [f for f in (v.get("video_files") or []) if (f.get("height") or 0) >= 1080]
         if not arquivos:
             continue
@@ -120,7 +167,7 @@ def _pexels(q, dur, orientacao="portrait"):
     return None
 
 
-def _pixabay(q, dur):
+def _pixabay(q, dur, exigir=None):
     key = _env("PIXABAY_API_KEY")
     if not key:
         return None
@@ -132,6 +179,8 @@ def _pixabay(q, dur):
         if v.get("duration", 0) < dur:
             continue
         if _tem_pessoa(v.get("tags", "")):
+            continue
+        if exigir and not _confere(v.get("tags", ""), exigir):
             continue
         vids = v.get("videos") or {}
         alvo = vids.get("large") or vids.get("medium")
@@ -146,6 +195,21 @@ def _pixabay(q, dur):
 
 def gerar(prompt_cena, dur, out):
     """Procura b-roll real que sirva pra cena. Retorna (ok:bool, fonte:str, usd:float=0)."""
+    # TIER 0 — O LUGAR PELO NOME. Filmagem real do Taj Mahal existe de graça no acervo; o que
+    # faltava era pedir por ela. Só entra material que PROVE ser do lugar (ver _confere): sem essa
+    # trava, "Pavlopetri" volta placa de Petri e "Fordlandia" volta feira de carros Ford.
+    for nome in _nomes(prompt_cena):
+        for fonte, fn in (("pexels-nome", lambda n=nome: _pexels(n, dur, "portrait", exigir=n)),
+                          ("pixabay-nome", lambda n=nome: _pixabay(n, dur, exigir=n)),
+                          ("pexels-nome-wide", lambda n=nome: _pexels(n, dur, "", exigir=n))):
+            try:
+                link = fn()
+            except Exception:
+                link = None
+            if link and _baixar(link, out):
+                print(f"      [stock] {fonte}: '{nome}' -> filmagem REAL do lugar (R$0)", flush=True)
+                return (True, fonte, 0.0)
+
     queries = _queries(prompt_cena)
     if not queries:
         return (False, "", 0.0)

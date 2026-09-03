@@ -341,6 +341,12 @@ Gere os campos abaixo, cada um adaptado à sua rede:
 
 REGRAS:
 - PT-BR coloquial, segunda pessoa.
+- NOMEIE O CASO na legenda: diga QUAL é a cidade, quem é a pessoa, onde fica o lugar ou que ano
+  foi — desde que o NOME ESTEJA NO ROTEIRO acima. Nomear não é entregar o final: o final é a
+  revelação, o nome é o rótulo. "A cidade submersa de Yonaguni, no Japão" prende mais que "uma
+  cidade submersa", e é o que faz o vídeo ser encontrado na busca do YouTube.
+- Se o roteiro NÃO nomear o caso, NÃO invente um nome, um lugar nem uma data. Já aconteceu (04/07)
+  e virou legenda contando fato que o vídeo não tem. Nesse caso escreva sem nome, e pronto.
 - A legenda NUNCA entrega o final do vídeo — provoca o clique/assistir.
 - Hashtags em minúsculas, sem espaço, relevantes ao tema.
 - Nada de aspas envolvendo o texto, nada de markdown.
