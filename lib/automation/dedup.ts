@@ -105,6 +105,22 @@ export function filtrarDuplicatas<T extends DedupItem>(
 }
 
 /**
+ * DUAS RAZÕES DIFERENTES PARA UM LOTE VAZIO — e elas não podiam continuar iguais na tela.
+ *
+ * A checagem semântica é fail-closed: se a IA cai ou devolve JSON quebrado, o lote é barrado em
+ * vez de entrar sem conferência. Isso está certo. O errado era o desfecho SE PARECER com veto:
+ * o dono lia "0 geradas · 5 barradas" sem distinguir "essas cinco já existem" de "não consegui
+ * checar". A primeira frase pede outro assunto; a segunda pede outra tentativa. `indisponivel`
+ * separa as duas — quem chama decide se tenta de novo ou avisa que o acervo está saturado.
+ */
+export interface ResultadoSemantico<T> {
+  aceitas: T[]
+  ignoradas: DuplicataMatch[]
+  /** true = a checagem não pôde ser feita (barrado por precaução), não que sejam duplicatas */
+  indisponivel: boolean
+}
+
+/**
  * 2ª camada — duplicidade SEMÂNTICA via LLM. O Jaccard (acima) é lexical: pega
  * "navio fantasma" vs "Mary Celeste" mas PERDE quando o mesmo tema é descrito com
  * palavras totalmente diferentes ("seu cérebro acha que uma mão falsa é sua" ==
@@ -117,10 +133,10 @@ export async function filtrarDuplicatasSemantica<T extends DedupItem>(
   candidatas: T[],
   existentes: DedupItem[],
   callLLM: (prompt: string) => Promise<string>
-): Promise<{ aceitas: T[]; ignoradas: DuplicataMatch[] }> {
+): Promise<ResultadoSemantico<T>> {
   const titulos = existentes.map((e) => e.titulo).filter(Boolean)
   if (candidatas.length === 0 || titulos.length === 0) {
-    return { aceitas: candidatas, ignoradas: [] }
+    return { aceitas: candidatas, ignoradas: [], indisponivel: false }
   }
 
   const prompt = [
@@ -185,6 +201,7 @@ export async function filtrarDuplicatasSemantica<T extends DedupItem>(
         similar_a: '(checagem semântica indisponível — lote barrado por precaução)',
         score: 0,
       })),
+      indisponivel: true,
     }
   }
 
@@ -198,5 +215,5 @@ export async function filtrarDuplicatasSemantica<T extends DedupItem>(
     if (dup.has(i)) ignoradas.push({ titulo: c.titulo, similar_a: dup.get(i)!, score: 1 })
     else aceitas.push(c)
   })
-  return { aceitas, ignoradas }
+  return { aceitas, ignoradas, indisponivel: false }
 }

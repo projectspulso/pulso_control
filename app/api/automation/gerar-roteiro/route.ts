@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { extrairAncora, acharColisao, type ColisaoAncora } from '@/lib/automation/ancora'
+import { varrerDuplicidade } from '@/lib/automation/vigia-duplicidade'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarRoteiro, buildPromptLegendas } from '@/lib/automation/prompts'
 import { contarFormas, desempenhoPorForma, escolherForma, INSTRUCAO_POR_FORMA } from '@/lib/automation/forma-hook'
@@ -189,8 +191,88 @@ export async function POST(request: NextRequest) {
     const autoApproveThreshold = 80
     // tem_cta é bloqueante: sem "segue/siga o PULSO" no fecho, o render não tem âncora pra
     // janela do mascote (regra PULSO-CTA) — roteiro assim só sai com aprovação humana.
+    // TRAVA DE ÂNCORA — o último portão antes do dinheiro.
+    //
+    // A duplicidade era checada só no NASCIMENTO da ideia, pelo título. Em 02/09/2026 uma
+    // varredura no acervo achou dois vídeos JÁ RENDERIZADOS e agendados que repetiam histórias
+    // publicadas — com 10% de similaridade de título, invisíveis para aquela trava:
+    //   #175 e #156 abrem os dois com "Em 2134 a.C., ... dois astrônomos chineses"
+    //   #165 e #86  citam os dois "a psicóloga Bluma Zeigarnik", 1927
+    // O roteiro é o último ponto em que barrar ainda é barato: depois dele vêm o áudio e o render.
+    //
+    // Colisão NÃO joga o roteiro fora — ele fica gravado e vai para aprovação humana com o motivo.
+    // O que ela impede é a auto-aprovação, que é o que empurra o item para a esteira paga sozinho.
+    let ancora: string | null = null
+    let colisaoAncora: ColisaoAncora | null = null
+    try {
+      ancora = await extrairAncora(roteiro, (pr) =>
+        callOpenAI(pr, { json_mode: true, temperature: 0, max_tokens: 200 }).then((r) => r.content)
+      )
+      if (ancora) {
+        const { data: outras } = await supabase
+          .schema('pulso_content')
+          .from('ideias')
+          .select('id, titulo, metadata, status')
+          .neq('id', ideia.id)
+        colisaoAncora = acharColisao(
+          ancora,
+          ((outras || []) as Array<{ id: string; titulo: string | null; metadata: { ancora?: string } | null; status: string }>)
+            .filter((o) => o.status !== 'DESCARTADA')
+            .map((o) => ({ id: o.id, titulo: o.titulo, ancora: o.metadata?.ancora ?? null }))
+        )
+      }
+    } catch (e) {
+      // âncora indisponível NÃO é "não tem âncora": não auto-aprova, mas também não inventa colisão
+      console.error('[gerar-roteiro] checagem de âncora indisponível:', e)
+      ancora = null
+    }
+
+    // SEGUNDA REDE, e ela não custa nada: a varredura de termos raros compara o roteiro NOVO com
+    // o corpo de todos os outros. Funciona sem âncora nenhuma no acervo — foi ela que achou, em
+    // dados reais, os pares que a trava de título não via (#25×#26 com 8 termos em comum e 0% de
+    // título; #8×#108 unidos por "sullivan"). Enquanto o acervo antigo não tem âncora gravada,
+    // esta é a rede que segura; depois as duas somam.
+    let gemeoNoAcervo: { titulo: string; termos: string[] } | null = null
+    try {
+      const { data: outrosRot } = await supabase
+        .schema('pulso_content')
+        .from('roteiros')
+        .select('ideia_id, conteudo_md')
+        .neq('ideia_id', ideia.id)
+      const { data: outrasIdeias } = await supabase
+        .schema('pulso_content')
+        .from('ideias')
+        .select('id, titulo, status, formato')
+
+      const titulos = new Map(
+        ((outrasIdeias || []) as Array<{ id: string; titulo: string | null; status: string; formato: string | null }>)
+          .filter((i) => i.status !== 'DESCARTADA' && i.formato !== 'longo')
+          .map((i) => [i.id, i.titulo])
+      )
+      const itens = [
+        { id: ideia.id, titulo: ideia.titulo as string, corpo: roteiro, publicado: false, numero: null },
+        ...((outrosRot || []) as Array<{ ideia_id: string; conteudo_md: string | null }>)
+          .filter((r) => titulos.has(r.ideia_id))
+          .map((r) => ({
+            id: r.ideia_id,
+            titulo: titulos.get(r.ideia_id) ?? null,
+            corpo: r.conteudo_md,
+            publicado: true,
+            numero: null,
+          })),
+      ]
+      const par = varrerDuplicidade(itens).find((x) => x.a.id === ideia.id || x.b.id === ideia.id)
+      if (par) {
+        const outro = par.a.id === ideia.id ? par.b : par.a
+        gemeoNoAcervo = { titulo: outro.titulo, termos: par.termosComuns }
+      }
+    } catch (e) {
+      console.error('[gerar-roteiro] varredura de duplicidade indisponível:', e)
+    }
+
     const shouldAutoApprove =
-      autoApprove && qualidade.score >= autoApproveThreshold && hook.nota >= 3 && qualidade.tem_cta
+      autoApprove && qualidade.score >= autoApproveThreshold && hook.nota >= 3 && qualidade.tem_cta &&
+      !colisaoAncora && !gemeoNoAcervo
 
     // NUMERO AUTOMÁTICO: respeita o número já gravado na ideia; senão, próximo da sequência canônica.
     let numero: number | null =
@@ -319,6 +401,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // A ÂNCORA FICA GUARDADA na ideia: daqui em diante a checagem é consulta, não chamada de IA.
+    if (ancora) {
+      try {
+        await supabase
+          .schema('pulso_content')
+          .from('ideias')
+          .update({ metadata: { ...(ideia.metadata || {}), ancora } })
+          .eq('id', ideia.id)
+      } catch (e) {
+        console.error('[gerar-roteiro] falha ao gravar âncora na ideia:', e)
+      }
+    }
+
     // mantém o kanban: garante entrada no pipeline (AGUARDANDO_ROTEIRO até aprovação; ROTEIRO_PRONTO se auto-aprovado)
     // denormaliza numero + caption (lido pelo /publicar) no pipeline_producao.metadata
     {
@@ -331,6 +426,20 @@ export async function POST(request: NextRequest) {
       const statusPipe = shouldAutoApprove ? 'ROTEIRO_PRONTO' : 'AGUARDANDO_ROTEIRO'
       const metaExtra: Record<string, unknown> = {}
       if (numero != null) metaExtra.numero = numero
+      if (gemeoNoAcervo) {
+        metaExtra.gemeo_no_acervo = {
+          titulo: gemeoNoAcervo.titulo,
+          termos: gemeoNoAcervo.termos,
+          quando: new Date().toISOString(),
+        }
+      }
+      if (colisaoAncora) {
+        metaExtra.colisao_ancora = {
+          ancora: colisaoAncora.ancora,
+          colide_com: colisaoAncora.colideCom.titulo,
+          quando: new Date().toISOString(),
+        }
+      }
       if (legendas?.legenda_ig_fb) metaExtra.caption = legendas.legenda_ig_fb
       if (pipeExist && pipeExist.length > 0) {
         await supabase
@@ -358,6 +467,18 @@ export async function POST(request: NextRequest) {
       status: saved?.status,
       quality_score: qualidade.score,
       auto_aprovado: shouldAutoApprove,
+      ancora,
+      colisao_ancora: colisaoAncora
+        ? { ancora: colisaoAncora.ancora, colide_com: colisaoAncora.colideCom.titulo }
+        : null,
+      gemeo_no_acervo: gemeoNoAcervo,
+      aviso_ancora: colisaoAncora
+        ? `Conta a mesma história de "${colisaoAncora.colideCom.titulo}" — foi para aprovação humana em vez de seguir para a esteira.`
+        : gemeoNoAcervo
+          ? `Divide ${gemeoNoAcervo.termos.length} termos raros com "${gemeoNoAcervo.titulo}" (${gemeoNoAcervo.termos.slice(0, 4).join(', ')}) — pode ser a mesma história. Foi para aprovação humana.`
+          : ancora == null
+            ? 'Não consegui extrair a âncora deste roteiro (checagem de IA indisponível).'
+            : null,
       duracao_estimada: qualidade.duracao_estimada,
       palavras: qualidade.palavras,
     })

@@ -257,9 +257,14 @@ que já existe. Nomeie o caso.`
         quantidade_gerada: 0,
         ideias: [],
         ignoradas_duplicidade: ignoradasTotal,
-        aviso: tentouDeNovo
-          ? `Duas tentativas e tudo colidiu com o acervo — "${canal.nome}" está saturado. Escolha outro canal no seletor.`
-          : 'Todas as ideias geradas já existiam (trava anti-duplicidade lexical + semântica).',
+        // "não consegui checar" pede OUTRA TENTATIVA; "já existe" pede OUTRO ASSUNTO. Enquanto os
+        // dois diziam a mesma frase, uma queda da OpenAI parecia acervo saturado.
+        checagem_indisponivel: semantica.indisponivel,
+        aviso: semantica.indisponivel
+          ? 'A checagem semântica não pôde ser feita (IA indisponível) e o lote foi barrado por precaução — NÃO é duplicata. Tente de novo em instantes.'
+          : tentouDeNovo
+            ? `Duas tentativas e tudo colidiu com o acervo — "${canal.nome}" está saturado. Escolha outro canal no seletor.`
+            : 'Todas as ideias geradas já existiam (trava anti-duplicidade lexical + semântica).',
         tokens: usage,
       })
     }
@@ -275,6 +280,7 @@ que já existe. Nomeie o caso.`
         tipo_formato?: string
         prioridade?: number
         gancho_sugerido?: string
+        ancora?: string
         emocao_ancora?: string
         gatilho_psicologico?: string
         tipo_hook?: string
@@ -295,6 +301,9 @@ que já existe. Nomeie o caso.`
           duracao_estimada: `${ideia.duracao_estimada || 30}s`,
           tipo_formato: ideia.tipo_formato,
           gancho_sugerido: ideia.gancho_sugerido,
+          // A ÂNCORA é o caso concreto no centro da história — a identidade do vídeo, declarada
+          // no nascimento em vez de inferida depois. Ver lib/automation/ancora.ts.
+          ancora: ideia.ancora || null,
           emocao_ancora: ideia.emocao_ancora,
           gatilho_psicologico: ideia.gatilho_psicologico,
           tipo_hook: ideia.tipo_hook,

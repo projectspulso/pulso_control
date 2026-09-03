@@ -106,6 +106,11 @@ Idioma: ${canal.idioma}${serieCtx}
 Gere ${quantidade} ideias de vídeos curtos para este canal.
 Para cada ideia, retorne um JSON com:
 - titulo: string (max 80 chars — deve abrir uma lacuna de curiosidade que o espectador PRECISA fechar)
+- ancora: string (3-8 palavras) — o CASO CONCRETO no centro: pessoa, lugar, objeto, evento ou
+  efeito COM NOME/DATA. Ex.: "Bluma Zeigarnik 1927", "Pavlopetri", "eclipse 2134 a.C. astronomos
+  chineses", "Roy Sullivan". NUNCA o tema nem o genero ("misterio", "arqueologia" nao servem).
+  É por este campo que o app impede repetir um video que ja existe — se voce nao souber nomear o
+  caso, a ideia ainda esta generica demais e precisa de outro angulo.
 - descricao: string (1-2 frases: o fato real + por que prende)
 - emocao_ancora: string (UMA só: suspense|awe|identificacao|catarse|indignacao|nostalgia)
 - tags: string[] (3-5 tags relevantes)

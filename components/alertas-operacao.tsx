@@ -5,6 +5,7 @@ import { useDesafio100 } from '@/lib/hooks/use-desafio-100'
 import { useEstoquePipeline } from '@/lib/hooks/use-estoque'
 import { useHiggsfieldSaldo } from '@/lib/hooks/use-higgsfield-saldo'
 import { useCadencia } from '@/lib/hooks/use-cadencia'
+import { useDuplicidade } from '@/lib/hooks/use-duplicidade'
 
 /**
  * O que trava a operação AGORA: crédito, estoque e a sequência do desafio.
@@ -39,6 +40,7 @@ export function AlertasOperacao() {
   const { data: estoque } = useEstoquePipeline()
   const { data: desafio } = useDesafio100()
   const { data: cadencia } = useCadencia()
+  const { data: dup } = useDuplicidade()
 
   const semCredito = saldo && saldo.nivel !== 'ok'
   const semEstoque = estoque && estoque.diasCobertura < 2
@@ -49,7 +51,11 @@ export function AlertasOperacao() {
   const cadenciaEmRisco =
     !!cadencia && (cadencia.diasAbaixo > 0 || (cadencia.hoje < cadencia.meta && !cadencia.aindaDaTempo))
 
-  if (!semCredito && !semEstoque && !streakEmRisco && !cadenciaEmRisco) return null
+  // REPETIÇÃO: só entra quando ainda dá pra impedir. Par de dois já publicados é história —
+  // aparecer todo dia transformaria o alerta em paisagem, que é o oposto do que ele serve.
+  const repetindo = !!dup && dup.evitaveis.length > 0
+
+  if (!semCredito && !semEstoque && !streakEmRisco && !cadenciaEmRisco && !repetindo) return null
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -84,6 +90,22 @@ export function AlertasOperacao() {
             <>hoje saiu {b(`${cadencia.hoje} de ${cadencia.meta}`)} e o dia já passou da grade.</>
           )}
           {' '}Últimos 7 dias: {cadencia.ultimos.map((u) => u.n).join(' · ')}
+        </Faixa>
+      )}
+
+      {repetindo && dup && (
+        <Faixa tom="crit" icone="👯" href="/producao">
+          <b className="font-semibold text-white">Repetição: </b>
+          {b(`${dup.evitaveis.length} par(es)`)} contam a mesma história com títulos diferentes e
+          {' '}pelo menos um lado ainda NÃO publicou.
+          {dup.evitaveis.slice(0, 2).map((par) => (
+            <span key={`${par.a.id}-${par.b.id}`} className="mt-1.5 block text-[12px] text-zinc-500">
+              {par.a.numero != null && `#${par.a.numero} `}
+              {par.a.titulo.slice(0, 46)} ↔ {par.b.numero != null && `#${par.b.numero} `}
+              {par.b.titulo.slice(0, 46)}
+              <span className="text-zinc-600"> · em comum: {par.termosComuns.slice(0, 4).join(', ')}</span>
+            </span>
+          ))}
         </Faixa>
       )}
 
