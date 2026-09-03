@@ -34,8 +34,40 @@ const MIN_COMUNS = 3
 /** Acima disto a trava lexical de título já enxerga o par — não precisa duplicar o aviso. */
 const TITULO_MAX = 0.3
 
+/**
+ * A CTA NÃO É A HISTÓRIA — e ignorá-la tirou o falso positivo mais teimoso.
+ *
+ * Todo roteiro fecha com a chamada da marca e, muitas vezes, com o teaser do PRÓXIMO vídeo. Dois
+ * roteiros que promovem o mesmo próximo vídeo passam a dividir termos raros que não têm nada a ver
+ * com o que eles contam. Foi o caso de "Por que o cérebro mente para você?" e "O homem que
+ * sobreviveu a um deserto congelante": os dois terminam falando de "um jogador que previu o
+ * resultado de todas as partidas", e `jogador` + `partidas` bastaram para o vigia acusar.
+ *
+ * Cortar SÓ no marcador não resolveu, e a razão importa: o fecho não tem forma única. Um roteiro
+ * diz "Siga o PULSO", outro "Segue o Pulso", e um terceiro nem usa a marca — fecha com "fique de
+ * olho no próximo vídeo". Por isso o corte é duplo: o marcador quando existe, e SEMPRE a cauda.
+ *
+ * A cauda é defensável porque a CTA é obrigatória (regra PULSO-CTA): nos ~1.000 caracteres de um
+ * roteiro, os últimos 15% são o fecho por construção, nunca o miolo da história.
+ *
+ * Medido no acervo (189 roteiros): sem corte 23 pares e 5 evitáveis · só marcador 21 e 5 ·
+ * marcador + cauda 19 e 4, com o par falso acima eliminado.
+ */
+const MARCA_CTA = /s[ei]g(?:a|ue|uir)\s+o\s+pulso|fique\s+de\s+olho|no\s+pr[oó]ximo\s+v[ií]deo/i
+/** fração do fim que é fecho por construção, com piso para roteiros curtos */
+const CAUDA = 0.15
+const CAUDA_MIN = 120
+
+function semCta(texto: string | null | undefined): string {
+  const t = texto || ''
+  const m = t.match(MARCA_CTA)
+  const porMarca = m && m.index != null ? m.index : t.length
+  const porCauda = Math.max(0, t.length - Math.max(CAUDA_MIN, Math.floor(t.length * CAUDA)))
+  return t.slice(0, Math.min(porMarca, porCauda))
+}
+
 function termos(texto: string | null | undefined): Set<string> {
-  const s = (texto || '')
+  const s = semCta(texto)
     .toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
