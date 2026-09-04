@@ -80,7 +80,13 @@ export async function POST(request: NextRequest) {
         sem_resposta: r.semResposta,
         indisponivel: r.indisponivel,
         quando: new Date().toISOString(),
-        itens: r.suspeitas.slice(0, 8).map((a) => ({ trecho: a.trecho, sabido: a.sabido, observacao: a.observacao })),
+        fontes_verificadas: false,
+        // TODAS as afirmações, não só as suspeitas: quando alguém contesta um número nos
+        // comentários, a pergunta pode ser sobre qualquer uma — inclusive as que conferem.
+        itens: r.afirmacoes.slice(0, 20).map((a) => ({
+          trecho: a.trecho, tipo: a.tipo, confere: a.confere,
+          sabido: a.sabido, fonte: a.fonte ?? null, observacao: a.observacao,
+        })),
       }
       if (!r.indisponivel) {
         await supabase

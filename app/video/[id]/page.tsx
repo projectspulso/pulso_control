@@ -4,7 +4,7 @@ import { use, useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft, Calendar, Check, Clapperboard, Copy, ExternalLink, FileText,
-  Lightbulb, Mic, Send, TrendingUp,
+  Lightbulb, Mic, Send, ShieldCheck, TrendingUp,
 } from 'lucide-react'
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -209,6 +209,51 @@ export default function FichaDoVideo({ params }: { params: Promise<{ id: string 
           </>
         ) : <Vazio>Ainda não tem roteiro.</Vazio>}
       </Secao>
+
+      {/* ── conferência de fatos (INTERNO) ── */}
+      {d.checagem && (
+        <Secao icone={<ShieldCheck className="h-4 w-4" />} titulo="Conferência de fatos (interno)">
+          <p className="mb-3 text-[11px] leading-relaxed text-zinc-500">
+            {d.checagem.conferidas} afirmação(ões) conferida(s) em {data_(d.checagem.quando)}
+            {d.checagem.suspeitas > 0 && (
+              <> · <b className="text-amber-300">{d.checagem.suspeitas} não confere(m)</b></>
+            )}
+            {d.checagem.sem_resposta > 0 && <> · {d.checagem.sem_resposta} sem resposta</>}
+            <br />
+            {/* A honestidade sobre o limite tem que estar NA TELA, não só no código: modelo
+                fabrica citação com fluência, e fonte inventada desarma a desconfiança de quem lê. */}
+            <span className="text-zinc-600">
+              Uso interno — para responder quem contestar um número. As fontes{' '}
+              <b className="text-zinc-500">não foram verificadas</b>: são onde procurar, não citação.
+              Confira antes de responder.
+            </span>
+          </p>
+          <div className="space-y-2">
+            {d.checagem.itens.map((it, k) => (
+              <div
+                key={k}
+                className={`rounded-xl border p-3 text-sm ${
+                  it.confere
+                    ? 'border-white/8 bg-black/20'
+                    : 'border-amber-500/30 bg-amber-500/[0.06]'
+                }`}
+              >
+                <p className="text-zinc-200">
+                  {!it.confere && <span className="mr-1.5 text-amber-400">⚠</span>}
+                  {it.trecho}
+                </p>
+                {!it.confere && it.sabido && (
+                  <p className="mt-1 text-[12px] text-amber-200">o correto seria: {it.sabido}</p>
+                )}
+                <p className="mt-1 text-[11px] text-zinc-500">
+                  {it.fonte ? <>fonte: {it.fonte}</> : <span className="text-zinc-600">sem fonte identificada</span>}
+                  {it.observacao && <> · {it.observacao}</>}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Secao>
+      )}
 
       {/* ── áudio ── */}
       <Secao icone={<Mic className="h-4 w-4" />} titulo="Áudio">

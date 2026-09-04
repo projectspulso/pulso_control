@@ -25,6 +25,17 @@
  * que conhece para cada afirmação — e só então os dois são comparados. Modelo que não sabe deve
  * dizer que não sabe; "não sei" sobre uma data que o roteiro afirma com precisão já é suspeita.
  *
+ * A FONTE FICA NO BANCO, NUNCA NA TELA (decisão do dono, 04/09/2026). O motivo não é vaidade
+ * editorial: é ter com que RESPONDER quando alguém contestar um número nos comentários — e o PULSO
+ * responde em todos os lugares. Por isso a fonte é gravada por afirmação e recuperável na ficha do
+ * vídeo, e não vira selo de autoridade para o público.
+ *
+ * E ELA NASCE MARCADA COMO NÃO VERIFICADA, de propósito. Modelo de linguagem fabrica citação com
+ * fluência — nome de estudo plausível, ano plausível, revista plausível, tudo inexistente. Uma
+ * fonte inventada é PIOR que fonte nenhuma, porque desarma a desconfiança de quem lê. Enquanto não
+ * houver busca externa confirmando, `verificada` é false e a ficha diz isso em voz alta: serve para
+ * o dono saber ONDE procurar antes de responder, nunca para ele responder direto citando.
+ *
  * O LIMITE, DECLARADO: IA checando IA é REDE, não garantia. Pega o que ela sabe estar errado —
  * um evento que não existe, um número fora da faixa conhecida — e perde o resto. Verificação de
  * verdade exigiria busca externa por afirmação, com outro custo e outra latência. Esta trava reduz
@@ -43,6 +54,8 @@ export interface Afirmacao {
   confere: boolean
   /** por que não confere, ou por que não deu para dizer */
   observacao: string
+  /** onde o conhecimento está ancorado — NÃO verificado; ponto de partida da busca, não citação */
+  fonte: string | null
 }
 
 export interface ResultadoChecagem {
@@ -53,6 +66,8 @@ export interface ResultadoChecagem {
   semResposta: number
   /** true = a checagem não pôde ser feita. Nunca confundir com "está tudo certo". */
   indisponivel: boolean
+  /** nenhuma fonte aqui passou por confirmação externa — o campo existe para ser honesto sobre isso */
+  fontesVerificadas: false
 }
 
 const PROMPT = [
@@ -76,9 +91,16 @@ const PROMPT = [
   'milhões de anos, e não há descoberta conhecida de 1938 — o marco é a expedição de Scott, do',
   'início de 1900. Duas afirmações, as duas com confere = false.',
   '',
+  'PASSO 4 — para cada afirmação, diga ONDE esse conhecimento está ancorado: o evento, a expedição,',
+  'o estudo, a instituição ou o período histórico de referência. Seja concreto quando souber',
+  '("expedição de Scott, 1910-1913"; "artigo na Nature, abril de 2020").',
+  'NÃO INVENTE FONTE. Fonte fabricada é pior que fonte nenhuma: ela faz uma informação errada',
+  'parecer confiável. Se você não sabe de onde vem, escreva fonte = null. Isso é resposta aceitável',
+  'e esperada — quem lê precisa saber onde procurar, não receber um nome bonito que não existe.',
+  '',
   'Responda APENAS JSON:',
   '{"afirmacoes":[{"trecho":"...","tipo":"data|numero|nome|lugar|outro","sabido":"..."|null,',
-  '"confere":true|false,"observacao":"curta"}]}',
+  '"confere":true|false,"observacao":"curta","fonte":"..."|null}]}',
 ].join('\n')
 
 export async function checarFatos(
@@ -86,7 +108,9 @@ export async function checarFatos(
   callLLM: (prompt: string) => Promise<string>
 ): Promise<ResultadoChecagem> {
   const texto = (roteiro || '').slice(0, 4000)
-  const vazio: ResultadoChecagem = { afirmacoes: [], suspeitas: [], semResposta: 0, indisponivel: true }
+  const vazio: ResultadoChecagem = {
+    afirmacoes: [], suspeitas: [], semResposta: 0, indisponivel: true, fontesVerificadas: false,
+  }
   if (!texto.trim()) return vazio
 
   try {
@@ -98,6 +122,7 @@ export async function checarFatos(
       suspeitas: afirmacoes.filter((a) => a.confere === false),
       semResposta: afirmacoes.filter((a) => a.sabido == null).length,
       indisponivel: false,
+      fontesVerificadas: false,
     }
   } catch {
     // Falha de checagem NÃO é aval. Quem chama trata `indisponivel` como "não sei", nunca como

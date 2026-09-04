@@ -57,8 +57,28 @@ export interface PontoSerie {
   views: number
 }
 
+/** Conferência de fatos do roteiro — USO INTERNO. Fica no banco e na ficha, nunca no público:
+ *  serve para responder quem contesta um número nos comentários. As fontes NÃO passaram por
+ *  confirmação externa (ver lib/automation/checagem-fatos.ts) — são onde procurar, não citação. */
+export interface ChecagemDoVideo {
+  conferidas: number
+  suspeitas: number
+  sem_resposta: number
+  quando: string
+  fontes_verificadas: boolean
+  itens: Array<{
+    trecho: string
+    tipo?: string
+    confere: boolean
+    sabido: string | null
+    fonte: string | null
+    observacao: string
+  }>
+}
+
 export interface VideoDetalhe {
   ideiaId: string
+  checagem: ChecagemDoVideo | null
   titulo: string
   canalNome: string
   numero: number | null
@@ -215,6 +235,8 @@ export function useVideo(ideiaId: string) {
 
       return {
         ideiaId,
+        // conferência de fatos gravada por /api/checagem — interna, ver ChecagemDoVideo
+        checagem: (ideia?.metadata?.checagem as ChecagemDoVideo | undefined) ?? null,
         titulo: ideia.titulo || '(sem título)',
         canalNome: (ideia.canal_id && canalNome.get(ideia.canal_id)) || '—',
         numero: md.numero ?? null,
