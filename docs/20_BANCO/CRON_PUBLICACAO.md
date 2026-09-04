@@ -49,6 +49,29 @@ select cron.schedule(
 
 Extensões já instaladas no projeto: `pg_cron 1.6.4`, `pg_net 0.19.5`, `supabase_vault 0.3.1`.
 
+## Os outros três jobs — o cérebro diário (04/09/2026)
+
+Migration: [`docs/migrations/059_cerebro_diario.sql`](../migrations/059_cerebro_diario.sql).
+
+| Hora (UTC) | Job | O que faz |
+|---|---|---|
+| 06:40 | `COLETAR_METRICAS` | já existia — traz o número do dia |
+| 07:00 | `pulso-aprender-diario` | reescreve `aprendizado_cerebro` (o gerador de ideias lê) |
+| 07:15 | `pulso-decisor-parecer` | reescreve `decisor_parecer` (a leitura do dia) |
+| 07:30 | `pulso-decisor-sombra` | **mede** o que o Decisor trocaria na fila — **não mexe** |
+
+**A ordem é o ponto.** Coletar antes de aprender, aprender antes de opinar, opinar antes de
+agendar. Fora dessa ordem cada peça decide com o dado da véspera.
+
+**Por que existiram:** em 04/09 o `aprendizado_cerebro` estava com **98 horas** (parado desde
+31/08) porque só era reescrito por clique — e é ele que diz ao gerador COMO escrever. O
+`decisor_parecer` tinha a mesma dependência.
+
+**Por que o terceiro nasce em sombra:** ninguém mediu ainda quanto o ranking muda de um dia para o
+outro. O job grava em `logs_workflows` (`DECISOR_SOMBRA`) o que trocaria, sem trocar. Depois de uns
+dias o número aparece e a histerese é calibrada em cima do comportamento real. Para dar o volante:
+trocar `sombra` por `confirmar` + `realinhar` no corpo do job 3.
+
 **De hora em hora é de propósito.** Quem decide o que sai são as travas da rota (teto diário +
 janela de atraso de 12h), não o horário do cron. Assim nenhum slot da grade depende de um disparo
 específico acontecer.

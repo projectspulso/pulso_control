@@ -19,6 +19,20 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
  *
  * R-011: por padrão é SIMULAÇÃO. Só grava com `confirmar: true` — a decisão de por data em
  * publicação segue sendo humana, ela só deixa de ser digitada uma por uma.
+ *
+ * MODO SOMBRA (`sombra: true`, 04/09/2026) — o passo antes de dar o volante ao Decisor.
+ *
+ * O dono quer o Decisor decidindo sozinho, todo dia, quais vídeos vão à frente. A máquina para
+ * isso já existe (o roteador reranqueia a cada rodada do POPULAR_AGENDA), mas falta um número:
+ * QUANTO o ranking muda de um dia para o outro. Se muda pouco, um cron que remaneja a fila toda
+ * noite compra pouco e adiciona risco; se muda muito, compra bastante.
+ *
+ * Em vez de apostar, o modo sombra roda a decisão inteira e GRAVA NO LOG o que ele trocaria —
+ * sem tocar em uma linha sequer. Uma semana disso responde a pergunta com dado, e aí a histerese
+ * (quanto de ganho justifica uma troca) é calibrada em cima do comportamento real, não do palpite.
+ *
+ * ZONA CONGELADA: o que sai hoje e amanhã nunca entra na conta. Trocar o vídeo de amanhã às 23h
+ * de hoje quebra a previsibilidade e invalida legenda já gerada por vídeo.
  */
 
 export const maxDuration = 60
@@ -40,6 +54,8 @@ async function comprometer(request: NextRequest) {
   // metade. Com realinhar:true a data do pipeline volta a seguir o plano (so para quem ainda
   // NAO foi publicado). Sem a flag, o comportamento antigo continua.
   const realinhar = body?.realinhar === true
+  // sombra decide como se fosse realinhar, mas não grava — só registra o que trocaria
+  const sombra = body?.sombra === true
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
@@ -95,6 +111,17 @@ async function comprometer(request: NextRequest) {
 
   const agora = new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).replace(' ', 'T')
 
+  // ZONA CONGELADA — hoje e amanhã não se discutem. Vale para o modo sombra e para qualquer
+  // realinhamento automático: o vídeo de amanhã já tem legenda gerada, e mexer nele de madrugada
+  // torna a operação imprevisível para quem opera de manhã.
+  const congeladoAte = (() => {
+    const d = new Date(`${agora.slice(0, 10)}T12:00:00Z`)
+    d.setUTCDate(d.getUTCDate() + 2)
+    return d.toISOString().slice(0, 10) // primeiro dia MEXÍVEL
+  })()
+  // sombra redistribui como o realinhar faria, para medir a decisão inteira
+  const redistribuir = realinhar || sombra
+
   // O SLOT É TEMPO, O VÍDEO É CONTEÚDO — e soldar os dois foi o que bagunçou a fila em 04/09/2026.
   //
   // Esta rota andava pelo plano SLOT A SLOT e, quando a ideia daquele slot não estava pronta,
@@ -132,8 +159,12 @@ async function comprometer(request: NextRequest) {
     if (jaPublicado.has(p.ideia_id)) return false
     if (p.status !== 'PRONTO_PUBLICACAO') return false
     if (!p.metadata?.video_url) { pulados.push({ ...rot, motivo: 'sem video_url' }); return false }
+    // Data dentro da zona congelada nunca é remexida, nem realinhando.
+    if (p.data_publicacao_planejada && String(p.data_publicacao_planejada).slice(0, 10) < congeladoAte) {
+      return false
+    }
     // Sem realinhar, quem já tem data é intocável — o padrão continua conservador.
-    if (p.data_publicacao_planejada && !realinhar) {
+    if (p.data_publicacao_planejada && !redistribuir) {
       pulados.push({ ...rot, motivo: `já tem data (${String(p.data_publicacao_planejada).slice(0, 16)})` })
       return false
     }
@@ -149,20 +180,29 @@ async function comprometer(request: NextRequest) {
 
   // Realinhando, a grade é redistribuída do zero; senão, respeita-se o que já está marcado.
   const ocupado = new Set<string>()
-  if (!realinhar) {
+  if (!redistribuir) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const p of (pipeQ.data || []) as any[]) {
       if (p.data_publicacao_planejada) ocupado.add(String(p.data_publicacao_planejada).slice(0, 16))
     }
   }
-  // Contagem por dia começa do que já está marcado (ou zerada, se vamos redistribuir tudo) e
-  // SOBE a cada slot entregue — sem isso o teto seria furado dentro da própria rodada.
-  const porDia: Record<string, number> = realinhar ? {} : { ...ocupacao }
+  const congelados: Record<string, number> = {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const p of (pipeQ.data || []) as any[]) {
+    const d = p.data_publicacao_planejada ? String(p.data_publicacao_planejada).slice(0, 10) : null
+    if (d && d < congeladoAte) congelados[d] = (congelados[d] || 0) + 1
+  }
+
+  // Contagem por dia SOBE a cada slot entregue — sem isso o teto seria furado dentro da própria
+  // rodada. Redistribuindo, ela parte só dos dias congelados (que já estão servidos); no modo
+  // conservador, parte de tudo que já está marcado.
+  const porDia: Record<string, number> = redistribuir ? { ...congelados } : { ...ocupacao }
   const proximoSlot = () => {
     while (slots.length) {
       const q = slots.shift()!
       const dia = q.slice(0, 10)
-      if (!realinhar && ocupado.has(q.slice(0, 16))) continue
+      if (q.slice(0, 10) < congeladoAte) continue // slot congelado não recebe nada novo
+      if (!redistribuir && ocupado.has(q.slice(0, 16))) continue
       if ((porDia[dia] || 0) >= tetoDia) continue
       porDia[dia] = (porDia[dia] || 0) + 1
       return q
@@ -197,6 +237,33 @@ async function comprometer(request: NextRequest) {
       if (d < agora.slice(0, 10) || (ocupFinal[d] || 0) >= tetoDia) continue
       if (d < ultimo) diasComBuraco++ // há material marcado depois deste dia magro
     }
+  }
+
+  // MODO SOMBRA — mede a decisão e vai embora. Registra sempre, inclusive quando nada mudaria:
+  // automação que só aparece no log quando age é indistinguível de automação morta.
+  if (sombra) {
+    const trocas = aRealinhar.length
+    await supabase.schema('pulso_content').from('logs_workflows').insert({
+      workflow_name: 'DECISOR_SOMBRA',
+      status: 'sucesso',
+      detalhes: {
+        quando: agora,
+        congelado_ate: congeladoAte,
+        candidatos: candidatos.length,
+        trocaria: trocas,
+        movimentos: aRealinhar.slice(0, 30),
+        sem_slot: pulados.filter((x) => x.motivo.includes('sem slot')).length,
+      },
+    })
+    return NextResponse.json({
+      success: true,
+      sombra: true,
+      congelado_ate: congeladoAte,
+      candidatos: candidatos.length,
+      trocaria: trocas,
+      movimentos: aRealinhar,
+      nota: 'Nada foi gravado na fila. A decisão foi registrada em logs_workflows (DECISOR_SOMBRA).',
+    })
   }
 
   if (!confirmar) {
