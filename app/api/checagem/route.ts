@@ -76,15 +76,15 @@ export async function POST(request: NextRequest) {
       )
       const resumo = {
         conferidas: r.afirmacoes.length,
-        suspeitas: r.suspeitas.length,
-        sem_resposta: r.semResposta,
+        erradas: r.erradas.length,
+        nao_confirmadas: r.naoConfirmadas.length,
         indisponivel: r.indisponivel,
         quando: new Date().toISOString(),
         fontes_verificadas: false,
         // TODAS as afirmações, não só as suspeitas: quando alguém contesta um número nos
         // comentários, a pergunta pode ser sobre qualquer uma — inclusive as que conferem.
         itens: r.afirmacoes.slice(0, 20).map((a) => ({
-          trecho: a.trecho, tipo: a.tipo, confere: a.confere,
+          trecho: a.trecho, tipo: a.tipo, veredito: a.veredito,
           sabido: a.sabido, fonte: a.fonte ?? null, observacao: a.observacao,
         })),
       }
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       conferidos: saida.length,
-      com_suspeita: saida.filter((s) => s.suspeitas > 0).length,
+      com_erro: saida.filter((s) => s.erradas > 0).length,
       resultados: saida,
     })
   } catch (e) {

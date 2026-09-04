@@ -62,14 +62,14 @@ export interface PontoSerie {
  *  confirmação externa (ver lib/automation/checagem-fatos.ts) — são onde procurar, não citação. */
 export interface ChecagemDoVideo {
   conferidas: number
-  suspeitas: number
-  sem_resposta: number
+  erradas: number
+  nao_confirmadas: number
   quando: string
   fontes_verificadas: boolean
   itens: Array<{
     trecho: string
     tipo?: string
-    confere: boolean
+    veredito: 'ok' | 'errada' | 'nao_sei'
     sabido: string | null
     fonte: string | null
     observacao: string

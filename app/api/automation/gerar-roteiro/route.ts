@@ -292,7 +292,9 @@ export async function POST(request: NextRequest) {
       console.error('[gerar-roteiro] checagem de fatos indisponível:', e)
     }
     // indisponível NÃO é aval: sem conferência, não auto-aprova.
-    const fatoSuspeito = checagem == null || checagem.indisponivel || checagem.suspeitas.length > 0
+    // Só ERRADA trava: "não sei" é falta de aval, não prova de erro. A primeira versão colapsava
+    // os dois e acusava 12 em 24 roteiros, quase tudo prosa narrativa — sinal que grita não avisa.
+    const fatoSuspeito = checagem == null || checagem.indisponivel || checagem.erradas.length > 0
 
     const shouldAutoApprove =
       autoApprove && qualidade.score >= autoApproveThreshold && hook.nota >= 3 && qualidade.tem_cta &&
@@ -450,10 +452,10 @@ export async function POST(request: NextRequest) {
       const statusPipe = shouldAutoApprove ? 'ROTEIRO_PRONTO' : 'AGUARDANDO_ROTEIRO'
       const metaExtra: Record<string, unknown> = {}
       if (numero != null) metaExtra.numero = numero
-      if (checagem && !checagem.indisponivel && checagem.suspeitas.length > 0) {
+      if (checagem && !checagem.indisponivel && checagem.erradas.length > 0) {
         metaExtra.fatos_suspeitos = {
-          quantos: checagem.suspeitas.length,
-          itens: checagem.suspeitas.slice(0, 6).map((a) => ({
+          quantos: checagem.erradas.length,
+          itens: checagem.erradas.slice(0, 6).map((a) => ({
             trecho: a.trecho, sabido: a.sabido, observacao: a.observacao,
           })),
           quando: new Date().toISOString(),
@@ -512,15 +514,15 @@ export async function POST(request: NextRequest) {
       checagem_fatos: checagem
         ? {
             conferidas: checagem.afirmacoes.length,
-            suspeitas: checagem.suspeitas,
-            sem_resposta: checagem.semResposta,
+            erradas: checagem.erradas,
+            nao_confirmadas: checagem.naoConfirmadas.length,
             indisponivel: checagem.indisponivel,
           }
         : { indisponivel: true },
       aviso_fatos: !checagem || checagem.indisponivel
         ? 'A checagem de fatos não pôde ser feita — o roteiro NÃO foi auto-aprovado por precaução.'
-        : checagem.suspeitas.length > 0
-          ? `${checagem.suspeitas.length} afirmação(ões) não conferem: ${checagem.suspeitas.map((a) => a.trecho).slice(0, 3).join(' · ')}`
+        : checagem.erradas.length > 0
+          ? `${checagem.erradas.length} afirmação(ões) ERRADAS: ${checagem.erradas.map((a) => a.trecho).slice(0, 3).join(' · ')}`
           : null,
       aviso_promessa: promessaAberta
         ? 'O roteiro abre uma curiosidade e nunca diz QUAL é o caso (sem nome, lugar ou data verificável). Foi para aprovação humana: roteiro assim rende 230 views contra 439 dos que nomeiam.'

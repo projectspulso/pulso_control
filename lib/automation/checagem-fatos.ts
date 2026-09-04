@@ -36,6 +36,17 @@
  * houver busca externa confirmando, `verificada` é false e a ficha diz isso em voz alta: serve para
  * o dono saber ONDE procurar antes de responder, nunca para ele responder direto citando.
  *
+ * TRÊS ESTADOS, NÃO DOIS — e confundi-los na primeira versão inutilizou a trava. Rodada em 24
+ * roteiros do acervo em 04/09/2026, ela acusou 12 com "suspeita", e quase nada era erro: eram
+ * frases NARRATIVAS extraídas como se fossem afirmações ("o que desafia tudo o que sabemos",
+ * "a resposta está na técnica de 5 minutos"), marcadas como não-conferidas porque o modelo não
+ * tinha o que confirmar. Sinal que grita em tudo não avisa nada.
+ *
+ * A distinção que faltava: "eu sei que está errado" é diferente de "eu não sei". A primeira é
+ * prova e trava a esteira; a segunda é ausência de informação e no máximo levanta a sobrancelha —
+ * um roteiro com MUITAS afirmações não confirmáveis é suspeito no conjunto, não em cada linha.
+ * E prosa não entra: só vira afirmação o que carrega data, número, nome próprio ou lugar.
+ *
  * O LIMITE, DECLARADO: IA checando IA é REDE, não garantia. Pega o que ela sabe estar errado —
  * um evento que não existe, um número fora da faixa conhecida — e perde o resto. Verificação de
  * verdade exigiria busca externa por afirmação, com outro custo e outra latência. Esta trava reduz
@@ -50,8 +61,13 @@ export interface Afirmacao {
   tipo: TipoAfirmacao
   /** o que o modelo sabe de forma independente — null quando ele não sabe */
   sabido: string | null
-  /** true quando o que o roteiro diz bate com o que o modelo sabe */
-  confere: boolean
+  /**
+   * `ok`          — bate com o que o modelo sabe
+   * `errada`      — o modelo sabe um valor DIFERENTE. É o único que prova erro e trava a esteira.
+   * `nao_sei`     — afirmação concreta que o modelo não consegue confirmar. Não é erro; é falta de
+   *                 aval. Muitas delas juntas é que viram sinal.
+   */
+  veredito: 'ok' | 'errada' | 'nao_sei'
   /** por que não confere, ou por que não deu para dizer */
   observacao: string
   /** onde o conhecimento está ancorado — NÃO verificado; ponto de partida da busca, não citação */
@@ -60,10 +76,10 @@ export interface Afirmacao {
 
 export interface ResultadoChecagem {
   afirmacoes: Afirmacao[]
-  /** afirmações que NÃO conferem — o que segura a auto-aprovação */
-  suspeitas: Afirmacao[]
-  /** afirmações que o modelo não soube avaliar: não é erro, mas também não é aval */
-  semResposta: number
+  /** o modelo sabe um valor diferente — a única prova de erro, e o que segura a auto-aprovação */
+  erradas: Afirmacao[]
+  /** concretas que ele não confirmou: não travam sozinhas, mas em quantidade são cheiro ruim */
+  naoConfirmadas: Afirmacao[]
   /** true = a checagem não pôde ser feita. Nunca confundir com "está tudo certo". */
   indisponivel: boolean
   /** nenhuma fonte aqui passou por confirmação externa — o campo existe para ser honesto sobre isso */
@@ -73,34 +89,40 @@ export interface ResultadoChecagem {
 const PROMPT = [
   'Você confere fatos de roteiros de vídeos curtos de curiosidades e história.',
   '',
-  'PASSO 1 — extraia do roteiro TODA afirmação verificável: datas, anos, quantidades, magnitudes',
-  '(idades geológicas, distâncias, medidas), nomes próprios de pessoas, lugares e obras.',
-  'Ignore o que é opinião, gancho ou chamada da marca — só o que pode ser conferido.',
+  'PASSO 1 — extraia SÓ o que é conferível: afirmações que contenham DATA, NÚMERO, NOME PRÓPRIO ou',
+  'LUGAR. Nada mais.',
+  'NÃO extraia narrativa, suspense, opinião nem chamada da marca. Estas NÃO são afirmações e não',
+  'devem aparecer na sua resposta:',
+  '  "o que desafia tudo o que sabemos"  ·  "a resposta vai te surpreender"',
+  '  "cientistas ficaram intrigados"     ·  "o mistério só aumenta"',
+  'Se o roteiro inteiro não tiver nenhuma afirmação conferível, devolva a lista VAZIA. Isso é uma',
+  'resposta correta e comum — não force extração para parecer útil.',
   '',
-  'PASSO 2 — para CADA afirmação, responda de MEMÓRIA PRÓPRIA qual é o valor correto.',
+  'PASSO 2 — para CADA afirmação extraída, diga de MEMÓRIA PRÓPRIA o valor que você conhece.',
   'Não trate o roteiro como referência: ele pode estar errado, e é isso que você está checando.',
-  'Se você não souber, escreva sabido = null. NÃO invente e NÃO chute para parecer útil.',
+  'Se não souber, sabido = null. NÃO invente e NÃO chute.',
   '',
-  'PASSO 3 — compare. confere = true só quando o roteiro bate com o que você sabe.',
-  'confere = false quando você sabe que está errado OU quando o roteiro afirma com precisão algo',
-  'que você não consegue confirmar que exista — data específica de um evento que você desconhece é',
-  'suspeita, não neutralidade.',
+  'PASSO 3 — dê o veredito, e a distinção aqui é o coração da tarefa:',
+  '  veredito = "ok"      -> o roteiro bate com o que você sabe.',
+  '  veredito = "errada"  -> você SABE um valor diferente. Só use quando puder dizer qual é o certo.',
+  '  veredito = "nao_sei" -> você não consegue confirmar nem desmentir.',
+  '"nao_sei" NÃO é acusação: é falta de aval, e é uma resposta honesta e esperada. Nunca marque',
+  '"errada" só porque desconhece — sem valor alternativo, o veredito é "nao_sei".',
   '',
-  'Exemplo de suspeita real (caso verdadeiro deste canal): o roteiro dizia "Em 1938, na Antártica,',
-  'um fóssil de 300 milhões de anos". As florestas fósseis antárticas de Gondwana têm 260-280',
-  'milhões de anos, e não há descoberta conhecida de 1938 — o marco é a expedição de Scott, do',
-  'início de 1900. Duas afirmações, as duas com confere = false.',
+  'Exemplo real deste canal: o roteiro dizia "Em 1938, na Antártica, um fóssil de 300 milhões de',
+  'anos". As florestas de Gondwana têm 260-280 milhões de anos -> "300 milhões" é "errada", com',
+  'sabido = "260-280 milhões de anos". Sobre "1938", se você não conhece descoberta nessa data,',
+  'o veredito é "nao_sei" — não "errada".',
   '',
-  'PASSO 4 — para cada afirmação, diga ONDE esse conhecimento está ancorado: o evento, a expedição,',
-  'o estudo, a instituição ou o período histórico de referência. Seja concreto quando souber',
-  '("expedição de Scott, 1910-1913"; "artigo na Nature, abril de 2020").',
-  'NÃO INVENTE FONTE. Fonte fabricada é pior que fonte nenhuma: ela faz uma informação errada',
-  'parecer confiável. Se você não sabe de onde vem, escreva fonte = null. Isso é resposta aceitável',
-  'e esperada — quem lê precisa saber onde procurar, não receber um nome bonito que não existe.',
+  'PASSO 4 — para cada afirmação, diga ONDE o conhecimento está ancorado: o evento, a expedição, o',
+  'estudo, a instituição ou o período de referência ("expedição de Scott, 1910-1913"; "artigo na',
+  'Nature, abril de 2020").',
+  'NÃO INVENTE FONTE. Fonte fabricada é pior que fonte nenhuma: faz informação errada parecer',
+  'confiável. Sem saber, fonte = null — resposta aceitável e esperada.',
   '',
   'Responda APENAS JSON:',
-  '{"afirmacoes":[{"trecho":"...","tipo":"data|numero|nome|lugar|outro","sabido":"..."|null,',
-  '"confere":true|false,"observacao":"curta","fonte":"..."|null}]}',
+  '{"afirmacoes":[{"trecho":"...","tipo":"data|numero|nome|lugar","sabido":"..."|null,',
+  '"veredito":"ok|errada|nao_sei","observacao":"curta","fonte":"..."|null}]}',
 ].join('\n')
 
 export async function checarFatos(
@@ -109,7 +131,7 @@ export async function checarFatos(
 ): Promise<ResultadoChecagem> {
   const texto = (roteiro || '').slice(0, 4000)
   const vazio: ResultadoChecagem = {
-    afirmacoes: [], suspeitas: [], semResposta: 0, indisponivel: true, fontesVerificadas: false,
+    afirmacoes: [], erradas: [], naoConfirmadas: [], indisponivel: true, fontesVerificadas: false,
   }
   if (!texto.trim()) return vazio
 
@@ -119,8 +141,8 @@ export async function checarFatos(
     const afirmacoes = (j.afirmacoes || []).filter((a) => a && typeof a.trecho === 'string')
     return {
       afirmacoes,
-      suspeitas: afirmacoes.filter((a) => a.confere === false),
-      semResposta: afirmacoes.filter((a) => a.sabido == null).length,
+      erradas: afirmacoes.filter((a) => a.veredito === 'errada'),
+      naoConfirmadas: afirmacoes.filter((a) => a.veredito === 'nao_sei'),
       indisponivel: false,
       fontesVerificadas: false,
     }
