@@ -91,6 +91,12 @@ const PROMPT = [
   '',
   'PASSO 1 — extraia SÓ o que é conferível: afirmações que contenham DATA, NÚMERO, NOME PRÓPRIO ou',
   'LUGAR. Nada mais.',
+  '',
+  'UMA AFIRMAÇÃO POR ELEMENTO. Se a frase carrega data E número, ela vira DUAS entradas separadas,',
+  'cada uma com seu tipo. Juntar afunda a checagem: "Em 1938 achou-se um fóssil de 300 milhões de',
+  'anos" virando UM item faz o desconhecimento sobre 1938 engolir o erro dos 300 milhões, e a',
+  'resposta sai "nao_sei" quando havia um erro provável ali dentro. Separe SEMPRE.',
+  'O campo tipo recebe UM valor só — nunca "data|numero".',
   'NÃO extraia narrativa, suspense, opinião nem chamada da marca. Estas NÃO são afirmações e não',
   'devem aparecer na sua resposta:',
   '  "o que desafia tudo o que sabemos"  ·  "a resposta vai te surpreender"',
@@ -109,10 +115,13 @@ const PROMPT = [
   '"nao_sei" NÃO é acusação: é falta de aval, e é uma resposta honesta e esperada. Nunca marque',
   '"errada" só porque desconhece — sem valor alternativo, o veredito é "nao_sei".',
   '',
-  'Exemplo real deste canal: o roteiro dizia "Em 1938, na Antártica, um fóssil de 300 milhões de',
-  'anos". As florestas de Gondwana têm 260-280 milhões de anos -> "300 milhões" é "errada", com',
-  'sabido = "260-280 milhões de anos". Sobre "1938", se você não conhece descoberta nessa data,',
-  'o veredito é "nao_sei" — não "errada".',
+  'Exemplo real deste canal, e é assim que a saída deve ficar. Roteiro: "Em 1938, na Antártica, um',
+  'fóssil de 300 milhões de anos foi encontrado". Isso são DUAS entradas:',
+  '  1) trecho "fóssil de 300 milhões de anos", tipo "numero", sabido "260-280 milhões de anos",',
+  '     veredito "errada" — as florestas de Gondwana têm essa idade.',
+  '  2) trecho "Em 1938", tipo "data", sabido null, veredito "nao_sei" — não conhecer descoberta',
+  '     nessa data não basta para chamar de mentira.',
+  'Uma entrada só, misturando as duas, seria resposta ERRADA à tarefa.',
   '',
   'PASSO 4 — para cada afirmação, diga ONDE o conhecimento está ancorado: o evento, a expedição, o',
   'estudo, a instituição ou o período de referência ("expedição de Scott, 1910-1913"; "artigo na',
@@ -138,7 +147,15 @@ export async function checarFatos(
   try {
     const bruto = await callLLM(`${PROMPT}\n\nROTEIRO:\n${texto}`)
     const j = JSON.parse(bruto) as { afirmacoes?: Afirmacao[] }
-    const afirmacoes = (j.afirmacoes || []).filter((a) => a && typeof a.trecho === 'string')
+    const afirmacoes = (j.afirmacoes || [])
+      .filter((a) => a && typeof a.trecho === 'string')
+      // o modelo às vezes devolve a STRING "null" em vez de null — sem isto, "não sei" viraria
+      // um valor de referência inventado na tela da ficha
+      .map((a) => ({
+        ...a,
+        sabido: a.sabido == null || String(a.sabido).toLowerCase() === 'null' ? null : a.sabido,
+        fonte: a.fonte == null || String(a.fonte).toLowerCase() === 'null' ? null : a.fonte,
+      }))
     return {
       afirmacoes,
       erradas: afirmacoes.filter((a) => a.veredito === 'errada'),
