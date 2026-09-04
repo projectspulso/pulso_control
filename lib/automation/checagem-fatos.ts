@@ -47,6 +47,14 @@
  * um roteiro com MUITAS afirmações não confirmáveis é suspeito no conjunto, não em cada linha.
  * E prosa não entra: só vira afirmação o que carrega data, número, nome próprio ou lugar.
  *
+ * E A TERCEIRA CALIBRAGEM: casa decimal não é erro. Rodado o acervo inteiro (211 roteiros, 710
+ * afirmações), 17 saíram como "errada" e só TRÊS eram exagero material — Tutancâmon com "mais de 20
+ * mortes" quando o registro é 9, o Kryptos com "quase 1.800 letras" quando são 865, e o fóssil dos
+ * 300 milhões. O resto era arredondamento fiel ("384 mil km" para 384.400), limite inferior
+ * verdadeiro ("mais de 70 anos" quando são 73), comparação tratada como medida ("do tamanho de uma
+ * toranja" contra "400 cm³") e até concordância lida como divergência. Roteiro de vídeo curto é
+ * fala, não artigo: o que interessa é o erro que muda a história.
+ *
  * O LIMITE, DECLARADO: IA checando IA é REDE, não garantia. Pega o que ela sabe estar errado —
  * um evento que não existe, um número fora da faixa conhecida — e perde o resto. Verificação de
  * verdade exigiria busca externa por afirmação, com outro custo e outra latência. Esta trava reduz
@@ -108,9 +116,23 @@ const PROMPT = [
   'Não trate o roteiro como referência: ele pode estar errado, e é isso que você está checando.',
   'Se não souber, sabido = null. NÃO invente e NÃO chute.',
   '',
+  'ANTES DO VEREDITO, o que NÃO é erro. Roteiro de vídeo curto é fala, não artigo científico:',
+  '  · ARREDONDAMENTO fiel: "384 mil km" para 384.400 km · "um metro" para 1,1 m · "170 anos" para 169.',
+  '  · LIMITE INFERIOR verdadeiro: "mais de 70 anos" quando são 73 está CORRETO. Só é erro quando',
+  '    o número real fica ABAIXO do que o roteiro afirma ("mais de 20" quando são 9).',
+  '  · COMPARAÇÃO e figura de linguagem: "do tamanho de uma toranja" não é medida e não se confere',
+  '    contra "400 cm³".',
+  '  · Afirmação que o seu conhecimento CONFIRMA, ainda que com detalhe a mais: se o roteiro diz',
+  '    "Patrimônio da Humanidade pela UNESCO" e você sabe que foi reconhecida em 1980, isso é "ok" —',
+  '    você concordou com ele.',
+  'Marcar essas coisas como erradas afoga o sinal: numa passada por 211 roteiros, 17 foram acusadas',
+  'e só 3 eram exagero material. O que interessa é o erro que muda a história, não a casa decimal.',
+  '',
   'PASSO 3 — dê o veredito, e a distinção aqui é o coração da tarefa:',
   '  veredito = "ok"      -> o roteiro bate com o que você sabe.',
-  '  veredito = "errada"  -> você SABE um valor diferente. Só use quando puder dizer qual é o certo.',
+  '  veredito = "errada"  -> você SABE um valor diferente E a diferença MUDA a história: exagero,',
+  '                          ordem de grandeza trocada, evento atribuído a outro lugar ou pessoa.',
+  '                          Só use quando puder dizer qual é o certo.',
   '  veredito = "nao_sei" -> você não consegue confirmar nem desmentir.',
   '"nao_sei" NÃO é acusação: é falta de aval, e é uma resposta honesta e esperada. Nunca marque',
   '"errada" só porque desconhece — sem valor alternativo, o veredito é "nao_sei".',
