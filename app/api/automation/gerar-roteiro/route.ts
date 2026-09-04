@@ -3,6 +3,7 @@ import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { extrairAncora, acharColisao, type ColisaoAncora } from '@/lib/automation/ancora'
 import { varrerDuplicidade } from '@/lib/automation/vigia-duplicidade'
+import { checarFatos, type ResultadoChecagem } from '@/lib/automation/checagem-fatos'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarRoteiro, buildPromptLegendas } from '@/lib/automation/prompts'
 import { contarFormas, desempenhoPorForma, escolherForma, INSTRUCAO_POR_FORMA } from '@/lib/automation/forma-hook'
@@ -279,9 +280,23 @@ export async function POST(request: NextRequest) {
       console.error('[gerar-roteiro] varredura de duplicidade indisponível:', e)
     }
 
+    // CHECAGEM DE FATOS — o roteiro afirma data e número; alguém precisa conferir.
+    // O validarRoteiro pontua só forma (hook, CTA, duração, tamanho, parágrafos): um roteiro tira
+    // 100 com toda data inventada. Ver o cabeçalho de lib/automation/checagem-fatos.ts.
+    let checagem: ResultadoChecagem | null = null
+    try {
+      checagem = await checarFatos(roteiro, (pr) =>
+        callOpenAI(pr, { model: 'gpt-4o-mini', json_mode: true, temperature: 0, max_tokens: 900 }).then((r) => r.content)
+      )
+    } catch (e) {
+      console.error('[gerar-roteiro] checagem de fatos indisponível:', e)
+    }
+    // indisponível NÃO é aval: sem conferência, não auto-aprova.
+    const fatoSuspeito = checagem == null || checagem.indisponivel || checagem.suspeitas.length > 0
+
     const shouldAutoApprove =
       autoApprove && qualidade.score >= autoApproveThreshold && hook.nota >= 3 && qualidade.tem_cta &&
-      !colisaoAncora && !gemeoNoAcervo && !promessaAberta
+      !colisaoAncora && !gemeoNoAcervo && !promessaAberta && !fatoSuspeito
 
     // NUMERO AUTOMÁTICO: respeita o número já gravado na ideia; senão, próximo da sequência canônica.
     let numero: number | null =
@@ -435,6 +450,15 @@ export async function POST(request: NextRequest) {
       const statusPipe = shouldAutoApprove ? 'ROTEIRO_PRONTO' : 'AGUARDANDO_ROTEIRO'
       const metaExtra: Record<string, unknown> = {}
       if (numero != null) metaExtra.numero = numero
+      if (checagem && !checagem.indisponivel && checagem.suspeitas.length > 0) {
+        metaExtra.fatos_suspeitos = {
+          quantos: checagem.suspeitas.length,
+          itens: checagem.suspeitas.slice(0, 6).map((a) => ({
+            trecho: a.trecho, sabido: a.sabido, observacao: a.observacao,
+          })),
+          quando: new Date().toISOString(),
+        }
+      }
       if (promessaAberta) {
         metaExtra.promessa_aberta = { ancora, quando: new Date().toISOString() }
       }
@@ -485,6 +509,19 @@ export async function POST(request: NextRequest) {
         : null,
       gemeo_no_acervo: gemeoNoAcervo,
       promessa_aberta: promessaAberta,
+      checagem_fatos: checagem
+        ? {
+            conferidas: checagem.afirmacoes.length,
+            suspeitas: checagem.suspeitas,
+            sem_resposta: checagem.semResposta,
+            indisponivel: checagem.indisponivel,
+          }
+        : { indisponivel: true },
+      aviso_fatos: !checagem || checagem.indisponivel
+        ? 'A checagem de fatos não pôde ser feita — o roteiro NÃO foi auto-aprovado por precaução.'
+        : checagem.suspeitas.length > 0
+          ? `${checagem.suspeitas.length} afirmação(ões) não conferem: ${checagem.suspeitas.map((a) => a.trecho).slice(0, 3).join(' · ')}`
+          : null,
       aviso_promessa: promessaAberta
         ? 'O roteiro abre uma curiosidade e nunca diz QUAL é o caso (sem nome, lugar ou data verificável). Foi para aprovação humana: roteiro assim rende 230 views contra 439 dos que nomeiam.'
         : null,

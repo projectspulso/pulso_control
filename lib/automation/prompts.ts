@@ -297,6 +297,14 @@ REGRAS DURAS:
 - Tom conversacional, segunda pessoa
 - Duração alvo: ${duracaoAlvo} segundos (~${palavrasAlvo} palavras)
 - SOMENTE fatos reais e verificáveis; se a ideia tiver elemento de lenda, deixe isso explícito no texto ("diz a lenda...")
+- OMITIR É MELHOR QUE INVENTAR. A regra "NOMEIE O CASO" acima pede especificidade — ela NÃO
+  autoriza fabricar precisão. Se você não sabe o ano, escreva "há milhões de anos" ou "no início do
+  século passado" em vez de cravar uma data; se não sabe o número exato, dê a faixa. Data falsa é
+  pior que data ausente: em 04/09/2026 o vídeo #189 foi ao ar dizendo "Em 1938, na Antártica, um
+  fóssil de 300 milhões de anos" — as florestas de Gondwana têm 260-280 milhões de anos e não
+  existe descoberta de 1938. Ele já tinha 1.621 views no Facebook quando o erro foi visto.
+- Todo número e toda data que você escrever serão CONFERIDOS por outra passagem antes da
+  aprovação. Escreva só o que sustenta a conferência.
 - NÃO use emojis, hashtags ou indicações de edição
 - O texto será narrado por TTS (voz do PULSO): frases curtas, sem parênteses
 - Cada parágrafo = uma pausa natural na narração
@@ -308,6 +316,9 @@ AUTO-CHECAGEM ANTES DE RESPONDER (obrigatória):
 1) TESTE DO ESTRANHO: alguém que só leu o seu roteiro consegue pesquisar esse caso e achar? Se a
 resposta for não — porque você escreveu "uma cidade", "um homem", "um artefato" e nunca disse qual
 — o roteiro está incompleto. Volte e nomeie, ou troque de recorte.
+1b) TESTE DA FONTE: para cada data e cada número que você escreveu, você conseguiria dizer de onde
+sabe? Se a resposta for "soa plausível", APAGUE a precisão e escreva a forma vaga que você sustenta.
+Um roteiro sem data é publicável; um roteiro com data errada vira erro público.
 2) Releia SUA primeira frase contra a TRAVA DOS 3 SEGUNDOS. Se ela violar qualquer ponto (abertura proibida, sem número/nome/contradição, >14 palavras, repete o título, ou adia o impacto), REESCREVA a primeira frase antes de entregar. Não entregue um roteiro com hook fraco.
 
 Retorne APENAS o roteiro em texto, sem títulos ou formatação markdown.`
