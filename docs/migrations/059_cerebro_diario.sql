@@ -15,10 +15,16 @@
 -- antes de agendar. Fora dessa ordem cada peça decide com o dado da véspera — que é exatamente o
 -- problema de hoje, só que automatizado e mais difícil de enxergar.
 --
---   06:40 UTC  COLETAR_METRICAS  (já existia)
---   07:00 UTC  aprender          -> reescreve aprendizado_cerebro
---   07:15 UTC  decisor/analisar  -> reescreve decisor_parecer
---   07:30 UTC  comprometer       -> MODO SOMBRA (mede, não mexe)
+--   06:10-06:40 UTC  coletas (youtube, tiktok, facebook, instagram) — já existiam
+--   07:00 UTC        aprender          -> reescreve aprendizado_cerebro
+--   07:15 UTC        decisor/analisar  -> reescreve decisor_parecer
+--   10:30 UTC        popular-agenda    -> reranqueia o plano — JÁ EXISTIA, e é a âncora do horário
+--   10:45 UTC        comprometer       -> MODO SOMBRA (mede, não mexe)
+--
+-- O HORÁRIO DA SOMBRA SAIU DE 07:30 ANTES DE SER APLICADO. A primeira versão desta migration a
+-- punha às 07:30, o que a faria ler o plano montado às 10:30 do dia ANTERIOR — justamente o erro
+-- de "decidir com o dado da véspera" que ela existe para evitar. A conferência dos jobs já no ar
+-- mostrou o popular-agenda às 10:30, e a sombra passou para 15 minutos depois dele.
 --
 -- O TERCEIRO NASCE EM SOMBRA DE PROPÓSITO. O dono quer o Decisor remanejando a fila sozinho, e a
 -- máquina para isso está pronta — mas falta um número: quanto o ranking muda de um dia para o
@@ -68,7 +74,7 @@ select cron.schedule(
 -- 3) DECISOR NA FILA — em SOMBRA. Mede a decisão, não executa.
 select cron.schedule(
   'pulso-decisor-sombra',
-  '30 7 * * *',
+  '45 10 * * *',
   $cmd$
   select net.http_post(
     url := 'https://pulsoprojects.vercel.app/api/agenda/comprometer',

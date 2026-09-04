@@ -55,10 +55,14 @@ Migration: [`docs/migrations/059_cerebro_diario.sql`](../migrations/059_cerebro_
 
 | Hora (UTC) | Job | O que faz |
 |---|---|---|
-| 06:40 | `COLETAR_METRICAS` | já existia — traz o número do dia |
+| 06:10–06:40 | coletas por rede | já existiam — trazem o número do dia |
 | 07:00 | `pulso-aprender-diario` | reescreve `aprendizado_cerebro` (o gerador de ideias lê) |
 | 07:15 | `pulso-decisor-parecer` | reescreve `decisor_parecer` (a leitura do dia) |
-| 07:30 | `pulso-decisor-sombra` | **mede** o que o Decisor trocaria na fila — **não mexe** |
+| 10:30 | `pulso-popular-agenda` | já existia — reranqueia o plano |
+| 10:45 | `pulso-decisor-sombra` | **mede** o que o Decisor trocaria na fila — **não mexe** |
+
+A sombra ficou **depois** do `popular-agenda`, não de manhã: às 07:30 ela leria o plano montado às
+10:30 do dia anterior — o erro de "decidir com o dado da véspera" que ela existe para evitar.
 
 **A ordem é o ponto.** Coletar antes de aprender, aprender antes de opinar, opinar antes de
 agendar. Fora dessa ordem cada peça decide com o dado da véspera.
