@@ -92,42 +92,111 @@ async function comprometer(request: NextRequest) {
   const aGravar: Array<{ id: string; numero: number | null; titulo: string; quando: string }> = []
   const aRealinhar: Array<{ numero: number | null; de: string; para: string }> = []
   const pulados: Array<{ numero: number | null; titulo: string; motivo: string }> = []
-  const vistos = new Set<string>()
 
+  const agora = new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).replace(' ', 'T')
+
+  // O SLOT É TEMPO, O VÍDEO É CONTEÚDO — e soldar os dois foi o que bagunçou a fila em 04/09/2026.
+  //
+  // Esta rota andava pelo plano SLOT A SLOT e, quando a ideia daquele slot não estava pronta,
+  // deixava o dia VAZIO. O resultado, medido: 44 vídeos prontos, 8 dias sem nada (10 a 14/09, 16,
+  // 21, 22) e 14 sem data nenhuma, espalhados até 01/10 — enquanto 2/dia cobriria 22 dias
+  // corridos. Com `realinhar` era pior: reescrevia data boa para o buraco do plano.
+  //
+  // A inteligência do roteador é a ORDEM (que vídeo vem antes de qual, por desempenho de tema),
+  // não a célula do calendário. Então: mantém-se a ordem dele e as datas são preenchidas
+  // DENSAMENTE com o que existe. Slot vazio com estoque pronto é erro, nunca plano.
+  const ordemPlano = new Map<string, number>()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;((planoQ.data || []) as any[]).forEach((slot, i) => {
+    if (slot.ideia_id && !ordemPlano.has(slot.ideia_id)) ordemPlano.set(slot.ideia_id, i)
+  })
+
+  // Slots do plano ainda no futuro, sem repetir horário, do mais cedo ao mais tarde.
+  const slots: string[] = []
+  const vistoSlot = new Set<string>()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for (const slot of (planoQ.data || []) as any[]) {
-    const p = pipePorIdeia.get(slot.ideia_id)
-    const md = p?.metadata || {}
-    const rot = { numero: md.numero ?? null, titulo: String(titulo[slot.ideia_id] || '').slice(0, 50) }
+    const quando = quandoBRT(slot.data, slot.horario)
+    if (quando <= agora || vistoSlot.has(quando)) continue
+    vistoSlot.add(quando)
+    slots.push(quando)
+  }
+  slots.sort()
 
-    if (!p) { pulados.push({ ...rot, motivo: 'sem linha no pipeline' }); continue }
-    // Vídeo longo não recebe data por aqui: publicação dele é deliberada (só YouTube, fora do
-    // teto da grade). Carimbar data faria o cron despachá-lo nas 5 redes como se fosse Short.
-    if (ehLongo.has(slot.ideia_id)) { pulados.push({ ...rot, motivo: 'formato longo — fora da esteira automática' }); continue }
-    if (jaPublicado.has(slot.ideia_id)) { pulados.push({ ...rot, motivo: 'já publicado' }); continue }
-    // O plano inclui itens ainda em roteiro/áudio. Data só em quem o cron consegue publicar —
-    // carimbar data em vídeo inexistente é promessa que a rodada das 18h não cumpre.
-    if (p.status !== 'PRONTO_PUBLICACAO') { pulados.push({ ...rot, motivo: `ainda em ${p.status}` }); continue }
-    if (!md.video_url) { pulados.push({ ...rot, motivo: 'sem video_url' }); continue }
-    if (p.data_publicacao_planejada) {
-      const planejado = quandoBRT(slot.data, slot.horario)
-      const divergente = String(p.data_publicacao_planejada).slice(0, 16) !== planejado.slice(0, 16)
-      if (!realinhar || !divergente) {
-        pulados.push({ ...rot, motivo: divergente ? `já tem data (${String(p.data_publicacao_planejada).slice(0, 16)}) — diverge do plano` : 'já tem data' })
-        continue
-      }
-      // realinhando: cai no fluxo normal abaixo e recebe a data do plano
-      aRealinhar.push({ numero: rot.numero, de: String(p.data_publicacao_planejada).slice(0, 16), para: planejado })
+  // Quem pode receber data: pronto, com vídeo, não publicado, formato curto.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const candidatos = ((pipeQ.data || []) as any[]).filter((p) => {
+    if (!p.ideia_id) return false
+    const rot = { numero: p.metadata?.numero ?? null, titulo: String(titulo[p.ideia_id] || '').slice(0, 50) }
+    if (ehLongo.has(p.ideia_id)) return false // publicação deliberada, fora da esteira de Shorts
+    if (jaPublicado.has(p.ideia_id)) return false
+    if (p.status !== 'PRONTO_PUBLICACAO') return false
+    if (!p.metadata?.video_url) { pulados.push({ ...rot, motivo: 'sem video_url' }); return false }
+    // Sem realinhar, quem já tem data é intocável — o padrão continua conservador.
+    if (p.data_publicacao_planejada && !realinhar) {
+      pulados.push({ ...rot, motivo: `já tem data (${String(p.data_publicacao_planejada).slice(0, 16)})` })
+      return false
     }
-    if (vistos.has(slot.ideia_id)) { pulados.push({ ...rot, motivo: 'repetido no plano' }); continue }
-    if ((ocupacao[slot.data] || 0) >= tetoDia) {
-      pulados.push({ ...rot, motivo: `dia ${slot.data} já cheio (teto ${tetoDia})` })
+    return true
+  })
+
+  candidatos.sort((a, b) => {
+    const oa = ordemPlano.has(a.ideia_id) ? ordemPlano.get(a.ideia_id)! : 99999
+    const ob = ordemPlano.has(b.ideia_id) ? ordemPlano.get(b.ideia_id)! : 99999
+    if (oa !== ob) return oa - ob
+    return String(a.data_publicacao_planejada || '9').localeCompare(String(b.data_publicacao_planejada || '9'))
+  })
+
+  // Realinhando, a grade é redistribuída do zero; senão, respeita-se o que já está marcado.
+  const ocupado = new Set<string>()
+  if (!realinhar) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const p of (pipeQ.data || []) as any[]) {
+      if (p.data_publicacao_planejada) ocupado.add(String(p.data_publicacao_planejada).slice(0, 16))
+    }
+  }
+  // Contagem por dia começa do que já está marcado (ou zerada, se vamos redistribuir tudo) e
+  // SOBE a cada slot entregue — sem isso o teto seria furado dentro da própria rodada.
+  const porDia: Record<string, number> = realinhar ? {} : { ...ocupacao }
+  const proximoSlot = () => {
+    while (slots.length) {
+      const q = slots.shift()!
+      const dia = q.slice(0, 10)
+      if (!realinhar && ocupado.has(q.slice(0, 16))) continue
+      if ((porDia[dia] || 0) >= tetoDia) continue
+      porDia[dia] = (porDia[dia] || 0) + 1
+      return q
+    }
+    return null
+  }
+
+  for (const p of candidatos) {
+    const rot = { numero: p.metadata?.numero ?? null, titulo: String(titulo[p.ideia_id] || '').slice(0, 50) }
+    const quando = proximoSlot()
+    if (!quando) {
+      pulados.push({ ...rot, motivo: 'sem slot livre no horizonte do plano' })
       continue
     }
+    const atual = p.data_publicacao_planejada ? String(p.data_publicacao_planejada).slice(0, 16) : null
+    if (atual && atual !== quando.slice(0, 16)) aRealinhar.push({ numero: rot.numero, de: atual, para: quando })
+    if (atual === quando.slice(0, 16)) continue // já está no lugar certo: nada a gravar
+    aGravar.push({ id: p.id, numero: rot.numero, titulo: rot.titulo, quando })
+  }
 
-    ocupacao[slot.data] = (ocupacao[slot.data] || 0) + 1
-    vistos.add(slot.ideia_id)
-    aGravar.push({ id: p.id, numero: rot.numero, titulo: rot.titulo, quando: quandoBRT(slot.data, slot.horario) })
+  // O AVISO QUE OFERECE O REALINHAMENTO. Sem realinhar, `aRealinhar` fica vazio por construção
+  // (só entram itens sem data), e o botão âmbar nunca apareceria — o dono não descobriria que
+  // existe conserto. O sinal honesto é outro: sobrou dia abaixo da meta COM vídeo pronto marcado
+  // depois dele? Se sim, há estoque no lugar errado, e redistribuir resolve.
+  let diasComBuraco = 0
+  if (!realinhar) {
+    const ocupFinal: Record<string, number> = { ...ocupacao }
+    for (const g of aGravar) ocupFinal[g.quando.slice(0, 10)] = (ocupFinal[g.quando.slice(0, 10)] || 0) + 1
+    const dias = Object.keys(ocupFinal).sort()
+    const ultimo = dias[dias.length - 1]
+    for (const d of dias) {
+      if (d < agora.slice(0, 10) || (ocupFinal[d] || 0) >= tetoDia) continue
+      if (d < ultimo) diasComBuraco++ // há material marcado depois deste dia magro
+    }
   }
 
   if (!confirmar) {
@@ -137,7 +206,7 @@ async function comprometer(request: NextRequest) {
       agendaria: aGravar.length,
       plano: aGravar,
       realinhamentos: aRealinhar,
-      divergentes: pulados.filter((x) => x.motivo.includes('diverge do plano')).length,
+      divergentes: realinhar ? aRealinhar.length : diasComBuraco,
       pulados,
       nota: 'Nada foi gravado. Reenvie com confirmar: true para comprometer estas datas.',
     })

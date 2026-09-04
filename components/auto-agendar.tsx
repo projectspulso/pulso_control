@@ -122,9 +122,9 @@ export function AutoAgendar() {
               </div>
               {(res.divergentes ?? 0) > 0 && (
                 <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] p-3 text-xs text-amber-200">
-                  <b>{res.divergentes} vídeo(s) com data que diverge do plano.</b> Data velha vira buraco na
-                  grade: em 01/09 a fila estava carimbada para 5 dias à frente e o cron ficou ocioso enquanto
-                  havia vídeo pronto.
+                  <b>{res.divergentes} dia(s) abaixo da meta com vídeo pronto marcado depois.</b> É estoque
+                  no lugar errado: o cron fica ocioso num dia magro enquanto há material carimbado lá na
+                  frente. Em 04/09 eram 44 vídeos prontos e 8 dias vazios, espalhados até 01/10.
                   <button
                     type="button"
                     onClick={() => chamar(false, true)}
