@@ -17,6 +17,13 @@ import { guardApi } from '@/lib/auth/api-guard'
  * pra "revisar" (nunca chuta). Órfão SEM legenda (FB manual sem texto) nunca casa
  * por aqui — registrar na mão. Lição: ao publicar manual, sempre colar a legenda.
  *
+ * ATÉ ONDE ESSE LIMIAR FOI TESTADO (medido 05/09/2026, ao responder o Limelight): ele aguenta
+ * porque o nosso caso real é legenda COLADA IDÊNTICA — aí best=1,00 e nenhum corte importa.
+ * Contra texto REESCRITO ele reprova 94,6% (202 casos): manda pra revisão, e em 124 deles o topo
+ * já estava certo. Ou seja: a premissa "sempre colar a legenda" acima não é um conselho, é a
+ * condição de funcionamento. No dia em que alguém reescrever a legenda ao publicar à mão, esta
+ * rota vai calar, não errar — e é por isso que a rodada agora fica em logs_workflows.
+ *
  * INSERT-ONLY e idempotente: pula post_id já cadastrado, nunca apaga/altera.
  * Fontes: TikTok video.list · Facebook /videos · YouTube uploads do canal.
  */
@@ -315,7 +322,7 @@ async function reconciliar(request: NextRequest) {
   // 4) casa cada órfão e cadastra os de alta confiança
   const registrar: Array<Record<string, unknown>> = []
   const promover: Array<{ rowId: string; patch: Record<string, unknown> }> = []
-  const revisar: Array<{ plataforma: string; post_id: string; caption: string; best: number }> = []
+  const revisar: Array<{ plataforma: string; post_id: string; caption: string; best: number; margem: number }> = []
   for (const o of orfaos) {
     const { ideia_id, best, second } = casar(o.caption)
     const h = horaBRT(o.data)
@@ -329,7 +336,12 @@ async function reconciliar(request: NextRequest) {
         promover.push({ rowId: draftId, patch: base }) // promove rascunho TikTok → vídeo real
         draftTikTok.delete(ideia_id)
       } else {
-        registrar.push({ ideia_id, roteiro_id: roteiroDeIdeia.get(ideia_id) ?? null, plataforma: o.plataforma, ...base })
+        registrar.push({
+          ideia_id, roteiro_id: roteiroDeIdeia.get(ideia_id) ?? null, plataforma: o.plataforma, ...base,
+          // a PROVA do casamento fica na linha. Sem isso, "por que o sistema achou que este post do
+          // Facebook e a ideia X?" nao tem resposta depois — so o desenho da rota, que e opiniao.
+          metadata: { metodo: 'reconciliado', casamento: { best: Number(best.toFixed(3)), second: Number(second.toFixed(3)), margem: Number((best - second).toFixed(3)), caption: o.caption.slice(0, 120) } },
+        })
       }
     } else if (draftId && ideia_id && best >= 0.12) {
       // RELAXADO: a ideia tem rascunho TikTok pendente (prior forte — nós mesmos subimos) +
@@ -337,7 +349,9 @@ async function reconciliar(request: NextRequest) {
       promover.push({ rowId: draftId, patch: base })
       draftTikTok.delete(ideia_id)
     } else {
-      revisar.push({ plataforma: o.plataforma, post_id: o.post_id, caption: o.caption.slice(0, 60), best: Number(best.toFixed(2)) })
+      // margem junto: e ela que diz se o caso e "nao achei" (best baixo) ou "achei dois" (margem
+      // baixa) — sao problemas diferentes e o best sozinho nao os separa.
+      revisar.push({ plataforma: o.plataforma, post_id: o.post_id, caption: o.caption.slice(0, 60), best: Number(best.toFixed(2)), margem: Number((best - second).toFixed(2)) })
     }
   }
 
@@ -356,6 +370,17 @@ async function reconciliar(request: NextRequest) {
 
   const porRede: Record<string, number> = {}
   for (const r of registrar) porRede[r.plataforma as string] = (porRede[r.plataforma as string] || 0) + 1
+
+  // TODA rodada e registrada, inclusive a ociosa. Ate 05/09 esta rota decidia e jogava a decisao
+  // fora: `revisar` so existia no corpo da resposta HTTP, que o cron nao le. Orfao que precisava de
+  // gente era anunciado para ninguem — e a rodada que nao achou nada era indistinguivel da rodada
+  // que nao rodou. E o mesmo animal que o Limelight encontrou no Facebook dele em 05/09: o sistema
+  // reportava "soltas: 0" e estava tecnicamente certo, porque nao havia nada solto nem nada.
+  await supabase.schema('pulso_content').from('logs_workflows').insert({
+    workflow_name: 'RECONCILIAR_PUBLICACOES',
+    status: avisos.length ? 'parcial' : (inseridos || promovidos) ? 'sucesso' : 'ocioso',
+    detalhes: { varridos, orfaos: orfaos.length, inseridos, promovidos, por_rede: porRede, revisar: revisar.slice(0, 40), avisos },
+  }).then(() => {}, () => {})
 
   return NextResponse.json({
     success: true,

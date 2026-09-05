@@ -4,6 +4,18 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (05/09)
+- **Capturador dos Bastidores em 4K real.** `npm run capturas:login` (o dono loga uma vez) + `npm run capturas` produzem **PNG 3840×2160 nativo** — medido no cabeçalho do arquivo, não estimado. O navegador do agente entrega 1568×579 JPEG, que é teto de ferramenta: capturado a 1×, o zoom da montagem vira interpolação justo no quadro em que o número é o assunto. O login fica humano por desenho — o agente não digita senha do dono nem move cookie de sessão entre navegadores; o arquivo de sessão é credencial e está no `.gitignore`.
+
+### Corrigido (05/09)
+- **`reconciliar-publicacoes` era a única automação que decidia e jogava a decisão fora.** A fila `revisar` só existia no corpo da resposta HTTP, que o cron não lê: órfão que precisava de gente era anunciado para ninguém, e a rodada que não achou nada era indistinguível da rodada que não rodou. Agora toda rodada entra em `logs_workflows` como `RECONCILIAR_PUBLICACOES` (inclusive a ociosa), no mesmo padrão das outras 7.
+- **A linha registrada passa a carregar a prova do casamento** (`metadata.casamento`: `best`, `second`, `margem`, legenda usada). Sem isso, "por que o sistema achou que este post do Facebook é a ideia X?" não tinha resposta depois — só o desenho da rota, que é opinião.
+- **A fila de revisão passa a carregar a margem**, não só o `best`: "não achei" (best baixo) e "achei dois" (margem baixa) são problemas diferentes, e o `best` sozinho não os separa.
+
+### Medido (05/09) — sem mudança de código
+- **O nosso limiar de casamento nunca tinha sido testado no caso difícil.** Ao responder a calibragem do Limelight, medi contra 202 casos do acervo com texto REESCRITO: `best>=0,25 E margem>=0,15` aceita **5,4%** e manda **94,6% para revisão** — e em **124** desses o topo já estava certo. Ele aguenta em produção porque o nosso caso real é legenda colada idêntica (`best=1,00`). A frase "sempre colar a legenda" no cabeçalho da rota não é conselho: é a **condição de funcionamento**, e agora está escrita como tal.
+- **O piso absoluto de `best` é inerte.** `second >= 0` faz `best − second >= X` já implicar `best >= X`. Oito combinações de piso (p90/p95/p99/máx × 2 folgas) deram resultado idêntico a não ter piso nenhum. Scripts: `scratchpad/calibra_jaccard.mjs` e `calibra_piso_ruido.mjs`.
+
 ### Removido (04/09)
 - **Esteira dos Bastidores sai do app.** Decisão do dono: a série passa ao orquestrador, que conduz com o Limelight. Removidos `/bastidores`, `/api/bastidores/*`, `use-episodios`, `use-horas-longos`, o bloco "Longos prontos" da Central de Publicação, o card "Rumo às 3.000 horas" e o item da sidebar.
 - **O que NÃO saiu, de propósito:** as travas de `formato=longo` em 9 rotas (comprometer, popular, publicar-agendados, gerar-roteiro, publicar, aprender, decisor, duplicidade, use-bi/use-hoje) — elas impedem que um vídeo longo caia na grade de Shorts e seja despachado nas 5 redes. Custam nada e protegem um retorno futuro do formato. Também ficam `docs/40_PRODUTO/19` e `20` e `public/pulso/avatar_dono/`: são acervo, não esteira.
