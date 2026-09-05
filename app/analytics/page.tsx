@@ -34,12 +34,10 @@ import {
   CardVerticais,
   HeroMonetizacao,
   ModalDrill,
-  CardHorasLongos,
   CardPinterest,
 } from '@/components/analytics-cards'
 import { ASSINATURAS_MENSAIS_BRL } from '@/lib/config/custos'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
-import { useHorasLongos } from '@/lib/hooks/use-horas-longos'
 import { usePinterest } from '@/lib/hooks/use-pinterest'
 import { useBi, type BiFiltros } from '@/lib/hooks/use-bi'
 import { useDecisao } from '@/lib/hooks/use-decisao'
@@ -211,7 +209,6 @@ export default function AnalyticsPage() {
     return m
   }, [data])
 
-  const { data: horasLongos } = useHorasLongos()
   const { data: pinterest } = usePinterest()
   const gatesCalc = useMemo(() => {
     return GATES_MONETIZACAO.map((g) => {
@@ -411,7 +408,6 @@ export default function AnalyticsPage() {
               conversaoYt={gatesCalc.find((c) => c.g.plataforma === 'youtube')?.conv ?? null}
             />
             <HeroMonetizacao gatesCalc={gatesCalc} />
-            <CardHorasLongos dados={horasLongos} />
             <CardPinterest dados={pinterest} />
             <div className="grid gap-3.5 lg:grid-cols-2">
               <CardAlcancePorRede porRede={porRede} totalViews={resumo?.views ?? 0} />

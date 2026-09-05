@@ -20,7 +20,6 @@ import { useMemo, useState } from 'react'
 import { ErrorState } from '@/components/ui/error-state'
 import { PageHeader } from '@/components/layout/page-header'
 import { CockpitDia } from '@/components/cockpit-dia'
-import { LongosProntos } from '@/components/longos-prontos'
 import { useAgendarPublicacao, useConteudosProntos } from '@/lib/hooks/use-calendario'
 import { useAgenda } from '@/lib/hooks/use-agenda'
 import { CalendarioAgenda, SlotsTravando, type ItemAgenda } from '@/components/agenda-enxuta'
@@ -419,7 +418,6 @@ export default function PublicarPage() {
 
         {aba === 'plano' && (
           <>
-            <LongosProntos />
             <CockpitDia mostrarLinkPublicar={false} />
           </>
         )}

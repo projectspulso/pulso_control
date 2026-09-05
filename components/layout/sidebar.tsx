@@ -44,7 +44,6 @@ const navigation = [
   { name: 'Assets', href: '/assets', icon: Library, badge: null, soAdmin: false },
   { name: 'Produção', href: '/producao', icon: Clapperboard, badge: null, soAdmin: false },
   // Trilha separada dos Shorts (série de vídeos longos — rumo às 3.000h do YPP)
-  { name: 'Bastidores', href: '/bastidores', icon: Film, badge: null, soAdmin: false },
   { name: 'Central de Publicação', href: '/publicar', icon: Send, badge: 'ai', soAdmin: false },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null, soAdmin: false },
   { name: 'Configurações', href: '/settings', icon: Settings, badge: null, soAdmin: false },

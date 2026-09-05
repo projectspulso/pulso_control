@@ -4,6 +4,17 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Removido (04/09)
+- **Esteira dos Bastidores sai do app.** Decisão do dono: a série passa ao orquestrador, que conduz com o Limelight. Removidos `/bastidores`, `/api/bastidores/*`, `use-episodios`, `use-horas-longos`, o bloco "Longos prontos" da Central de Publicação, o card "Rumo às 3.000 horas" e o item da sidebar.
+- **O que NÃO saiu, de propósito:** as travas de `formato=longo` em 9 rotas (comprometer, popular, publicar-agendados, gerar-roteiro, publicar, aprender, decisor, duplicidade, use-bi/use-hoje) — elas impedem que um vídeo longo caia na grade de Shorts e seja despachado nas 5 redes. Custam nada e protegem um retorno futuro do formato. Também ficam `docs/40_PRODUTO/19` e `20` e `public/pulso/avatar_dono/`: são acervo, não esteira.
+- **Antes de remover**, os 10 episódios foram exportados crus (19 colunas, os 3 `roteiro_md` inteiros) para `Cockpit/_BASTIDORES_EXPORT_EPISODIOS_2026-09-04.json`. O material `.md` é a versão humana; o export é o dado. Os dois sobrevivem — condição do orquestrador para "remover do app" não virar "apagar conhecimento".
+- **A tabela `pulso_content.episodios` continua de pé.** Dropar é o único passo que não volta com `git revert`, e espera ordem explícita do dono.
+
+### Corrigido (04/09)
+- **O dia do PULSO passa a ser o dia de Brasília.** O contador zerava às 21h: `toISOString()` devolve o dia UTC, que depois das 21h já é o seguinte. Medido no momento do relato: dia UTC dava 0 vídeos, dia BRT dava 3 em 4 redes. Corrigidos `contarPublicadosHoje`, a tela Hoje, o teto da linha de produção e o radar de estouro. `lib/datas.ts` separa os dois casos pelo nome (`diaBRT` para coluna com fuso, `diaNaive` para sem).
+- **`leituras_metricas.data_ref` reancorada em Brasília** (migration 060, aplicada). 25.731 de 31.351 linhas estavam deslocadas (24.579 exatamente +1 dia) porque a coleta roda às 21h BRT = 00h UTC. Não era "menos um dia em tudo": as ~5.600 da coleta das 03h já estavam certas. Recalculado linha a linha pelo `created_at`; 2.963 duplicatas resolvidas mantendo a mais recente. Resultado: 28.388 linhas, 0 erradas. Backup em `leituras_metricas_bkp_20260904`.
+
+
 ### Bastidores (03/09)
 - **Contrato fechado com o orquestrador** (`Cockpit/_RESPOSTA_DO_PULSO_BASTIDORES_2026-09-03.md`, responde a `_PERGUNTAS_AO_PULSO_BASTIDORES_2026-09-02.md`): a série **mora no Pulso**, o Limelight conduz como executor criativo, estado só avança em `pulso_content.episodios`. Linha de corte por estágio: roteiro = Limelight redige / **dono aprova** · narração = Limelight (clone, bloqueado na amostra de voz do dono) · capturas = Pulso (🔒 aplicado aqui) · montagem = Limelight, EP01 com o Pulso no loop · revisão→publicação = dono, só YouTube. Segredo: só o agregado do contrato por rede viaja; quartis/thresholds/prompts não.
 - **Roteiros levados para a esteira**: `episodios.roteiro_md` estava **vazio nos 10 episódios** — os roteiros só existiam em `19_SERIE_BASTIDORES.md`, e a transição `planejado → roteiro_ok` não tinha o que aprovar. EP01 (5.185 chars), EP04 (3.269) e EP09 (4.202) gravados. Os 7 restantes têm só tese + `material`.
