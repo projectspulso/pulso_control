@@ -43,3 +43,6 @@ next-env.d.ts
 # Python bytecode (nao versionar)
 __pycache__/
 *.pyc
+
+# sessao gravada para a captura dos Bastidores — CREDENCIAL, nunca versionar
+scripts/capturas/.sessao.json
