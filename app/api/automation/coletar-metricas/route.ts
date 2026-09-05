@@ -514,7 +514,14 @@ async function coletar(request: NextRequest) {
       // LEITURA LIMPA: 1 registro por post por dia em pulso_analytics.leituras_metricas (SEM FK —
       // captura TODOS os posts; crescimento = diferença entre leituras). Upsert no dia (latest do dia).
       try {
-        const dataRef = agora.toISOString().slice(0, 10)
+        // O DIA DA LEITURA É O DIA DE BRASÍLIA em que ela foi tirada, não o dia UTC.
+        // A coleta principal roda às 21h BRT, que já é 00h UTC do dia seguinte: com
+        // `toISOString()` toda leitura da noite nascia carimbada com AMANHÃ, e o painel mostrava
+        // ganho num dia que ainda não existia. Medido em 04/09/2026: 25.731 das 31.351 linhas
+        // estavam deslocadas (24.579 exatamente +1 dia); as ~5.600 certas eram da coleta das 03h
+        // BRT, que cai do lado certo da meia-noite UTC — por isso o conserto do histórico
+        // recalculou linha a linha, nunca "menos um dia em tudo".
+        const dataRef = agora.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
         // SÓ as colunas que leituras_metricas TEM. `extras` carrega taxa_retencao e
         // taxa_conversao (que só existem em metricas_publicacao) — jogá-las aqui via `...extras`
         // fazia o insert dar 400 (PGRST204) e o catch abaixo engolia em silêncio. Foi o que
