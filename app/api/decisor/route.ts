@@ -16,6 +16,7 @@ import {
   type PubBruta,
 } from '@/lib/decisor/fatos'
 import { montarContratoRedes } from '@/lib/decisor/contrato-redes'
+import { hojeBRT, diaBRT } from '@/lib/datas'
 
 /**
  * GET /api/decisor
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient()
-    const desde = new Date(Date.now() - DIAS_SERIE * 86_400_000).toISOString().slice(0, 10)
+    const desde = new Date(Date.now() - DIAS_SERIE * 86_400_000).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
 
     const [pubQ, leiQ, ideiasQ, filaQ, roteirosQ, parecerQ, segQ, audiosQ] = await Promise.all([
       supabase
@@ -220,11 +221,13 @@ export async function GET(request: NextRequest) {
 }
 
 function contarPublicadosHoje(pubs: PubBruta[]) {
-  const hoje = new Date().toISOString().slice(0, 10)
+  // BRT dos dois lados. Com o dia UTC, das 21h à meia-noite este contador dava ZERO: já era o dia
+  // seguinte em UTC enquanto as publicações da noite ainda eram de hoje. Ver lib/datas.ts.
+  const hoje = hojeBRT()
   const ideias = new Set<string>()
   const redes = new Set<string>()
   for (const p of pubs) {
-    if (!p.dataPublicacao || p.dataPublicacao.slice(0, 10) !== hoje) continue
+    if (!p.dataPublicacao || diaBRT(p.dataPublicacao) !== hoje) continue
     if (p.ideiaId) ideias.add(p.ideiaId)
     redes.add(p.plataforma)
   }

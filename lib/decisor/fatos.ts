@@ -69,7 +69,9 @@ export function radarDeEstouro(
 ): PostEmAlta[] {
   const maxIdade = opts?.maxIdadeDias ?? 4
   const mult = opts?.multiplo ?? MULTIPLO_ESTOURO
-  const hoje = opts?.hoje ?? new Date().toISOString().slice(0, 10)
+  // BRT: a idade do post em dias é contada contra o dia de Brasília. Com UTC, depois das 21h
+  // todo post do dia ganhava um dia de idade de presente e saía do radar cedo demais.
+  const hoje = opts?.hoje ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
 
   const amostra = new Map<string, number[]>() // "rede|idade" -> views observadas
   const ultimo = new Map<string, { ideiaId: string; plataforma: string; views: number; idade: number }>()
@@ -433,7 +435,7 @@ export interface CoberturaEntrada {
 }
 
 export function coberturaPorRede(linhas: CoberturaEntrada[], hoje?: string): CoberturaRede[] {
-  const ref = hoje ?? new Date().toISOString().slice(0, 10)
+  const ref = hoje ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
   const ag = new Map<
     string,
     { n: number; manuais: number; ultima: string | null; tem: Map<string, number> }

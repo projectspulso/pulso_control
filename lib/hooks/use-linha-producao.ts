@@ -57,7 +57,8 @@ export function useLinhaProducao() {
     queryKey: ['linha-producao'],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const hoje = new Date().toISOString().slice(0, 10)
+      // BRT: o teto do dia tem que virar à meia-noite de Brasília, não às 21h
+      const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
       const [cfgQ, pipeQ, ideiasQ, rotQ, audQ, pubQ] = await Promise.all([
         supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle(),
         supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status, metadata'),

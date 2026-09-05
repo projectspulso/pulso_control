@@ -87,7 +87,8 @@ export interface Hoje {
   coberturaRecente: CoberturaVideo[]
 }
 
-const HOJE_ISO = () => new Date().toISOString().slice(0, 10)
+// BRT, não UTC: depois das 21h o dia UTC já virou e a tela perdia as publicações da noite.
+const HOJE_ISO = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
 
 export function useHoje() {
   return useQuery<Hoje>({
