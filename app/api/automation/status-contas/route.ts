@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
+import type { NextRequest } from 'next/server'
+import { guardApi } from '@/lib/auth/api-guard'
 
 const REDES = ['youtube', 'instagram', 'facebook', 'tiktok', 'kwai'] as const
 
@@ -14,7 +16,10 @@ const REDES = ['youtube', 'instagram', 'facebook', 'tiktok', 'kwai'] as const
 const GRAPH = 'https://graph.facebook.com/v23.0'
 const YT_CHANNEL_ID = 'UCqrAzwWiKvphDqH2o6PGzBw'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const negado = await guardApi(request)
+  if (negado) return negado
+
   const contas: Record<string, { seguidores: number | null; detalhe?: string }> = {
     youtube: { seguidores: null },
     instagram: { seguidores: null },

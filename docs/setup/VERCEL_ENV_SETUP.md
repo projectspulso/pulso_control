@@ -24,7 +24,7 @@ Environment: Production, Preview, Development
 
 ```
 Name: NEXT_PUBLIC_SUPABASE_ANON_KEY
-Value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sY2lzYmZkaW9rbWlweWlodHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1ODk0OTksImV4cCI6MjA3OTE2NTQ5OX0.-Cfzv9ebOYB8I93zNLghWTszawJk4G3rXwiTTY9PpOI
+Value: <o JWT do n8n — pegar no painel do n8n; NUNCA colar aqui>
 Environment: Production, Preview, Development
 ```
 
@@ -38,7 +38,7 @@ Environment: Production, Preview, Development
 
 ```
 Name: N8N_API_KEY
-Value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzZmYzNmJhMy1lMzM1LTRlYWItYmEyNi03NGVkM2YwOTIyN2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJtY3Atc2VydmVyLWFwaSIsImp0aSI6IjAzMmUzNDc4LWIwMjItNDExZi1iNDEzLTQwMzZhMmEzMjk5NSIsImlhdCI6MTc2MzU5Mzk2N30.dOps3JjCuOeWUbqygaIb1LkUwBXNCKc9-KMcJeJilaU
+Value: <o JWT do n8n — pegar no painel do n8n; NUNCA colar aqui>
 Environment: Production, Preview, Development
 ```
 

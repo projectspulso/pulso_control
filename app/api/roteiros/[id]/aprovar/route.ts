@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { guardApi } from '@/lib/auth/api-guard'
 
 /**
  * POST /api/roteiros/[id]/aprovar
@@ -14,9 +15,12 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 export const maxDuration = 60
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const negado = await guardApi(request)
+  if (negado) return negado
+
   try {
     const { id } = await params
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

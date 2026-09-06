@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { guardApi } from '@/lib/auth/api-guard'
 
 // Precomputa o EMBEDDING de cada clip (texto = prompt + visão + vtags) e grava no
 // catálogo. text-embedding-3-small com dimensions:256 (leve). Incremental + idempotente.
@@ -23,7 +24,10 @@ function textoDe(c: Clip): string {
   return [c.prompt, c.visao?.descricao || '', (c.vtags || []).join(', '), c.tema].filter(Boolean).join('. ').slice(0, 800)
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const negado = await guardApi(request)
+  if (negado) return negado
+
   if (!autorizado(request)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return NextResponse.json({ error: 'OPENAI_API_KEY ausente' }, { status: 500 })

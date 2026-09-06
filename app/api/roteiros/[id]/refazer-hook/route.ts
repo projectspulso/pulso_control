@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { refazerHookRoteiro } from '@/lib/automation/refazer-hook'
+import { guardApi } from '@/lib/auth/api-guard'
 
 /**
  * POST /api/roteiros/[id]/refazer-hook
@@ -12,6 +13,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const negado = await guardApi(request)
+  if (negado) return negado
+
   void request
   try {
     const { id } = await params

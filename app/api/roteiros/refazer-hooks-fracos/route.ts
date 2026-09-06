@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { refazerHookRoteiro } from '@/lib/automation/refazer-hook'
+import { guardApi } from '@/lib/auth/api-guard'
 
 /**
  * POST /api/roteiros/refazer-hooks-fracos
@@ -9,6 +10,9 @@ import { refazerHookRoteiro } from '@/lib/automation/refazer-hook'
  * estourar rate limit do Gemini.
  */
 export async function POST(request: NextRequest) {
+  const negado = await guardApi(request)
+  if (negado) return negado
+
   void request
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
