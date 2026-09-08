@@ -28,3 +28,9 @@ end $$;
 -- Prova (08/09 14:49): 401 em ideias/roteiros/pipeline_producao/logs_workflows (public) e em
 -- pulso_core.usuarios_internos/plataforma_credenciais/configuracoes, pulso_automation.workflows,
 -- pulso_analytics.metricas_diarias; 200 em vw_hub_videos/vw_hub_links; hub 200, /v/1 200, app 200.
+-- Adendo 08/09 15:2x: consumidor quebrado achado pelo Pulso via edge_logs (401 ×7): o digiai
+-- (espelhoMotores.ts) e o Telão leem public.v_espelho_pulso e v_espelho_pulso_dias com a anon
+-- key do Pulso — contrato deliberado da 057. v_espelho_pulso expõe custo/receita do Pulso a
+-- anônimo: fica FECHADA até o dono decidir (portão 37). v_espelho_pulso_dias só tem
+-- engajamento por dia/plataforma: grant devolvido ao anon (orquestrador geral).
+grant select on public.v_espelho_pulso_dias to anon;
