@@ -4,6 +4,16 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Segurança (08/09)
+- **`anon` tinha `TRUNCATE` em `pulso_content.agenda_atribuicoes`** — a chave pública, que viaja no bundle do navegador, podia esvaziar a tabela. Revogado (`REFERENCES,SELECT,TRIGGER,TRUNCATE` → `SELECT`), migration `061`. Varri os quatro privilégios destrutivos em todos os schemas `pulso_*`: este era o único, e agora são **zero**. Conferido por chamada real depois: leitura anon 200, app 200, hub público 200 — nada quebrou.
+- **`guardApi` nas 5 rotas abertas** (`roteiros/[id]/aprovar`, `refazer-hook`, `refazer-hooks-fracos`, `automation/status-contas`, `banco-clips/embed`). O middleware exclui `/api`, então rota sem guarda é rota pública. Verificado **em produção** durante o deploy: a mesma chamada devolveu `200` antes e `401` depois. `banco-clips` (base) e `banco-clips/match` ficaram abertas de propósito — `motor/banco_clips.py` as chama de fora e a guarda derrubaria o worker de render calado.
+- **Cadastro público fechado** (`disable_signup=true`). Medido: já estava fechado quando fui aplicar — o dono fechou antes.
+- **JWT do `N8N_API_KEY` fora dos dois `VERCEL_ENV_SETUP.md`.** A revogação no n8n e a reescrita de histórico continuam com o dono.
+
+### Ainda aberto (precisa da view pública do hub antes)
+- **RLS desligada em 16 tabelas de `pulso_content`** — e `ideias`/`pipeline_producao` têm **policies escritas com RLS OFF**, que não fazem nada mas *parecem* proteção para quem lê a lista de policies.
+- **`SELECT` do anon** e **DML completo do `authenticated`** — hoje contidos pelo cadastro fechado e 1 usuário só; voltam a ser críticos se o cadastro reabrir.
+
 ### Adicionado (05/09)
 - **Capturador dos Bastidores em 4K real.** `npm run capturas:login` (o dono loga uma vez) + `npm run capturas` produzem **PNG 3840×2160 nativo** — medido no cabeçalho do arquivo, não estimado. O navegador do agente entrega 1568×579 JPEG, que é teto de ferramenta: capturado a 1×, o zoom da montagem vira interpolação justo no quadro em que o número é o assunto. O login fica humano por desenho — o agente não digita senha do dono nem move cookie de sessão entre navegadores; o arquivo de sessão é credencial e está no `.gitignore`.
 
