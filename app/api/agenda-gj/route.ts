@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { hojeBRT } from '@/lib/datas'
+import { createHash, timingSafeEqual } from 'node:crypto'
 
 /**
  * GET /api/agenda-gj — a agenda de trabalho do PULSO para o GJ, com credencial de UMA LEITURA.
@@ -35,19 +36,21 @@ const DIAS_MAX = 90
 
 const COLUNAS = 'data, horario, canal_nome, ideia_titulo, estagio, status, fixado'
 
+const sha256 = (v: string) => createHash('sha256').update(v, 'utf8').digest()
+
 export async function GET(request: NextRequest) {
   const esperado = process.env.AGENDA_GJ_SECRET
   if (!esperado) {
     return NextResponse.json({ error: 'Agenda indisponivel' }, { status: 503 })
   }
 
+  // SHA-256 dos dois lados antes de comparar: os digests tem sempre 32 bytes, entao a comparacao
+  // nao depende do tamanho do segredo. A versao anterior checava `recebido.length !==
+  // esperado.length` ANTES do laco e respondia mais cedo para tamanho errado — vazava o TAMANHO do
+  // segredo pelo tempo de resposta, que e exatamente o que comparacao em tempo constante existe
+  // para nao fazer. Achado pelo agente do MKT ao copiar este arquivo como molde.
   const recebido = request.headers.get('x-agenda-gj-secret')
-  if (!recebido || recebido.length !== esperado.length) {
-    return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
-  }
-  let diff = 0
-  for (let i = 0; i < esperado.length; i++) diff |= recebido.charCodeAt(i) ^ esperado.charCodeAt(i)
-  if (diff !== 0) {
+  if (!recebido || !timingSafeEqual(sha256(recebido), sha256(esperado))) {
     return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
   }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { createHash, timingSafeEqual } from 'node:crypto'
 
 /**
  * GET /api/espelho — o espelho do PULSO para o digiai, com credencial de UMA LEITURA.
@@ -25,20 +26,22 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
  * nada. Portão que abre no erro não é portão (R-037).
  */
 
+const sha256 = (v: string) => createHash('sha256').update(v, 'utf8').digest()
+
 export async function GET(request: NextRequest) {
   const esperado = process.env.ESPELHO_SECRET
   if (!esperado) {
     return NextResponse.json({ error: 'Espelho indisponivel' }, { status: 503 })
   }
 
+  // SHA-256 dos dois lados antes de comparar: os digests tem sempre 32 bytes, entao a comparacao
+  // nao depende do tamanho do segredo. A versao anterior checava `recebido.length !==
+  // esperado.length` ANTES do laco e respondia mais cedo para tamanho errado — vazava o TAMANHO do
+  // segredo pelo tempo de resposta, que e exatamente o que comparacao em tempo constante existe
+  // para nao fazer. O comentario que estava aqui afirmava "comparacao de tamanho fixo" e mentia.
+  // Achado pelo agente do MKT ao copiar este arquivo como molde.
   const recebido = request.headers.get('x-espelho-secret')
-  // comparação de tamanho fixo evita vazar o segredo pelo tempo de resposta
-  if (!recebido || recebido.length !== esperado.length) {
-    return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
-  }
-  let diff = 0
-  for (let i = 0; i < esperado.length; i++) diff |= recebido.charCodeAt(i) ^ esperado.charCodeAt(i)
-  if (diff !== 0) {
+  if (!recebido || !timingSafeEqual(sha256(recebido), sha256(esperado))) {
     return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
   }
 
