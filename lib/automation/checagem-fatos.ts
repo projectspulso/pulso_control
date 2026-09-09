@@ -156,6 +156,74 @@ const PROMPT = [
   '"veredito":"ok|errada|nao_sei","observacao":"curta","fonte":"..."|null}]}',
 ].join('\n')
 
+/**
+ * TRAVA DO LIMITE ABERTO — em código, porque o prompt já pedia isso e o modelo não obedeceu.
+ *
+ * MEDIDO em 09/09/2026 sobre as 16 acusações que a checagem tinha acumulado em 211 roteiros:
+ * QUATRO eram o mesmo engano. O roteiro afirma um limite aberto e o modelo devolve o valor exato
+ * como se fosse contradição, quando o valor SATISFAZ o limite:
+ *
+ *   "mais de 300 anos antes"      x  "a Antártida foi avistada em 1820"   (1820−1513 = 307) ✔
+ *   "mais de um milhão de dólares" x  "1,04 milhão de dólares"                              ✔
+ *   "mais de 70 anos"              x  "73 anos"                                             ✔
+ *   "Patrimônio da Humanidade"     x  "reconhecida como Patrimônio em 1980"  (acrescenta)   ✔
+ *
+ * Nos quatro o roteiro estava CERTO. Acusar aqui não é rigor, é ruído — e ruído em checagem de
+ * fato custa caro duas vezes: gera revisão inútil e ensina quem lê a ignorar o alerta, que é como
+ * o erro de verdade passa. Por isso a regra virou código: um `errada` cujo `sabido` satisfaz o
+ * limite do próprio trecho é rebaixado a `ok`, com a observação preservada.
+ *
+ * Só rebaixa quando consegue LER os dois números. Se não conseguir, deixa como veio — a trava
+ * corrige o engano que ela entende, não opina sobre o resto.
+ */
+// numeros por extenso, que o roteiro usa o tempo todo ("mais de um milhao de dolares") e o
+// `sabido` quase nunca usa ("1,04 milhao"). Sem isto o lado do roteiro sai vazio e a trava desiste.
+const EXTENSO: Record<string, string> = {
+  um: '1', uma: '1', dois: '2', duas: '2', tres: '3', quatro: '4', cinco: '5',
+  seis: '6', sete: '7', oito: '8', nove: '9', dez: '10', cem: '100', cento: '100',
+}
+
+function paresNumeroUnidade(txt: string): Array<{ n: number; unidade: string }> {
+  const t = (txt || '').toLowerCase()
+    .normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .replace(/(um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|cem|cento)/g,
+             (w) => EXTENSO[w] ?? w)
+    .replace(/(\d)[.\u00a0](\d{3})\b/g, '$1$2')
+    .replace(/(\d),(\d)/g, '$1.$2')
+  const pares: Array<{ n: number; unidade: string }> = []
+  const re = /(\d+(?:\.\d+)?)\s*(milh(?:ões|ao|ão|oes)|mil)?\s*(?:de\s+)?([a-zà-ú]{3,})?/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(t)) !== null) {
+    const escala = m[2] ? (m[2].startsWith('milh') ? 1e6 : 1e3) : 1
+    const unidade = (m[3] || '').replace(/s$/, '')
+    if (unidade) pares.push({ n: parseFloat(m[1]) * escala, unidade })
+  }
+  return pares
+}
+
+/**
+ * Só rebaixa quando os dois lados falam da MESMA unidade. Sem isso a trava compara um ano com uma
+ * duração — em #23 ela devolvia "satisfeito" comparando 1820 com 300, e acertava por sorte. O caso
+ * que me fez apertar é o inverso e é grave: um erro real como "mais de 20 pessoas" contra um
+ * `sabido` que mencione qualquer ano ("9 pessoas, em 1923") seria APAGADO, porque 1923 >= 20.
+ * Trava que esconde erro real é pior que o ruído que ela conserta.
+ */
+export function limiteAbertoSatisfeito(trecho: string, sabido: string | null): boolean {
+  if (!sabido) return false
+  const t = (trecho || '').toLowerCase()
+  const paraCima = /\b(mais de|acima de|pelo menos|no m[ií]nimo|superior a)\b/.test(t)
+  const paraBaixo = /\b(menos de|abaixo de|no m[aá]ximo|inferior a)\b/.test(t)
+  if (!paraCima && !paraBaixo) return false
+
+  const alvo = paresNumeroUnidade(t)
+  const real = paresNumeroUnidade(sabido)
+  if (!alvo.length || !real.length) return false
+
+  return alvo.some((a) =>
+    real.some((r) => r.unidade === a.unidade && (paraCima ? r.n >= a.n : r.n <= a.n))
+  )
+}
+
 export async function checarFatos(
   roteiro: string,
   callLLM: (prompt: string) => Promise<string>
@@ -178,10 +246,18 @@ export async function checarFatos(
         sabido: a.sabido == null || String(a.sabido).toLowerCase() === 'null' ? null : a.sabido,
         fonte: a.fonte == null || String(a.fonte).toLowerCase() === 'null' ? null : a.fonte,
       }))
+    // a trava do limite aberto age ANTES de qualquer contagem: o que ela rebaixa não conta como
+    // erro em lugar nenhum, nem na tela nem no bloqueio da esteira
+    const triadas = afirmacoes.map((a) =>
+      a.veredito === 'errada' && limiteAbertoSatisfeito(a.trecho, a.sabido)
+        ? { ...a, veredito: 'ok' as const,
+            observacao: `${a.observacao || ''} [rebaixado: o valor conhecido satisfaz o limite aberto do roteiro]`.trim() }
+        : a
+    )
     return {
-      afirmacoes,
-      erradas: afirmacoes.filter((a) => a.veredito === 'errada'),
-      naoConfirmadas: afirmacoes.filter((a) => a.veredito === 'nao_sei'),
+      afirmacoes: triadas,
+      erradas: triadas.filter((a) => a.veredito === 'errada'),
+      naoConfirmadas: triadas.filter((a) => a.veredito === 'nao_sei'),
       indisponivel: false,
       fontesVerificadas: false,
     }
