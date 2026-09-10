@@ -55,3 +55,7 @@ public/pulso/bastidores_capturas/*.mp4
 # rosto do dono (kit dos Bastidores). O repo e PUBLICO e `public/` e servido sem login:
 # os 23 quadros respondiam 200 a qualquer visitante. Moram no OneDrive.
 public/pulso/avatar_dono/
+
+# config local de MCP. Nao tem segredo hoje, mas JA teve um JWT (ec523ea) — e config que
+# guarda credencial nao deve morar em repo, ainda mais publico.
+.mcp.json
