@@ -51,3 +51,7 @@ scripts/capturas/.sessao.json
 # A crua do Decisor nunca pode viajar. O indice (.md) continua versionado.
 public/pulso/bastidores_capturas/*.png
 public/pulso/bastidores_capturas/*.mp4
+
+# rosto do dono (kit dos Bastidores). O repo e PUBLICO e `public/` e servido sem login:
+# os 23 quadros respondiam 200 a qualquer visitante. Moram no OneDrive.
+public/pulso/avatar_dono/
