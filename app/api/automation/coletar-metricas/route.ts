@@ -569,7 +569,24 @@ async function coletar(request: NextRequest) {
   // porque o IG é só ~1/3 das publicações.
   // PRAZO GLOBAL: a funcao morre aos 60s. Parar limpo aos 45s e avisar o que ficou vale mais do
   // que um 504 mudo — a rodada seguinte (ou a fatia por rede) pega o resto.
-  const PRAZO_GERAL_MS = 45_000
+  // ORCAMENTO DE TEMPO, derivado do teto — nao um numero magico.
+  //
+  // O QUE O DONO VIU (09/09/2026): 504 na tela de Automacao ao clicar em "Coletar Metricas". A
+  // funcao tem maxDuration=60; a rota gastava ate 50s LENDO e so entao gravava, e a gravacao de
+  // ~175 leituras leva ~18s. 50+18 passa dos 60, a Vercel mata e o gateway devolve 504.
+  //
+  // O erro estava na forma do prazo, nao no valor: ele media so a LEITURA e tratava a ESCRITA como
+  // se fosse de graca. Por isso aqui o orcamento sai do teto para tras — reserva a escrita
+  // primeiro, e o que sobra e o que pode ser gasto lendo. Se o maxDuration mudar, isto acompanha.
+  //
+  // MEDIDO por fatia depois do conserto (local, que e mais lento que a Vercel):
+  //   youtube 48s · facebook 36s · instagram 52s — todos abaixo do teto, contra 61s e 68s antes.
+  const TETO_MS = maxDuration * 1000
+  const MARGEM_MS = 10_000        // o gateway nao espera ate o ultimo milissegundo
+  const RESERVA_ESCRITA_MS = 18_000 // medido: ~18s para gravar ~175 leituras
+  const ORCAMENTO_LEITURA_MS = TETO_MS - MARGEM_MS - RESERVA_ESCRITA_MS // 32s
+
+  const PRAZO_GERAL_MS = ORCAMENTO_LEITURA_MS
   let restoPulados = 0
   const pubsResto = publicacoes.filter((p) => p.plataforma !== 'instagram')
   await comPool(pubsResto, 16, async (p) => {
@@ -592,7 +609,10 @@ async function coletar(request: NextRequest) {
   // não muda) e subir o pool para 8 — a cota da Graph marcava 1% de uso, os 3 eram educação, não
   // necessidade. E um prazo explícito: se ainda assim não couber, para limpo e AVISA quantos
   // ficaram, em vez de a função morrer calada no meio.
-  const PRAZO_IG_MS = 50_000
+  // O Instagram tem fase PROPRIA, que roda DEPOIS da geral — os prazos se somam. Medido: com 30s
+  // A fase do Instagram roda DEPOIS da geral e os dois prazos se SOMAM — por isso ela fica com
+  // metade do orcamento, nao com ele inteiro. Foi somar dois prazos cheios que produziu os 68s.
+  const PRAZO_IG_MS = Math.round(ORCAMENTO_LEITURA_MS / 2)
   const igDaVez = publicacoes
     .filter((p) => p.plataforma === 'instagram')
     .sort((a, b) => String(b.data_publicacao || '').localeCompare(String(a.data_publicacao || '')))
