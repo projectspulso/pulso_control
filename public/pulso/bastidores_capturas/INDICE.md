@@ -55,7 +55,7 @@ Status: `PENDENTE` (existe, dá para capturar) · `PERDIDA` (o estado não exist
 
 | Captura | Onde | Status |
 |---|---|---|
-| Comparativo por rede: views e alcance | `/analytics` | PENDENTE |
+| Comparativo por rede: views e alcance | `/analytics` | **FEITA** — `EP01_app_analytics-geral.png` |
 | Os posts do teste A/B lado a lado | `/validacao` (Aderência) | PENDENTE |
 | Ficha de um vídeo publicado nas 5 redes | `/video/[id]` | PENDENTE |
 
@@ -70,7 +70,7 @@ Status: `PENDENTE` (existe, dá para capturar) · `PERDIDA` (o estado não exist
 
 | Captura | Onde | Status |
 |---|---|---|
-| Decisor, visão geral | `/` (home) | PENDENTE — **só borrada** |
+| Decisor, visão geral | `/` (home) | **CRUA FEITA** — `EP06_app_decisor-visao.png` · a borrada ainda não existe |
 | Parecer do analista | `/` bloco do parecer | PENDENTE — **só borrada** |
 
 > **Nada deste episódio viaja sem blur.** O placar tema×rede, os quartis e qualquer peso ficam
@@ -115,10 +115,10 @@ periodicamente, porque mudam sozinhas.
 
 | Captura | Onde | Nota |
 |---|---|---|
-| Kanban de produção com a fila cheia | `/producao` | muda todo dia |
-| Calendário com a grade 2/dia sem buraco | `/publicar` | muda todo dia |
-| Esteira de ideias | `/esteira` | — |
-| Saúde dos dados (6 checks) | `/validacao` | — |
+| Kanban de produção com a fila cheia | `/producao` | **FEITA** — `EP01_app_kanban-producao.png` |
+| Calendário com a grade 2/dia sem buraco | `/publicar` | **FEITA** — `EP01_app_calendario-grade.png` |
+| Esteira de ideias | `/esteira` | **FEITA** — `EP01_app_esteira-ideias.png` |
+| Saúde dos dados (6 checks) | `/validacao` | **FEITA** — `EP01_app_saude-dos-dados.png` |
 | Ficha completa de um vídeo | `/video/[id]` | escolher um campeão |
 
 ---
@@ -131,3 +131,37 @@ periodicamente, porque mudam sozinhas.
 2. **Espelho no OneDrive** — combinar a pasta.
 3. **Peso no git:** PNG 4K é pesado. Se a pasta crescer, ela sai do git e fica só no OneDrive, com
    este índice permanecendo versionado.
+
+
+---
+
+## Primeira coleta — 09/09/2026
+
+**6 capturas, todas 3840×2160 PNG nativo**, conferidas lendo as dimensões do cabeçalho do arquivo,
+não confiando no nome. Pasta com 3,3 MB.
+
+A pendência nº 1 deste índice — *"verificar se o navegador entrega 3840×2160 de verdade"* — está
+**respondida, e a resposta era não**: o navegador do agente entrega 1568×579 JPEG. Foi por isso que
+o capturador existe. Ele roda o Chromium a 1920×1080 com escala 2, e o dono faz o login uma única
+vez (`npm run capturas:login`); a sessão é credencial e não é versionada.
+
+**O que ficou faltando, e é humano:**
+- **A versão borrada do EP06.** A crua está aqui e **não pode viajar**. Enquanto a borrada não
+  existir, essa captura não sai desta pasta.
+- **As de fora do app**: YouTube Studio (EP09), kit do avatar e forma de onda (EP07).
+- **T01E10** continua agendada para 17/09 — o contador no dia 100 só existe naquele dia.
+
+**Onde os arquivos moram, e por quê não é aqui.** As capturas NÃO ficam nesta pasta. Ficam em
+`OneDrive/Marketing_e_Vendas/pulso/bastidores_capturas`, e o capturador escreve lá por padrão.
+
+A pendência nº 3 previa que a pasta sairia do git "quando o peso incomodasse". O motivo real
+apareceu antes do peso, e é mais sério: **duas portas fariam a captura crua do Decisor viajar.**
+
+1. O repositório `projectspulso/pulso_control` é **público** no GitHub. Commitar é publicar.
+2. Tudo em `public/` é servido pelo Next **sem login** — o middleware exclui `.png` do matcher por
+   conta própria. Um deploy deixaria `pulsoprojects.vercel.app/pulso/bastidores_capturas/...`
+   aberto para qualquer visitante.
+
+Salvar em `public/` era, portanto, o pior lugar possível para material marcado 🔒 — e o nome da
+pasta dizia isso o tempo todo. Trava aplicada em 09/09: destino padrão fora do repo + `.gitignore`
+barrando `*.png` e `*.mp4` aqui. Este índice (texto) continua versionado.

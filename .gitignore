@@ -46,3 +46,8 @@ __pycache__/
 
 # sessao gravada para a captura dos Bastidores — CREDENCIAL, nunca versionar
 scripts/capturas/.sessao.json
+
+# capturas dos Bastidores: o repo e PUBLICO e `public/` e servido sem login.
+# A crua do Decisor nunca pode viajar. O indice (.md) continua versionado.
+public/pulso/bastidores_capturas/*.png
+public/pulso/bastidores_capturas/*.mp4

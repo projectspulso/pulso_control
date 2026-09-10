@@ -27,7 +27,14 @@ import path from 'node:path'
 
 const BASE = process.env.CAPTURA_BASE || 'http://localhost:3004'
 const SESSAO = path.join(import.meta.dirname, '.sessao.json')
-const DESTINO = path.join(process.cwd(), 'public', 'pulso', 'bastidores_capturas')
+// FORA do `public/`, e isto e trava, nao arrumacao. Duas portas tornavam a pasta antiga um
+// vazamento: (1) o repositorio `projectspulso/pulso_control` e PUBLICO no GitHub, entao commitar
+// uma captura e publica-la; (2) tudo em `public/` e servido pelo Next SEM login — o middleware
+// exclui `.png` do matcher de propria conta. A captura do Decisor esta marcada no indice como
+// "so viaja borrada": as duas portas a fariam viajar crua. O destino padrao agora e o OneDrive,
+// que e onde o indice ja dizia que ficaria o espelho.
+const DESTINO = process.env.CAPTURA_DESTINO
+  || path.join('D:', 'OneDrive - Óticas Taty Mello', 'Grupo Mello', 'Marketing_e_Vendas', 'pulso', 'bastidores_capturas')
 
 // O executavel ja baixado pelo Playwright desta maquina — o pacote npm aqui e so o driver.
 function acharChromium() {
