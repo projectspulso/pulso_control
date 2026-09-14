@@ -1,8 +1,11 @@
 -- ============================================================
 -- ESPELHO DE SCHEMA — pulso_control  (projeto Supabase: projectspulso's Project / region sa-east-1)
--- Snapshot estrutural gerado via Management API. Read-only.
--- Para o DDL EXATO (constraints/índices/triggers), a fonte canônica é ./migrations/.
--- Regenerar: node Cockpit/scripts/dump-db-mirror.mjs pulso_control
+-- Gerado em 2026-09-14 por Cockpit/scripts/dump-db-mirror.mjs. Read-only.
+--
+-- Aqui só as TABELAS: o repositório projectspulso/pulso_control é PÚBLICO. Grants, policies, corpos de função, RLS e cron são o mapa de
+-- acesso do banco e ficam no espelho completo, no repo privado do Cockpit:
+--   Cockpit/security/espelhos/pulso_control/schema-completo.sql
+-- Regra: portão 90 da ordem do dia (mapa de acesso sai de repo público). A fonte canônica do DDL é ./migrations/.
 -- ============================================================
 
 CREATE TABLE pulso_analytics.eventos (
@@ -34,6 +37,25 @@ CREATE TABLE pulso_analytics.leituras_metricas (
     reach integer,
     retention_graph jsonb,
     estimado boolean NOT NULL DEFAULT false
+);
+
+CREATE TABLE pulso_analytics.leituras_metricas_bkp_20260904 (
+    id uuid,
+    ideia_id uuid,
+    plataforma text,
+    post_id text,
+    data_ref date,
+    coletado_em timestamp with time zone,
+    views integer,
+    likes integer,
+    comentarios integer,
+    compartilhamentos integer,
+    created_at timestamp with time zone,
+    avg_watch_ms integer,
+    view_time_ms bigint,
+    reach integer,
+    retention_graph jsonb,
+    estimado boolean
 );
 
 CREATE TABLE pulso_analytics.metricas_diarias (
@@ -214,6 +236,28 @@ CREATE TABLE pulso_content.conteudos (
     updated_at timestamp without time zone DEFAULT timezone('utc'::text, now())
 );
 
+CREATE TABLE pulso_content.episodios (
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    serie_id uuid NOT NULL,
+    temporada integer NOT NULL DEFAULT 1,
+    numero integer NOT NULL,
+    codigo text NOT NULL,
+    titulo text NOT NULL,
+    gancho text,
+    material text,
+    roteiro_md text,
+    checklist jsonb NOT NULL DEFAULT '[]'::jsonb,
+    status text NOT NULL DEFAULT 'planejado'::text,
+    ordem_producao integer,
+    ideia_id uuid,
+    audio_url text,
+    video_url text,
+    data_prevista date,
+    notas text,
+    created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
 CREATE TABLE pulso_content.feedbacks (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
     entidade_tipo text NOT NULL,
@@ -262,7 +306,8 @@ CREATE TABLE pulso_content.ideias (
     personagem_sugerido_id uuid,
     nota_ia_inicial numeric,
     potencial_viral_ia numeric,
-    gatilho_psicologico text
+    gatilho_psicologico text,
+    formato text NOT NULL DEFAULT 'short'::text
 );
 
 CREATE TABLE pulso_content.logs_workflows (
@@ -383,6 +428,20 @@ CREATE TABLE pulso_content.plano_publicacao (
     intervalo_dias integer NOT NULL DEFAULT 2,
     hora_publicacao time without time zone NOT NULL DEFAULT '20:00:00'::time without time zone,
     ativo boolean NOT NULL DEFAULT true
+);
+
+CREATE TABLE pulso_content.receitas (
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    plataforma text NOT NULL,
+    programa text,
+    competencia date NOT NULL,
+    valor_brl numeric NOT NULL DEFAULT 0,
+    valor_usd numeric,
+    status text NOT NULL DEFAULT 'estimado'::text,
+    recebido_em date,
+    observacao text,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now()
 );
 
 CREATE TABLE pulso_content.roteiros (
@@ -624,31 +683,3 @@ CREATE TABLE pulso_distribution.posts_logs (
     payload jsonb,
     created_at timestamp without time zone DEFAULT timezone('utc'::text, now())
 );
-
--- ============================================================
--- ROW LEVEL SECURITY
--- ============================================================
--- RLS HABILITADO (7): pulso_automation.ai_config, pulso_automation.automation_queue, pulso_content.audios, pulso_content.logs_workflows, pulso_content.workflow_queue, pulso_core.configuracoes, pulso_core.plataforma_credenciais
--- ⚠️ RLS DESABILITADO (32): pulso_analytics.eventos, pulso_analytics.leituras_metricas, pulso_analytics.metricas_diarias, pulso_assets.assets, pulso_assets.conteudo_variantes_assets, pulso_automation.workflow_execucoes, pulso_automation.workflows, pulso_content.agenda_atribuicoes, pulso_content.canais_personagens, pulso_content.conteudo_variantes, pulso_content.conteudos, pulso_content.feedbacks, pulso_content.ideias, pulso_content.metricas_publicacao, pulso_content.personagens, pulso_content.pipeline_producao, pulso_content.pipeline_producao_backup_20251126, pulso_content.plano_publicacao, pulso_content.roteiros, pulso_content.roteiros_renders, pulso_content.thumbnails, pulso_content.videos, pulso_core.agenda_semanal, pulso_core.canais, pulso_core.canais_plataformas, pulso_core.plataformas, pulso_core.series, pulso_core.series_tags, pulso_core.tags, pulso_core.usuarios_internos, pulso_distribution.posts, pulso_distribution.posts_logs
-
--- POLICIES (20):
---   pulso_automation.ai_config  [SELECT]  ai_config_read
---   pulso_automation.ai_config  [ALL]  ai_config_write
---   pulso_automation.automation_queue  [SELECT]  automation_queue_read
---   pulso_automation.automation_queue  [ALL]  automation_queue_write
---   pulso_content.audios  [SELECT]  audios_select
---   pulso_content.ideias  [ALL]  Permitir tudo para todos
---   pulso_content.logs_workflows  [ALL]  Logs públicos escrita
---   pulso_content.logs_workflows  [SELECT]  Logs públicos leitura
---   pulso_content.pipeline_producao  [ALL]  Permitir tudo para todos
---   pulso_content.pipeline_producao  [ALL]  Pipeline público escrita
---   pulso_content.pipeline_producao  [SELECT]  Pipeline público leitura
---   pulso_content.roteiros  [ALL]  Permitir tudo para todos
---   pulso_content.workflow_queue  [ALL]  Fila publica escrita
---   pulso_content.workflow_queue  [SELECT]  Fila publica leitura
---   pulso_core.canais  [SELECT]  Permitir SELECT para todos
---   pulso_core.configuracoes  [ALL]  Configurações editáveis para authenticated
---   pulso_core.configuracoes  [SELECT]  Configurações visíveis para authenticated
---   pulso_core.plataforma_credenciais  [ALL]  Credenciais editáveis apenas para authenticated
---   pulso_core.plataforma_credenciais  [SELECT]  Credenciais visíveis apenas para authenticated
---   pulso_core.series  [SELECT]  Permitir SELECT para todos
