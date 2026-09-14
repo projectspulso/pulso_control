@@ -27,14 +27,45 @@ import { createHash, timingSafeEqual } from 'node:crypto'
  *
  * FALHA FECHADA: sem o segredo no ambiente responde 503 e não serve nada (R-037).
  *
- * JANELA: só o futuro, e limitada. `?dias=N` (padrão 30, teto 90). Sem isso a rota viraria despejo
- * do histórico inteiro a cada chamada — 235 linhas hoje e crescendo para sempre.
+ * JANELA: passado E futuro, os dois limitados. `?passado=N` (padrão 30, teto 90) e `?dias=N` (padrão
+ * 30, teto 90). O passado existe para o GJ RECONCILIAR: sem ele, um vídeo que publicou ou atrasou some
+ * da resposta e o GJ não tem como saber se concluiu ou se foi cancelado.
+ *
+ * O ID ESTÁVEL, E POR QUE ESTA ROTA TROCOU DE VIEW (14/09/2026). A primeira versão lia
+ * `vw_agenda_atribuicoes` e não devolvia id nenhum. O GJ mediu contra a agenda real do dono e travou:
+ * ele tem 34 eventos chaveados como `pp-<id>`, 20 marcados como concluídos e 10 atrasados, e sem o id
+ * os 34 viram referência nova e as conclusões se perdem. Fui ler como o `sync-pulso` antigo montava a
+ * chave — `'pp-' + r.pipeline_id`, lendo `vw_agenda_publicacao_geral`. Ou seja: não faltava só um
+ * campo, a rota estava na VIEW ERRADA. `vw_agenda_atribuicoes` tem outro espaço de id, e devolver o id
+ * dela quebraria as 34 referências do mesmo jeito que não devolver nada. Conferido: o `pipeline_id` de
+ * `vw_agenda_publicacao_geral` casa 149 de 149 com `pipeline_producao.id`, todos distintos.
+ *
+ * ESTA VIEW CARREGA A RECEITA: `pipeline_metadata` e `ideia_metadata` estão entre as colunas dela, e é
+ * nesses campos que moram a checagem (as fontes), a âncora e o gancho. A lista nomeada abaixo é o que
+ * impede que eles saiam — nunca troque por `*`.
  */
 
 const DIAS_PADRAO = 30
-const DIAS_MAX = 90
+const PASSADO_PADRAO = 30
+const JANELA_MAX = 90
 
-const COLUNAS = 'data, horario, canal_nome, ideia_titulo, estagio, status, fixado'
+// NOMEADAS. A view tem pipeline_metadata e ideia_metadata — a receita. Nenhum dos dois entra aqui.
+const COLUNAS = 'pipeline_id, datahora_publicacao_planejada, canal, serie, ideia_titulo, pipeline_status'
+
+function limitar(bruto: string | null, padrao: number): number {
+  // ausente NAO e zero. `Number(null)` e `Number('')` dao 0, e sem esta guarda a chamada sem
+  // parametro virava janela de 0 dias — o GJ receberia so o dia de hoje e as 34 referencias seguiriam
+  // perdidas. Achado no teste, nao na leitura. `passado=0` explicito continua valendo.
+  if (bruto === null || bruto.trim() === '') return padrao
+  const n = Number(bruto)
+  return Number.isFinite(n) && n >= 0 ? Math.min(Math.floor(n), JANELA_MAX) : padrao
+}
+
+function somarDias(diaBRT: string, n: number): string {
+  const d = new Date(`${diaBRT}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
 
 const sha256 = (v: string) => createHash('sha256').update(v, 'utf8').digest()
 
@@ -54,30 +85,48 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
   }
 
-  const pedido = Number(request.nextUrl.searchParams.get('dias'))
-  const dias = Number.isFinite(pedido) && pedido > 0 ? Math.min(pedido, DIAS_MAX) : DIAS_PADRAO
+  const dias = limitar(request.nextUrl.searchParams.get('dias'), DIAS_PADRAO)
+  const passado = limitar(request.nextUrl.searchParams.get('passado'), PASSADO_PADRAO)
 
-  const de = hojeBRT() // o dia do PULSO é o dia de Brasília; cortar um ISO em UTC erra depois das 21h
-  const ate = new Date(`${de}T12:00:00Z`)
-  ate.setUTCDate(ate.getUTCDate() + dias)
-  const limite = ate.toISOString().slice(0, 10)
+  const hoje = hojeBRT() // o dia do PULSO é o dia de Brasília; cortar um ISO em UTC erra depois das 21h
+  const de = somarDias(hoje, -passado)
+  const ate = somarDias(hoje, dias)
 
+  // `datahora_publicacao_planejada` é NAIVE e já está em Brasília (ver lib/datas.ts): compara por
+  // string e corta os dez primeiros caracteres. Converter de novo tiraria três horas que não existem.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
   const { data, error } = await supabase
-    .from('vw_agenda_atribuicoes')
+    .schema('pulso_content')
+    .from('vw_agenda_publicacao_geral')
     .select(COLUNAS)
-    .gte('data', de)
-    .lte('data', limite)
-    .order('data', { ascending: true })
-    .order('horario', { ascending: true })
+    .not('datahora_publicacao_planejada', 'is', null)
+    .gte('datahora_publicacao_planejada', `${de}T00:00:00`)
+    .lte('datahora_publicacao_planejada', `${ate}T23:59:59`)
+    .order('datahora_publicacao_planejada', { ascending: true })
 
   if (error) {
     return NextResponse.json({ error: `Agenda falhou: ${error.message}` }, { status: 500 })
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const agenda = (data ?? []).map((r: any) => {
+    const dh = String(r.datahora_publicacao_planejada)
+    const dia = dh.slice(0, 10)
+    return {
+      pipeline_id: r.pipeline_id, // estável: o GJ chaveia como `pp-<pipeline_id>`
+      data: dia,
+      horario: dh.slice(11, 16),
+      canal_nome: r.canal,
+      serie: r.serie ?? null,
+      ideia_titulo: r.ideia_titulo,
+      status: r.pipeline_status, // PUBLICADO/CANCELADO no passado = o que o GJ reconcilia
+      atrasado: dia < hoje && r.pipeline_status !== 'PUBLICADO' && r.pipeline_status !== 'CANCELADO',
+    }
+  })
+
   return NextResponse.json(
-    { de, ate: limite, dias, total: data?.length ?? 0, agenda: data ?? [] },
+    { hoje, de, ate, passado, dias, total: agenda.length, agenda },
     { headers: { 'Cache-Control': 'no-store' } },
   )
 }
