@@ -14,9 +14,14 @@
 -- `auth.role() = 'authenticated'` significa QUALQUER USUARIO LOGADO. E o "apenas" do nome da
 -- segunda soa restritivo e nao e: e a mesma frase. Terceira policy com nome que mente nesta auditoria.
 --
--- O QUE UM INTRUSO LOGADO LERIA em configuracoes (medido, so nomes de chave):
---   youtube_oauth   tiktok_oauth   n8n_api_key   higgsfield_saldo   extrato_semanal ...
--- Os dois primeiros sao os tokens que PUBLICAM nos canais. Com eles, controle dos canais.
+-- O QUE UM INTRUSO LOGADO FARIA em configuracoes — LER E ESCREVER, e isto corrige o que reportei
+-- primeiro. Das 4 policies com `auth.role() = 'authenticated'`, DUAS sao `ALL`, nao SELECT. Medido com
+-- update que nao muda valor nenhum (chave = chave), em transacao desfeita:
+--   intruso, antes da 071: consegue alterar 21 de 21 linhas
+--   intruso, depois:       0        ·   dono, depois: 21 (nao quebra)
+-- Leitura: youtube_oauth, tiktok_oauth, n8n_api_key — os tokens que PUBLICAM nos canais.
+-- Escrita: trocar esses tokens pelos dele, ou apagar `orcamento_travas` e desligar a trava de gasto
+-- do Higgsfield, que e dinheiro real. Eu tinha escrito "leria". Era pior.
 --
 -- CONTENCAO HOJE, circunstancial: cadastro fechado, 1 usuario (o dono, interno). Nenhum intruso
 -- existe agora — por isso nao ha evidencia de que esses tokens tenham vazado, e rotacionar por causa
