@@ -1,5 +1,23 @@
 -- 070_views_security_invoker.sql — 2026-09-14
--- ESCRITA, NAO APLICADA. Aguarda a palavra do dono.
+-- APLICADA em 14/09/2026, com a palavra do dono ("então vamos corrigir"). Espelho aqui.
+--
+-- PROVA PELA API REAL, antes e depois — nao por `set local role`. JWT assinado com a chave do proprio
+-- projeto (HS256), para um `sub` que nao existe em usuarios_internos. Nenhuma conta criada, nenhuma
+-- senha usada: a RLS so le o `sub` do token. Chamadas feitas ao PostgREST de producao.
+--
+--                           ANTES              DEPOIS
+--                           intruso  dono      intruso  dono
+--   public.roteiros          225     225          0     225
+--   public.ideias            291     291          0     291
+--   public.configuracoes      21      21          0      21
+--   pulso_core.configuracoes  21      21          0      21
+--   pulso_core.usuarios_int.   1       1          0       1
+--   pulso_content.v_custos_mes 10     10          0      10
+--   ESCRITA do intruso em configuracoes (PATCH no-op): 1 linha -> 0
+--
+-- Nada quebrou, conferido depois: hub publico 200 com 120 cards · vw_hub_videos (anon) 200 ·
+-- v_espelho_pulso_dias (anon) 200 · app 200.
+--
 --
 -- O QUE ESTA ABERTO, MEDIDO. Das 69 views do PULSO, 68 sao SECURITY DEFINER por omissao — no
 -- Postgres, view sem `security_invoker` le as tabelas com o privilegio de QUEM A CRIOU, nao de quem
