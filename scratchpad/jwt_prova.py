@@ -26,6 +26,11 @@ PAPEIS = {
   'dono':    jwt('7c89e951-63c6-41b9-81b0-094baab51d3e'),
 }
 ALVOS = [  # (rotulo, schema, relacao)
+  ('tabela: ai_config',      'pulso_automation', 'ai_config'),
+  ('tabela: automation_queue','pulso_automation', 'automation_queue'),
+  ('tabela: canais',         'pulso_core',    'canais'),
+  ('tabela: series',         'pulso_core',    'series'),
+  ('tabela: plat_credenciais','pulso_core',   'plataforma_credenciais'),
   ('views: roteiros',        'public',        'roteiros'),
   ('views: ideias',          'public',        'ideias'),
   ('views: configuracoes',   'public',        'configuracoes'),
