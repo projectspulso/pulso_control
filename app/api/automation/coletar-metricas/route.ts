@@ -586,45 +586,56 @@ async function coletar(request: NextRequest) {
   const RESERVA_ESCRITA_MS = 18_000 // medido: ~18s para gravar ~175 leituras
   const ORCAMENTO_LEITURA_MS = TETO_MS - MARGEM_MS - RESERVA_ESCRITA_MS // 32s
 
-  const PRAZO_GERAL_MS = ORCAMENTO_LEITURA_MS
-  let restoPulados = 0
-  const pubsResto = publicacoes.filter((p) => p.plataforma !== 'instagram')
-  await comPool(pubsResto, 16, async (p) => {
-    if (Date.now() - agora.getTime() > PRAZO_GERAL_MS) { restoPulados++; return }
-    await processarPub(p)
-  })
-  if (restoPulados > 0) {
-    avisos.push(`${restoPulados} publicacao(oes) ficaram para a proxima rodada (prazo geral de ${PRAZO_GERAL_MS / 1000}s). Use ?rede= para fatiar.`)
-  }
+  // UM PRAZO SO, ABSOLUTO, E AS DUAS FILAS CORRENDO JUNTAS.
+  //
+  // O QUE EU ERREI EM 09/09, e o dono viu em 16/09 como "dois videos com 0 e 1 de aderencia desde
+  // ontem". Ao consertar o 504 dei a fase geral um prazo de 32s e ao Instagram "metade do orcamento"
+  // (16s), escrevendo aqui que "os prazos se somam". NAO SE SOMAM: os dois contam do INICIO da
+  // chamada (`agora`). A fase geral rodava primeiro e gastava ate 32s; o Instagram comecava com o
+  // prazo de 16s JA VENCIDO e pulava tudo. Medido nas rodadas de 16/09: "Instagram: 0 lidos, 190
+  // ficaram para a proxima rodada" — em TODAS. Mesmo o cron dedicado do Instagram, que roda sozinho,
+  // so tinha 16s e lia metade. Resultado: Instagram foi de zero dia de atraso (09/09) para 98 de 190
+  // posts sem leitura ha mais de 24h, media de 87h.
+  //
+  // E o meu teste de 09/09 nao pegou porque chamei uma rede por vez; o botao "Coletar agora" da
+  // Aderencia chama todas juntas, que e onde a ordem das fases importa.
+  //
+  // SEGUNDO DEFEITO, mais antigo: a fila geral nao tinha ordem. O pool consome o array como vem, e
+  // quem sobra no prazo e a CAUDA — os posts mais novos. Foi por isso que os dois videos de 15/09
+  // (pinguins e polvo) ficaram com 0 e 1 no app enquanto o YouTube ja tinha 3 e 5. O Instagram ja
+  // tinha sido consertado para "mais novos primeiro" em 01/08; as outras redes nunca foram.
+  //
+  // A FORMA NOVA: um prazo so (o orcamento de leitura inteiro), as duas filas em paralelo, as duas
+  // ordenadas do mais novo para o mais antigo. O tempo total de leitura continua o mesmo que ja foi
+  // provado seguro contra o 504 — so passa a ser dividido de verdade. A escrita acontece dentro de
+  // `processarPub`, entao o que passa do prazo e apenas o que ja estava em voo (no maximo 16 + 8).
+  const PRAZO_MS = ORCAMENTO_LEITURA_MS
+  const maisNovoPrimeiro = (a: LinhaPublicacao, b: LinhaPublicacao) =>
+    String(b.data_publicacao || '').localeCompare(String(a.data_publicacao || ''))
 
-  // INSTAGRAM: NOVOS PRIMEIRO, e com folga de concorrência.
-  //
-  // O pool de 3 com pausa de 150ms coube enquanto eram ~100 posts. Em 01/08 o volume passou disso
-  // e o Instagram deixou de caber nos 60s da Vercel: passou a ler 56-67 de 107 todo dia, contra
-  // 105-107 das outras redes. Pior, a consulta não tinha ORDEM — o pool consome o array como vem,
-  // então quem ficava de fora era sempre a CAUDA, isto é, os posts mais novos. Os dois vídeos de
-  // 03/08 ficaram com views=0 no app por dois dias enquanto os antigos atualizavam normalmente.
-  //
-  // Duas correções: ordenar por publicação DESC (post de ontem muda muito, post de junho quase
-  // não muda) e subir o pool para 8 — a cota da Graph marcava 1% de uso, os 3 eram educação, não
-  // necessidade. E um prazo explícito: se ainda assim não couber, para limpo e AVISA quantos
-  // ficaram, em vez de a função morrer calada no meio.
-  // O Instagram tem fase PROPRIA, que roda DEPOIS da geral — os prazos se somam. Medido: com 30s
-  // A fase do Instagram roda DEPOIS da geral e os dois prazos se SOMAM — por isso ela fica com
-  // metade do orcamento, nao com ele inteiro. Foi somar dois prazos cheios que produziu os 68s.
-  const PRAZO_IG_MS = Math.round(ORCAMENTO_LEITURA_MS / 2)
-  const igDaVez = publicacoes
-    .filter((p) => p.plataforma === 'instagram')
-    .sort((a, b) => String(b.data_publicacao || '').localeCompare(String(a.data_publicacao || '')))
+  const pubsResto = publicacoes.filter((p) => p.plataforma !== 'instagram').sort(maisNovoPrimeiro)
+  // Instagram com pool proprio de 8: a Graph aceita mais, mas e a rede que ja estourou cota antes
+  const igDaVez = publicacoes.filter((p) => p.plataforma === 'instagram').sort(maisNovoPrimeiro)
+
+  let restoPulados = 0
   let igLidos = 0
   let igPulados = 0
-  await comPool(igDaVez, 8, async (p) => {
-    if (Date.now() - agora.getTime() > PRAZO_IG_MS) { igPulados++; return }
-    await processarPub(p)
-    igLidos++
-  })
+  await Promise.all([
+    comPool(pubsResto, 16, async (p) => {
+      if (Date.now() - agora.getTime() > PRAZO_MS) { restoPulados++; return }
+      await processarPub(p)
+    }),
+    comPool(igDaVez, 8, async (p) => {
+      if (Date.now() - agora.getTime() > PRAZO_MS) { igPulados++; return }
+      await processarPub(p)
+      igLidos++
+    }),
+  ])
+  if (restoPulados > 0) {
+    avisos.push(`${restoPulados} publicacao(oes) ficaram para a proxima rodada (prazo de ${PRAZO_MS / 1000}s). Os mais novos foram primeiro.`)
+  }
   if (igPulados > 0) {
-    avisos.push(`Instagram: ${igLidos} lidos, ${igPulados} ficaram para a próxima rodada (prazo de ${PRAZO_IG_MS / 1000}s). Os mais novos foram primeiro.`)
+    avisos.push(`Instagram: ${igLidos} lidos, ${igPulados} ficaram para a proxima rodada (prazo de ${PRAZO_MS / 1000}s). Os mais novos foram primeiro.`)
   }
 
   const resumo = {

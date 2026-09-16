@@ -159,10 +159,22 @@ export function useAderencia() {
 export function useColetarAgora() {
   const queryClient = useQueryClient()
   return useMutation({
+    // UMA CHAMADA POR REDE, igual a tela de Automacao ja faz desde 09/09 — e esta ficou esquecida.
+    // Pedir as 4 redes numa chamada so divide 32s de leitura entre ~770 posts: sobra pouco para cada
+    // uma, e foi este botao que, com o prazo mal dividido, deixou o Instagram sem leitura por dias.
+    // Fatiado, cada rede ganha o orcamento inteiro. Uma rede que falha nao derruba as outras.
     mutationFn: async () => {
-      const resp = await fetch('/api/automation/coletar-metricas', { method: 'POST', body: '{}' })
-      if (!resp.ok) throw new Error(`Coleta falhou (${resp.status})`)
-      return resp.json()
+      const redes = ['youtube', 'tiktok', 'instagram', 'facebook']
+      const falhas: string[] = []
+      let coletados = 0
+      for (const rede of redes) {
+        const resp = await fetch(`/api/automation/coletar-metricas?rede=${rede}`, { method: 'POST', body: '{}' })
+        if (!resp.ok) { falhas.push(`${rede} (${resp.status})`); continue }
+        const d = await resp.json().catch(() => ({}))
+        coletados += Number(d?.coletados ?? 0)
+      }
+      if (falhas.length === redes.length) throw new Error(`Coleta falhou: ${falhas.join(', ')}`)
+      return { coletados, falhas }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aderencia'] })
