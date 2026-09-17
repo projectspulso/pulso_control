@@ -304,6 +304,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Pipeline não encontrado' }, { status: 404 })
   }
 
+  // Vídeo segurado não sai por caminho nenhum (cron, comprometer ou botão). Em 16/09/2026 o #177,
+  // segurado por erro factual, voltou a PRONTO pelo worker e foi publicado: ninguém lia esta marca.
+  // Para liberar, apague `metadata.segurado` — mudar só o status não basta.
+  if (item.metadata?.segurado) {
+    return NextResponse.json(
+      { error: `Vídeo segurado: ${item.metadata.segurado.motivo || 'sem motivo registrado'}` },
+      { status: 409 },
+    )
+  }
+
   const { data: ideia } = await supabase
     .schema('pulso_content')
     .from('ideias')

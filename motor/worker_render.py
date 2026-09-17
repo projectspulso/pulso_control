@@ -89,7 +89,10 @@ def proximo_da_fila(excluir=None):
     # GATE DE RENDER (passo caro/Veo): renderiza SÓ o que está em EM_EDICAO — o humano
     # arrasta pra "Em Edição" no kanban pra autorizar o vídeo. AUDIO_GERADO fica esperando.
     # Precisa ter cenas (senão travaria) — pula o resto.
-    aud = [p for p in pipe if p.get('status') == 'EM_EDICAO' and (p.get('metadata') or {}).get('cenas')]
+    # Segurado (metadata.segurado) nunca renderiza nem vira PRONTO: em 16/09/2026 o #177, segurado por
+    # erro factual, foi re-subido daqui e publicado pelo cron. Liberar = apagar metadata.segurado.
+    aud = [p for p in pipe if p.get('status') == 'EM_EDICAO' and (p.get('metadata') or {}).get('cenas')
+           and not (p.get('metadata') or {}).get('segurado')]
     aud.sort(key=lambda p: (tier(cn.get(cid.get(p['ideia_id']), '')), (p.get('metadata') or {}).get('numero', 999)))
     sem = sum(1 for p in pipe if p.get('status') == 'EM_EDICAO' and not (p.get('metadata') or {}).get('cenas'))
     if sem: log("aviso: %d AUDIO_GERADO sem cenas (pulados — gere o áudio no app pra criar as cenas)" % sem)
