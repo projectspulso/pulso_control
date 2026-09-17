@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { lerRedesPausadas } from '@/lib/publicacao/redes-pausadas'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { withPulsoCodigo } from '@/lib/pulso-codigo'
@@ -321,6 +322,8 @@ export async function POST(request: NextRequest) {
     .eq('id', item.ideia_id)
     .single()
 
+  const redesPausadas = await lerRedesPausadas(supabase)
+
   // #pulsoNNN: código de ligação entre redes, o MESMO em todas (é o que liga o vídeo entre
   // elas). N vem de metadata.numero — nunca inventado. Idempotente: se a legenda já traz o
   // código (gerado antes daqui), não duplica. Vai na legenda (IG/FB/TikTok) e na descrição (YT).
@@ -340,6 +343,10 @@ export async function POST(request: NextRequest) {
   const igDeadlineMs = Date.now() + 52_000
 
   for (const plataforma of plataformas) {
+    if (redesPausadas.includes(plataforma)) {
+      resultados.push({ plataforma, status: 'PAUSADO', erro: 'rede pausada em configuracoes.linha_producao.redes_pausadas' })
+      continue
+    }
     try {
       // IDEMPOTÊNCIA: se já existe publicação dessa plataforma pra esta ideia,
       // NÃO republica (blinda contra double-fire do botão / retry / chamada dupla).

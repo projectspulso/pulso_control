@@ -103,11 +103,16 @@ async function publicarAgendados(request: NextRequest) {
   if (pubQ.error) return NextResponse.json({ error: `publicacoes: ${pubQ.error.message}` }, { status: 500 })
 
   let tetoDia = TETO_PADRAO_POR_DIA
+  // Rede pausada pelo dono (ver lib/publicacao/redes-pausadas.ts) sai da ordem E do remendo — senão o
+  // remendo de "rede faltante" reenviaria o YouTube pausado na rodada seguinte.
+  let redesPausadas: string[] = [...REDES_API_SEGURAS]
   try {
     const raw = cfgQ.data?.valor
     const cfg = typeof raw === 'string' ? JSON.parse(raw) : raw
     if (cfg?.publicar_dia) tetoDia = cfg.publicar_dia
-  } catch { /* mantém o padrão */ }
+    if (!cfgQ.error) redesPausadas = Array.isArray(cfg?.redes_pausadas) ? cfg.redes_pausadas.map(String) : []
+  } catch { /* mantém o padrão — e, sem ler a pausa, não publica por API nesta rodada */ }
+  const redesAtivas = REDES_API_SEGURAS.filter((r) => !redesPausadas.includes(r))
 
   // Quantos VÍDEOS já saíram hoje (por ideia, não por linha — 1 vídeo em 3 redes conta 1).
   //
@@ -210,7 +215,7 @@ async function publicarAgendados(request: NextRequest) {
     // Instagram vai por último, com prazo curto — a gente solta o pedido e segue, e a
     // reconciliação amarra o post depois. Assim ele nunca mais come o tempo do TikTok.
     const ORCAMENTO_MS: Record<string, number> = { tiktok: 18_000, youtube: 22_000, instagram: 10_000, facebook: 12_000 }
-    const ORDEM = ['tiktok', 'youtube', 'instagram'].filter((r) => (REDES_API_SEGURAS as readonly string[]).includes(r))
+    const ORDEM = ['tiktok', 'youtube', 'instagram'].filter((r) => (redesAtivas as readonly string[]).includes(r))
     // Facebook entra só se o experimento estiver valendo E este vídeo for do braço da API.
     // Fica por ÚLTIMO: se o orçamento de 60s acabar, quem perde é o experimento, não a operação.
     const fbNesteVideo = !!expFb && vaiPorApi(md.numero, expFb)
@@ -294,7 +299,7 @@ async function publicarAgendados(request: NextRequest) {
       const q = quandoSaiu.get(p.ideia_id)
       if (!q || new Date(q) < limite24h) return false
       const tem = redesPorIdeia.get(p.ideia_id) || new Set()
-      return REDES_API_SEGURAS.some((r) => !tem.has(r))
+      return redesAtivas.some((r) => !tem.has(r))
     })
 
     // Uma rede por rodada: o cron bate de hora em hora, então o remendo se completa sozinho sem
@@ -303,7 +308,7 @@ async function publicarAgendados(request: NextRequest) {
     if (alvo) {
       const md = alvo.metadata || {}
       const tem = redesPorIdeia.get(alvo.ideia_id) || new Set()
-      const rede = REDES_API_SEGURAS.find((r) => !tem.has(r))
+      const rede = redesAtivas.find((r) => !tem.has(r))
       if (rede && md.video_url) {
         try {
           const r = await fetch(`${origin}/api/automation/publicar`, {
