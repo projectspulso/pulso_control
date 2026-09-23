@@ -26,6 +26,7 @@
  */
 
 import { classificarTema, PAPEL_NO_FACEBOOK, MEDIANA_FB_MEDIDA, type Tema } from '@/lib/decisor/temas'
+import { podeOcuparVaga, somarDias, type EstadoTeste, type RegrasTeste } from './teste-temas'
 
 export type Faixa = 'perene' | 'sazonal'
 
@@ -160,10 +161,27 @@ export function pontuarCandidato(
 export function rotearSlots(
   slots: SlotParaPreencher[],
   candidatos: CandidatoAgenda[],
-  jaUsados: Set<string> = new Set()
+  jaUsados: Set<string> = new Set(),
+  teste?: { estados: Map<string, EstadoTeste>; regras: RegrasTeste }
 ): Map<string, EscolhaSlot> {
   const usados = new Set(jaUsados)
   const saida = new Map<string, EscolhaSlot>()
+
+  // TEMA EM TESTE (lib/agenda/teste-temas.ts) não disputa a vaga pelo score. Pelo score ele
+  // perderia sempre (sem histórico) ou ganharia sempre ("parado desde sempre"). Entra por
+  // convite: 1 vaga, só com vídeo PRONTO, e depois fica fora pelos dias do intervalo. Assim
+  // um flop custa no máximo 1 dia, e os outros 6 ficam com os temas que já provaram.
+  const noPlano = new Map<string, number>()
+  const liberaNoPlano = new Map<string, string>()
+  const emTeste = (c: CandidatoAgenda) => !!(c.canalId && teste?.estados.has(c.canalId))
+  const testeCabe = (c: CandidatoAgenda, dia: string) => {
+    if (!teste || !c.canalId) return false
+    const est = teste.estados.get(c.canalId)
+    if (!est) return false
+    const ok = podeOcuparVaga(est, dia, teste.regras, noPlano.get(c.canalId) ?? 0)
+    const libera = liberaNoPlano.get(c.canalId)
+    return ok.pode && (!libera || dia >= libera)
+  }
 
   const ordenados = [...slots].sort((a, b) => {
     if (a.data !== b.data) return a.data < b.data ? -1 : 1
@@ -179,9 +197,23 @@ export function rotearSlots(
     if (livres.length === 0) break
 
     const anterior = temaPorData.get(slot.data) ?? null
-    const melhor = livres
+    const convidados = livres.filter((c) => c.estagio === 'video' && testeCabe(c, slot.data))
+    const normais = livres.filter((c) => !emTeste(c))
+    const pool = convidados.length ? convidados : normais
+    if (pool.length === 0) continue
+
+    const melhor = pool
       .map((c) => ({ c, ...pontuarCandidato(c, slot, anterior) }))
       .sort((a, b) => b.score - a.score)[0]
+
+    let motivo = melhor.motivo || 'melhor disponível no estoque'
+    if (convidados.length && melhor.c.canalId && teste) {
+      const canal = melhor.c.canalId
+      const n = (teste.estados.get(canal)?.tentativasPublicadas ?? 0) + (noPlano.get(canal) ?? 0) + 1
+      noPlano.set(canal, (noPlano.get(canal) ?? 0) + 1)
+      liberaNoPlano.set(canal, somarDias(slot.data, teste.regras.cooldownDias))
+      motivo = `tema em teste: tentativa ${n} de ${teste.regras.tentativasParaAprovar} — 1 dia a cada ${teste.regras.cooldownDias} é de teste`
+    }
 
     usados.add(melhor.c.ideiaId)
     temaPorData.set(slot.data, melhor.tema)
@@ -191,7 +223,7 @@ export function rotearSlots(
       tema: melhor.tema,
       estagio: melhor.c.estagio,
       score: melhor.score,
-      motivo: melhor.motivo || 'melhor disponível no estoque',
+      motivo,
     })
   }
 

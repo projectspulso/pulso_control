@@ -4,6 +4,7 @@ import { repassarCredencial } from '@/lib/auth/repassar-credencial'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { REDES_API_SEGURAS } from '@/lib/publicacao/redes-api'
 import { experimentoFbAtivo, vaiPorApi } from '@/lib/publicacao/experimento-fb'
+import { estadoDosTestes, estreias, lerRegras, podeOcuparVaga, type CanalComTeste, type TesteDoCanal } from '@/lib/agenda/teste-temas'
 
 /**
  * O DESPERTADOR DA PUBLICAÇÃO — a metade que faltava do botão "Agendar".
@@ -70,8 +71,11 @@ function diaBRT(d: Date): string {
   return d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
 }
 
-/** Sem isso um bug de data viraria dez posts numa hora. O teto vem da config da linha. */
-const TETO_PADRAO_POR_DIA = 2
+/** Sem isso um bug de data viraria dez posts numa hora. O teto vem da config da linha.
+ * 1/dia desde 23/09/2026: os 100 dias fecharam (94/100, 98,1% de consistência) e o dono decidiu
+ * baixar o ritmo de publicação pra sobrar capacidade de RENDER pra testar ideia nova e formar
+ * estoque, sem parar de publicar todo dia. */
+const TETO_PADRAO_POR_DIA = 1
 /** Não ressuscita agendamento antigo: hora que venceu há dias não é plano, é esquecimento. */
 const JANELA_ATRASO_HORAS = 12
 
@@ -84,7 +88,7 @@ async function publicarAgendados(request: NextRequest) {
   const agora = new Date()
   const limiteAtraso = new Date(agora.getTime() - JANELA_ATRASO_HORAS * 3600_000)
 
-  const [pipeQ, pubQ, cfgQ, longosQ] = await Promise.all([
+  const [pipeQ, pubQ, cfgQ, longosQ, ideiasCanalQ, canaisQ, regrasTesteQ] = await Promise.all([
     // Sem filtro de status: o teto precisa enxergar TAMBÉM os já publicados de hoje para saber
     // quantas vagas da grade sobraram. Filtrar PRONTO_PUBLICACAO acontece depois.
     supabase.schema('pulso_content').from('pipeline_producao')
@@ -98,9 +102,17 @@ async function publicarAgendados(request: NextRequest) {
     // e comeria uma vaga do teto da grade de Shorts. Filtrado na ORIGEM: some do teto, dos
     // vencidos e do remendo de uma vez. Ver _DESPACHO_VIDEOS_LONGOS_2026-08-24.md.
     supabase.schema('pulso_content').from('ideias').select('id').eq('formato', 'longo'),
+    supabase.schema('pulso_content').from('ideias').select('id, canal_id'),
+    supabase.schema('pulso_core').from('canais').select('id, nome, metadata'),
+    supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'teste_temas').maybeSingle(),
   ])
   if (pipeQ.error) return NextResponse.json({ error: `pipeline: ${pipeQ.error.message}` }, { status: 500 })
   if (pubQ.error) return NextResponse.json({ error: `publicacoes: ${pubQ.error.message}` }, { status: 500 })
+  // Sem saber quem está em teste, um tema reprovado ou dentro do intervalo sairia na vaga do dia.
+  // Falha FECHADA: esta rodada não publica; o cron tenta de novo na hora seguinte (R-037).
+  if (ideiasCanalQ.error || canaisQ.error) {
+    return NextResponse.json({ error: `teste de tema: ${(ideiasCanalQ.error || canaisQ.error).message}` }, { status: 500 })
+  }
 
   let tetoDia = TETO_PADRAO_POR_DIA
   // Rede pausada pelo dono (ver lib/publicacao/redes-pausadas.ts) sai da ordem E do remendo — senão o
@@ -140,11 +152,33 @@ async function publicarAgendados(request: NextRequest) {
   const daGradeDeHoje = pipeTodos.filter((p) => diaBRT(horaMarcada(p.data_publicacao_planejada)) === hoje)
   const publicadosHoje = new Set(daGradeDeHoje.filter((p) => jaSaiu.has(p.ideia_id)).map((p) => p.ideia_id))
 
+  // TEMA EM TESTE (lib/agenda/teste-temas.ts) — a última porta. O plano já respeita o intervalo
+  // de 7 dias e o veredito; esta checagem pega o que chegou por outro caminho (data posta à mão,
+  // plano antigo, antecipação). Vídeo segurado aqui fica PRONTO e volta no próximo convite do plano.
+  const regrasTeste = lerRegras(regrasTesteQ.data?.valor)
+  const canalDaIdeia = new Map<string, string>()
+  for (const i of (ideiasCanalQ.data || []) as Array<{ id: string; canal_id: string | null }>) if (i.canal_id) canalDaIdeia.set(i.id, i.canal_id)
+  const estadosTeste = estadoDosTestes(
+    ((canaisQ.data || []) as Array<{ id: string; nome: string; metadata: { teste?: TesteDoCanal } | null }>)
+      .map((c): CanalComTeste => ({ id: c.id, nome: c.nome, teste: c.metadata?.teste ?? null })),
+    estreias(pubs.filter((p) => p.ideia_id && p.data_publicacao)
+      .map((p) => ({ ideiaId: p.ideia_id, plataforma: p.plataforma, dataPublicacao: p.data_publicacao }))),
+    canalDaIdeia,
+    regrasTeste
+  )
+  const seguradosPorTeste: Array<{ numero: number | null; motivo: string }> = []
+  const liberadoPeloTeste = (p: { ideia_id: string; metadata?: { numero?: number } }) => {
+    const canal = canalDaIdeia.get(p.ideia_id)
+    const r = podeOcuparVaga(canal ? estadosTeste.get(canal) : undefined, hoje, regrasTeste)
+    if (!r.pode) seguradosPorTeste.push({ numero: p.metadata?.numero ?? null, motivo: r.motivo || 'tema em teste' })
+    return r.pode
+  }
+
   const vencidos = pipeTodos
     .filter((p) => {
       if (p.status !== 'PRONTO_PUBLICACAO') return false
       const quando = horaMarcada(p.data_publicacao_planejada)
-      return quando <= agora && quando >= limiteAtraso && !jaSaiu.has(p.ideia_id)
+      return quando <= agora && quando >= limiteAtraso && !jaSaiu.has(p.ideia_id) && liberadoPeloTeste(p)
     })
     .sort((a, b) => (a.data_publicacao_planejada < b.data_publicacao_planejada ? -1 : 1))
 
@@ -178,7 +212,7 @@ async function publicarAgendados(request: NextRequest) {
       .filter((p) => {
         if (p.status !== 'PRONTO_PUBLICACAO' || !p.metadata?.video_url) return false
         if (jaSaiu.has(p.ideia_id)) return false
-        return horaMarcada(p.data_publicacao_planejada) > agora
+        return horaMarcada(p.data_publicacao_planejada) > agora && liberadoPeloTeste(p)
       })
       .sort((a, b) => (a.data_publicacao_planejada < b.data_publicacao_planejada ? -1 : 1))
     if (futuros.length > 0) {
@@ -356,6 +390,7 @@ async function publicarAgendados(request: NextRequest) {
       antecipado,
       resultados,
       ...(remendos.length ? { remendos } : {}),
+      ...(seguradosPorTeste.length ? { segurados_por_teste: seguradosPorTeste } : {}),
     },
   })
   if (erroLog) console.error('[publicar-agendados] falhou ao gravar log:', erroLog.message)
@@ -367,6 +402,7 @@ async function publicarAgendados(request: NextRequest) {
     ja_publicados_hoje: publicadosHoje.size,
     disparados: resultados.length,
     resultados,
+    ...(seguradosPorTeste.length ? { segurados_por_teste: seguradosPorTeste } : {}),
     nota: vencidos.length > aDisparar.length
       ? `${vencidos.length - aDisparar.length} ficaram para a próxima rodada (teto diário de ${tetoDia}).`
       : undefined,

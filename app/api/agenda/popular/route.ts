@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { guardApi } from '@/lib/auth/api-guard'
 import { rotearSlots, type CandidatoAgenda, type Faixa, type SlotParaPreencher } from '@/lib/agenda/roteador'
+import { estadoDosTestes, estreias, lerRegras, type CanalComTeste, type TesteDoCanal } from '@/lib/agenda/teste-temas'
+import { julgarTestes } from '@/lib/agenda/teste-temas-db'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 /**
@@ -32,14 +34,16 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdminClient() as any
 
   try {
-    const [gradeQ, ideiasQ, roteirosQ, audiosQ, metricasQ, pipeQ, atribQ] = await Promise.all([
+    const [gradeQ, ideiasQ, roteirosQ, audiosQ, metricasQ, pipeQ, atribQ, canaisQ, regrasTesteQ] = await Promise.all([
       supabase.from('vw_agenda_semanal').select('*').eq('ativo', true),
       supabase.schema('pulso_content').from('ideias').select('id, canal_id, status, titulo, formato'),
       supabase.schema('pulso_content').from('roteiros').select('ideia_id, conteudo_md'),
       supabase.schema('pulso_content').from('audios').select('ideia_id'),
-      supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma, taxa_retencao'),
+      supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma, taxa_retencao, data_publicacao'),
       supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status, metadata, updated_at'),
       supabase.schema('pulso_content').from('agenda_atribuicoes').select('id, data, horario, ideia_id, fixado, status'),
+      supabase.schema('pulso_core').from('canais').select('id, nome, metadata'),
+      supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'teste_temas').maybeSingle(),
     ])
     if (gradeQ.error) return NextResponse.json({ error: gradeQ.error.message }, { status: 500 })
 
@@ -212,7 +216,25 @@ export async function POST(request: NextRequest) {
     // O ROTEADOR decide tudo de uma vez (ver lib/agenda/roteador.ts): tema que estoura no
     // Facebook > retenção do canal > tempo parado > estágio, com a grade de canal virando só
     // desempate e a faixa sazonal servindo de slot de exploração.
-    const escolhas = rotearSlots(aPreencher, candidatos, usados)
+    // TEMA EM TESTE (lib/agenda/teste-temas.ts): julga as tentativas maduras ANTES de planejar,
+    // para o plano de hoje já respeitar um veredito de hoje. Sem ler os canais não dá para saber
+    // quem está em teste — e planejar sem saber pode pôr um tema reprovado na vaga. Falha fechada.
+    if (canaisQ.error) return NextResponse.json({ error: `canais: ${canaisQ.error.message}` }, { status: 500 })
+    const regrasTeste = lerRegras(regrasTesteQ.data?.valor)
+    const pubsRede = ((metricasQ.data || []) as Array<{ ideia_id: string | null; plataforma: string; data_publicacao: string | null }>)
+      .filter((m) => m.ideia_id && m.data_publicacao)
+      .map((m) => ({ ideiaId: m.ideia_id as string, plataforma: m.plataforma, dataPublicacao: m.data_publicacao as string }))
+    const estreiaPorIdeia = estreias(pubsRede)
+    const hojeBRT = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+    const julgado = await julgarTestes(
+      supabase,
+      ((canaisQ.data || []) as Array<{ id: string; nome: string; metadata: { teste?: TesteDoCanal } | null }>)
+        .map((c): CanalComTeste => ({ id: c.id, nome: c.nome, teste: c.metadata?.teste ?? null })),
+      canalDaIdeia, pubsRede, estreiaPorIdeia, regrasTeste, hojeBRT
+    )
+    const estadosTeste = estadoDosTestes(julgado.canais, estreiaPorIdeia, canalDaIdeia, regrasTeste)
+
+    const escolhas = rotearSlots(aPreencher, candidatos, usados, { estados: estadosTeste, regras: regrasTeste })
 
     for (const slot of aPreencher) {
       const e = escolhas.get(slot.chave)
@@ -255,13 +277,14 @@ export async function POST(request: NextRequest) {
       preenchidos: novos.filter((n) => n.ideia_id).length,
       vazios: novos.filter((n) => !n.ideia_id).length,
       por_estagio: porEstagio,
+      teste_de_tema: julgado.mudancas,
     }
 
     // Cron nunca falha em silêncio: TODA rodada deixa registro, inclusive a que não mudou nada.
     // Sem isto, o dia em que o pg_cron parar de chamar esta rota é indistinguível do dia calmo.
     await supabase.schema('pulso_content').from('logs_workflows').insert({
       workflow_name: 'POPULAR_AGENDA',
-      status: novos.length || reavaliados ? 'sucesso' : 'ocioso',
+      status: novos.length || reavaliados || julgado.mudancas.length ? 'sucesso' : 'ocioso',
       detalhes: resumo,
     }).then(
       () => {},

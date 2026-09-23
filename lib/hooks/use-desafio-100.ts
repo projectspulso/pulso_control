@@ -34,6 +34,12 @@ export interface Desafio100 {
   metaGrade: number // diasCorridos × alvoDia
   aderenciaGrade: number // 0..1 — vídeos distintos ÷ meta da grade
   gapGrade: number // vídeos distintos − meta da grade (negativo = atrasado)
+  /** true quando os 100 dias já passaram. O card vira "concluído + ritmo contínuo": pra de contar
+   * pra baixo (ficou preso em "Dia 100/100" de 17/09 a 23/09, 6 dias sem ninguém notar) e passa a
+   * mostrar a sequência viva, não mais uma corrida com fim marcado. */
+  concluido: boolean
+  diasDesdeConclusao: number // 0 se ainda não concluiu
+  ritmoAtualDia: number // publicar_dia de configuracoes.linha_producao — o ritmo de HOJE, não o da sprint
 }
 
 function isoLocal(d: Date) {
@@ -66,10 +72,19 @@ export function useDesafio100() {
     queryKey: ['desafio-100'],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const [cfgRes, mpRes] = await Promise.all([
+      const [cfgRes, mpRes, linhaRes] = await Promise.all([
         supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'desafio_100').maybeSingle(),
         supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma, views, data_publicacao'),
+        supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle(),
       ])
+      let ritmoAtualDia = 2
+      try {
+        const raw = linhaRes.data?.valor
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+        if (parsed?.publicar_dia) ritmoAtualDia = parsed.publicar_dia
+      } catch {
+        /* mantém o padrão */
+      }
 
       let cfg = DEFAULT
       try {
@@ -104,6 +119,8 @@ export function useDesafio100() {
       const diasCorridos = Math.max(1, diffDias(inicio, hoje) + 1)
       const diaAtual = Math.min(diasCorridos, metaDias)
       const diasRestantes = Math.max(0, metaDias - diaAtual)
+      const concluido = diasCorridos > metaDias
+      const diasDesdeConclusao = concluido ? diasCorridos - metaDias : 0
 
       // trilha dia-a-dia (só até hoje)
       const serie: { data: string; videos: number; publicou: boolean }[] = []
@@ -186,6 +203,9 @@ export function useDesafio100() {
         metaGrade,
         aderenciaGrade,
         gapGrade,
+        concluido,
+        diasDesdeConclusao,
+        ritmoAtualDia,
       }
     },
   })

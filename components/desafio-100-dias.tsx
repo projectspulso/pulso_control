@@ -36,37 +36,57 @@ export function Desafio100Dias({ variante = 'full' }: { variante?: 'full' | 'fai
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-violet-300">
-            <Target className="h-3.5 w-3.5" /> Desafio dos 100 Dias
+            <Target className="h-3.5 w-3.5" /> {d.concluido ? '🏁 Meta dos 100 Dias — batida' : 'Desafio dos 100 Dias'}
           </div>
-          <div className="mt-1 flex items-end gap-2">
-            <span className="bg-linear-to-r from-violet-300 to-fuchsia-300 bg-clip-text text-4xl sm:text-5xl font-black text-transparent tabular-nums">
-              Dia {d.diaAtual}
-            </span>
-            <span className="mb-1 text-lg font-bold text-zinc-500">/ {d.metaDias}</span>
-          </div>
-          <p className="mt-0.5 text-xs text-zinc-400">
-            {d.diasRestantes > 0 ? `faltam ${d.diasRestantes} dias · meta em ${fim}` : 'desafio concluído 🏁'} · começou {fmtBR(d.inicio)}
-          </p>
+          {d.concluido ? (
+            <>
+              <div className="mt-1 flex items-end gap-2">
+                <span className="bg-linear-to-r from-violet-300 to-fuchsia-300 bg-clip-text text-4xl sm:text-5xl font-black text-transparent tabular-nums">
+                  {d.sequenciaAtual}
+                </span>
+                <span className="mb-1 text-lg font-bold text-zinc-500">dias seguidos publicando</span>
+              </div>
+              <p className="mt-0.5 text-xs text-zinc-400">
+                bateu a meta em {fim} · hoje é o dia {d.diasCorridos} ({d.diasDesdeConclusao} desde a meta) · ritmo atual: {d.ritmoAtualDia}/dia
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="mt-1 flex items-end gap-2">
+                <span className="bg-linear-to-r from-violet-300 to-fuchsia-300 bg-clip-text text-4xl sm:text-5xl font-black text-transparent tabular-nums">
+                  Dia {d.diaAtual}
+                </span>
+                <span className="mb-1 text-lg font-bold text-zinc-500">/ {d.metaDias}</span>
+              </div>
+              <p className="mt-0.5 text-xs text-zinc-400">
+                {d.diasRestantes > 0 ? `faltam ${d.diasRestantes} dias · meta em ${fim}` : 'desafio concluído 🏁'} · começou {fmtBR(d.inicio)}
+              </p>
+            </>
+          )}
         </div>
 
-        {/* sequência em destaque */}
-        <div className="flex items-center gap-2 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-2">
-          <Flame className={`h-6 w-6 ${sequenciaCor}`} />
-          <div>
-            <div className={`text-2xl font-black tabular-nums ${sequenciaCor}`}>{d.sequenciaAtual}</div>
-            <div className="text-[10px] uppercase tracking-wide text-zinc-500">
-              {d.publicouHoje ? 'dias seguidos' : 'sequência (poste hoje!)'}
+        {/* sequência em destaque — some quando concluído, porque já virou o número principal acima */}
+        {!d.concluido && (
+          <div className="flex items-center gap-2 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-2">
+            <Flame className={`h-6 w-6 ${sequenciaCor}`} />
+            <div>
+              <div className={`text-2xl font-black tabular-nums ${sequenciaCor}`}>{d.sequenciaAtual}</div>
+              <div className="text-[10px] uppercase tracking-wide text-zinc-500">
+                {d.publicouHoje ? 'dias seguidos' : 'sequência (poste hoje!)'}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* barra de progresso */}
-      <div className="mt-4">
-        <div className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-800">
-          <div className="h-full rounded-full bg-linear-to-r from-violet-500 to-fuchsia-500 transition-all" style={{ width: pct(d.progresso) }} />
+      {/* barra de progresso — só faz sentido enquanto a meta ainda não foi batida */}
+      {!d.concluido && (
+        <div className="mt-4">
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-800">
+            <div className="h-full rounded-full bg-linear-to-r from-violet-500 to-fuchsia-500 transition-all" style={{ width: pct(d.progresso) }} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* trilha dia-a-dia (últimos 30 dias corridos) */}
       <div className="mt-4">
@@ -93,7 +113,7 @@ export function Desafio100Dias({ variante = 'full' }: { variante?: 'full' | 'fai
 
       {/* burn-up: real × ritmo da grade. A trilha acima diz "publiquei hoje?"; este diz
           "vamos bater a meta?" — perguntas diferentes, e só o burn-up mostra o gap. */}
-      {variante === 'full' && d.burnup.length > 1 && (
+      {variante === 'full' && !d.concluido && d.burnup.length > 1 && (
         <div className="mt-5 rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-sm font-semibold text-zinc-200">Vamos bater a meta?</span>
@@ -136,8 +156,14 @@ export function Desafio100Dias({ variante = 'full' }: { variante?: 'full' | 'fai
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat icon={<CalendarCheck className="h-3.5 w-3.5" />} label="Consistência" value={pct(d.consistencia)} cls={consistenciaCor} />
           <Stat icon={<Trophy className="h-3.5 w-3.5" />} label="Melhor sequência" value={`${d.melhorSequencia}d`} cls="text-amber-300" />
-          <Stat icon={<TrendingUp className="h-3.5 w-3.5" />} label="Vídeos publicados" value={String(d.videosPublicados)} cls="text-white" sub={`~${d.projecaoVideos} até o dia 100`} />
-          <Stat icon={<Eye className="h-3.5 w-3.5" />} label="Views acumuladas" value={fmt(d.viewsAcumuladas)} cls="text-white" sub={`~${fmt(d.projecaoViews)} até o dia 100`} />
+          <Stat
+            icon={<TrendingUp className="h-3.5 w-3.5" />} label="Vídeos publicados" value={String(d.videosPublicados)} cls="text-white"
+            sub={d.concluido ? 'desde o dia 1' : `~${d.projecaoVideos} até o dia 100`}
+          />
+          <Stat
+            icon={<Eye className="h-3.5 w-3.5" />} label="Views acumuladas" value={fmt(d.viewsAcumuladas)} cls="text-white"
+            sub={d.concluido ? 'desde o dia 1' : `~${fmt(d.projecaoViews)} até o dia 100`}
+          />
         </div>
       )}
     </div>
