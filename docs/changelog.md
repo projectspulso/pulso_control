@@ -4,6 +4,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Corrigido (23/09) — trava de duplicidade barrava a versão corrigida de uma ideia
+- **Ideia descartada por ERRO DE EXECUÇÃO não bloqueia mais a versão corrigida.** A trava de ideia (`gerar-ideias` e `do-momento`) comparava com todas as ideias, descartadas inclusive; a trava de roteiro já ignorava descartadas — as duas discordavam. O eclipse assírio de 763 a.C. foi barrado por "contar a mesma história" da versão que atribuía o eclipse aos maias, descartada minutos antes justamente por esse erro.
+- **O tipo mora em `ideias.metadata.descarte.tipo`**: sem tipo ou `'assunto'` continua bloqueando (Copa, tema centrado em pessoa, duplicata — 13 das 17 descartadas); só `'execucao'` libera. Nenhum descarte antigo mudou de comportamento. Função `bloqueiamDuplicidade` em `lib/automation/dedup.ts`.
+- **Pendente:** a caixinha "o assunto é bom, errou a execução" na tela de rejeitar ideia. Até lá o tipo é marcado por quem descarta pelo sistema.
+
 ### Mudado (23/09) — 1 vídeo por dia e teste de tema novo com trava
 - **Desafio dos 100 Dias fechado no app.** O cartão ficou preso em "Dia 100/100 · 0 dias restantes" de 17/09 a 23/09 sem ninguém notar: o código travava o contador na meta e não tinha estado de "concluído". Agora mostra "meta batida" + a sequência viva de dias publicando + o ritmo atual; some a barra de progresso, o gráfico "vamos bater a meta?" e as projeções "até o dia 100". Resultado do desafio: 94 dias seguidos (1 furo real, 20/06), 98,1% de consistência, 200 vídeos, 572 mil views.
 - **Publicação cai de 2 para 1 vídeo por dia** (decisão do dono). `linha_producao.publicar_dia = 1`, `TETO_PADRAO_POR_DIA = 1` e o horário das 21h desligado nos 7 dias de `agenda_semanal`. A produção continua no ritmo de antes, então o estoque cresce — é essa sobra que vira espaço de teste.

@@ -5,7 +5,7 @@ import { montarBriefing } from '@/lib/automation/briefing-do-momento'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarIdeias } from '@/lib/automation/prompts'
-import { filtrarDuplicatas, filtrarDuplicatasSemantica } from '@/lib/automation/dedup'
+import { filtrarDuplicatas, filtrarDuplicatasSemantica, bloqueiamDuplicidade } from '@/lib/automation/dedup'
 
 /**
  * POST /api/automation/gerar-ideias
@@ -189,10 +189,12 @@ export async function POST(request: NextRequest) {
 
     // TRAVA ANTI-DUPLICIDADE: barra ideias semelhantes a existentes (qualquer
     // canal/status) e dedup intra-lote. Mary Celeste etc. nunca mais entram 2x.
-    const { data: existentesIdeias } = await supabase
+    const { data: todasIdeias } = await supabase
       .schema('pulso_content')
       .from('ideias')
-      .select('titulo, descricao')
+      .select('titulo, descricao, status, metadata')
+    // descartada por ERRO DE EXECUÇÃO não bloqueia a versão corrigida (ver bloqueiamDuplicidade)
+    const existentesIdeias = bloqueiamDuplicidade(todasIdeias || [])
     const { aceitas, ignoradas } = filtrarDuplicatas(
       ideias as Array<{ titulo: string; descricao?: string | null }>,
       existentesIdeias || []

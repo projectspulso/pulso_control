@@ -37,6 +37,29 @@ export interface DedupItem {
 }
 
 /**
+ * QUEM BLOQUEIA UMA IDEIA NOVA — descartada também bloqueia, com uma exceção.
+ *
+ * "Descartada" guarda dois motivos opostos, e até 23/09/2026 a trava tratava os dois igual:
+ *   · ASSUNTO ruim (Copa, tema centrado em pessoa, duplicata) — tem que continuar bloqueando,
+ *     senão o gerador repropõe o mesmo assunto recusado para sempre. Eram 13 das 17 descartadas.
+ *   · EXECUÇÃO ruim (erro de fato, roteiro fraco) — o assunto é bom. Bloquear impede justamente
+ *     a versão corrigida: o eclipse assírio de 763 a.C. foi barrado por "contar a mesma história"
+ *     da versão que atribuía o eclipse aos maias, descartada minutos antes por esse erro.
+ *
+ * Por isso o tipo mora em `metadata.descarte.tipo`. Sem tipo = assunto (o padrão seguro, e o que
+ * vale para todo descarte antigo). Só `'execucao'` libera. A trava do ROTEIRO (âncora e gêmeo, em
+ * gerar-roteiro) já ignorava descartadas — esta regra é da trava de IDEIA.
+ */
+export interface IdeiaParaDedup extends DedupItem {
+  status?: string | null
+  metadata?: { descarte?: { tipo?: string } } | null
+}
+
+export function bloqueiamDuplicidade<T extends IdeiaParaDedup>(existentes: T[]): T[] {
+  return existentes.filter((i) => !(i.status === 'DESCARTADA' && i.metadata?.descarte?.tipo === 'execucao'))
+}
+
+/**
  * SÓ O TÍTULO — a descrição saiu em 29/07/2026, e essa era a falha principal.
  *
  * Medido nas 6 duplicatas reais do acervo: com título+descrição elas pontuavam 0,11 a 0,25

@@ -3,7 +3,7 @@ import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptDoMomento } from '@/lib/automation/prompts'
-import { filtrarDuplicatas, filtrarDuplicatasSemantica } from '@/lib/automation/dedup'
+import { filtrarDuplicatas, filtrarDuplicatasSemantica, bloqueiamDuplicidade } from '@/lib/automation/dedup'
 
 /**
  * POST /api/automation/do-momento
@@ -80,10 +80,12 @@ export async function POST(request: NextRequest) {
     // que a raia "do Momento" mais produz: o mesmo assunto em alta descrito com outras palavras.
     // Uma ideia por clique parecia risco pequeno — mas duplicata que entra aqui custa o render
     // inteiro lá na frente, igual às que já viraram vídeo repetido (#85×#76, #9×#73, #113×#111).
-    const { data: existentes } = await supabase
+    const { data: todas } = await supabase
       .schema('pulso_content')
       .from('ideias')
-      .select('titulo, descricao')
+      .select('titulo, descricao, status, metadata')
+    // descartada por ERRO DE EXECUÇÃO não bloqueia a versão corrigida (ver bloqueiamDuplicidade)
+    const existentes = bloqueiamDuplicidade(todas || [])
     const candidata = [{ titulo: ideia.titulo as string, descricao: (ideia.descricao as string) || '' }]
     const barrada = (motivo: string) =>
       NextResponse.json({
