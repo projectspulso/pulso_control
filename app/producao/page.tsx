@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { useAprendizados, REDE_LABEL, REDE_EMOJI, corNota5 } from '@/lib/hooks/use-aprendizados'
 import { AvisoCreditoRender } from '@/components/aviso-credito-render'
 import { LinhaProducaoPanel } from '@/components/linha-producao-panel'
+import { motivosRevisao, NOTA_MINIMA_AUTO_APROVAR } from '@/lib/automation/motivos-revisao'
 
 const COLUNAS: { id: StatusProducao; titulo: string; cor: string }[] = [
   { id: 'AGUARDANDO_ROTEIRO', titulo: 'Aguardando Roteiro', cor: 'bg-zinc-700' },
@@ -38,10 +39,36 @@ const RENDER_ESTADO: Record<string, { txt: string; cls: string }> = {
   aguardando_cenas: { txt: '⏳ faltam as cenas', cls: 'bg-amber-500/10 text-amber-300 ring-amber-500/30' },
 }
 
+/**
+ * Roteiro escrito mas não aprovado sozinho: o card diz POR QUÊ. A lista vem gravada pelo gerador
+ * (metadata.motivos_revisao, desde 23/09/2026); para roteiros anteriores, é reconstruída do que o
+ * roteiro e o pipeline já guardavam.
+ */
+function motivosDoCard(c: any): string[] {
+  const md = c.metadata || {}
+  if (Array.isArray(md.motivos_revisao)) return md.motivos_revisao
+  const rmd = c.roteiro_metadata || {}
+  return motivosRevisao({
+    nota: typeof rmd.quality_score === 'number' ? rmd.quality_score : null,
+    notaMinima: NOTA_MINIMA_AUTO_APROVAR,
+    notaHook: c.nota_hook,
+    blocoUnico: rmd.validacoes?.tem_hook === false,
+    duracaoFora: rmd.validacoes?.duracao_adequada === false,
+    temCta: typeof rmd.validacoes?.tem_cta === 'boolean' ? rmd.validacoes.tem_cta : null,
+    colideCom: md.colisao_ancora?.colide_com ?? null,
+    gemeoDe: md.gemeo_no_acervo?.titulo ?? null,
+    promessaAberta: !!md.promessa_aberta,
+    fatosSuspeitos: md.fatos_suspeitos?.quantos ?? null,
+  })
+}
+
 function CardConteudo({ conteudo, destacado, onAcao, processando }: CardProps) {
   const apr = useAprendizados()
   const redeRec = apr.data?.redeRecomendadaNome(conteudo.canal)
   const emEdicao = conteudo.pipeline_status === 'EM_EDICAO'
+  const esperaAprovacao =
+    conteudo.pipeline_status === 'AGUARDANDO_ROTEIRO' && !!conteudo.roteiro_id && conteudo.roteiro_status === 'RASCUNHO'
+  const motivos = esperaAprovacao ? motivosDoCard(conteudo) : []
   const rs = conteudo.metadata?.render_status as
     | { estado?: string; motivo?: string; quando?: string }
     | undefined
@@ -136,6 +163,21 @@ function CardConteudo({ conteudo, destacado, onAcao, processando }: CardProps) {
           )}
         </div>
 
+        {esperaAprovacao && (
+          <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-2 py-1.5">
+            <p className="text-[10px] font-semibold text-amber-300">✋ esperando sua aprovação</p>
+            {motivos.length > 0 ? (
+              <ul className="mt-1 space-y-0.5">
+                {motivos.map((m) => (
+                  <li key={m} className="text-[10px] leading-tight text-amber-200/80">• {m}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-[10px] leading-tight text-amber-200/60">sem motivo registrado</p>
+            )}
+          </div>
+        )}
+
         {emEdicao && (
           <div className="mt-2 rounded-lg border border-zinc-700/40 bg-zinc-900/50 px-2 py-1.5">
             {rs?.estado && RENDER_ESTADO[rs.estado] ? (
@@ -164,6 +206,20 @@ function CardConteudo({ conteudo, destacado, onAcao, processando }: CardProps) {
           AGUARDANDO_ROTEIRO: 'Gerar roteiro',
           ROTEIRO_PRONTO: 'Gerar áudio',
           AUDIO_GERADO: 'Renderizar →',
+        }
+        // Com roteiro já escrito, "Gerar roteiro" não fazia nada (a ação só age sem roteiro_id):
+        // o botão vira o atalho para revisar.
+        if (esperaAprovacao) {
+          return (
+            <Link
+              href={`/roteiros/${conteudo.roteiro_id}`}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              className="relative z-10 mt-3 block w-full rounded-lg bg-linear-to-r from-orange-600 to-amber-600 px-3 py-1.5 text-center text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Revisar roteiro →
+            </Link>
+          )
         }
         const label = acoes[conteudo.pipeline_status]
         if (!label || !onAcao) return null

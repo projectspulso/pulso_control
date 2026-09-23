@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { extrairAncora, acharColisao, type ColisaoAncora } from '@/lib/automation/ancora'
+import { motivosRevisao, NOTA_MINIMA_AUTO_APROVAR } from '@/lib/automation/motivos-revisao'
 import { varrerDuplicidade } from '@/lib/automation/vigia-duplicidade'
 import { checarFatos, type ResultadoChecagem } from '@/lib/automation/checagem-fatos'
 import { callOpenAI } from '@/lib/automation/ai-clients'
@@ -189,7 +190,7 @@ export async function POST(request: NextRequest) {
     const hook = avaliarHook(roteiro)
 
     const autoApprove = autoApproveConfig?.valor === true || autoApproveConfig?.valor === 'true'
-    const autoApproveThreshold = 80
+    const autoApproveThreshold = NOTA_MINIMA_AUTO_APROVAR
     // tem_cta é bloqueante: sem "segue/siga o PULSO" no fecho, o render não tem âncora pra
     // janela do mascote (regra PULSO-CTA) — roteiro assim só sai com aprovação humana.
     // TRAVA DE ÂNCORA — o último portão antes do dinheiro.
@@ -300,6 +301,22 @@ export async function POST(request: NextRequest) {
       autoApprove && qualidade.score >= autoApproveThreshold && hook.nota >= 3 && qualidade.tem_cta &&
       !colisaoAncora && !gemeoNoAcervo && !promessaAberta && !fatoSuspeito
 
+    // O porquê, gravado junto — o card do kanban mostra ao dono o que segurou o roteiro.
+    const motivos = shouldAutoApprove ? [] : motivosRevisao({
+      autoAprovarLigado: autoApprove,
+      nota: qualidade.score,
+      notaMinima: autoApproveThreshold,
+      notaHook: hook.nota,
+      blocoUnico: !qualidade.tem_hook,
+      duracaoFora: !qualidade.duracao_adequada,
+      temCta: qualidade.tem_cta,
+      colideCom: colisaoAncora?.colideCom.titulo ?? null,
+      gemeoDe: gemeoNoAcervo?.titulo ?? null,
+      promessaAberta,
+      fatosSuspeitos: checagem && !checagem.indisponivel ? checagem.erradas.length : null,
+      checagemRodou: !!checagem && !checagem.indisponivel,
+    })
+
     // NUMERO AUTOMÁTICO: respeita o número já gravado na ideia; senão, próximo da sequência canônica.
     let numero: number | null =
       typeof ideia.metadata?.numero === 'number' ? ideia.metadata.numero : null
@@ -346,6 +363,7 @@ export async function POST(request: NextRequest) {
           quality_score: qualidade.score,
           validacoes: qualidade,
           auto_aprovado: shouldAutoApprove,
+          motivos_revisao: motivos,
           palavras_total: qualidade.palavras,
           total_caracteres: roteiro.length,
           total_paragrafos: roteiro.split('\n\n').filter(Boolean).length,
@@ -440,7 +458,7 @@ export async function POST(request: NextRequest) {
         .eq('ideia_id', ideia.id)
         .limit(1)
       const statusPipe = shouldAutoApprove ? 'ROTEIRO_PRONTO' : 'AGUARDANDO_ROTEIRO'
-      const metaExtra: Record<string, unknown> = {}
+      const metaExtra: Record<string, unknown> = { motivos_revisao: motivos }
       if (numero != null) metaExtra.numero = numero
       if (checagem && !checagem.indisponivel && checagem.erradas.length > 0) {
         metaExtra.fatos_suspeitos = {

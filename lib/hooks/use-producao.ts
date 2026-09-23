@@ -26,6 +26,7 @@ export interface ConteudoProducao {
   pipeline_status: string
   ideia_status: string
   roteiro_status: string | null
+  roteiro_metadata?: Record<string, unknown> | null
   
   // Flags
   is_piloto: boolean

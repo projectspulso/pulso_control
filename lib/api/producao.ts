@@ -16,6 +16,7 @@ export interface ConteudoProducao {
   pipeline_status: string
   ideia_status: string
   roteiro_status: string | null
+  roteiro_metadata?: Record<string, unknown> | null
   
   // Flags
   is_piloto: boolean
@@ -72,7 +73,8 @@ export async function getAll() {
         id,
         titulo,
         status,
-        nota_hook
+        nota_hook,
+        metadata
       )
     `)
     .order('prioridade', { ascending: false })
@@ -100,6 +102,7 @@ export async function getAll() {
       pipeline_status: item.status,
       ideia_status: ideiaData?.status || '',
       roteiro_status: roteiroData?.status || null,
+      roteiro_metadata: roteiroData?.metadata || null,
       
       is_piloto: item.is_piloto || false,
       
@@ -136,7 +139,8 @@ export async function getByStatus(status: string) {
         id,
         titulo,
         status,
-        nota_hook
+        nota_hook,
+        metadata
       )
     `)
     .eq('status', status)
@@ -163,6 +167,7 @@ export async function getByStatus(status: string) {
       pipeline_status: item.status,
       ideia_status: ideiaData?.status || '',
       roteiro_status: roteiroData?.status || null,
+      roteiro_metadata: roteiroData?.metadata || null,
       
       is_piloto: item.is_piloto || false,
       
