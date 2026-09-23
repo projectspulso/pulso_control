@@ -304,26 +304,16 @@ export async function POST(request: NextRequest) {
     let numero: number | null =
       typeof ideia.metadata?.numero === 'number' ? ideia.metadata.numero : null
     if (numero == null) {
-      try {
-        // maxNumero de TODAS as fontes (roteiros + ideias + pipeline) — antes lia só roteiros,
-        // e os números do lote de junho viviam em ideias/pipeline, então julho recomeçava baixo
-        // e colidia (6 números duplicados até 17/07). Agora o próximo é sempre > o real máximo.
-        const [rotN, ideiasN, pipeN] = await Promise.all([
-          supabase.schema('pulso_content').from('roteiros').select('metadata').not('metadata->numero', 'is', null),
-          supabase.schema('pulso_content').from('ideias').select('metadata').not('metadata->numero', 'is', null),
-          supabase.schema('pulso_content').from('pipeline_producao').select('metadata').not('metadata->numero', 'is', null),
-        ])
-        let maxNumero = 0
-        for (const src of [rotN.data, ideiasN.data, pipeN.data]) {
-          for (const r of (src || [])) {
-            const n = Number((r?.metadata as { numero?: unknown })?.numero)
-            if (Number.isFinite(n) && n > maxNumero) maxNumero = n
-          }
-        }
-        numero = maxNumero + 1
-      } catch (e) {
-        console.error('[gerar-roteiro] falha ao calcular numero automático:', e)
+      // O NÚMERO VEM DO BANCO (migration 073), não de "maior + 1" aqui. Calculado nesta rota, duas
+      // chamadas ao mesmo tempo liam o mesmo máximo: em 23/09/2026 três roteiros pedidos juntos
+      // saíram todos #246, e dois de 18/09 como #230. A sequência reserva na hora e confere o
+      // máximo real de roteiros + ideias + pipeline, então nunca devolve um número já usado.
+      const { data: n, error: nErr } = await supabase.schema('pulso_content').rpc('proximo_numero_video')
+      if (nErr || typeof n !== 'number') {
+        console.error('[gerar-roteiro] falha ao reservar numero:', nErr?.message)
         numero = null
+      } else {
+        numero = n
       }
     }
 

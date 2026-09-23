@@ -4,6 +4,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Corrigido (23/09) — número do vídeo repetido e cards da produção sem canal
+- **O número do vídeo (#pulsoNNN) saía repetido.** Era "maior existente + 1" calculado na rota `gerar-roteiro`: chamadas ao mesmo tempo leem o mesmo máximo. Medido: #246 em 3 vídeos (os roteiros do teste de Espaço, pedidos em paralelo) e #230 em 2 (18/09). Nenhum publicado nem renderizado. Agora o número vem do banco — sequência `pulso_content.numero_video_seq` + função `proximo_numero_video()` (migration `073`), que reserva na hora e ainda confere o máximo real de roteiros, ideias e pipeline. Só `service_role` executa (anon recebe 401, conferido). Renumerados: Fomalhaut #247, Tomates #248, "medo nas telas" #249; zero duplicados restantes.
+- **Os cards da produção mostravam "Sem canal"** em 44 de 44 itens em andamento. O card lia uma cópia (`pipeline_producao.metadata.canal_nome`) que ninguém mais grava — 242 de 248 registros estavam sem ela. Agora lê o canal da ideia (`ideias.canal_id` → `pulso_core.canais`), que é a fonte; a cópia antiga só vale se a ideia não tiver canal. Conferido reproduzindo a consulta do card: 44 → 0 sem canal.
+
 ### Corrigido (23/09) — trava de duplicidade barrava a versão corrigida de uma ideia
 - **Ideia descartada por ERRO DE EXECUÇÃO não bloqueia mais a versão corrigida.** A trava de ideia (`gerar-ideias` e `do-momento`) comparava com todas as ideias, descartadas inclusive; a trava de roteiro já ignorava descartadas — as duas discordavam. O eclipse assírio de 763 a.C. foi barrado por "contar a mesma história" da versão que atribuía o eclipse aos maias, descartada minutos antes justamente por esse erro.
 - **O tipo mora em `ideias.metadata.descarte.tipo`**: sem tipo ou `'assunto'` continua bloqueando (Copa, tema centrado em pessoa, duplicata — 13 das 17 descartadas); só `'execucao'` libera. Nenhum descarte antigo mudou de comportamento. Função `bloqueiamDuplicidade` em `lib/automation/dedup.ts`.

@@ -32,6 +32,22 @@ export interface ConteudoProducao {
   metadata: any
 }
 
+/**
+ * O CANAL DO CARD VEM DA IDEIA, não de uma cópia. Até 23/09/2026 o card lia
+ * `pipeline_producao.metadata.canal_nome` — cópia gravada na criação do registro que ninguém mais
+ * escreve: 242 de 248 estavam sem ela e o card mostrava "Sem canal" (44 em andamento). A fonte
+ * verdadeira é `ideias.canal_id` → `pulso_core.canais`. A cópia antiga só vale se a ideia não tiver
+ * canal. O embed cruzado de schema não é suportado pelo PostgREST, por isso os nomes vêm à parte.
+ */
+async function nomesDosCanais(): Promise<Map<string, string>> {
+  const { data } = await supabase.schema('pulso_core').from('canais').select('id, nome')
+  return new Map(((data || []) as Array<{ id: string; nome: string }>).map((c) => [c.id, c.nome]))
+}
+
+function canalDoCard(canalId: string | null | undefined, metadata: { canal_nome?: string } | null | undefined, canais: Map<string, string>): string {
+  return (canalId && canais.get(canalId)) || metadata?.canal_nome || 'Sem canal'
+}
+
 export async function getAll() {
   const { data, error } = await supabase
     .schema('pulso_content')
@@ -49,7 +65,8 @@ export async function getAll() {
       ideias:ideia_id (
         id,
         titulo,
-        status
+        status,
+        canal_id
       ),
       roteiros:roteiro_id (
         id,
@@ -62,6 +79,7 @@ export async function getAll() {
     .order('data_publicacao_planejada', { ascending: true })
 
   if (error) throw error
+  const canais = await nomesDosCanais()
 
   // Transformar para o formato esperado
   return (data || []).map(item => {
@@ -76,7 +94,7 @@ export async function getAll() {
       ideia: ideiaData?.titulo || 'Sem título',
       roteiro: roteiroData?.titulo || null,
       nota_hook: roteiroData?.nota_hook ?? null,
-      canal: item.metadata?.canal_nome || 'Sem canal',
+      canal: canalDoCard(ideiaData?.canal_id, item.metadata, canais),
       serie: item.metadata?.serie_nome || '',
       
       pipeline_status: item.status,
@@ -111,7 +129,8 @@ export async function getByStatus(status: string) {
       ideias:ideia_id (
         id,
         titulo,
-        status
+        status,
+        canal_id
       ),
       roteiros:roteiro_id (
         id,
@@ -124,6 +143,7 @@ export async function getByStatus(status: string) {
     .order('prioridade', { ascending: false })
 
   if (error) throw error
+  const canais = await nomesDosCanais()
 
   return (data || []).map(item => {
     const ideiaData = Array.isArray(item.ideias) ? item.ideias[0] : item.ideias
@@ -137,7 +157,7 @@ export async function getByStatus(status: string) {
       ideia: ideiaData?.titulo || 'Sem título',
       roteiro: roteiroData?.titulo || null,
       nota_hook: roteiroData?.nota_hook ?? null,
-      canal: item.metadata?.canal_nome || 'Sem canal',
+      canal: canalDoCard(ideiaData?.canal_id, item.metadata, canais),
       serie: item.metadata?.serie_nome || '',
       
       pipeline_status: item.status,
