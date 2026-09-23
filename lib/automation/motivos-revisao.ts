@@ -18,7 +18,7 @@ export interface EntradaRevisao {
   nota?: number | null
   notaMinima?: number | null
   notaHook?: number | null
-  /** a nota conta PARÁGRAFOS no critério "tem gancho" — roteiro em bloco único perde 35 pontos */
+  /** SÓ para roteiro gerado antes de 23/09/2026: a nota antiga contava parágrafos como "gancho" */
   blocoUnico?: boolean | null
   duracaoFora?: boolean | null
   temCta?: boolean | null

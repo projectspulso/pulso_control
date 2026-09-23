@@ -209,11 +209,21 @@ export function splitTextForTTS(text: string, maxChars = 4000): string[] {
 }
 
 /**
- * Valida qualidade de um roteiro gerado
+ * Valida qualidade de um roteiro gerado.
+ *
+ * A NOTA MEDIA FORMA, NÃO O GANCHO (corrigido em 23/09/2026). "tem_hook" era `parágrafos >= 2` e
+ * mais 10 pontos iam para "3 a 8 parágrafos". O gerador escreve a narração em bloco único (média
+ * 1,0–1,2 parágrafo em setembro), então quase todo roteiro ficava em 65 com gancho real 4,4/5 — e
+ * desde 07/09 nenhum chegou ao mínimo de 80: a aprovação automática, ligada, não aprovava nada.
+ * Parágrafo não existe na narração falada; o gancho existe. Agora "tem_hook" é a nota do avaliador
+ * de gancho (`notaHook >= 3`, de hook-score.ts) e o peso dos parágrafos foi para gancho e duração:
+ *   gancho 30 · chamada 25 · duração 30 · tamanho 15 = 100.
+ * 80 exige gancho + chamada + duração no alvo — faltar qualquer um dos três já reprova.
  */
 export function validarRoteiro(
   roteiro: string,
-  duracaoAlvo: number
+  duracaoAlvo: number,
+  notaHook: number
 ): {
   score: number
   tem_hook: boolean
@@ -224,10 +234,9 @@ export function validarRoteiro(
   duracao_estimada: number
 } {
   const palavras = roteiro.split(/\s+/).length
-  const paragrafos = roteiro.split('\n\n').filter(Boolean).length
   const duracaoEstimada = Math.round(palavras / 2.5)
 
-  const tem_hook = paragrafos >= 2
+  const tem_hook = notaHook >= 3
   // CTA DE VERDADE, NO LUGAR CERTO: o fecho (último quarto do texto) precisa pedir o follow com
   // o nome da marca — "segue/siga/seguir o PULSO". O teste antigo (/segue|...|pulso|canal/ no
   // texto INTEIRO) nunca reprovava: todo roteiro menciona "PULSO", e "consegue" contém "segue".
@@ -239,11 +248,10 @@ export function validarRoteiro(
   const tamanho_ok = palavras >= 40 && palavras <= 600
 
   let score = 0
-  if (tem_hook) score += 25
+  if (tem_hook) score += 30
   if (tem_cta) score += 25
-  if (duracao_adequada) score += 25
+  if (duracao_adequada) score += 30
   if (tamanho_ok) score += 15
-  if (paragrafos >= 3 && paragrafos <= 8) score += 10
 
   return {
     score,

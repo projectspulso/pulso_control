@@ -176,7 +176,10 @@ export async function POST(request: NextRequest) {
 
     // Validar qualidade
     const duracaoAlvo = ideiaCtx.duracao_estimada || 35
-    const qualidade = validarRoteiro(roteiro, duracaoAlvo)
+    // TRAVA DE HOOK (Kaizen): nota 1-5 da 1ª frase. Hook <=2 NUNCA auto-aprova. Vem antes da
+    // qualidade porque a nota de qualidade usa ela (ver validarRoteiro).
+    const hook = avaliarHook(roteiro)
+    const qualidade = validarRoteiro(roteiro, duracaoAlvo, hook.nota)
 
     // Buscar config de auto-approve
     const { data: autoApproveConfig } = await supabase
@@ -185,9 +188,6 @@ export async function POST(request: NextRequest) {
       .select('valor')
       .eq('chave', 'auto_approve_roteiro')
       .single()
-
-    // TRAVA DE HOOK (Kaizen): nota 1-5 da 1ª frase. Hook <=2 NUNCA auto-aprova.
-    const hook = avaliarHook(roteiro)
 
     const autoApprove = autoApproveConfig?.valor === true || autoApproveConfig?.valor === 'true'
     const autoApproveThreshold = NOTA_MINIMA_AUTO_APROVAR
@@ -307,7 +307,6 @@ export async function POST(request: NextRequest) {
       nota: qualidade.score,
       notaMinima: autoApproveThreshold,
       notaHook: hook.nota,
-      blocoUnico: !qualidade.tem_hook,
       duracaoFora: !qualidade.duracao_adequada,
       temCta: qualidade.tem_cta,
       colideCom: colisaoAncora?.colideCom.titulo ?? null,

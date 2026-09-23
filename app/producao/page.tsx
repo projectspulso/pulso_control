@@ -173,7 +173,7 @@ function CardConteudo({ conteudo, destacado, onAcao, processando }: CardProps) {
                 ))}
               </ul>
             ) : (
-              <p className="mt-1 text-[10px] leading-tight text-amber-200/60">sem motivo registrado</p>
+              <p className="mt-1 text-[10px] leading-tight text-amber-200/60">nenhuma trava acusou nada — só falta você aprovar</p>
             )}
           </div>
         )}
