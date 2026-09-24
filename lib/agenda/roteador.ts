@@ -154,8 +154,8 @@ export function pontuarCandidato(
 /**
  * Preenche os slots na ordem cronológica, sem repetir vídeo.
  *
- * Os slots PERENES escolhem antes dos sazonais: são as duas publicações que sustentam o
- * crescimento (18h e 21h), então levam o melhor estoque. O sazonal das 12h fica com o que sobra —
+ * Os slots PERENES escolhem antes dos sazonais: são as publicações que sustentam o crescimento
+ * (desde 23/09/2026 uma só, às 19h), então levam o melhor estoque. O sazonal das 12h fica com o que sobra —
  * e é justamente onde tema novo tem chance de aparecer sem custar o horário nobre.
  */
 export function rotearSlots(

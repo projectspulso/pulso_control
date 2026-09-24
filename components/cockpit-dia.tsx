@@ -189,7 +189,7 @@ export function CockpitDia({ mostrarLinkPublicar = true }: { mostrarLinkPublicar
           <Send className="h-5 w-5 text-violet-400" /> Plano de publicação
         </h2>
         <p className="mb-4 text-xs text-zinc-500">
-          Grade: {data?.alvoDia ?? 2}/dia (perenes 18h/21h). A rede vem do que mais entrega pra cada canal.
+          Grade: {data?.alvoDia ?? 1}/dia, às 19h (horário na Agenda semanal). A rede vem do que mais entrega pra cada canal.
         </p>
 
         {isLoading ? (

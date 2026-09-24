@@ -25,7 +25,7 @@ export function useEstoquePipeline() {
     queryFn: async () => {
       const [{ data: pipeline, error: e1 }, { data: cfgRow, error: e2 }] = await Promise.all([
         supabase.schema('pulso_content').from('pipeline_producao').select('status, data_publicacao'),
-        supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'desafio_100').maybeSingle(),
+        supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle(),
       ])
       if (e1) throw e1
       if (e2) throw e2
@@ -37,11 +37,12 @@ export function useEstoquePipeline() {
       const publicados = porStatus('PUBLICADO')
       const agendados = porStatus('AGENDADO')
 
-      // Ritmo = a MESMA grade que o Desafio dos 100 Dias cobra (pulso_core.configuracoes).
-      // Antes vinha de plano_publicacao, tabela que ninguém mais escreve: ela somava 1/intervalo
-      // de cada plano ativo e devolvia 12/dia, zerando a cobertura e deixando o alarme sempre aceso.
-      const cfg = (cfgRow?.valor as { publicacoes_dia_alvo?: number } | null) || {}
-      const ritmo = Math.max(1, cfg.publicacoes_dia_alvo ?? 2)
+      // Ritmo = o teto real de publicação (linha_producao.publicar_dia), o mesmo que o publicador
+      // obedece. Antes vinha de plano_publicacao (tabela morta, dava 12/dia) e depois do desafio dos
+      // 100 dias (2/dia) — que fechou; desde 23/09/2026 a operação publica 1/dia.
+      const valorCfg = cfgRow?.valor
+      const cfg = ((typeof valorCfg === 'string' ? JSON.parse(valorCfg) : valorCfg) as { publicar_dia?: number } | null) || {}
+      const ritmo = Math.max(1, cfg.publicar_dia ?? 1)
       const diasCobertura = (prontos + agendados) / ritmo
 
       let situacao: EstoquePipeline['situacao'] = 'SAUDAVEL'

@@ -4,6 +4,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Mudado (23/09) — publicação diária às 19h
+- **O vídeo do dia sai às 19h** (era 18h). Medido antes de decidir: nos 32 dias com 2 vídeos, o de mais tarde ganhou em ~50% das redes — entre 18h e 21h não há vencedor; a tarde (12–17h) perde 30–60% em todas as redes. 19h fica no meio da faixa boa e dá folga para o upload manual de YouTube e Facebook. Mudado na grade (`agenda_semanal`, 7 dias), no plano (`agenda_atribuicoes`, 26 horários futuros) e na fila (`data_publicacao_planejada`, 13 vídeos a partir de 24/09).
+- **As telas Hoje e Estoque liam o ritmo do desafio encerrado (2/dia).** Agora leem `linha_producao.publicar_dia` (1), o mesmo teto que o publicador obedece — antes a Hoje cobraria 2 vídeos por dia e o Estoque mostraria metade dos dias de cobertura. "Ainda dá tempo hoje" vai até 23h (o cron antecipa de hora em hora); o texto "perenes 18h/21h" do cockpit foi atualizado.
+
 ### Adicionado (23/09) — o card da produção diz por que o roteiro não foi aprovado sozinho
 - **Roteiro escrito e não aprovado mostra "✋ esperando sua aprovação" + os motivos** (fato suspeito, mesmo assunto de X, parecido com Y, promessa aberta, gancho fraco, sem chamada, nota abaixo do mínimo e o que derrubou a nota). O gerador grava a lista em `metadata.motivos_revisao` (roteiro e pipeline); para roteiros anteriores o card reconstrói do que já estava salvo. Função única: `lib/automation/motivos-revisao.ts` (nota mínima 80 também mora lá).
 - **O botão "Gerar roteiro" não fazia nada** quando o card já tinha roteiro em rascunho (a ação só age sem `roteiro_id`). Vira "Revisar roteiro →", link para o roteiro.

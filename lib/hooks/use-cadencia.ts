@@ -22,7 +22,7 @@ export interface Cadencia {
   diasAbaixo: number
   /** quantos vídeos deixaram de sair no período */
   deficit: number
-  /** hoje ainda dá tempo? (antes das 21h a grade ainda tem slot) */
+  /** hoje ainda dá tempo? A grade sai às 19h e o cron antecipa de hora em hora até 23h05 */
   aindaDaTempo: boolean
   ultimos: Array<{ dia: string; n: number }>
 }
@@ -74,7 +74,7 @@ export function useCadencia() {
         hoje: porDia.get(hojeISO)?.size ?? 0,
         diasAbaixo,
         deficit,
-        aindaDaTempo: hora < 21,
+        aindaDaTempo: hora < 23,
         ultimos,
       }
     },

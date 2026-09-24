@@ -105,7 +105,7 @@ export function useHoje() {
           .select('ideia_id, plataforma, data_publicacao')
           .gte('data_publicacao', HOJE_ISO()),
         supabase.schema('pulso_content').from('roteiros').select('ideia_id, nota_hook'),
-        supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'desafio_100').maybeSingle(),
+        supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle(),
         supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'kwai_backfill').maybeSingle(),
         supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id').eq('plataforma', 'kwai'),
         supabase
@@ -113,8 +113,12 @@ export function useHoje() {
           .from('metricas_publicacao')
           .select('ideia_id, plataforma, data_publicacao, taxa_retencao'),
       ])
-      // grade real (mesma fonte do burn-up e do estoque) — não hardcodar 3/dia
-      const alvoDia = Math.max(1, (cfgRes.data?.valor as { publicacoes_dia_alvo?: number } | null)?.publicacoes_dia_alvo ?? 2)
+      // Ritmo REAL de publicação (linha_producao.publicar_dia — o teto que o publicador obedece).
+      // Até 23/09/2026 lia desafio_100.publicacoes_dia_alvo: o desafio fechou em 2/dia e a operação
+      // passou a 1/dia, então a tela cobraria 2 vídeos todo dia e acusaria dia "abaixo da meta".
+      const valorLinha = cfgRes.data?.valor
+      const linha = (typeof valorLinha === 'string' ? JSON.parse(valorLinha) : valorLinha) as { publicar_dia?: number } | null
+      const alvoDia = Math.max(1, linha?.publicar_dia ?? 1)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ideiaMap = new Map<string, any>((ideiasRes.data || []).map((i: any) => [i.id, i]))
