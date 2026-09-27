@@ -4,6 +4,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Corrigido (26/09) — auto-agendar: mensagem enganosa, trava de teste e plano com vídeo cancelado
+- **"Nada a agendar" com 15 vídeos prontos sem data não era defeito do botão — era o horizonte.** Com 1 vídeo/dia, o plano cobre 28 dias (28 horários) e havia 42 vídeos prontos: 27 já datados até 23/10, 15 sem lugar. A mensagem dizia "não estão prontos ou já têm data" e escondia isso. Agora conta o motivo: quantos não cabem no horizonte (entram quando a janela andar), quantos já têm data, quantos de tema em teste esperam o intervalo, quantos sem vídeo.
+- **O auto-agendar não conhecia a trava do teste de tema:** carimbou as 3 tentativas do tema Espaço em 05, 06 e 07/10, dias seguidos. O publicador seguraria duas, mas a fila mentia. Agora a tentativa só pega dia permitido pela trava, sem gastar o horário se não couber.
+- **O plano (popular) incluía ideias DESCARTADAS com pipeline CANCELADO** — 4 dias futuros ocupados, dois com vídeos de Copa. O estágio vinha só de "tem áudio". Agora cancelado/descartado não é candidato.
+
 ### Mudado (23/09) — publicação diária às 19h
 - **O vídeo do dia sai às 19h** (era 18h). Medido antes de decidir: nos 32 dias com 2 vídeos, o de mais tarde ganhou em ~50% das redes — entre 18h e 21h não há vencedor; a tarde (12–17h) perde 30–60% em todas as redes. 19h fica no meio da faixa boa e dá folga para o upload manual de YouTube e Facebook. Mudado na grade (`agenda_semanal`, 7 dias), no plano (`agenda_atribuicoes`, 26 horários futuros) e na fila (`data_publicacao_planejada`, 13 vídeos a partir de 24/09).
 - **As telas Hoje e Estoque liam o ritmo do desafio encerrado (2/dia).** Agora leem `linha_producao.publicar_dia` (1), o mesmo teto que o publicador obedece — antes a Hoje cobraria 2 vídeos por dia e o Estoque mostraria metade dos dias de cobertura. "Ainda dá tempo hoje" vai até 23h (o cron antecipa de hora em hora); o texto "perenes 18h/21h" do cockpit foi atualizado.

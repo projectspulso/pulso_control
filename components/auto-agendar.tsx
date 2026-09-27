@@ -70,6 +70,20 @@ export function AutoAgendar() {
   }
 
   const pulados = typeof res?.pulados === 'number' ? res.pulados : (res?.pulados?.length ?? 0)
+  // O MOTIVO, contado. "Não estão prontos ou já têm data" escondia o caso comum desde 23/09/2026
+  // (1 vídeo/dia): vídeo pronto que não cabe no horizonte do plano (28 dias). Ele entra sozinho
+  // quando a janela anda — não é defeito, mas o dono precisa saber que é isso.
+  const lista = Array.isArray(res?.pulados) ? res.pulados : []
+  const semSlot = lista.filter((p) => p.motivo.startsWith('sem slot')).length
+  const comData = lista.filter((p) => p.motivo.startsWith('já tem data')).length
+  const emTeste = lista.filter((p) => p.motivo.startsWith('tema em teste')).length
+  const outros = lista.length - semSlot - comData - emTeste
+  const motivos = [
+    semSlot && `${semSlot} pronto(s) não cabem no horizonte do plano (28 dias) — entram quando a janela andar`,
+    comData && `${comData} já têm data`,
+    emTeste && `${emTeste} de tema em teste aguardam o intervalo de 7 dias`,
+    outros && `${outros} sem vídeo pronto`,
+  ].filter(Boolean).join(' · ')
 
   return (
     <div className="glass rounded-2xl border border-zinc-800/50 p-5">
@@ -107,7 +121,7 @@ export function AutoAgendar() {
         <div className="mt-4">
           {res.plano.length === 0 ? (
             <p className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 text-sm text-zinc-400">
-              Nada a agendar — {pulados} item(ns) do plano não estão prontos ou já têm data.
+              Nada a agendar{motivos ? ` — ${motivos}.` : typeof res.pulados === 'number' ? ` — ${pulados} item(ns) ficaram de fora.` : '.'}
             </p>
           ) : (
             <>
@@ -145,7 +159,7 @@ export function AutoAgendar() {
                 </div>
               )}
               <p className="mt-2 text-[11px] text-zinc-600">
-                {pulados > 0 && `${pulados} do plano ficaram de fora (ainda em produção, sem vídeo ou já com data). `}
+                {motivos ? `Ficaram de fora: ${motivos}. ` : pulados > 0 && `${pulados} do plano ficaram de fora. `}
                 O horário vem da grade; o vídeo de cada slot, do desempenho de tema.
               </p>
               <div className="mt-3 flex gap-2">

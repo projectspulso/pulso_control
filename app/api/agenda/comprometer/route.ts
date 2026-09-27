@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { estadoDosTestes, estreias, lerRegras, podeOcuparVaga, somarDias, type CanalComTeste, type TesteDoCanal } from '@/lib/agenda/teste-temas'
 
 /**
  * A PONTE QUE FALTAVA — o plano inteligente vira data que o cron dispara.
@@ -61,17 +62,21 @@ async function comprometer(request: NextRequest) {
   const supabase = getSupabaseAdminClient() as any
   const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
 
-  const [planoQ, pipeQ, pubQ, ideiasQ, cfgQ] = await Promise.all([
+  const [planoQ, pipeQ, pubQ, ideiasQ, cfgQ, canaisQ, regrasTesteQ] = await Promise.all([
     supabase.schema('pulso_content').from('agenda_atribuicoes')
       .select('data, horario, ideia_id').gte('data', hoje).not('ideia_id', 'is', null).order('data'),
     supabase.schema('pulso_content').from('pipeline_producao')
       .select('id, ideia_id, status, metadata, data_publicacao_planejada'),
     supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, data_publicacao'),
-    supabase.schema('pulso_content').from('ideias').select('id, titulo, formato'),
+    supabase.schema('pulso_content').from('ideias').select('id, titulo, formato, canal_id'),
     supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle(),
+    supabase.schema('pulso_core').from('canais').select('id, nome, metadata'),
+    supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'teste_temas').maybeSingle(),
   ])
   if (planoQ.error) return NextResponse.json({ error: `plano: ${planoQ.error.message}` }, { status: 500 })
   if (pipeQ.error) return NextResponse.json({ error: `pipeline: ${pipeQ.error.message}` }, { status: 500 })
+  // Sem saber quem está em teste, a rota poria as 3 tentativas de um tema novo em dias seguidos.
+  if (canaisQ.error) return NextResponse.json({ error: `canais: ${canaisQ.error.message}` }, { status: 500 })
 
   const titulo = Object.fromEntries((ideiasQ.data || []).map((i: { id: string; titulo: string }) => [i.id, i.titulo]))
   const ehLongo = new Set(
@@ -197,25 +202,56 @@ async function comprometer(request: NextRequest) {
   // rodada. Redistribuindo, ela parte só dos dias congelados (que já estão servidos); no modo
   // conservador, parte de tudo que já está marcado.
   const porDia: Record<string, number> = redistribuir ? { ...congelados } : { ...ocupacao }
-  const proximoSlot = () => {
-    while (slots.length) {
-      const q = slots.shift()!
+  const proximoSlot = (aceita: (dia: string) => boolean = () => true) => {
+    for (let k = 0; k < slots.length; k++) {
+      const q = slots[k]
       const dia = q.slice(0, 10)
-      if (q.slice(0, 10) < congeladoAte) continue // slot congelado não recebe nada novo
+      if (dia < congeladoAte) continue // slot congelado não recebe nada novo
       if (!redistribuir && ocupado.has(q.slice(0, 16))) continue
       if ((porDia[dia] || 0) >= tetoDia) continue
+      if (!aceita(dia)) continue
+      slots.splice(k, 1)
       porDia[dia] = (porDia[dia] || 0) + 1
       return q
     }
     return null
   }
 
+  // TEMA EM TESTE (lib/agenda/teste-temas.ts): esta rota preenche datas em sequência e não sabia da
+  // trava — em 26/09/2026 as 3 tentativas do tema Espaço estavam carimbadas em 05, 06 e 07/10, dias
+  // seguidos, contra o intervalo de 7 dias. O publicador seguraria as duas últimas, mas a fila ficava
+  // mentindo. Agora a tentativa só pega dia permitido, sem gastar o slot se não couber.
+  const regrasTeste = lerRegras(regrasTesteQ.data?.valor)
+  const canalDaIdeia = new Map<string, string>()
+  for (const i of (ideiasQ.data || []) as Array<{ id: string; canal_id: string | null }>) if (i.canal_id) canalDaIdeia.set(i.id, i.canal_id)
+  const estadosTeste = estadoDosTestes(
+    ((canaisQ.data || []) as Array<{ id: string; nome: string; metadata: { teste?: TesteDoCanal } | null }>)
+      .map((c): CanalComTeste => ({ id: c.id, nome: c.nome, teste: c.metadata?.teste ?? null })),
+    estreias(((pubQ.data || []) as Array<{ ideia_id: string | null; data_publicacao: string | null }>)
+      .filter((m) => m.ideia_id && m.data_publicacao)
+      .map((m) => ({ ideiaId: m.ideia_id as string, plataforma: '', dataPublicacao: m.data_publicacao as string }))),
+    canalDaIdeia,
+    regrasTeste
+  )
+  const testeNoPlano = new Map<string, number>()
+  const testeLibera = new Map<string, string>()
+
   for (const p of candidatos) {
     const rot = { numero: p.metadata?.numero ?? null, titulo: String(titulo[p.ideia_id] || '').slice(0, 50) }
-    const quando = proximoSlot()
+    const canal = canalDaIdeia.get(p.ideia_id)
+    const est = canal ? estadosTeste.get(canal) : undefined
+    const aceita = est
+      ? (dia: string) => podeOcuparVaga(est, dia, regrasTeste, testeNoPlano.get(canal!) ?? 0).pode &&
+          (!testeLibera.has(canal!) || dia >= testeLibera.get(canal!)!)
+      : undefined
+    const quando = proximoSlot(aceita)
     if (!quando) {
-      pulados.push({ ...rot, motivo: 'sem slot livre no horizonte do plano' })
+      pulados.push({ ...rot, motivo: est ? `tema em teste (${est.nome}): sem dia permitido no horizonte` : 'sem slot livre no horizonte do plano' })
       continue
+    }
+    if (est && canal) {
+      testeNoPlano.set(canal, (testeNoPlano.get(canal) ?? 0) + 1)
+      testeLibera.set(canal, somarDias(quando.slice(0, 10), regrasTeste.cooldownDias))
     }
     const atual = p.data_publicacao_planejada ? String(p.data_publicacao_planejada).slice(0, 16) : null
     if (atual && atual !== quando.slice(0, 16)) aRealinhar.push({ numero: rot.numero, de: atual, para: quando })

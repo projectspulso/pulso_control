@@ -110,9 +110,15 @@ export async function POST(request: NextRequest) {
     // ESTOQUE ÚNICO (não mais por canal): o roteador escolhe pelo que rende, e a grade de canal
     // vira preferência de desempate. Antes, terça era do PULSO IA (mediana 86 no Facebook) tivesse
     // ele algo bom ou não, enquanto um história/arqueologia (mediana 2.919) esperava na fila.
+    // Cancelado/descartado não é candidato: em 26/09/2026 o plano tinha 4 dias ocupados por ideias
+    // DESCARTADAS com pipeline CANCELADO (duas de Copa), porque o estágio vinha só de "tem áudio".
+    const cancelado = new Set(
+      (pipeQ.data || []).filter((p: { status: string }) => p.status === 'CANCELADO').map((p: { ideia_id: string }) => p.ideia_id)
+    )
     const candidatos: CandidatoAgenda[] = []
     for (const i of ideiasQ.data || []) {
       if (publicado.has(i.id)) continue
+      if (i.status === 'DESCARTADA' || cancelado.has(i.id)) continue
       // formato=longo fica FORA da grade de Shorts: a série de bastidores tem cadência e canal
       // próprios (1/semana, só YouTube) e só entra na agenda quando o formato se provar.
       if ((i as { formato?: string }).formato === 'longo') continue
