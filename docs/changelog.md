@@ -6,6 +6,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ### Mudado (29/09) — render 1/dia e fila realinhada
 - **O worker obedece `linha_producao.render_dia_max`** (agora 1). Antes o teto existia só na config; o worker renderizava tudo o que estava autorizado. Conta os vídeos com `metadata.pronto_em` de hoje (carimbo novo, gravado ao virar PRONTO) e, batido o teto, os autorizados esperam o próximo dia.
+- **O plano cobre todo o estoque pronto:** o horizonte era fixo em 28 dias e deixava 12 dos 40 prontos sem data. Agora vai até caber o estoque + 14 dias de folga (máx. 60); slot futuro além do horizonte também é reavaliado, para não repetir vídeo no plano. Resultado: 40 vídeos prontos, 1 por dia, de 29/09 a 07/11, nenhum dia vazio ou duplo.
 - **Realinhar deixava vídeo com data velha colidindo:** quem não cabia no plano novo mantinha a data antiga — 23/10 ficou com #223 e #252. Agora, ao realinhar, quem fica sem lugar perde a data e entra quando a janela andar. #223 corrigido no banco. Fila: 1 por dia de 29/09 a 26/10; tentativas do tema Espaço em 01/10, 08/10 e 15/10.
 
 ### Corrigido (26/09) — auto-agendar: mensagem enganosa, trava de teste e plano com vídeo cancelado
