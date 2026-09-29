@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   // 28 DIAS por padrão, alinhado com a tela. A /publicar projeta useAgenda(28) e o planejador
   // preenchia 21: os 7 dias de diferença viravam 14 slots "sem conteúdo" no card "O que está
   // travando" — alarme estrutural que aparecia mesmo com a fila cheia e escondia o alarme real.
-  const horizonte = Math.min(Math.max(Number(body.horizonte) || 28, 7), 60)
+  const horizontePedido = Number(body.horizonte) || null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
@@ -179,15 +179,26 @@ export async function POST(request: NextRequest) {
     const hojeIso = new Date().toISOString().slice(0, 10)
     const reavaliar: { id: string; ideia_id: string | null; estagio: string }[] = []
 
+    // HORIZONTE COBRE O ESTOQUE (29/09/2026). Com 1 vídeo/dia, 28 dias deixavam 12 dos 40 prontos
+    // sem data. Sem pedido explícito, o plano vai até caber todo o estoque pronto + 14 dias de folga
+    // (as tentativas de tema em teste ficam 7 dias uma da outra e empurram o fim da fila).
+    const estoquePronto = [...videoPronto].filter((id) => !publicado.has(id)).length
+    const horizonte = Math.min(Math.max(horizontePedido ?? Math.max(28, estoquePronto + 14), 7), 60)
     // gera slots datados do horizonte
     const hoje = new Date()
     hoje.setHours(0, 0, 0, 0)
+    // Slot futuro que já existe ALÉM do horizonte também é reavaliado: se o estoque encolher e o
+    // horizonte voltar a 28, a ideia parada lá no dia 40 não estaria em `usados` e o roteador
+    // poderia pô-la de novo num dia próximo — o mesmo vídeo em dois dias do plano.
+    const ultimoFuturo = [...slotsPorChave.values()].reduce((m, a) => (a.data > m ? a.data : m), hojeIso)
+    const diasAteUltimo = Math.round((new Date(`${ultimoFuturo}T00:00:00`).getTime() - hoje.getTime()) / 86_400_000) + 1
+    const diasVarridos = Math.max(horizonte, diasAteUltimo)
     const novos: Record<string, unknown>[] = []
     // Coleta TODOS os slots que precisam de conteúdo e decide de uma vez, no roteador. Antes cada
     // slot escolhia sozinho dentro do seu canal, então ninguém comparava um slot com o outro —
     // e o melhor vídeo do estoque podia cair num horário fraco enquanto o nobre pegava sobra.
     const aPreencher: (SlotParaPreencher & { slotId: string | null })[] = []
-    for (let d = 0; d < horizonte; d++) {
+    for (let d = 0; d < diasVarridos; d++) {
       const dt = new Date(hoje)
       dt.setDate(hoje.getDate() + d)
       const wd = dt.getDay() === 0 ? 7 : dt.getDay()
@@ -211,6 +222,7 @@ export async function POST(request: NextRequest) {
           aPreencher.push({ chave, data: dataIso, horario: g.horario, faixa: (g.faixa === 'sazonal' ? 'sazonal' : 'perene') as Faixa, canalIdPreferido: g.canal_id, slotId: existente.id })
           continue
         }
+        if (d >= horizonte) continue
         aPreencher.push({ chave, data: dataIso, horario: g.horario, faixa: (g.faixa === 'sazonal' ? 'sazonal' : 'perene') as Faixa, canalIdPreferido: g.canal_id, slotId: null })
         slotsExistentes.add(chave)
       }
@@ -278,6 +290,7 @@ export async function POST(request: NextRequest) {
     for (const n of novos) porEstagio[n.estagio as string] = (porEstagio[n.estagio as string] || 0) + 1
 
     const resumo = {
+      horizonte,
       criados: novos.length,
       reavaliados, // slots futuros que apontavam vídeo já publicado ou fora do estoque
       preenchidos: novos.filter((n) => n.ideia_id).length,
