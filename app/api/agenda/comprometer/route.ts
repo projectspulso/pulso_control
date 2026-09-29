@@ -113,6 +113,10 @@ async function comprometer(request: NextRequest) {
   const aGravar: Array<{ id: string; numero: number | null; titulo: string; quando: string }> = []
   const aRealinhar: Array<{ numero: number | null; de: string; para: string }> = []
   const pulados: Array<{ numero: number | null; titulo: string; motivo: string }> = []
+  // Realinhando, quem fica SEM lugar no plano novo perde a data velha: a grade inteira foi redistribuída,
+  // então a data antiga não está mais reservada e colide com o vídeo que ganhou aquele dia (29/09/2026:
+  // #223 ficou em 23/10 junto com o #252). Sem data, ele entra quando a janela do plano andar.
+  const aLimpar: Array<{ id: string; numero: number | null; de: string }> = []
 
   const agora = new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).replace(' ', 'T')
 
@@ -247,6 +251,9 @@ async function comprometer(request: NextRequest) {
     const quando = proximoSlot(aceita)
     if (!quando) {
       pulados.push({ ...rot, motivo: est ? `tema em teste (${est.nome}): sem dia permitido no horizonte` : 'sem slot livre no horizonte do plano' })
+      if (redistribuir && p.data_publicacao_planejada) {
+        aLimpar.push({ id: p.id, numero: rot.numero, de: String(p.data_publicacao_planejada).slice(0, 16) })
+      }
       continue
     }
     if (est && canal) {
@@ -310,6 +317,7 @@ async function comprometer(request: NextRequest) {
       plano: aGravar,
       realinhamentos: aRealinhar,
       divergentes: realinhar ? aRealinhar.length : diasComBuraco,
+      sem_data: aLimpar,
       pulados,
       nota: 'Nada foi gravado. Reenvie com confirmar: true para comprometer estas datas.',
     })
@@ -323,11 +331,16 @@ async function comprometer(request: NextRequest) {
     if (error) erros.push(`#${item.numero}: ${error.message}`)
     else gravados++
   }
+  for (const item of aLimpar) {
+    const { error } = await supabase.schema('pulso_content').from('pipeline_producao')
+      .update({ data_publicacao_planejada: null }).eq('id', item.id)
+    if (error) erros.push(`#${item.numero}: ${error.message}`)
+  }
 
   await supabase.schema('pulso_content').from('logs_workflows').insert({
     workflow_name: 'AUTO_AGENDAR',
     status: erros.length ? 'parcial' : gravados ? 'sucesso' : 'ocioso',
-    detalhes: { gravados, pulados: pulados.length, erros, plano: aGravar },
+    detalhes: { gravados, sem_data: aLimpar, pulados: pulados.length, erros, plano: aGravar },
   }).then(() => {}, () => {})
 
   return NextResponse.json({ success: true, gravados, realinhados: aRealinhar.length, pulados: pulados.length, erros, plano: aGravar })

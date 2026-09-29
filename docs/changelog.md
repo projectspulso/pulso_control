@@ -4,6 +4,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Mudado (29/09) — render 1/dia e fila realinhada
+- **O worker obedece `linha_producao.render_dia_max`** (agora 1). Antes o teto existia só na config; o worker renderizava tudo o que estava autorizado. Conta os vídeos com `metadata.pronto_em` de hoje (carimbo novo, gravado ao virar PRONTO) e, batido o teto, os autorizados esperam o próximo dia.
+- **Realinhar deixava vídeo com data velha colidindo:** quem não cabia no plano novo mantinha a data antiga — 23/10 ficou com #223 e #252. Agora, ao realinhar, quem fica sem lugar perde a data e entra quando a janela andar. #223 corrigido no banco. Fila: 1 por dia de 29/09 a 26/10; tentativas do tema Espaço em 01/10, 08/10 e 15/10.
+
 ### Corrigido (26/09) — auto-agendar: mensagem enganosa, trava de teste e plano com vídeo cancelado
 - **"Nada a agendar" com 15 vídeos prontos sem data não era defeito do botão — era o horizonte.** Com 1 vídeo/dia, o plano cobre 28 dias (28 horários) e havia 42 vídeos prontos: 27 já datados até 23/10, 15 sem lugar. A mensagem dizia "não estão prontos ou já têm data" e escondia isso. Agora conta o motivo: quantos não cabem no horizonte (entram quando a janela andar), quantos já têm data, quantos de tema em teste esperam o intervalo, quantos sem vídeo.
 - **O auto-agendar não conhecia a trava do teste de tema:** carimbou as 3 tentativas do tema Espaço em 05, 06 e 07/10, dias seguidos. O publicador seguraria duas, mas a fila mentia. Agora a tentativa só pega dia permitido pela trava, sem gastar o horário se não couber.

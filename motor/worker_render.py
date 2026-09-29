@@ -94,6 +94,24 @@ def proximo_da_fila(excluir=None):
     aud = [p for p in pipe if p.get('status') == 'EM_EDICAO' and (p.get('metadata') or {}).get('cenas')
            and not (p.get('metadata') or {}).get('segurado')]
     aud.sort(key=lambda p: (tier(cn.get(cid.get(p['ideia_id']), '')), (p.get('metadata') or {}).get('numero', 999)))
+    # TETO DE RENDER POR DIA (linha_producao.render_dia_max). Até 29/09/2026 o teto só limitava o botão
+    # "Produzir o dia"; este robô renderizava tudo o que estivesse em EM_EDICAO, 3 rodadas por dia.
+    # Com a publicação em 1/dia (desde 23/09) isso virou estoque de 6 semanas e crédito gasto adiantado.
+    # Conta o que já ficou PRONTO hoje (metadata.pronto_em). Sem ler a config, vale 1 — o lado barato.
+    if aud:
+        maxd = 1
+        try:
+            cfg = g._db('GET', '/rest/v1/configuracoes?chave=eq.linha_producao&select=valor', schema='pulso_core') or []
+            v = cfg[0]['valor'] if cfg else {}
+            v = json.loads(v) if isinstance(v, str) else (v or {})
+            maxd = int(v.get('render_dia_max') or 1)
+        except Exception as e:
+            log("aviso: não leu render_dia_max (%s) — usando 1" % str(e)[:60])
+        hoje = datetime.date.today().isoformat()
+        feitos = sum(1 for p in pipe if str((p.get('metadata') or {}).get('pronto_em', '')).startswith(hoje))
+        if feitos >= maxd:
+            log("teto de render do dia atingido (%d/%d) — %d autorizado(s) esperam o próximo dia" % (feitos, maxd, len(aud)))
+            return None
     sem = sum(1 for p in pipe if p.get('status') == 'EM_EDICAO' and not (p.get('metadata') or {}).get('cenas'))
     if sem: log("aviso: %d AUDIO_GERADO sem cenas (pulados — gere o áudio no app pra criar as cenas)" % sem)
     return aud[0] if aud else None
@@ -316,6 +334,7 @@ def run(ideia_id=None):
     except Exception as _e:
         log("aviso: ledger nao anexado (%s)" % str(_e)[:60])
     if info.get('transcricao'): nmd['transcricao'] = info['transcricao']
+    nmd['pronto_em'] = datetime.datetime.now().isoformat(timespec='seconds')  # conta no teto de render do dia
     g._db('PATCH', '/rest/v1/pipeline_producao?id=eq.%s' % p['id'], {'status': 'PRONTO_PUBLICACAO', 'metadata': nmd}, schema='pulso_content')
     dest = f"{ONE}/video_{num:03d}_{slug}"; os.makedirs(dest, exist_ok=True)
     open(f"{dest}/FINAL_{slug}.mp4", "wb").write(data)
