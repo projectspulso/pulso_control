@@ -75,9 +75,9 @@ export interface Hoje {
   emRenderComCenas: number
   emRenderSemCenas: number
   aguardandoRoteiroOuAudio: number
-  /** dias de estoque (prontos ÷ publicações/dia da grade, lida da config desafio_100) */
+  /** dias de estoque (prontos ÷ publicações/dia da grade, linha_producao.publicar_dia) */
   estoqueDias: number
-  /** publicações/dia da grade ativa (config desafio_100) */
+  /** publicações/dia da grade ativa (linha_producao.publicar_dia) */
   alvoDia: number
   /** repost matinal do Kwai (backfill de cobertura) — o próximo campeão que ainda não está lá */
   kwaiHoje: KwaiRepost | null
@@ -96,7 +96,7 @@ export function useHoje() {
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
       const [ppRes, ideiasRes, canaisRes, metRes, rotRes, cfgRes, kwaiCfgRes, kwaiPubRes, todasPubRes] = await Promise.all([
-        supabase.schema('pulso_content').from('pipeline_producao').select('id, ideia_id, status, metadata'),
+        supabase.schema('pulso_content').from('pipeline_producao').select('id, ideia_id, status, metadata, data_publicacao_planejada'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id, formato'),
         supabase.schema('pulso_core').from('canais').select('id, nome'),
         supabase
@@ -178,19 +178,30 @@ export function useHoje() {
         canalNome
       )
       const posicao = new Map(pontos.map((p, i) => [p.ideiaId, { ...p, i }]))
-      prontos.sort(
-        (a, b) => (posicao.get(a.ideiaId)?.i ?? 999) - (posicao.get(b.ideiaId)?.i ?? 999)
-      )
-      // os N do dia saem com CANAIS DIFERENTES quando possível — o topo do placar costuma ter
-      // dois do mesmo canal empatados, e publicar os dois seguidos joga fora a variedade.
-      const doDia = escolherDoDia(
-        pontos,
-        new Map(prontos.map((p) => [p.ideiaId, p.canalId])),
-        alvoDia
-      )
+      // UMA DECISÃO SÓ (30/09/2026). Esta tela tinha ranqueador próprio (score.ts: retenção +
+      // idade + gancho, sem tema) enquanto a agenda decidia por outro (roteador.ts, com tema) — e
+      // quem publica de fato é o cron, pela data da agenda. A tela recomendava um vídeo e o cron
+      // soltava outro. Agora manda a DATA PLANEJADA; o score só ordena quem ainda não tem data.
+      const planejada = new Map<string, string>()
+      for (const x of pp) if (x.data_publicacao_planejada) planejada.set(x.ideia_id, String(x.data_publicacao_planejada).slice(0, 10))
+      const hojeLocal = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+      prontos.sort((a, b) => {
+        const da = planejada.get(a.ideiaId) ?? '9999'
+        const db = planejada.get(b.ideiaId) ?? '9999'
+        if (da !== db) return da < db ? -1 : 1
+        return (posicao.get(a.ideiaId)?.i ?? 999) - (posicao.get(b.ideiaId)?.i ?? 999)
+      })
+      const agendadosHoje = prontos.filter((p) => (planejada.get(p.ideiaId) ?? '9999') <= hojeLocal)
+      // Sem nada agendado para hoje, cai no placar antigo — com CANAIS DIFERENTES quando possível.
+      const doDia = agendadosHoje.length
+        ? new Set(agendadosHoje.slice(0, alvoDia).map((p) => p.ideiaId))
+        : escolherDoDia(pontos, new Map(prontos.map((p) => [p.ideiaId, p.canalId])), alvoDia)
       prontos.forEach((p) => {
         const pt = posicao.get(p.ideiaId)
-        p.motivo = pt?.motivo || ''
+        const data = planejada.get(p.ideiaId)
+        p.motivo = data
+          ? `agendado para ${data.slice(8, 10)}/${data.slice(5, 7)} pela agenda`
+          : `sem data — ${pt?.motivo || 'aguarda a agenda'}`
         p.score = pt?.score ?? 0
         p.recomendadoHoje = doDia.has(p.ideiaId)
       })

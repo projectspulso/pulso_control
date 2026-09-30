@@ -4,6 +4,7 @@ import { guardApi } from '@/lib/auth/api-guard'
 import { rotearSlots, type CandidatoAgenda, type Faixa, type SlotParaPreencher } from '@/lib/agenda/roteador'
 import { estadoDosTestes, estreias, lerRegras, type CanalComTeste, type TesteDoCanal } from '@/lib/agenda/teste-temas'
 import { julgarTestes } from '@/lib/agenda/teste-temas-db'
+import { carregarTemasMedidos } from '@/lib/decisor/temas-db'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 /**
@@ -252,7 +253,8 @@ export async function POST(request: NextRequest) {
     )
     const estadosTeste = estadoDosTestes(julgado.canais, estreiaPorIdeia, canalDaIdeia, regrasTeste)
 
-    const escolhas = rotearSlots(aPreencher, candidatos, usados, { estados: estadosTeste, regras: regrasTeste })
+    const temasMedidos = await carregarTemasMedidos(supabase)
+    const escolhas = rotearSlots(aPreencher, candidatos, usados, { estados: estadosTeste, regras: regrasTeste }, temasMedidos)
 
     for (const slot of aPreencher) {
       const e = escolhas.get(slot.chave)

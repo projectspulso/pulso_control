@@ -29,13 +29,38 @@
  * pega (ver radarDeEstouro em ./fatos).
  */
 
+/*
+ * ATUALIZAÇÃO 30/09/2026 — O QUE ESTÁ ACIMA ENVELHECEU, E POR ISSO O NÚMERO SAIU DO CÓDIGO.
+ * Remedido sobre 221 publicações de Facebook: de 31/07 a 30/09 história/arqueologia fez ZERO
+ * estouros em 43 vídeos (mediana 1.193 → 530 → 779), e os dois ≥3k do período caíram em "outros"
+ * — que era metade do acervo (114 de 221), incluindo a Máquina de Antikythera (3.552, o maior de
+ * setembro). A agenda seguia dando o bônus máximo a um tema "que sorteia" que tinha parado de
+ * sortear, com a frase de julho na tela.
+ *
+ * Mudou: (1) o papel de cada tema (sorteia/neutro/morto) e as medianas são MEDIDOS toda manhã por
+ * `medirTemas` (rotina /api/automation/aprender → configuracoes.temas_medidos) sobre janela móvel
+ * de 90 dias; sem medição, todo tema é neutro — número velho não decide mais nada. (2) o
+ * dicionário ganhou os temas que viviam escondidos em "outros": espaço, games, esporte/Copa,
+ * terra/clima e mistério/inexplicável.
+ */
+
 export type Tema =
   | 'história/arqueologia'
+  | 'espaço/universo'
+  | 'games'
+  | 'esporte/Copa'
+  | 'terra/clima'
   | 'natureza/animais'
   | 'corpo/cérebro'
   | 'tecnologia/IA'
   | 'produtividade/motivacional'
+  | 'mistério/inexplicável'
   | 'outros'
+
+export const TEMAS: Tema[] = [
+  'história/arqueologia', 'espaço/universo', 'games', 'esporte/Copa', 'terra/clima', 'natureza/animais',
+  'corpo/cérebro', 'tecnologia/IA', 'produtividade/motivacional', 'mistério/inexplicável', 'outros',
+]
 
 /** Ordem importa: o primeiro tema que casa vence. Por isso história/arqueologia vem antes —
  *  "navio" e "castelo" pertencem a ela mesmo quando o título também fala de natureza. */
@@ -56,6 +81,39 @@ const DICIONARIO: Array<{ tema: Tema; termos: string[] }> = [
       'milenar', 'ancestral', 'relíquia', 'reliquia', 'artefato', 'escavaç', 'escavac',
       'submers', 'catacumba', 'castelo', 'fortaleza', 'muralha', 'tesouro',
       'a.c.', 'd.c.', 'idade média', 'idade media', 'sarcófago', 'sarcofago',
+      // 30/09: nomes de sítios e povos antigos que caíam em "outros" (Antikythera era o maior
+      // Facebook de setembro rotulado como tema neutro)
+      'antikythera', 'petra', 'atlântida', 'atlantida', 'pré-históri', 'pre-histori', 'pompeia',
+      'viking', 'egito', 'egípci', 'egipci', 'babilôn', 'babilon', 'asteca', 'maias', 'romanos',
+    ],
+  },
+  {
+    tema: 'espaço/universo',
+    termos: [
+      'buraco negro', 'estrela', 'planeta', 'galáxia', 'galaxia', 'universo', 'no espaço', 'no espaco',
+      'sistema solar', 'lua', 'eclipse', 'asteroide', 'cometa', 'nasa', 'astronaut', 'marte',
+      'satélite', 'satelite', 'cosmo', 'meteor',
+    ],
+  },
+  {
+    tema: 'games',
+    termos: [
+      'game', 'games', 'videogame', 'nintendo', 'console', 'tetris', 'zelda', 'mario', 'vice city',
+      'easter egg', 'playstation', 'sega', 'atari', 'fliperama',
+    ],
+  },
+  {
+    tema: 'esporte/Copa',
+    termos: [
+      'copa', 'gol', 'estádio', 'estadio', 'seleção', 'selecao', 'maracan', 'jogador', 'futebol',
+      'campeonato', 'eliminatória', 'eliminatoria', 'olimpíad', 'olimpiad', 'torcida', 'apito',
+    ],
+  },
+  {
+    tema: 'terra/clima',
+    termos: [
+      'terremoto', 'treme', 'sísm', 'sism', 'el niño', 'el nino', 'clima', 'chuva', 'furacão',
+      'furacao', 'tornado', 'relâmpago', 'relampago', 'raio', 'glaciar', 'geleira', 'tsunami',
     ],
   },
   {
@@ -77,6 +135,8 @@ const DICIONARIO: Array<{ tema: Tema; termos: string[] }> = [
     termos: [
       'planta', 'animal', 'animais', 'floresta', 'formiga', 'camelo', 'pássaro', 'passaro',
       'oceano', 'vulcão', 'vulcao', 'inseto', 'espécie', 'especie', 'árvore', 'arvore',
+      'aranha', 'cacto', 'pinguim', 'sucuri', 'lagosta', 'polvo', 'baleia', 'elefante', 'zebra',
+      'castor', 'tubarão', 'tubarao', 'abelha', 'cobra',
     ],
   },
   {
@@ -86,35 +146,24 @@ const DICIONARIO: Array<{ tema: Tema; termos: string[] }> = [
       'sangue', 'coração', 'coracao', 'psicolog', 'mente', 'neurô', 'neuro',
     ],
   },
+  {
+    // POR ÚLTIMO de propósito: "mistério" aparece em quase todo título do PULSO. Só rotula quando
+    // nenhum assunto concreto casou — "O Mistério do Voo 19", "O diário que previu desastres".
+    tema: 'mistério/inexplicável',
+    termos: [
+      'mistério', 'misterio', 'enigma', 'inexplic', 'sem explicação', 'sem explicacao', 'desaparec',
+      'sumiu', 'sumiram', 'previu', 'profecia', 'maldição', 'maldicao', 'assombr', 'indecifr',
+      'proibido', 'sobrenatural', 'fantasma', 'reencarna', 'estranho caso', 'ninguém sabe',
+      'ninguem sabe', 'sem solução', 'sem solucao', 'bermudas',
+    ],
+  },
 ]
 
-/** Papel do tema no Facebook — a rede que traz seguidor. Vem da medição, não de opinião. */
-export const PAPEL_NO_FACEBOOK: Record<Tema, 'sorteia' | 'neutro' | 'morto'> = {
-  'história/arqueologia': 'sorteia',
-  'natureza/animais': 'neutro',
-  'corpo/cérebro': 'neutro',
-  outros: 'neutro',
-  'tecnologia/IA': 'morto',
-  'produtividade/motivacional': 'morto',
-}
+export type PapelTema = 'sorteia' | 'neutro' | 'morto'
 
-/**
- * Mediana de views no Facebook por tema. REMEDIDO em 30/07/2026 depois de ampliar o dicionário —
- * história/arqueologia foi de 12 para 16 vídeos e a mediana caiu de 2.919 para 1.160, porque
- * entraram 4 vídeos medianos que antes ficavam em "outros".
- *
- * A mediana caiu, o SINAL não: os 6 estouros (>=3k) de 48 dias continuam TODOS em
- * história/arqueologia, e nenhum outro tema jamais produziu um. É essa a informação que decide —
- * a mediana serve só pra dar escala na tela.
- */
-export const MEDIANA_FB_MEDIDA: Record<Tema, number> = {
-  'história/arqueologia': 1160,
-  'natureza/animais': 1134,
-  'corpo/cérebro': 521,
-  outros: 399,
-  'produtividade/motivacional': 253,
-  'tecnologia/IA': 176,
-}
+/** O corpo do roteiro nunca decide estes: prova fraca custa caro (morto tira pontos na agenda) e
+ *  "mistério" está em quase toda prosa do PULSO. Só o título rotula. */
+const CORPO_NAO_DECIDE: Tema[] = ['tecnologia/IA', 'produtividade/motivacional', 'mistério/inexplicável']
 
 /**
  * Termos curtos precisam casar como PALAVRA INTEIRA. Com `includes` puro, o token "ia " marcava
@@ -192,15 +241,130 @@ function classificarCorpo(raw: string | null): Tema {
   const vice = placar[1]
   if (!campeao || campeao.n < MIN_TERMOS_NO_CORPO) return 'outros'
   if (vice && vice.n >= campeao.n) return 'outros'
-  if (PAPEL_NO_FACEBOOK[campeao.tema] === 'morto') return 'outros'
+  if (CORPO_NAO_DECIDE.includes(campeao.tema)) return 'outros'
   return campeao.tema
 }
 
+
+// ====== TEMAS MEDIDOS (o papel vem do dado de agora, não de julho) ======
+
+export const LIMITE_ESTOURO_FB = 3000
+const LIMITE_ACERTO_FB = 1000
+const AMOSTRA_MINIMA = 5
+
+export interface MedidaTema {
+  n: number
+  mediana: number
+  estouros: number
+  /** fração dos vídeos do tema que passaram de 1.000 no Facebook */
+  taxaAcerto: number
+  papel: PapelTema
+  porque: string
+  /** mediana nas outras redes, para o gerador mirar a rede certa */
+  porRede: Record<string, { n: number; mediana: number }>
+}
+
+export interface TemasMedidos {
+  atualizadoEm: string
+  janelaDias: number
+  geral: { n: number; mediana: number; taxaAcerto: number; estouros: number }
+  porTema: Partial<Record<Tema, MedidaTema>>
+}
+
+export interface PublicacaoParaMedir {
+  ideiaId: string
+  plataforma: string
+  views: number | null
+  dataPublicacao: string | null
+}
+
+const mediana = (a: number[]) => {
+  if (!a.length) return 0
+  const s = [...a].sort((x, y) => x - y)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+}
+
+/**
+ * Mede cada tema no Facebook (a rede que sorteia) numa janela móvel. Regras:
+ *   sorteia = amostra ≥5, mediana ≥ a geral, e (estourou ao menos 1× OU acerta ≥1,5× a taxa geral)
+ *   morto   = amostra ≥5, zero estouro, acerta ≤ metade da taxa geral e mediana ≤ 70% da geral
+ *   neutro  = o resto, inclusive amostra pequena (sem prova, não decide)
+ * Vídeo com menos de 3 dias fica fora: ainda está subindo.
+ */
+export function medirTemas(
+  pubs: PublicacaoParaMedir[],
+  titulos: Map<string, string>,
+  corpos: Map<string, string | null> | undefined,
+  hojeISO: string,
+  janelaDias = 90
+): TemasMedidos {
+  const hoje = new Date(`${hojeISO}T12:00:00Z`).getTime()
+  const inicio = new Date(hoje - janelaDias * 86_400_000).toISOString().slice(0, 10)
+  const maduro = new Date(hoje - 3 * 86_400_000).toISOString().slice(0, 10)
+  const temaDe = new Map<string, Tema>()
+  const tema = (id: string) => {
+    if (!temaDe.has(id)) temaDe.set(id, classificarTema(titulos.get(id) || '', corpos?.get(id)))
+    return temaDe.get(id)!
+  }
+  const valores = new Map<string, number[]>() // `${rede}|${tema}`
+  const fbGeral: number[] = []
+  for (const p of pubs) {
+    const d = (p.dataPublicacao || '').slice(0, 10)
+    if (!d || d < inicio || d > maduro || !titulos.has(p.ideiaId)) continue
+    const v = p.views ?? 0
+    const k = `${p.plataforma}|${tema(p.ideiaId)}`
+    if (!valores.has(k)) valores.set(k, [])
+    valores.get(k)!.push(v)
+    if (p.plataforma === 'facebook') fbGeral.push(v)
+  }
+  const taxa = (a: number[]) => (a.length ? a.filter((v) => v >= LIMITE_ACERTO_FB).length / a.length : 0)
+  const geral = {
+    n: fbGeral.length,
+    mediana: Math.round(mediana(fbGeral)),
+    taxaAcerto: taxa(fbGeral),
+    estouros: fbGeral.filter((v) => v >= LIMITE_ESTOURO_FB).length,
+  }
+  const porTema: Partial<Record<Tema, MedidaTema>> = {}
+  for (const t of TEMAS) {
+    const fb = valores.get(`facebook|${t}`) || []
+    const porRede: Record<string, { n: number; mediana: number }> = {}
+    for (const [k, arr] of valores) {
+      const [rede, tt] = k.split('|')
+      if (tt === t) porRede[rede] = { n: arr.length, mediana: Math.round(mediana(arr)) }
+    }
+    if (!Object.keys(porRede).length) continue
+    const m = Math.round(mediana(fb))
+    const estouros = fb.filter((v) => v >= LIMITE_ESTOURO_FB).length
+    const tx = taxa(fb)
+    let papel: PapelTema = 'neutro'
+    let porque = `mediana ${m} no FB (geral ${geral.mediana}), n=${fb.length} em ${janelaDias} dias`
+    if (fb.length < AMOSTRA_MINIMA) {
+      porque = `amostra pequena (${fb.length} no FB em ${janelaDias} dias) — não decide`
+    } else if (m >= geral.mediana && (estouros > 0 || (geral.taxaAcerto > 0 && tx >= 1.5 * geral.taxaAcerto))) {
+      papel = 'sorteia'
+      porque = estouros > 0
+        ? `${estouros} estouro${estouros > 1 ? 's' : ''} ≥3k em ${janelaDias} dias, mediana ${m} no FB (geral ${geral.mediana})`
+        : `${Math.round(tx * 100)}% passam de 1k no FB (geral ${Math.round(geral.taxaAcerto * 100)}%), mediana ${m}`
+    } else if (estouros === 0 && tx <= 0.5 * geral.taxaAcerto && m <= 0.7 * geral.mediana) {
+      papel = 'morto'
+      porque = `mediana ${m} no FB (geral ${geral.mediana}) e zero estouros em ${janelaDias} dias`
+    }
+    porTema[t] = { n: fb.length, mediana: m, estouros, taxaAcerto: tx, papel, porque, porRede }
+  }
+  return { atualizadoEm: new Date().toISOString(), janelaDias, geral, porTema }
+}
+
+/** Sem medição (config vazia ou tema sem amostra) o tema é neutro: número velho não decide. */
+export function papelDoTema(tema: Tema, m?: TemasMedidos | null): PapelTema {
+  return m?.porTema[tema]?.papel ?? 'neutro'
+}
+
+export function medianaFbDoTema(tema: Tema, m?: TemasMedidos | null): number | null {
+  return m?.porTema[tema]?.mediana ?? null
+}
+
 /** Frase curta do porquê — o dono precisa poder discordar da classificação. */
-export function motivoDoTema(tema: Tema): string {
-  const papel = PAPEL_NO_FACEBOOK[tema]
-  const med = MEDIANA_FB_MEDIDA[tema]
-  if (papel === 'sorteia') return `os 6 estouros de 48 dias saíram deste tema (mediana ${med} no FB)`
-  if (papel === 'morto') return `mediana ${med} no FB e zero estouros em 48 dias`
-  return `mediana ${med} no FB, sem estouro registrado`
+export function motivoDoTema(tema: Tema, m?: TemasMedidos | null): string {
+  return m?.porTema[tema]?.porque ?? 'sem medição recente deste tema'
 }

@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 
 import { supabase } from '@/lib/supabase/client'
 import { levantarFlops, type Flop, type ResumoFlops } from '@/lib/analytics/flops'
-import { classificarTema, PAPEL_NO_FACEBOOK, type Tema } from '@/lib/decisor/temas'
+import { carregarTemasMedidos } from '@/lib/decisor/temas-db'
+import { classificarTema, papelDoTema, type Tema } from '@/lib/decisor/temas'
 
 const REDES = ['youtube', 'instagram', 'facebook', 'tiktok', 'kwai'] as const
 
@@ -63,6 +64,7 @@ export function useFlops() {
       }))
 
       const base = levantarFlops(pubs, REDES, Date.now())
+      const temasMedidos = await carregarTemasMedidos(supabase)
 
       const flops: FlopComContexto[] = base.flops.map((f) => {
         const titulo = titulos.get(f.ideiaId) || '(sem título)'
@@ -72,7 +74,7 @@ export function useFlops() {
           numero: numeros.get(f.ideiaId) ?? null,
           titulo,
           tema,
-          papelNoFacebook: PAPEL_NO_FACEBOOK[tema],
+          papelNoFacebook: papelDoTema(tema, temasMedidos),
           videoUrl: videoUrls.get(f.ideiaId) ?? null,
         }
       })

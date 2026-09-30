@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { desempenhoPorForma, ROTULO_FORMA, N_MINIMO_POR_FORMA, type FormaHook } from '@/lib/automation/forma-hook'
+import { medirTemas, TEMAS, type TemasMedidos } from '@/lib/decisor/temas'
+import { hojeBRT } from '@/lib/datas'
 
 /**
  * POST /api/automation/aprender
@@ -10,7 +12,8 @@ import { desempenhoPorForma, ROTULO_FORMA, N_MINIMO_POR_FORMA, type FormaHook } 
  * Lê os campeões da nossa própria audiência (ganchos de maior retenção + tema×rede)
  * e grava um digest em pulso_core.configuracoes (chave: aprendizado_cerebro).
  * A geração de ideias/roteiro injeta esse digest no prompt (few-shot + viés tema→rede).
- * Roda semanal (cron) — quanto mais dados, mais forte.
+ * Roda todo dia 07:00 UTC (pg_cron pulso-aprender-diario). Também grava configuracoes.temas_medidos
+ * (papel de cada tema em 90 dias) e o crescimento de seguidores por rede em 30 dias.
  */
 
 /**
@@ -32,6 +35,11 @@ import { desempenhoPorForma, ROTULO_FORMA, N_MINIMO_POR_FORMA, type FormaHook } 
  * O que se MANTÉM do benchmark: PAYLOAD VISUAL CONCRETO. Mistério vago sem objeto afunda; o que
  * retém é mistério/quebra-de-crença COM uma coisa física no centro que dá pra mostrar (#44 = camelo).
  *
+ * 30/09/2026: a tabela de temas que morava aqui (medianas de 29/07, "história/arqueologia tem TODOS
+ * os estouros") saiu. Estava dois meses velha — história não estourava desde 30/07 — e era lida
+ * todo dia pelo gerador. Agora o bloco de tema é MEDIDO a cada rodada (medirTemas) e a medição
+ * fica gravada em configuracoes.temas_medidos para a agenda, o Decisor e as telas.
+ *
  * Fica AQUI (prefixado no digest semanal) e não numa config solta porque o cron `aprender`
  * reescreve o aprendizado_cerebro toda segunda — se estivesse solto, seria apagado. Assim
  * a trava sobrevive a cada reescrita e continua data-driven (edite este bloco pra ajustar).
@@ -49,29 +57,12 @@ PAYLOAD OBRIGATÓRIO: sempre um objeto/lugar/fenômeno físico no centro que dá
 Mistério abstrato SEM isso afunda (essa parte do benchmark estava certa) — mas mistério COM objeto
 concreto é o que MAIS reteve na nossa audiência.
 
-TEMA — O SINAL MAIS FORTE QUE JÁ MEDIMOS (29/07/2026, 95 publicações de Facebook, a rede que
-traz seguidor). Mediana de views por tema e quantos estouros (>=3k) cada um produziu em 48 dias:
-  história/arqueologia ....... 2.919 ... 6 estouros  <- TODOS os estouros do período
-  natureza/animais ........... 1.134 ... 0
-  corpo/cérebro ................ 551 ... 0
-  (outros) ..................... 446 ... 0
-  tecnologia/IA ................ 268 ... 0
-  produtividade/motivacional ... 252 ... 0
-Lift de 10,9x entre o topo e o fundo. Nenhum tema fora de história/arqueologia jamais passou de
-3k no Facebook. Campeões reais: "O fóssil que mudou tudo em 2003" (29k), "A cidade perdida que
-surgiu das areias do Saara" (17k), "O navio desaparecido por 170 anos" (17k), "A Divisão que
-Transformou a Igreja Católica" (6k), "Por que Ouro Preto foi construída em morros" (5k).
-REGRA: a MAIORIA das ideias deve ser história/arqueologia — civilização antiga, ruína, naufrágio,
-expedição, artefato, cidade, império, descoberta arqueológica. É o tema que compra bilhete no
-Facebook. Tecnologia/IA e produtividade/motivacional estão PROIBIDOS como tema principal: 22
-vídeos em 48 dias, mediana ~260, zero estouros.
+O FACEBOOK É LOTERIA, não gradiente: poucos vídeos carregam o crescimento inteiro. Por isso o
+objetivo NÃO é "melhorar a média": é produzir mais bilhete nos temas que estão sorteando (lista
+MEDIDA abaixo, refeita toda manhã).
 
-O FACEBOOK É LOTERIA, não gradiente: 3 vídeos acima de 10k, 71 dos 95 abaixo de 1.000 — ~6% dos
-vídeos carregam o crescimento inteiro. Por isso o objetivo NÃO é "melhorar a média": é produzir
-mais bilhete no tema que sorteia.
-
-EVITE: "Como/Por que X funciona" como abertura seca (sem quebra nem laço); tecnologia/IA e
-produtividade/motivacional como tema; "história que ninguém conta" genérica sem objeto concreto.
+EVITE: "Como/Por que X funciona" como abertura seca (sem quebra nem laço); tema marcado FRACO na
+medição abaixo; "história que ninguém conta" genérica sem objeto concreto.
 NÃO USE como critério: presença de ano/data/número no título. Foi TESTADO nas mesmas 95
 publicações e deu lift 0,56x — títulos com ano foram PIORES. A tese vinha de 2 virais que por
 acaso tinham ano no título; é outlier virando narrativa. O que prevê é o TEMA, não o formato.
@@ -103,18 +94,19 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdminClient() as any
 
   try {
-    const [{ data: metricas }, { data: roteiros }, { data: ideias }, { data: canais }] =
+    const [{ data: metricas }, { data: roteiros }, { data: ideias }, { data: canais }, { data: segRow }] =
       await Promise.all([
         supabase
           .schema('pulso_content')
           .from('metricas_publicacao')
-          .select('ideia_id, plataforma, views, taxa_retencao'),
+          .select('ideia_id, plataforma, views, taxa_retencao, data_publicacao'),
         supabase
           .schema('pulso_content')
           .from('roteiros')
           .select('ideia_id, conteudo_md, nota_hook'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id, formato'),
         supabase.schema('pulso_core').from('canais').select('id, nome'),
+        supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'seguidores_historico').maybeSingle(),
       ])
 
     const canalNome = new Map<string, string>((canais || []).map((c: { id: string; nome: string }) => [c.id, c.nome]))
@@ -249,7 +241,59 @@ FORMA DE GANCHO: experimento em curso, ainda sem ${N_MINIMO_POR_FORMA} medicoes 
       /* o digest nao pode quebrar por causa do experimento */
     }
 
+    // --- TEMA MEDIDO AGORA (janela de 90 dias) — substitui a tabela congelada de 29/07 ---
+    const corpos = new Map<string, string | null>([...roteiroPorIdeia].map(([id, r]) => [id, r.conteudo_md]))
+    const temasMedidos: TemasMedidos = medirTemas(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      metricasShort.map((m: any) => ({ ideiaId: m.ideia_id, plataforma: m.plataforma, views: m.views, dataPublicacao: m.data_publicacao })),
+      ideiaTitulo,
+      corpos,
+      hojeBRT()
+    )
+    const g = temasMedidos.geral
+    const linhasTema = TEMAS.filter((t) => temasMedidos.porTema[t])
+      .map((t) => ({ t, m: temasMedidos.porTema[t]! }))
+      .sort((a, b) => b.m.mediana - a.m.mediana)
+      .map(({ t, m }) => {
+        const selo = m.papel === 'sorteia' ? '  <- SORTEANDO' : m.papel === 'morto' ? '  <- FRACO' : ''
+        const outras = Object.entries(m.porRede).filter(([r, v]) => r !== 'facebook' && v.n >= 3)
+          .map(([r, v]) => `${r} ${v.mediana}`).join(', ')
+        return `  ${t}: mediana FB ${m.mediana} (n=${m.n}, ${m.estouros} estouro${m.estouros === 1 ? '' : 's'})${outras ? ` · ${outras}` : ''}${selo}`
+      })
+      .join('\n')
+    const sorteando = TEMAS.filter((t) => temasMedidos.porTema[t]?.papel === 'sorteia')
+    const fracos = TEMAS.filter((t) => temasMedidos.porTema[t]?.papel === 'morto')
+    const blocoTemas = `TEMA — MEDIDO HOJE no nosso banco (Facebook, últimos ${temasMedidos.janelaDias} dias, ${g.n} vídeos,
+mediana geral ${g.mediana}, ${g.estouros} estouros ≥3k). Fora do FB, a mediana de cada rede:
+${linhasTema}
+REGRA: a maior parte das ideias deve vir dos temas SORTEANDO (${sorteando.join(', ') || 'nenhum com prova agora — distribua entre os de maior mediana'}).
+${fracos.length ? `PROIBIDO como tema principal: ${fracos.join(', ')}.` : 'Nenhum tema está fraco o bastante para ser proibido.'}
+Se o vídeo mira YouTube/TikTok/Kwai, escolha pelo número daquela rede acima, não pelo do Facebook.
+`
+
+    // --- SEGUIDORES: quem cresce de verdade (contador do perfil, nunca derivado de métrica de post) ---
+    let seguidores30d: Record<string, number> = {}
+    try {
+      const raw = segRow?.valor
+      const v = typeof raw === 'string' ? JSON.parse(raw) : raw
+      const hist: Array<Record<string, number | string | null>> = Array.isArray(v) ? v : v?.historico || []
+      const limite = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10)
+      for (const rede of ['facebook', 'instagram', 'youtube', 'tiktok', 'kwai']) {
+        const pts = hist.filter((h) => typeof h[rede] === 'number')
+        const ult = pts[pts.length - 1]
+        const base = [...pts].reverse().find((h) => String(h.data) <= limite)
+        if (ult && base) seguidores30d[rede] = (ult[rede] as number) - (base[rede] as number)
+      }
+    } catch {
+      seguidores30d = {}
+    }
+    const linhaSeguidores = Object.entries(seguidores30d).sort((a, b) => b[1] - a[1])
+      .map(([r, n]) => `${r} ${n >= 0 ? '+' : ''}${n}`).join(' · ')
+
     const texto = `${PLANO_CRESCIMENTO}
+${blocoTemas}
+SEGUIDORES GANHOS NOS ÚLTIMOS 30 DIAS (contador do perfil): ${linhaSeguidores || 'sem histórico'}
+
 APRENDIZADO DA NOSSA AUDIÊNCIA (referência de PADRÃO — não copie tema nem frase literal):
 GANCHOS QUE MAIS RETIVERAM (replique a ESTRUTURA do gancho, NUNCA o assunto):
 ${ganchos.map((g) => `- "${g}"`).join('\n')}
@@ -267,6 +311,7 @@ ${linhasTemaRede}${blocoForma}`
       texto,
       ganchos,
       tema_rede: temaRedeTop,
+      seguidores_30d: seguidores30d,
       base: { ideias_com_metrica: porIdeia.size, ganchos: ganchos.length },
       atualizado_em: new Date().toISOString(),
     }
@@ -292,7 +337,11 @@ ${linhasTemaRede}${blocoForma}`
         .insert({ chave: 'aprendizado_cerebro', valor: JSON.stringify(valor) })
     }
 
-    return NextResponse.json({ success: true, ...valor })
+    // a medição de temas vira dado próprio: agenda, Decisor, gerador e telas leem daqui
+    await supabase.schema('pulso_core').from('configuracoes')
+      .upsert({ chave: 'temas_medidos', valor: JSON.stringify(temasMedidos) }, { onConflict: 'chave' })
+
+    return NextResponse.json({ success: true, ...valor, temas_medidos: temasMedidos })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erro desconhecido'
     return NextResponse.json({ error: msg }, { status: 500 })

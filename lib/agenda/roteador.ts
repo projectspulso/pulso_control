@@ -15,7 +15,8 @@
  * vídeo publicado vai para as CINCO redes de uma vez — não existe slot por rede. Por isso o tema
  * pesa em todo slot: todo vídeo passa pelo Facebook, e é lá que está a loteria.
  *
- * O SINAL QUE MANDA (medido em 29-30/07/2026 sobre 95 publicações de Facebook):
+ * O SINAL QUE MANDA (medido em 29-30/07/2026 sobre 95 publicações de Facebook — desde 30/09 o papel
+ * de cada tema é remedido toda manhã em janela de 90 dias, ver lib/decisor/temas.ts `medirTemas`):
  *   história/arqueologia  mediana 2.919 — os 6 estouros de 48 dias saíram TODOS dela
  *   tecnologia/IA 268 · produtividade 252 — zero estouros. Lift de 10,9×.
  *
@@ -25,7 +26,7 @@
  * dois dias seguidos (fadiga de fórmula já nos custou caro: ver duplicidade-causa-raiz).
  */
 
-import { classificarTema, PAPEL_NO_FACEBOOK, MEDIANA_FB_MEDIDA, type Tema } from '@/lib/decisor/temas'
+import { classificarTema, motivoDoTema, papelDoTema, type Tema, type TemasMedidos } from '@/lib/decisor/temas'
 import { podeOcuparVaga, somarDias, type EstadoTeste, type RegrasTeste } from './teste-temas'
 
 export type Faixa = 'perene' | 'sazonal'
@@ -94,10 +95,11 @@ function diasEntre(deISO: string, ateISO: string): number | null {
 export function pontuarCandidato(
   c: CandidatoAgenda,
   slot: SlotParaPreencher,
-  temaDoDiaAnterior?: Tema | null
+  temaDoDiaAnterior?: Tema | null,
+  medidos?: TemasMedidos | null
 ): { score: number; motivo: string; tema: Tema } {
   const tema = classificarTema(c.titulo, c.corpo)
-  const papel = PAPEL_NO_FACEBOOK[tema]
+  const papel = papelDoTema(tema, medidos)
   const partes: string[] = []
   let score = 0
 
@@ -106,10 +108,10 @@ export function pontuarCandidato(
   const pesoTema = slot.faixa === 'sazonal' ? 0.35 : 1
   if (papel === 'sorteia') {
     score += BONUS_TEMA_SORTEIA * pesoTema
-    partes.push(`${tema} é o único tema que estourou no Facebook (mediana ${MEDIANA_FB_MEDIDA[tema]})`)
+    partes.push(`${tema} está sorteando no Facebook: ${motivoDoTema(tema, medidos)}`)
   } else if (papel === 'morto') {
     score -= PENALIDADE_TEMA_MORTO * pesoTema
-    partes.push(`${tema} tem mediana ${MEDIANA_FB_MEDIDA[tema]} e zero estouros em 48 dias`)
+    partes.push(`${tema}: ${motivoDoTema(tema, medidos)}`)
   }
 
   if (temaDoDiaAnterior && tema === temaDoDiaAnterior) {
@@ -162,7 +164,8 @@ export function rotearSlots(
   slots: SlotParaPreencher[],
   candidatos: CandidatoAgenda[],
   jaUsados: Set<string> = new Set(),
-  teste?: { estados: Map<string, EstadoTeste>; regras: RegrasTeste }
+  teste?: { estados: Map<string, EstadoTeste>; regras: RegrasTeste },
+  medidos?: TemasMedidos | null
 ): Map<string, EscolhaSlot> {
   const usados = new Set(jaUsados)
   const saida = new Map<string, EscolhaSlot>()
@@ -203,7 +206,7 @@ export function rotearSlots(
     if (pool.length === 0) continue
 
     const melhor = pool
-      .map((c) => ({ c, ...pontuarCandidato(c, slot, anterior) }))
+      .map((c) => ({ c, ...pontuarCandidato(c, slot, anterior, medidos) }))
       .sort((a, b) => b.score - a.score)[0]
 
     let motivo = melhor.motivo || 'melhor disponível no estoque'

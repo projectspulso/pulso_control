@@ -30,7 +30,6 @@ import type {
   Tendencia,
   DependenciaViral,
 } from '@/lib/hooks/use-decisor'
-import { MEDIANA_FB_MEDIDA, motivoDoTema } from '@/lib/decisor/temas'
 
 /**
  * OS BLOCOS DO DECISOR. Regra da tela: só aparece o que MUDA UMA DECISÃO. Bloco sem novidade
@@ -232,10 +231,9 @@ function Coluna({ titulo, icone, itens, vazio }: { titulo: string; icone: React.
 // ====== 3. TEMA QUE SORTEIA (o DNA do campeão) ======
 
 /**
- * Medido em 29/07/2026 nas 95 publicações de Facebook: história/arqueologia tem mediana 2.919 e
- * MONOPÓLIO dos 6 estouros de 48 dias; tecnologia/IA 268 e produtividade 252, ambos com ZERO
- * estouros. Lift de 10,9×. O placar é recalculado no dado vivo — se outro tema começar a
- * sortear, aparece aqui.
+ * Placar no dado vivo; o selo sorteia/morto vem da medição diária de 90 dias
+ * (configuracoes.temas_medidos, ver lib/decisor/temas.ts). Até 30/09/2026 o selo era fixo
+ * desde julho e dizia "sorteia" para um tema que não estourava havia dois meses.
  */
 export function BlocoTemas({ temas }: { temas: DesempenhoTema[] }) {
   const comAmostra = temas.filter((t) => t.n >= 3)
@@ -291,9 +289,9 @@ export function BlocoTemas({ temas }: { temas: DesempenhoTema[] }) {
 export function BlocoFila({ fila }: { fila: FilaPorTema }) {
   const amostraBoa = fila.total >= 5
   const percentualSorteia = fila.total > 0 ? Math.round((fila.emTemaQueSorteia / fila.total) * 100) : 0
-  // O alarme real não é "quanto tem de tema morto" — é FALTAR o tema que sorteia. Uma fila de 26
-  // com 1 item de história/arqueologia produz pouquíssimo bilhete pro Facebook, mesmo que só 12%
-  // esteja em tema explicitamente morto: o resto é "outros", que nunca estourou.
+  // O alarme real não é "quanto tem de tema morto" — é FALTAR tema que sorteia. Uma fila de 26
+  // com 1 item de tema que sorteia produz pouquíssimo bilhete pro Facebook, mesmo que pouca coisa
+  // esteja em tema explicitamente morto.
   const faltaVencedor = amostraBoa && percentualSorteia < 20
   const alerta = amostraBoa && (faltaVencedor || fila.percentualMorto >= 20)
 
@@ -317,17 +315,17 @@ export function BlocoFila({ fila }: { fila: FilaPorTema }) {
               <strong className="text-red-300">
                 {fila.emTemaQueSorteia} de {fila.total}
               </strong>{' '}
-              estão no tema que sorteia no Facebook (história/arqueologia). Do jeito que está, a fila
-              produz pouquíssimo bilhete pra rede que traz seguidor
-              {fila.emTemaMorto > 0 && <> — e {fila.emTemaMorto} estão em tema que nunca estourou</>}.
-              Vale puxar a próxima leva pra história/arqueologia.
+              estão em tema que sorteia no Facebook agora. Do jeito que está, a fila produz
+              pouquíssimo bilhete pra rede que traz seguidor
+              {fila.emTemaMorto > 0 && <> — e {fila.emTemaMorto} estão em tema morto</>}.
+              Vale puxar a próxima leva pros temas marcados de verde.
             </p>
           ) : alerta ? (
             <p className="mt-2 text-sm text-zinc-300">
               <strong className="text-red-300">
                 {fila.emTemaMorto} de {fila.total} ({fila.percentualMorto}%)
               </strong>{' '}
-              estão em tema que nunca estourou no Facebook em 48 dias. Se forem pro FB, é slot
+              estão em tema sem estouro e abaixo da média no Facebook (90 dias). Se forem pro FB, é slot
               desperdiçado — mande pra YouTube/Kwai e priorize o FB com os {fila.emTemaQueSorteia} de
               tema que sorteia.
             </p>
@@ -348,7 +346,7 @@ export function BlocoFila({ fila }: { fila: FilaPorTema }) {
                       ? 'bg-red-500/10 text-red-300'
                       : 'bg-zinc-800/70 text-zinc-400'
                 }`}
-                title={motivoDoTema(p.tema)}
+                title={p.motivo}
               >
                 {p.tema} · {p.n}
               </span>
@@ -542,4 +540,3 @@ export function BlocoTendencia({ tendencia: t, dependencia }: { tendencia: Tende
 }
 
 /** Exportado pra tela mostrar o número medido sem reimportar o dicionário. */
-export { MEDIANA_FB_MEDIDA }

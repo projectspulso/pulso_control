@@ -17,6 +17,7 @@ import {
 } from '@/lib/decisor/fatos'
 import { montarContratoRedes } from '@/lib/decisor/contrato-redes'
 import { hojeBRT, diaBRT } from '@/lib/datas'
+import { carregarTemasMedidos } from '@/lib/decisor/temas-db'
 
 /**
  * GET /api/decisor
@@ -168,8 +169,9 @@ export async function GET(request: NextRequest) {
     }))
 
     const radar = radarDeEstouro(leituras, titulos, publicadoEm, { corpos })
-    const temasFacebook = desempenhoPorTema(pubs, titulos, 'facebook', corpos)
-    const temasGeral = desempenhoPorTema(pubs, titulos, undefined, corpos)
+    const temasMedidos = await carregarTemasMedidos(supabase)
+    const temasFacebook = desempenhoPorTema(pubs, titulos, 'facebook', corpos, temasMedidos)
+    const temasGeral = desempenhoPorTema(pubs, titulos, undefined, corpos, temasMedidos)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parecerRaw = (parecerQ.data as any)?.valor ?? null
@@ -192,7 +194,8 @@ export async function GET(request: NextRequest) {
         redes: perfilDasRedes(pubs, historicoSeguidores),
         temasFacebook,
         temasGeral,
-        fila: filaPorTema(itensFila),
+        fila: filaPorTema(itensFila, temasMedidos),
+        temasMedidos,
         cobertura: coberturaPorRede(cobertura),
         historicoSeguidores,
         publicadosHoje: contarPublicadosHoje(pubs),

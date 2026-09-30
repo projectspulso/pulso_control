@@ -9,7 +9,7 @@
  * concreta no título" foi TESTADA E REFUTADA — ver o cabeçalho de ./temas antes de tentar de novo.
  */
 
-import { classificarTema, PAPEL_NO_FACEBOOK, type Tema } from './temas'
+import { classificarTema, motivoDoTema, papelDoTema, type Tema, type TemasMedidos } from './temas'
 
 // ====== TIPOS DE ENTRADA (o que as rotas buscam e passam pra cá) ======
 
@@ -311,7 +311,9 @@ export function desempenhoPorTema(
   titulos: Map<string, string | null>,
   plataforma?: string,
   /** roteiro por ideia — desempata o tema quando o título não diz o assunto */
-  corpos?: Map<string, string | null>
+  corpos?: Map<string, string | null>,
+  /** papel medido toda manhã (configuracoes.temas_medidos); sem ele, todo tema é neutro */
+  medidos?: TemasMedidos | null
 ): DesempenhoTema[] {
   const porIdeia = new Map<string, number>()
   for (const p of pubs) {
@@ -342,7 +344,7 @@ export function desempenhoPorTema(
       medianaViews: Math.round(mediana(vals)),
       maxViews: Math.max(...vals),
       estouros: vals.filter((v) => v >= LIMITE_ESTOURO).length,
-      papelFacebook: PAPEL_NO_FACEBOOK[tema],
+      papelFacebook: papelDoTema(tema, medidos),
       melhor: melhor?.titulo || null,
     })
   }
@@ -358,20 +360,23 @@ export function desempenhoPorTema(
  */
 export interface FilaPorTema {
   total: number
-  porTema: Array<{ tema: Tema; n: number; papelFacebook: 'sorteia' | 'neutro' | 'morto' }>
+  porTema: Array<{ tema: Tema; n: number; papelFacebook: 'sorteia' | 'neutro' | 'morto'; motivo: string }>
   emTemaMorto: number
   percentualMorto: number
   emTemaQueSorteia: number
 }
 
-export function filaPorTema(fila: Array<{ titulo: string | null; corpo?: string | null }>): FilaPorTema {
+export function filaPorTema(
+  fila: Array<{ titulo: string | null; corpo?: string | null }>,
+  medidos?: TemasMedidos | null
+): FilaPorTema {
   const cont = new Map<Tema, number>()
   for (const item of fila) {
     const tema = classificarTema(item.titulo, item.corpo)
     cont.set(tema, (cont.get(tema) || 0) + 1)
   }
   const porTema = [...cont.entries()]
-    .map(([tema, n]) => ({ tema, n, papelFacebook: PAPEL_NO_FACEBOOK[tema] }))
+    .map(([tema, n]) => ({ tema, n, papelFacebook: papelDoTema(tema, medidos), motivo: motivoDoTema(tema, medidos) }))
     .sort((a, b) => b.n - a.n)
   const total = fila.length
   const emTemaMorto = porTema.filter((p) => p.papelFacebook === 'morto').reduce((s, p) => s + p.n, 0)

@@ -11,7 +11,8 @@ import {
 } from 'recharts'
 
 import { useVideo, type VideoDetalhe } from '@/lib/hooks/use-video'
-import { MEDIANA_FB_MEDIDA, PAPEL_NO_FACEBOOK } from '@/lib/decisor/temas'
+import { motivoDoTema, papelDoTema } from '@/lib/decisor/temas'
+import { useTemasMedidos } from '@/lib/hooks/use-temas-medidos'
 import { PublicarPorRede } from '@/components/publicar-por-rede'
 
 /**
@@ -124,6 +125,7 @@ function Trilha({ d }: { d: VideoDetalhe }) {
 export default function FichaDoVideo({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { data: d, isLoading } = useVideo(id)
+  const { data: temasMedidos } = useTemasMedidos()
 
   if (isLoading) return <div className="p-6"><div className="h-96 animate-pulse rounded-2xl bg-[#1a1922]" /></div>
   if (!d) return (
@@ -134,7 +136,7 @@ export default function FichaDoVideo({ params }: { params: Promise<{ id: string 
 
   const serieChart = d.serie.map((p) => ({ ...p, label: p.data.slice(5) }))
   const padrao = PADRAO_LABEL[d.padrao]
-  const papel = PAPEL_NO_FACEBOOK[d.tema]
+  const papel = papelDoTema(d.tema, temasMedidos)
   const corTema = papel === 'sorteia' ? 'bg-emerald-500/12 text-emerald-300'
     : papel === 'morto' ? 'bg-red-500/12 text-red-300' : 'bg-zinc-700/40 text-zinc-400'
   const jaPublicou = d.redes.some((r) => r.dataPublicacao)
@@ -151,7 +153,7 @@ export default function FichaDoVideo({ params }: { params: Promise<{ id: string 
         <div className="flex flex-wrap items-center gap-2">
           {d.numero != null && <span className="rounded-md bg-violet-500/15 px-2 py-0.5 text-xs font-bold text-violet-300">#{d.numero}</span>}
           <span className="rounded-md bg-zinc-800/70 px-2 py-0.5 text-[11px] text-zinc-400">{d.canalNome.replace(/^PULSO\s*/i, '')}</span>
-          <span className={`rounded-md px-2 py-0.5 text-[11px] ${corTema}`} title={`mediana ${MEDIANA_FB_MEDIDA[d.tema]} no Facebook`}>
+          <span className={`rounded-md px-2 py-0.5 text-[11px] ${corTema}`} title={motivoDoTema(d.tema, temasMedidos)}>
             {d.tema}
           </span>
           {d.statusPipeline && <span className="rounded-md bg-zinc-800/70 px-2 py-0.5 text-[11px] text-zinc-400">{d.statusPipeline.toLowerCase().replace(/_/g, ' ')}</span>}

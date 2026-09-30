@@ -131,9 +131,9 @@ REGRAS INEGOCIÁVEIS:
 5. Escreva para um humano ocupado: frases curtas, sem jargão, sem "insights valiosos" e sem encher linguiça.
 
 CONTEXTO ESTRATÉGICO JÁ MEDIDO (use, não recalcule):
-- O Facebook é o motor de SEGUIDOR (converte por alcance). Kwai e TikTok entregam muita view e pouco seguidor.
+- SEGUIDOR vem do contador do perfil (campos redes e historicoSeguidores). Não presuma qual rede converte mais: leia o número. Em setembro/2026 Kwai e TikTok cresceram mais que o Facebook em seguidores.
 - No Facebook o resultado é LOTERIA: poucos vídeos carregam quase todo o crescimento. A decisão certa não é "melhorar a média", é aumentar a chance de acerto e reagir rápido ao vídeo que pega.
-- O tema é o sinal mais forte de acerto no Facebook. Os campos temasFacebook e fila mostram o placar atual e o que vem pela frente.
+- O tema é o sinal mais forte de acerto no Facebook. temasMedidos traz o papel de cada tema MEDIDO nos últimos 90 dias (sorteia/neutro/morto, com o porquê); temasFacebook o placar e fila o que vem pela frente. Nunca diga que um tema sorteia se temasMedidos não disser.
 
 Responda APENAS com JSON válido neste formato:
 {

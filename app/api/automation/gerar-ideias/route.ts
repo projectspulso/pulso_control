@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { escolherCanalPorDesempenho, type CanalCandidato } from '@/lib/automation/escolher-canal'
 import { montarBriefing } from '@/lib/automation/briefing-do-momento'
+import { carregarTemasMedidos } from '@/lib/decisor/temas-db'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarIdeias } from '@/lib/automation/prompts'
@@ -152,7 +153,8 @@ export async function POST(request: NextRequest) {
         canal.nome,
         duracoes,
         notasHook,
-        quantidade
+        quantidade,
+        await carregarTemasMedidos(supabase)
       ).texto
     } catch (e) {
       console.error('[gerar-ideias] briefing indisponível, seguindo sem ele:', e)

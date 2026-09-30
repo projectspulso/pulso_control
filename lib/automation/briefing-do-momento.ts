@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { classificarTema, PAPEL_NO_FACEBOOK, type Tema } from '@/lib/decisor/temas'
+import { classificarTema, TEMAS, type Tema, type TemasMedidos } from '@/lib/decisor/temas'
 import { montarContratoRedes, type ContratoRedes } from '@/lib/decisor/contrato-redes'
 
 /**
@@ -53,7 +53,9 @@ export function montarBriefing(
   /** duração do áudio e nota de hook por ideia — alimentam o contrato por rede */
   duracoes: Map<string, number> = new Map(),
   notasHook: Map<string, number> = new Map(),
-  quantidade = 0
+  quantidade = 0,
+  /** papel de cada tema medido toda manhã em 90 dias (configuracoes.temas_medidos) */
+  medidos: TemasMedidos | null = null
 ): BriefingDoMomento {
   const tituloPorId = new Map(ideias.map((i) => [i.id, i.titulo]))
 
@@ -102,7 +104,20 @@ export function montarBriefing(
     .map(([t, n]) => `${t}: ${n}`)
     .join(' · ') || 'estoque vazio'
 
-  const mortos = (Object.keys(PAPEL_NO_FACEBOOK) as Tema[]).filter((t) => PAPEL_NO_FACEBOOK[t] === 'morto')
+  const mortos = TEMAS.filter((t) => medidos?.porTema[t]?.papel === 'morto')
+  const sorteando = TEMAS.filter((t) => medidos?.porTema[t]?.papel === 'sorteia')
+  // Onde cada tema rende FORA do Facebook — a mira por rede usa isto (espaço e esporte, fracos no
+  // FB, são os melhores do YouTube na medição de 30/09).
+  const linhaRedesPorTema = medidos
+    ? TEMAS.filter((t) => t !== 'outros' && medidos.porTema[t])
+        .map((t) => {
+          const pr = medidos.porTema[t]!.porRede
+          const melhor = Object.entries(pr).filter(([, v]) => v.n >= 3).sort((a, b) => b[1].mediana - a[1].mediana)[0]
+          return melhor ? `${t} → melhor em ${melhor[0]} (mediana ${melhor[1].mediana})` : null
+        })
+        .filter(Boolean)
+        .join(' · ')
+    : ''
 
   // CONTRATO POR REDE — a medição de 01/09 mostrou que o TEMA não separa as redes (todas querem
   // história/mistério), mas a FORMA separa muito: o gancho vale 2,07× no TikTok e 0,68× no
@@ -135,7 +150,9 @@ export function montarBriefing(
 DESEMPENHO REAL POR TEMA (mediana de views no Facebook, a rede que mais sorteia alcance):
 ${linhaDesempenho}
 ${temaQuente ? `O tema que mais rende hoje é ${temaQuente}.` : ''}
-Temas que a medição já mostrou fracos: ${mortos.join(', ')}.
+Temas sorteando no Facebook nos últimos 90 dias: ${sorteando.join(', ') || 'nenhum com prova'}.
+Temas fracos nos últimos 90 dias: ${mortos.join(', ') || 'nenhum com prova'}.
+${linhaRedesPorTema ? `ONDE CADA TEMA RENDE MAIS: ${linhaRedesPorTema}` : ''}
 
 ESTOQUE NÃO PUBLICADO POR TEMA (o que já está na fila esperando):
 ${linhaEstoque}

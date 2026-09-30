@@ -74,7 +74,7 @@ export interface DesempenhoTema {
 
 export interface FilaPorTema {
   total: number
-  porTema: Array<{ tema: Tema; n: number; papelFacebook: 'sorteia' | 'neutro' | 'morto' }>
+  porTema: Array<{ tema: Tema; n: number; papelFacebook: 'sorteia' | 'neutro' | 'morto'; motivo?: string }>
   emTemaMorto: number
   percentualMorto: number
   emTemaQueSorteia: number

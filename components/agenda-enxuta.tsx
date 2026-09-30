@@ -3,8 +3,9 @@
 import { AlertTriangle, CalendarDays, CheckCircle2, ExternalLink, Flame, Layers } from 'lucide-react'
 import Link from 'next/link'
 
-import { classificarTema, PAPEL_NO_FACEBOOK } from '@/lib/decisor/temas'
+import { classificarTema, papelDoTema } from '@/lib/decisor/temas'
 import { useDecisor } from '@/lib/hooks/use-decisor'
+import { useTemasMedidos } from '@/lib/hooks/use-temas-medidos'
 
 /**
  * AS PEÇAS DA AGENDA — o que está travando e o calendário.
@@ -15,7 +16,7 @@ import { useDecisor } from '@/lib/hooks/use-decisor'
  * duplicava o Plano do dia da própria Central.
  *
  * Cada item vem com o TEMA e o que ele significa no Facebook, porque é o sinal que decide:
- * história/arqueologia detém os 6 estouros de 48 dias, e nenhum outro tema produziu um.
+ * o papel de cada tema (sorteia/neutro/morto) é medido toda manhã — ver lib/decisor/temas.ts.
  * E leva o LINK DO ARQUIVO junto — "ter tudo ligado" era o pedido, então dá pra ir da data até
  * o vídeo sem trocar de tela.
  */
@@ -102,6 +103,7 @@ export function SlotsTravando({ itens, hoje }: { itens: ItemAgenda[]; hoje: stri
  * horário, tema e o link do arquivo, então dá pra ir da data até o vídeo sem trocar de tela.
  */
 export function CalendarioAgenda({ itens, hoje }: { itens: ItemAgenda[]; hoje: string }) {
+  const { data: temasMedidos } = useTemasMedidos()
   const futuros = itens.filter((i) => i.data > hoje)
   const porData = new Map<string, ItemAgenda[]>()
   for (const i of futuros) {
@@ -135,7 +137,7 @@ export function CalendarioAgenda({ itens, hoje }: { itens: ItemAgenda[]; hoje: s
                 <div className="space-y-1.5">
                   {lista.map((i) => {
                     const tema = i.titulo ? classificarTema(i.titulo, i.corpo) : null
-                    const papel = tema ? PAPEL_NO_FACEBOOK[tema] : null
+                    const papel = tema ? papelDoTema(tema, temasMedidos) : null
                     const cor =
                       papel === 'sorteia' ? 'border-l-emerald-500' : papel === 'morto' ? 'border-l-red-500/70' : 'border-l-zinc-700'
                     return (
@@ -169,7 +171,7 @@ export function CalendarioAgenda({ itens, hoje }: { itens: ItemAgenda[]; hoje: s
         </div>
       )}
       <p className="mt-3 text-[10px] text-zinc-600">
-        Barra verde = tema que estoura no Facebook · vermelha = tema sem estouro registrado. O ícone
+        Barra verde = tema que está sorteando no Facebook (últimos 90 dias) · vermelha = tema sem estouro e abaixo da média. O ícone
         abre o arquivo do vídeo; o título abre a página dele.
       </p>
     </div>
@@ -178,10 +180,11 @@ export function CalendarioAgenda({ itens, hoje }: { itens: ItemAgenda[]; hoje: s
 
 /** Resumo de uma linha pro topo — quantos do tema que sorteia estão planejados. */
 export function ResumoTemas({ itens }: { itens: ItemAgenda[] }) {
+  const { data: temasMedidos } = useTemasMedidos()
   const comTitulo = itens.filter((i) => i.titulo)
   if (comTitulo.length === 0) return null
-  const sorteia = comTitulo.filter((i) => PAPEL_NO_FACEBOOK[classificarTema(i.titulo!, i.corpo)] === 'sorteia').length
-  const morto = comTitulo.filter((i) => PAPEL_NO_FACEBOOK[classificarTema(i.titulo!, i.corpo)] === 'morto').length
+  const sorteia = comTitulo.filter((i) => papelDoTema(classificarTema(i.titulo!, i.corpo), temasMedidos) === 'sorteia').length
+  const morto = comTitulo.filter((i) => papelDoTema(classificarTema(i.titulo!, i.corpo), temasMedidos) === 'morto').length
   const pct = Math.round((sorteia / comTitulo.length) * 100)
   const fraco = pct < 20
 
@@ -192,7 +195,7 @@ export function ResumoTemas({ itens }: { itens: ItemAgenda[] }) {
         <strong className={fraco ? 'text-amber-300' : 'text-emerald-300'}>
           {sorteia} de {comTitulo.length}
         </strong>{' '}
-        do que está planejado é história/arqueologia — o único tema que estourou no Facebook.
+        do que está planejado é de tema que está sorteando no Facebook agora.
         {morto > 0 && <span className="text-zinc-500"> {morto} em tema sem estouro registrado.</span>}
       </p>
       <Link href="/" className="ml-auto shrink-0 text-[11px] text-zinc-500 hover:text-zinc-300">

@@ -42,7 +42,7 @@ export function InsightDoDia({ topRede, topVertical, melhorDia, conversaoYt }: I
         {topRede && (
           <>
             o {b(REDE_NOME[topRede.rede] ?? topRede.rede)} entrega {b(`${topRede.share.toFixed(0)}% do alcance`)}
-            {topRede.rede !== 'youtube' && ', mas quase não vira seguidor — o YouTube entrega menos e é o único que paga'}.{' '}
+            .{' '}
           </>
         )}
         {topVertical && (
