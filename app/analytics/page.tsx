@@ -8,6 +8,7 @@ import { ErrorState } from '@/components/ui/error-state'
 import { Desafio100Dias } from '@/components/desafio-100-dias'
 import { InsightDoDia } from '@/components/insight-do-dia'
 import { ParecerAnalista } from '@/components/parecer-analista'
+import { CardPublico } from '@/components/card-publico'
 import { HorariosPanel } from '@/components/horarios-panel'
 import { NotaVsViewsPanel } from '@/components/nota-vs-views-panel'
 import { QualidadePanel } from '@/components/qualidade-panel'
@@ -451,6 +452,7 @@ export default function AnalyticsPage() {
               <CardGates gatesCalc={gatesCalc} />
               <CardRessonancia porRede={porRede} />
             </div>
+            <CardPublico />
             <HorariosPanel filtros={filtros} />
           </div>
         )}

@@ -4,6 +4,17 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Mudado (30/09) — o aprendizado passa a ler o dado de agora
+- **Auditoria do analytics:** a coleta estava saudável (FB/IG/YT/TikTok ~207 posts/dia); o problema era o que o app aprendia. Agenda, gerador de ideias, Decisor e telas decidiam com números fixos no código desde 29–30/07 — e o principal tinha envelhecido: história/arqueologia fez **zero** estouros no Facebook de 31/07 a 30/09 (43 vídeos), e os dois ≥3k do período caíram em "outros".
+- **Temas medidos todo dia.** `medirTemas` (lib/decisor/temas.ts) recalcula papel (sorteia/neutro/morto) e mediana de cada tema em janela de 90 dias; a rotina `aprender` (07:00 UTC) grava em `configuracoes.temas_medidos`. Agenda (roteador), Decisor, gerador de ideias, flops, calendário e ficha do vídeo leem dali. Sem medição, todo tema é neutro — número velho não decide mais.
+- **Classificador enxerga mais.** "Outros" era metade do acervo (114 de 221 no FB), incluindo a Máquina de Antikythera (maior FB de setembro). Novos temas: espaço/universo, games, esporte/Copa, terra/clima, mistério/inexplicável; história ganhou nomes de sítios e povos antigos; natureza ganhou bichos. "Outros" caiu para 51.
+- **O cérebro do gerador** (`aprendizado_cerebro`) não carrega mais a tabela de 29/07: o bloco de tema é gerado da medição, com a mediana de cada tema em cada rede, e ganhou seguidores ganhos em 30 dias e o perfil do público.
+- **Frases falsas removidas:** o Decisor e o Insight do dia diziam que Kwai e TikTok "dão pouco seguidor" — em 30 dias foi Kwai +124, TikTok +100, Facebook +81, YouTube +67, Instagram +55.
+- **Uma decisão só na Publicar:** a tela recomendava pelo próprio placar (sem tema) enquanto o cron publicava pela data da agenda. Agora segue a data planejada; o placar só ordena quem não tem data.
+- **Analytics sem corte calado:** a aba baixava 47 mil leituras a cada 5 min e o PostgREST corta em 100 mil (≈ dezembro). Agora busca 30 dias (a tela mostra 14) e a curva de retenção vem da última curva de cada vídeo.
+- **Quem assiste (novo):** YouTube Analytics (idade × gênero, país, origem da view, % de inscritos) e Instagram (idade, gênero, cidade dos seguidores) gravados em `configuracoes.publico_redes`; card na aba Audiência. Facebook não entrega mais demografia de Página.
+- Textos de horário de coleta e metas de monetização atualizados.
+
 ### Mudado (29/09) — render 1/dia e fila realinhada
 - **O worker obedece `linha_producao.render_dia_max`** (agora 1). Antes o teto existia só na config; o worker renderizava tudo o que estava autorizado. Conta os vídeos com `metadata.pronto_em` de hoje (carimbo novo, gravado ao virar PRONTO) e, batido o teto, os autorizados esperam o próximo dia.
 - **O plano cobre todo o estoque pronto:** o horizonte era fixo em 28 dias e deixava 12 dos 40 prontos sem data. Agora vai até caber o estoque + 14 dias de folga (máx. 60); slot futuro além do horizonte também é reavaliado, para não repetir vídeo no plano. Resultado: 40 vídeos prontos, 1 por dia, de 29/09 a 07/11, nenhum dia vazio ou duplo.

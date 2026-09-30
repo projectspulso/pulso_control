@@ -4,6 +4,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { desempenhoPorForma, ROTULO_FORMA, N_MINIMO_POR_FORMA, type FormaHook } from '@/lib/automation/forma-hook'
 import { medirTemas, TEMAS, type TemasMedidos } from '@/lib/decisor/temas'
 import { hojeBRT } from '@/lib/datas'
+import { coletarPublico, resumoPublico, type PublicoRedes } from '@/lib/automation/publico-redes'
 
 /**
  * POST /api/automation/aprender
@@ -290,8 +291,20 @@ Se o vídeo mira YouTube/TikTok/Kwai, escolha pelo número daquela rede acima, n
     const linhaSeguidores = Object.entries(seguidores30d).sort((a, b) => b[1] - a[1])
       .map(([r, n]) => `${r} ${n >= 0 ? '+' : ''}${n}`).join(' · ')
 
+    // --- QUEM ASSISTE (YouTube Analytics + Instagram) — falha não derruba o digest ---
+    let publico: PublicoRedes | null = null
+    try {
+      publico = await coletarPublico()
+      await supabase.schema('pulso_core').from('configuracoes')
+        .upsert({ chave: 'publico_redes', valor: JSON.stringify(publico) }, { onConflict: 'chave' })
+    } catch {
+      publico = null
+    }
+    const linhaPublico = resumoPublico(publico)
+
     const texto = `${PLANO_CRESCIMENTO}
-${blocoTemas}
+${blocoTemas}${linhaPublico ? `QUEM ASSISTE (medido pelas plataformas): ${linhaPublico}. Escreva para esse público — referências, tom e exemplos que ele reconhece.
+` : ''}
 SEGUIDORES GANHOS NOS ÚLTIMOS 30 DIAS (contador do perfil): ${linhaSeguidores || 'sem histórico'}
 
 APRENDIZADO DA NOSSA AUDIÊNCIA (referência de PADRÃO — não copie tema nem frase literal):
@@ -341,7 +354,7 @@ ${linhasTemaRede}${blocoForma}`
     await supabase.schema('pulso_core').from('configuracoes')
       .upsert({ chave: 'temas_medidos', valor: JSON.stringify(temasMedidos) }, { onConflict: 'chave' })
 
-    return NextResponse.json({ success: true, ...valor, temas_medidos: temasMedidos })
+    return NextResponse.json({ success: true, ...valor, temas_medidos: temasMedidos, publico_erros: publico?.erros ?? ['não coletado'] })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erro desconhecido'
     return NextResponse.json({ error: msg }, { status: 500 })
