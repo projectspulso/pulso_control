@@ -69,7 +69,12 @@ export function useBi(filtros: BiFiltros) {
     queryKey: ['bi', filtros],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
-      const [metricasQ, ideiasQ, canaisQ, audiosQ, diariasQ, retencaoQ] = await Promise.all([
+      // JANELA DE 30 DIAS (30/09/2026). A tela só mostra 14 dias, mas a consulta baixava a série
+      // inteira desde 18/06 — 47 mil linhas a cada 5 minutos, crescendo ~1.000/dia. O PostgREST do
+      // projeto corta em 100 mil linhas sem erro: por volta de dezembro os gráficos passariam a
+      // vir truncados, calados. Post sem leitura na janela entra pelo valor atual (ver semente).
+      const desdeSerie = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10)
+      const [metricasQ, ideiasQ, canaisQ, audiosQ, diariasQ] = await Promise.all([
         supabase.schema('pulso_content').from('metricas_publicacao').select('*'),
         supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id, formato'),
         supabase.schema('pulso_core').from('canais').select('id, nome').order('nome'),
@@ -82,19 +87,13 @@ export function useBi(filtros: BiFiltros) {
           // linhas do backfill de 19/06, que carimbaram o valor daquele dia sobre 10–17/06 —
           // a curva ficava chapada e o crescimento do período, zero. Real começa em 18/06.
           .eq('estimado', false)
-          .gte('data_ref', '2026-06-18'),
-        supabase
-          .schema('pulso_analytics')
-          .from('leituras_metricas')
-          .select('ideia_id, plataforma, data_ref, retention_graph')
-          .not('retention_graph', 'is', null), // curva de retenção (FB é a única API que entrega)
+          .gte('data_ref', desdeSerie > '2026-06-18' ? desdeSerie : '2026-06-18'),
       ])
       if (metricasQ.error) throw metricasQ.error
       if (ideiasQ.error) throw ideiasQ.error
       if (canaisQ.error) throw canaisQ.error
       if (audiosQ.error) throw audiosQ.error
       if (diariasQ.error) throw diariasQ.error
-      if (retencaoQ.error) throw retencaoQ.error
 
       const ideias = new Map((ideiasQ.data || []).map((i) => [i.id, i]))
       // Vídeo longo (bastidores) fora do BI de Shorts: métrica dele é hora de exibição, não
@@ -184,6 +183,12 @@ export function useBi(filtros: BiFiltros) {
       const diasOrd = [...diasSet].sort()
       const cumul: BiSerieDia[] = []
       const ultimo = new Map<string, { views: number; likes: number }>()
+      // SEMENTE: post sem nenhuma leitura na janela (Kwai congela em 3 dias e é manual) entra
+      // pelo valor atual — se não mudou, o valor de antes da janela é o mesmo.
+      for (const p of publicacoes) {
+        const key = `${p.ideia_id}|${p.plataforma}`
+        if (!porPost.has(key)) ultimo.set(key, { views: p.views, likes: p.likes })
+      }
       for (const dia of diasOrd) {
         for (const [key, serie] of porPost) {
           const v = serie.get(dia)
@@ -245,18 +250,20 @@ export function useBi(filtros: BiFiltros) {
 
       const videosProduzidos = new Set(publicacoes.map((p) => p.ideia_id)).size
 
-      // ── CURVA DE RETENÇÃO MÉDIA (FB) ── 41 pontos (0→fim). Latest por vídeo, respeita filtros.
-      const retPorVideo = new Map<string, { data_ref: string; g: Record<string, number> }>()
-      for (const r of retencaoQ.data || []) {
+      // ── CURVA DE RETENÇÃO MÉDIA ── 41 pontos (0→fim). A curva mais recente de cada vídeo já
+      // mora em metricas_publicacao; antes a tela baixava TODAS as curvas diárias da série
+      // (dezenas de milhares de JSON) para ficar só com a última. Facebook tem preferência.
+      const retPorVideo = new Map<string, { plataforma: string; g: Record<string, number> }>()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const r of metricasUnicas as any[]) {
         if (filtros.plataforma !== 'todas' && r.plataforma !== filtros.plataforma) continue
-        if (filtros.canalId !== 'todos') {
-          const ideia = r.ideia_id ? ideias.get(r.ideia_id) : null
-          if (!ideia || ideia.canal_id !== filtros.canalId) continue
-        }
+        const ideia = r.ideia_id ? ideias.get(r.ideia_id) : null
+        if (!ideia) continue
+        if (filtros.canalId !== 'todos' && ideia.canal_id !== filtros.canalId) continue
         const g = r.retention_graph as Record<string, number> | null
         if (!g || typeof g !== 'object') continue
         const prev = retPorVideo.get(r.ideia_id)
-        if (!prev || r.data_ref > prev.data_ref) retPorVideo.set(r.ideia_id, { data_ref: r.data_ref, g })
+        if (!prev || (r.plataforma === 'facebook' && prev.plataforma !== 'facebook')) retPorVideo.set(r.ideia_id, { plataforma: r.plataforma, g })
       }
       const soma = new Array(41).fill(0)
       const cont = new Array(41).fill(0)

@@ -135,7 +135,7 @@ export default function ValidacaoPage() {
 
         <p className="flex items-center gap-2 text-xs text-zinc-600">
           <Activity className="h-3.5 w-3.5" />
-          Atualização automática a cada 5 minutos · cron diário no Vercel (8h BRT) · 4 redes via APIs oficiais
+          Atualização automática a cada 5 minutos · coleta diária às 03h10–03h40 (Brasília) · 4 redes via APIs oficiais, Kwai por print
         </p>
       </div>
     </div>

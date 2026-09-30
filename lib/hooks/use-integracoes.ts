@@ -62,7 +62,7 @@ export function useIntegracoes() {
         { chave: 'elevenlabs', nome: 'ElevenLabs', para_que: 'Voz oficial do PULSO — narração de cada vídeo.', categoria: 'geracao', status: recente(ultAudio, 14), detalhe: `Último áudio gerado ${txtDias(ultAudio)}.` },
         { chave: 'higgsfield', nome: 'Higgsfield (Veo)', para_que: 'Gera os clips de vídeo das cenas. Teto de 600 créditos/dia + banco de clips reusáveis.', categoria: 'geracao', status: 'desconhecido', detalhe: 'CLI local — controlado pelo guard de custo.' },
         { chave: 'worker', nome: 'Worker de render (local)', para_que: 'Monta os vídeos (TTS + clips + CTA + QC) e marca PRONTO. Roda 3×/dia (08/16/23h).', categoria: 'automacao', status: recente(ultPronto, 3), detalhe: `Último vídeo PRONTO ${txtDias(ultPronto)}.` },
-        { chave: 'crons', nome: 'Crons (Vercel)', para_que: 'Reconciliar publicações (10:50), coletar métricas (11:00), auto-funil de roteiros (12:00), popular agenda (12:30).', categoria: 'automacao', status: 'ok', detalhe: 'Agendados em vercel.json (UTC).' },
+        { chave: 'crons', nome: 'Crons (pg_cron no Supabase)', para_que: 'Coleta por rede (06:10–06:40), aprender (07:00), parecer do Decisor (07:15), plano da agenda (10:30), auto-funil (12:00), auto-áudio (14h/18h/23h), publicar agendados (de hora em hora).', categoria: 'automacao', status: 'ok', detalhe: 'Horários em UTC (Brasília = UTC−3). O vercel.json do plano Hobby não executa sub-diário.' },
       ]
     },
   })

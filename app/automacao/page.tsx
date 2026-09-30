@@ -43,7 +43,7 @@ const ACOES: Acao[] = [
   {
     id: 'coletar',
     titulo: 'Coletar Métricas',
-    desc: 'Puxa views/likes das 4 redes via API agora (o cron roda 11h).',
+    desc: 'Puxa views/likes das 4 redes via API agora (a coleta automática roda todo dia às 03h10–03h40, Brasília).',
     endpoint: '/api/automation/coletar-metricas',
     icone: <BarChart3 className="h-5 w-5" />,
     fatias: ['youtube', 'tiktok', 'instagram', 'facebook'],

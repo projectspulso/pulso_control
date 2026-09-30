@@ -37,7 +37,7 @@ export const GATES_MONETIZACAO: GateMonetizacao[] = [
     metaSecundariaNum: 3_000_000,
     metaSecundariaUnidade: 'views/90d',
     recompensa: 'fan funding → depois anúncios (1k insc + 10M/90d)',
-    alavanca: 'Dois caminhos: 3M views de Shorts/90d (hoje 91× longe) OU 3.000h de exibição — destravadas pela série de vídeos longos (Bastidores). CTA de inscrição converte quem já ama.',
+    alavanca: 'Dois caminhos: 3M views de Shorts/90d (a distância real está no card de metas) OU 3.000h de exibição — destravadas pela série de vídeos longos (Bastidores). CTA de inscrição converte quem já ama.',
   },
   {
     plataforma: 'kwai',
@@ -48,7 +48,7 @@ export const GATES_MONETIZACAO: GateMonetizacao[] = [
     gateRapido: { meta: 100, label: 'Lives (receita) liberam com 100 seguidores' },
     metaSecundaria: 'Lives monetizadas a partir de 100 seguidores',
     recompensa: 'Fundo por views + presentes em Lives',
-    alavanca: 'Meta de receita mais próxima do ecossistema — 606 média/post. Correr pros 100 seguidores e abrir Lives.',
+    alavanca: 'O gate de 100 seguidores já foi passado (479 em 30/09/2026) — conferir no app do Kwai se as Lives liberaram; próxima meta 1.000.',
   },
   {
     plataforma: 'facebook',

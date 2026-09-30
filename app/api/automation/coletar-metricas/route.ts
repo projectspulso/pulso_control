@@ -515,7 +515,7 @@ async function coletar(request: NextRequest) {
       // captura TODOS os posts; crescimento = diferença entre leituras). Upsert no dia (latest do dia).
       try {
         // O DIA DA LEITURA É O DIA DE BRASÍLIA em que ela foi tirada, não o dia UTC.
-        // A coleta principal roda às 21h BRT, que já é 00h UTC do dia seguinte: com
+        // A coleta principal rodava às 21h BRT (hoje: 03h10–03h40 BRT, pg_cron), que já era 00h UTC do dia seguinte: com
         // `toISOString()` toda leitura da noite nascia carimbada com AMANHÃ, e o painel mostrava
         // ganho num dia que ainda não existia. Medido em 04/09/2026: 25.731 das 31.351 linhas
         // estavam deslocadas (24.579 exatamente +1 dia); as ~5.600 certas eram da coleta das 03h
