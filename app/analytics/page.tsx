@@ -8,6 +8,7 @@ import { ErrorState } from '@/components/ui/error-state'
 import { Desafio100Dias } from '@/components/desafio-100-dias'
 import { InsightDoDia } from '@/components/insight-do-dia'
 import { ParecerAnalista } from '@/components/parecer-analista'
+import { CardGanhosFacebook } from '@/components/card-ganhos-facebook'
 import { CardPublico } from '@/components/card-publico'
 import { HorariosPanel } from '@/components/horarios-panel'
 import { NotaVsViewsPanel } from '@/components/nota-vs-views-panel'
@@ -409,6 +410,7 @@ export default function AnalyticsPage() {
               conversaoYt={gatesCalc.find((c) => c.g.plataforma === 'youtube')?.conv ?? null}
             />
             <HeroMonetizacao gatesCalc={gatesCalc} />
+            <CardGanhosFacebook />
             <CardPinterest dados={pinterest} />
             <div className="grid gap-3.5 lg:grid-cols-2">
               <CardAlcancePorRede porRede={porRede} totalViews={resumo?.views ?? 0} />

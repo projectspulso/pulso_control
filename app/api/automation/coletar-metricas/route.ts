@@ -4,6 +4,7 @@ import { guardApi } from '@/lib/auth/api-guard'
 import { getYoutubeAccessToken } from '@/lib/youtube/oauth'
 import { fetchYoutubeRetention, fetchYoutubeWatchTime } from '@/lib/youtube/retention'
 import { resolverRascunhosTikTok } from '@/lib/publicacao/tiktok-rascunho'
+import { coletarGanhosFacebook } from '@/lib/automation/ganhos-facebook'
 
 /**
  * POST|GET /api/automation/coletar-metricas
@@ -636,6 +637,16 @@ async function coletar(request: NextRequest) {
   }
   if (igPulados > 0) {
     avisos.push(`Instagram: ${igLidos} lidos, ${igPulados} ficaram para a proxima rodada (prazo de ${PRAZO_MS / 1000}s). Os mais novos foram primeiro.`)
+  }
+
+  // GANHOS (Estrelas liberadas em 01/10/2026) — vão junto com a coleta do Facebook; falha só avisa
+  if ((!redeAlvo || redeAlvo === 'facebook') && fbToken && fbPageId) {
+    try {
+      const g = await coletarGanhosFacebook(supabase, fbToken, fbPageId)
+      avisos.push(`ganhos Facebook: US$ ${g.ultimos7Usd.toFixed(2)} em 7 dias`)
+    } catch (e) {
+      avisos.push(`ganhos Facebook não lidos: ${e instanceof Error ? e.message : 'erro'}`)
+    }
   }
 
   const resumo = {

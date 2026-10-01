@@ -4,6 +4,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (01/10) — ganhos do Facebook (Estrelas liberadas)
+- **Estrelas liberadas** na página Pulso Histórias (3 de 3 critérios); o dono aceitou os termos. Falta o cadastro de repasse (dados fiscais e bancários), que é do dono.
+- **Coleta de ganhos:** junto com a coleta do Facebook (06:30 UTC), `lib/automation/ganhos-facebook.ts` lê `monetization_approximate_earnings` (todas as ferramentas, Estrelas inclusas) e `content_monetization_earnings` (programa de conteúdo) e grava 90 dias em `configuracoes.ganhos_facebook`. A Graph API não entrega contagem de Estrelas — o card mostra o ganho em dólar e a estimativa (1 Estrela = US$ 0,01).
+- **Card "Ganhos no Facebook"** na Visão geral do /analytics, abaixo das metas de monetização.
+
 ### Mudado (30/09) — o aprendizado passa a ler o dado de agora
 - **Auditoria do analytics:** a coleta estava saudável (FB/IG/YT/TikTok ~207 posts/dia); o problema era o que o app aprendia. Agenda, gerador de ideias, Decisor e telas decidiam com números fixos no código desde 29–30/07 — e o principal tinha envelhecido: história/arqueologia fez **zero** estouros no Facebook de 31/07 a 30/09 (43 vídeos), e os dois ≥3k do período caíram em "outros".
 - **Temas medidos todo dia.** `medirTemas` (lib/decisor/temas.ts) recalcula papel (sorteia/neutro/morto) e mediana de cada tema em janela de 90 dias; a rotina `aprender` (07:00 UTC) grava em `configuracoes.temas_medidos`. Agenda (roteador), Decisor, gerador de ideias, flops, calendário e ficha do vídeo leem dali. Sem medição, todo tema é neutro — número velho não decide mais.
