@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
     let fontes: FontesDoVideo | null = null
     if (checagem && !checagem.indisponivel && checagem.afirmacoes.length > 0) {
       try {
-        fontes = await verificarFontes(checagem.afirmacoes)
+        fontes = await verificarFontes(checagem.afirmacoes, { roteiro, titulo: ideia.titulo })
       } catch (e) {
         console.error('[gerar-roteiro] verificação de fontes indisponível:', e)
       }
@@ -328,7 +328,7 @@ export async function POST(request: NextRequest) {
       fatosSuspeitos: checagem && !checagem.indisponivel ? checagem.erradas.length : null,
       checagemRodou: !!checagem && !checagem.indisponivel,
       fontesContraditas: fontes && !fontes.indisponivel ? fontes.contraditas : null,
-      fontesSemProva: fontes && !fontes.indisponivel ? fontes.semProva : null,
+      fontesSemProva: fontes && !fontes.indisponivel ? fontes.semFonte : null,
       fontesTotal: fontes && !fontes.indisponivel ? fontes.total : null,
     })
 

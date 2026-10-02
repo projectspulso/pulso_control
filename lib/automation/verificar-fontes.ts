@@ -36,6 +36,8 @@ export interface FontesDoVideo {
   confirmadas: number
   contraditas: number
   semProva: number
+  /** sem nenhuma URL — é isto que pesa na trava; URL que não abriu (403, JS) é pista, não ausência */
+  semFonte: number
   /** a busca não pôde ser feita (sem chave, erro de rede) — nunca confundir com "sem prova" */
   indisponivel: boolean
   itens: FonteDaAfirmacao[]
@@ -73,6 +75,19 @@ function extrairJson(texto: string): Record<string, unknown> | null {
   }
 }
 
+/**
+ * A checagem de memória extrai PEDAÇOS ("Em 2016", "Ásia", "Londres") — sem a frase em volta, a
+ * busca não tem o que conferir (02/10/2026: 23 de 31 afirmações voltaram sem prova, quase todas
+ * fragmento). Aqui o pedaço vira a frase inteira do roteiro onde ele aparece.
+ */
+export function fraseDoRoteiro(trecho: string, roteiro: string | null | undefined): string {
+  if (!roteiro) return trecho
+  const frases = roteiro.replace(/\s+/g, ' ').split(/(?<=[.!?])\s+/)
+  const alvo = normalizar(trecho)
+  const achada = frases.find((f) => normalizar(f).includes(alvo))
+  return achada && achada.length > trecho.length ? achada.trim().slice(0, 400) : trecho
+}
+
 const PROMPT = (trecho: string) => [
   'Você confere fatos para um canal de vídeos curtos de história e curiosidades.',
   'PESQUISE NA WEB a afirmação abaixo e responda SOMENTE com JSON, sem texto fora dele:',
@@ -84,7 +99,7 @@ const PROMPT = (trecho: string) => [
   'traz um fato materialmente diferente. Se não achar fonte clara: status "sem_prova", url null.',
   'NUNCA invente URL nem citação — copie da página que você realmente leu.',
   '',
-  `AFIRMAÇÃO: ${trecho}`,
+  `AFIRMAÇÃO (com o contexto do vídeo): ${trecho}`,
 ].join('\n')
 
 async function buscarUma(trecho: string, apiKey: string, prazoMs: number): Promise<FonteDaAfirmacao> {
@@ -167,15 +182,20 @@ export function escolherAfirmacoes<T extends { trecho: string; tipo?: string }>(
 
 export async function verificarFontes(
   afirmacoes: Array<{ trecho: string; tipo?: string }>,
-  opts: { apiKey?: string; max?: number; prazoBuscaMs?: number; prazoPaginaMs?: number } = {}
+  opts: { apiKey?: string; max?: number; prazoBuscaMs?: number; prazoPaginaMs?: number; roteiro?: string | null; titulo?: string | null } = {}
 ): Promise<FontesDoVideo> {
   const apiKey = opts.apiKey ?? process.env.OPENAI_API_KEY
   const quando = new Date().toISOString()
   const alvo = escolherAfirmacoes(afirmacoes, opts.max ?? 6)
   if (!apiKey || alvo.length === 0) {
-    return { quando, total: 0, confirmadas: 0, contraditas: 0, semProva: 0, indisponivel: !apiKey, itens: [] }
+    return { quando, total: 0, confirmadas: 0, contraditas: 0, semProva: 0, semFonte: 0, indisponivel: !apiKey, itens: [] }
   }
-  const brutos = await Promise.all(alvo.map((a) => buscarUma(a.trecho, apiKey, opts.prazoBuscaMs ?? 40_000)))
+  const comContexto = (t: string) => {
+    const frase = fraseDoRoteiro(t, opts.roteiro)
+    return opts.titulo ? `${frase} (vídeo: "${opts.titulo}")` : frase
+  }
+  const brutos = await Promise.all(alvo.map((a) => buscarUma(comContexto(a.trecho), apiKey, opts.prazoBuscaMs ?? 40_000)))
+  brutos.forEach((b, k) => { b.trecho = alvo[k].trecho })
   const itens = await Promise.all(brutos.map((f) => conferirPagina(f, opts.prazoPaginaMs ?? 8_000)))
   const falhasDeBusca = brutos.filter((b) => b.observacao.startsWith('busca')).length
   return {
@@ -184,6 +204,7 @@ export async function verificarFontes(
     confirmadas: itens.filter((i) => i.status === 'confirmada').length,
     contraditas: itens.filter((i) => i.status === 'contradita').length,
     semProva: itens.filter((i) => i.status === 'sem_prova').length,
+    semFonte: itens.filter((i) => i.status === 'sem_prova' && !i.url).length,
     indisponivel: falhasDeBusca === itens.length,
     itens,
   }
@@ -195,7 +216,7 @@ export async function verificarFontes(
  */
 export function fontesSeguramRoteiro(f: FontesDoVideo | null): boolean {
   if (!f || f.indisponivel || f.total === 0) return false
-  return f.contraditas > 0 || f.semProva / f.total > 0.5
+  return f.contraditas > 0 || (f.semFonte ?? f.semProva) / f.total > 0.5
 }
 
 /** Para colar quando alguém perguntar "de onde vocês tiraram isso?". Só fontes verificadas. */

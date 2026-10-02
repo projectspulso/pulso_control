@@ -6,7 +6,7 @@ import { checarFatos } from '@/lib/automation/checagem-fatos'
 import { verificarFontes } from '@/lib/automation/verificar-fontes'
 
 /**
- * POST /api/fontes { ideia_id?, numero?, lote? }
+ * POST /api/fontes { ideia_id?, numero?, lote?, desde? }   desde = só publicados a partir da data (AAAA-MM-DD)
  *
  * Preenche a FONTE DE VERDADE (lib/automation/verificar-fontes.ts) do que já foi escrito. Roteiro
  * novo já nasce com fontes (gerar-roteiro); esta rota cobre o resto, nesta ordem: o ESTOQUE (ainda
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       const pendentes = todas.filter((i) => !(i.metadata as { fontes?: unknown } | null)?.fontes)
       const estoque = pendentes.filter((i) => !publicadoEm.has(i.id) && NO_ESTOQUE.includes(pipe.get(i.id)?.status || ''))
       const publicados = pendentes
-        .filter((i) => publicadoEm.has(i.id))
+        .filter((i) => publicadoEm.has(i.id) && (!body?.desde || publicadoEm.get(i.id)! >= String(body.desde)))
         .sort((a, b) => (publicadoEm.get(b.id)! < publicadoEm.get(a.id)! ? -1 : 1))
       alvo = [...estoque, ...publicados].slice(0, lote)
     }
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
           itens = r.afirmacoes
         }
       }
-      const fontes = await verificarFontes(itens)
+      const fontes = await verificarFontes(itens, { roteiro: corpo.get(i.id), titulo: i.titulo })
       if (!fontes.indisponivel) {
         md.fontes = fontes
         if (md.checagem) (md.checagem as Record<string, unknown>).fontes_verificadas = fontes.confirmadas > 0
@@ -103,7 +103,8 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const restantes = todas.filter((i) => !(i.metadata as { fontes?: unknown } | null)?.fontes).length - saida.length
+    const restantes = todas.filter((i) => !(i.metadata as { fontes?: unknown } | null)?.fontes &&
+      (!body?.desde || !publicadoEm.has(i.id) || publicadoEm.get(i.id)! >= String(body.desde))).length - saida.length
     return NextResponse.json({ ok: true, conferidos: saida.length, restantes: Math.max(0, restantes), resultados: saida })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'erro' }, { status: 500 })
