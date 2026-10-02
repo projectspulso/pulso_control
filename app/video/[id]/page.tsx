@@ -12,6 +12,7 @@ import {
 
 import { useVideo, type VideoDetalhe } from '@/lib/hooks/use-video'
 import { motivoDoTema, papelDoTema } from '@/lib/decisor/temas'
+import { respostaPronta } from '@/lib/automation/verificar-fontes'
 import { useTemasMedidos } from '@/lib/hooks/use-temas-medidos'
 import { PublicarPorRede } from '@/components/publicar-por-rede'
 
@@ -210,6 +211,64 @@ export default function FichaDoVideo({ params }: { params: Promise<{ id: string 
             </p>
           </>
         ) : <Vazio>Ainda não tem roteiro.</Vazio>}
+      </Secao>
+
+      {/* ── fontes de verdade (INTERNO — decisão do dono: fonte fica só no banco) ── */}
+      <Secao icone={<ShieldCheck className="h-4 w-4" />} titulo="Fontes (interno)">
+        {!d.fontes ? (
+          <Vazio>Ainda sem busca de fontes para este vídeo.</Vazio>
+        ) : (
+          <>
+            <p className="mb-3 text-[11px] leading-relaxed text-zinc-500">
+              {d.fontes.total} afirmação(ões) buscada(s) na web em {data_(d.fontes.quando)} ·{' '}
+              <b className="text-emerald-300">{d.fontes.confirmadas} confirmada(s)</b>
+              {d.fontes.contraditas > 0 && <> · <b className="text-red-300">{d.fontes.contraditas} contradita(s)</b></>}
+              {d.fontes.semProva > 0 && <> · {d.fontes.semProva} sem prova</>}
+              <br />
+              <span className="text-zinc-600">
+                &quot;Confirmada&quot; só quando abrimos a página e o trecho citado está nela. Uso interno — não vai para o público.
+              </span>
+            </p>
+            {respostaPronta(d.fontes) && (
+              <div className="mb-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] p-3">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-emerald-300">Resposta pronta para quem perguntar a fonte</span>
+                  <Copiar texto={respostaPronta(d.fontes)!} />
+                </div>
+                <p className="whitespace-pre-line text-[12px] text-zinc-300">{respostaPronta(d.fontes)}</p>
+              </div>
+            )}
+            <div className="space-y-2">
+              {d.fontes.itens.map((it, k) => (
+                <div
+                  key={k}
+                  className={`rounded-xl border p-3 text-sm ${
+                    it.status === 'contradita' ? 'border-red-500/40 bg-red-500/[0.07]'
+                      : it.status === 'confirmada' ? 'border-emerald-500/25 bg-emerald-500/[0.04]' : 'border-white/8 bg-black/20'
+                  }`}
+                >
+                  <p className="text-zinc-200">
+                    <span className="mr-1.5">{it.status === 'confirmada' ? '✓' : it.status === 'contradita' ? '✗' : '?'}</span>
+                    {it.trecho}
+                  </p>
+                  {it.status === 'contradita' && it.valorNaFonte && (
+                    <p className="mt-1 text-[12px] text-red-200">a fonte diz: {it.valorNaFonte}</p>
+                  )}
+                  {it.citacao && it.verificada && <p className="mt-1 text-[12px] italic text-zinc-400">&ldquo;{it.citacao}&rdquo;</p>}
+                  <p className="mt-1 text-[11px] text-zinc-500">
+                    {it.url ? (
+                      <a href={it.url} target="_blank" rel="noreferrer" className="text-violet-400 hover:underline">
+                        {it.titulo || it.url}
+                      </a>
+                    ) : <span className="text-zinc-600">nenhuma fonte encontrada</span>}
+                    {!it.verificada && it.url && <span className="text-zinc-600"> (pista, não conferida)</span>}
+                    {it.observacao && <> · {it.observacao}</>}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </Secao>
 
       {/* ── conferência de fatos (INTERNO) ── */}

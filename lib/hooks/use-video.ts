@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
 import { dedupePublicacoes } from '@/lib/analytics/dedupe'
 import { classificarTema, type Tema } from '@/lib/decisor/temas'
+import type { FontesDoVideo } from '@/lib/automation/verificar-fontes'
 
 /**
  * A FICHA COMPLETA de um vídeo, da ideia à publicação — a rota /video/[id].
@@ -79,6 +80,8 @@ export interface ChecagemDoVideo {
 export interface VideoDetalhe {
   ideiaId: string
   checagem: ChecagemDoVideo | null
+  /** fonte de verdade por busca na web, com página aberta e conferida — INTERNO (verificar-fontes.ts) */
+  fontes: FontesDoVideo | null
   titulo: string
   canalNome: string
   numero: number | null
@@ -237,6 +240,7 @@ export function useVideo(ideiaId: string) {
         ideiaId,
         // conferência de fatos gravada por /api/checagem — interna, ver ChecagemDoVideo
         checagem: (ideia?.metadata?.checagem as ChecagemDoVideo | undefined) ?? null,
+        fontes: (ideia?.metadata?.fontes as FontesDoVideo | undefined) ?? null,
         titulo: ideia.titulo || '(sem título)',
         canalNome: (ideia.canal_id && canalNome.get(ideia.canal_id)) || '—',
         numero: md.numero ?? null,

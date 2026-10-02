@@ -27,6 +27,10 @@ export interface EntradaRevisao {
   promessaAberta?: boolean | null
   fatosSuspeitos?: number | null
   checagemRodou?: boolean | null
+  /** busca na web (verificar-fontes.ts): fonte que contradiz, e afirmações sem prova */
+  fontesContraditas?: number | null
+  fontesSemProva?: number | null
+  fontesTotal?: number | null
 }
 
 export function motivosRevisao(e: EntradaRevisao): string[] {
@@ -36,6 +40,11 @@ export function motivosRevisao(e: EntradaRevisao): string[] {
     m.push(`${e.fatosSuspeitos} fato${e.fatosSuspeitos > 1 ? 's' : ''} suspeito${e.fatosSuspeitos > 1 ? 's' : ''} na checagem`)
   } else if (e.checagemRodou === false) {
     m.push('checagem de fatos não rodou')
+  }
+  if (e.fontesContraditas && e.fontesContraditas > 0) {
+    m.push(`${e.fontesContraditas} ${e.fontesContraditas > 1 ? 'afirmações contraditas' : 'afirmação contradita'} pela fonte na web`)
+  } else if (e.fontesTotal && e.fontesSemProva != null && e.fontesSemProva / e.fontesTotal > 0.5) {
+    m.push(`${e.fontesSemProva} de ${e.fontesTotal} afirmações sem fonte que comprove`)
   }
   if (e.colideCom) m.push(`mesmo assunto de "${e.colideCom}"`)
   if (e.gemeoDe) m.push(`parecido com "${e.gemeoDe}"`)

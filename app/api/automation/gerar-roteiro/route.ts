@@ -5,6 +5,7 @@ import { extrairAncora, acharColisao, type ColisaoAncora } from '@/lib/automatio
 import { motivosRevisao, NOTA_MINIMA_AUTO_APROVAR } from '@/lib/automation/motivos-revisao'
 import { varrerDuplicidade } from '@/lib/automation/vigia-duplicidade'
 import { checarFatos, type ResultadoChecagem } from '@/lib/automation/checagem-fatos'
+import { fontesSeguramRoteiro, verificarFontes, type FontesDoVideo } from '@/lib/automation/verificar-fontes'
 import { callOpenAI } from '@/lib/automation/ai-clients'
 import { buildPromptGerarRoteiro, buildPromptLegendas } from '@/lib/automation/prompts'
 import { contarFormas, desempenhoPorForma, escolherForma, INSTRUCAO_POR_FORMA } from '@/lib/automation/forma-hook'
@@ -297,9 +298,21 @@ export async function POST(request: NextRequest) {
     // os dois e acusava 12 em 24 roteiros, quase tudo prosa narrativa — sinal que grita não avisa.
     const fatoSuspeito = checagem == null || checagem.indisponivel || checagem.erradas.length > 0
 
+    // FONTE DE VERDADE (02/10/2026): as afirmações conferíveis vão à web buscar prova, e a página é
+    // aberta para confirmar o trecho citado. Ver lib/automation/verificar-fontes.ts. Fonte fica só no banco.
+    let fontes: FontesDoVideo | null = null
+    if (checagem && !checagem.indisponivel && checagem.afirmacoes.length > 0) {
+      try {
+        fontes = await verificarFontes(checagem.afirmacoes)
+      } catch (e) {
+        console.error('[gerar-roteiro] verificação de fontes indisponível:', e)
+      }
+    }
+    const fontesSeguram = fontesSeguramRoteiro(fontes)
+
     const shouldAutoApprove =
       autoApprove && qualidade.score >= autoApproveThreshold && hook.nota >= 3 && qualidade.tem_cta &&
-      !colisaoAncora && !gemeoNoAcervo && !promessaAberta && !fatoSuspeito
+      !colisaoAncora && !gemeoNoAcervo && !promessaAberta && !fatoSuspeito && !fontesSeguram
 
     // O porquê, gravado junto — o card do kanban mostra ao dono o que segurou o roteiro.
     const motivos = shouldAutoApprove ? [] : motivosRevisao({
@@ -314,6 +327,9 @@ export async function POST(request: NextRequest) {
       promessaAberta,
       fatosSuspeitos: checagem && !checagem.indisponivel ? checagem.erradas.length : null,
       checagemRodou: !!checagem && !checagem.indisponivel,
+      fontesContraditas: fontes && !fontes.indisponivel ? fontes.contraditas : null,
+      fontesSemProva: fontes && !fontes.indisponivel ? fontes.semProva : null,
+      fontesTotal: fontes && !fontes.indisponivel ? fontes.total : null,
     })
 
     // NUMERO AUTOMÁTICO: respeita o número já gravado na ideia; senão, próximo da sequência canônica.
@@ -435,15 +451,36 @@ export async function POST(request: NextRequest) {
     }
 
     // A ÂNCORA FICA GUARDADA na ideia: daqui em diante a checagem é consulta, não chamada de IA.
-    if (ancora) {
-      try {
-        await supabase
-          .schema('pulso_content')
-          .from('ideias')
-          .update({ metadata: { ...(ideia.metadata || {}), ancora } })
-          .eq('id', ideia.id)
-      } catch (e) {
-        console.error('[gerar-roteiro] falha ao gravar âncora na ideia:', e)
+    // E A CHECAGEM TAMBÉM (02/10/2026): de 05/09 a 02/10 ela rodava em todo roteiro e o resultado
+    // morria aqui — só o "errado" ia ao pipeline. A ficha do vídeo lê ideias.metadata.checagem/fontes.
+    {
+      const extra: Record<string, unknown> = {}
+      if (ancora) extra.ancora = ancora
+      if (checagem && !checagem.indisponivel) {
+        extra.checagem = {
+          conferidas: checagem.afirmacoes.length,
+          erradas: checagem.erradas.length,
+          nao_confirmadas: checagem.naoConfirmadas.length,
+          indisponivel: false,
+          quando: new Date().toISOString(),
+          fontes_verificadas: !!fontes && fontes.confirmadas > 0,
+          itens: checagem.afirmacoes.slice(0, 20).map((a) => ({
+            trecho: a.trecho, tipo: a.tipo, veredito: a.veredito,
+            sabido: a.sabido, fonte: a.fonte ?? null, observacao: a.observacao,
+          })),
+        }
+      }
+      if (fontes && !fontes.indisponivel) extra.fontes = fontes
+      if (Object.keys(extra).length) {
+        try {
+          await supabase
+            .schema('pulso_content')
+            .from('ideias')
+            .update({ metadata: { ...(ideia.metadata || {}), ...extra } })
+            .eq('id', ideia.id)
+        } catch (e) {
+          console.error('[gerar-roteiro] falha ao gravar âncora/checagem na ideia:', e)
+        }
       }
     }
 

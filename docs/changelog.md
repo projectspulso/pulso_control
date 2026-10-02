@@ -4,6 +4,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (02/10) — fonte de verdade das histórias (só no banco)
+- **Camada 1:** a checagem de fatos de cada roteiro passa a ser gravada em `ideias.metadata.checagem`. De 05/09 a 02/10 ela rodava e o resultado morria na rota — as 15 ideias do período ficaram sem registro.
+- **Camada 2:** `lib/automation/verificar-fontes.ts` — cada afirmação conferível (data e número primeiro, até 6) é buscada na web (OpenAI Responses + web_search_preview). O app ABRE a página citada e procura o trecho; só é "confirmada" se estiver lá. Grava em `ideias.metadata.fontes`. Fonte que contradiz o roteiro, ou maioria das afirmações sem prova, segura a aprovação automática e vira motivo no card. Roda em todo roteiro novo; `POST /api/fontes` preenche o estoque e os publicados (do mais novo para trás).
+- **Camada 3:** bloco "Fontes (interno)" na ficha do vídeo, com links, trecho comprovado e uma resposta pronta para colar quando alguém perguntar a fonte. Decisão do dono: a fonte não vai para legenda nem tela pública.
+
 ### Adicionado (01/10) — ganhos do Facebook (Estrelas liberadas)
 - **Estrelas liberadas** na página Pulso Histórias (3 de 3 critérios); o dono aceitou os termos. Falta o cadastro de repasse (dados fiscais e bancários), que é do dono.
 - **Coleta de ganhos:** junto com a coleta do Facebook (06:30 UTC), `lib/automation/ganhos-facebook.ts` lê `monetization_approximate_earnings` (todas as ferramentas, Estrelas inclusas) e `content_monetization_earnings` (programa de conteúdo) e grava 90 dias em `configuracoes.ganhos_facebook`. A Graph API não entrega contagem de Estrelas — o card mostra o ganho em dólar e a estimativa (1 Estrela = US$ 0,01).
