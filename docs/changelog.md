@@ -4,6 +4,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (03/10) — motor de stories
+- Plano em `docs/planos/motor-stories.md`. Dois momentos por dia em volta do vídeo das 19h: **antes** (17h — pergunta + teaser "hoje às 19h") e **depois** (19h40 — "saiu, vídeo completo no perfil", só se o vídeo saiu).
+- Artes geradas localmente do vídeo pronto (`motor/gerar_stories.py`, custo zero), chamadas pelo worker a cada rodada para os 3 próximos agendados.
+- Instagram e Facebook publicam sozinhos (`/api/automation/publicar-stories`, pg_cron 20:00 e 22:40 UTC). TikTok e Kwai viram tarefa no card "Stories de hoje" da Central de Publicação (baixar arte + "Postei").
+- Tabela `pulso_content.stories` (migration 074): uma linha por story, idempotente por (ideia, rede, momento, tipo).
+
 ### Adicionado (02/10) — fonte de verdade das histórias (só no banco)
 - **Camada 1:** a checagem de fatos de cada roteiro passa a ser gravada em `ideias.metadata.checagem`. De 05/09 a 02/10 ela rodava e o resultado morria na rota — as 15 ideias do período ficaram sem registro.
 - **Camada 2:** `lib/automation/verificar-fontes.ts` — cada afirmação conferível (data e número primeiro, até 6) é buscada na web (OpenAI Responses + web_search_preview). O app ABRE a página citada e procura o trecho; só é "confirmada" se estiver lá. Grava em `ideias.metadata.fontes`. Fonte que contradiz o roteiro, ou maioria das afirmações sem prova, segura a aprovação automática e vira motivo no card. Roda em todo roteiro novo; `POST /api/fontes` preenche o estoque e os publicados (do mais novo para trás).

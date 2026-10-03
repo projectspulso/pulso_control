@@ -394,6 +394,13 @@ if __name__ == "__main__":
         _g.sync_transacoes()
     except Exception as _e:
         log("aviso: sync do extrato Higgsfield falhou: %s" % str(_e)[:100])
+    # ARTES DE STORY dos próximos agendados (motor de stories, 03/10/2026): custo zero, sai do vídeo
+    # pronto. A rota /api/automation/publicar-stories só publica o que estiver em metadata.stories.
+    try:
+        r = subprocess.run(["python", "D:/tmp/gerar_stories.py", "--pendentes", "3"], capture_output=True, text=True, timeout=1200)
+        log((r.stdout or '').strip().splitlines()[-1] if (r.stdout or '').strip() else "stories: sem saída")
+    except Exception as _e:
+        log("aviso: gerar_stories falhou: %s" % str(_e)[:100])
     # auto-adiciona vídeos novos do YT nas playlists por vertical (idempotente, ~grátis)
     try:
         subprocess.run(["python", "D:/tmp/yt_playlists.py"], capture_output=True, timeout=180)
