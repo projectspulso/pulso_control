@@ -4,6 +4,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Corrigido/Adicionado (05/10) — stories: Instagram estável e medição do teste
+- **Story de imagem no Instagram falhava sempre** ("Media ID is not available", 2 de 2): o container de foto também precisa terminar de processar antes de publicar. Agora espera.
+- **Teaser do Instagram que passa de 36s processando** ficava em erro. O container é guardado e a repescagem (+15 min, pg_cron) só publica, sem subir de novo. Redes em paralelo; peças em sequência (pergunta antes do teaser).
+- **Medição:** `/api/automation/coletar-stories` (pg_cron 16h30 BRT, antes de o story sair do ar) grava por story views, alcance, respostas, seguidores, visitas ao perfil e navegação (avançou/voltou/saiu) em `stories.metricas`, e visitas ao perfil por dia em `configuracoes.ig_conta_diaria` (com 28 dias de linha de base). Facebook não entrega insight de story de Página.
+- **Card "O story faz crescer?"** na aba Crescimento do /analytics: seguidores/dia (IG e FB) e visitas ao perfil antes × com story, desempenho por story e quantos manuais foram postados. Veredito em 17/10.
+
 ### Adicionado (03/10) — motor de stories
 - Plano em `docs/planos/motor-stories.md`. Dois momentos por dia em volta do vídeo das 19h: **antes** (17h — pergunta + teaser "hoje às 19h") e **depois** (19h40 — "saiu, vídeo completo no perfil", só se o vídeo saiu).
 - Artes geradas localmente do vídeo pronto (`motor/gerar_stories.py`, custo zero), chamadas pelo worker a cada rodada para os 3 próximos agendados.

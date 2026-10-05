@@ -10,6 +10,7 @@ import { InsightDoDia } from '@/components/insight-do-dia'
 import { ParecerAnalista } from '@/components/parecer-analista'
 import { CardGanhosFacebook } from '@/components/card-ganhos-facebook'
 import { CardPublico } from '@/components/card-publico'
+import { CardStories } from '@/components/card-stories'
 import { HorariosPanel } from '@/components/horarios-panel'
 import { NotaVsViewsPanel } from '@/components/nota-vs-views-panel'
 import { QualidadePanel } from '@/components/qualidade-panel'
@@ -463,6 +464,7 @@ export default function AnalyticsPage() {
         {aba === 'crescimento' && (
           <div className="space-y-3.5">
             <NaoSegueFiltro filtros={filtros} motivo="a meta é publicar em qualquer rede, todo dia" />
+            <CardStories />
             <Desafio100Dias />
             <CardExperimento exp={experimento} />
             <CardCrescimento serie={data.serieCumulativa} diaria={data.serieDiaria} alto />

@@ -14,29 +14,39 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
  * Idempotente por (ideia, rede, momento, tipo): rodar de novo não duplica story.
  */
 
-export const maxDuration = 60
+export const maxDuration = 180
 
 const GRAPH = 'https://graph.facebook.com/v23.0'
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 type Peca = { tipo: 'imagem' | 'video'; url: string }
 
-async function storyInstagram(peca: Peca, igUser: string, token: string): Promise<string> {
-  const p = new URLSearchParams({ media_type: 'STORIES', access_token: token })
-  p.set(peca.tipo === 'imagem' ? 'image_url' : 'video_url', peca.url)
-  const c = await fetch(`${GRAPH}/${igUser}/media`, { method: 'POST', body: p }).then((r) => r.json())
-  if (!c?.id) throw new Error(`IG container: ${c?.error?.message || 'sem id'}`)
-  if (peca.tipo === 'video') {
-    let st = ''
-    for (let i = 0; i < 12 && st !== 'FINISHED'; i++) {
-      await espera(3000)
-      st = (await fetch(`${GRAPH}/${c.id}?fields=status_code&access_token=${token}`).then((r) => r.json()))?.status_code
-      if (st === 'ERROR') throw new Error('IG: processamento do vídeo falhou')
-    }
-    if (st !== 'FINISHED') throw new Error('IG: vídeo ainda processando (prazo)')
+/** O vídeo do IG às vezes passa de 36s processando: o container fica guardado e a rodada de
+ *  repescagem (+15 min) só publica — sem subir de novo (visto em 03/10/2026). */
+class ContainerProcessando extends Error {
+  constructor(public container: string) { super(`IG: ainda processando (container ${container})`) }
+}
+
+async function storyInstagram(peca: Peca, igUser: string, token: string, containerAnterior?: string | null): Promise<string> {
+  let id = containerAnterior || ''
+  if (!id) {
+    const p = new URLSearchParams({ media_type: 'STORIES', access_token: token })
+    p.set(peca.tipo === 'imagem' ? 'image_url' : 'video_url', peca.url)
+    const c = await fetch(`${GRAPH}/${igUser}/media`, { method: 'POST', body: p }).then((r) => r.json())
+    if (!c?.id) throw new Error(`IG container: ${c?.error?.message || 'sem id'}`)
+    id = c.id
   }
+  // IMAGEM TAMBÉM PRECISA ESPERAR: publicar o container de foto na hora dava "Media ID is not
+  // available" — 3 de 3 pergunta.jpg falharam assim em 03 e 04/10/2026.
+  let st = ''
+  for (let i = 0; i < (peca.tipo === 'video' ? 14 : 6) && st !== 'FINISHED'; i++) {
+    await espera(peca.tipo === 'video' ? 3000 : 2000)
+    st = (await fetch(`${GRAPH}/${id}?fields=status_code&access_token=${token}`).then((r) => r.json()))?.status_code
+    if (st === 'ERROR' || st === 'EXPIRED') throw new Error(`IG: container ${st}`)
+  }
+  if (st !== 'FINISHED') throw new ContainerProcessando(id)
   const pub = await fetch(`${GRAPH}/${igUser}/media_publish`, {
-    method: 'POST', body: new URLSearchParams({ creation_id: c.id, access_token: token }),
+    method: 'POST', body: new URLSearchParams({ creation_id: id, access_token: token }),
   }).then((r) => r.json())
   if (!pub?.id) throw new Error(`IG publish: ${pub?.error?.message || 'sem id'}`)
   return pub.id
@@ -112,7 +122,7 @@ export async function POST(request: NextRequest) {
   } catch { /* segue com o token base */ }
 
   const { data: existentes } = await supabase.schema('pulso_content').from('stories')
-    .select('rede, tipo, status').eq('ideia_id', p.ideia_id).eq('momento', momento)
+    .select('rede, tipo, status, erro').eq('ideia_id', p.ideia_id).eq('momento', momento)
   // automático: só não repete o que já saiu (erro tenta de novo); manual: linha existente já basta
   const feito = (rede: string, tipo: string) =>
     (existentes || []).some((e: { rede: string; tipo: string; status: string }) =>
@@ -120,19 +130,22 @@ export async function POST(request: NextRequest) {
 
   const resultados: Array<Record<string, unknown>> = []
   for (const peca of pecas) {
-    for (const rede of ['instagram', 'facebook'] as const) {
-      if (feito(rede, peca.tipo)) { resultados.push({ rede, tipo: peca.tipo, pulado: 'já publicado' }); continue }
+    // as duas redes em paralelo; as peças em sequência (no story, a pergunta vem antes do teaser)
+    await Promise.all((['instagram', 'facebook'] as const).map(async (rede) => {
+      if (feito(rede, peca.tipo)) { resultados.push({ rede, tipo: peca.tipo, pulado: 'já publicado' }); return }
       const linha = { ideia_id: p.ideia_id, rede, momento, tipo: peca.tipo, asset_url: peca.url, modo: 'auto' }
       try {
-        const postId = rede === 'instagram' ? await storyInstagram(peca, igUser, igToken) : await storyFacebook(peca, pageId, pageToken)
+        const anterior = (existentes || []).find((e: { rede: string; tipo: string; erro: string | null }) => e.rede === rede && e.tipo === peca.tipo)
+        const container = anterior?.erro?.startsWith('processando:') ? anterior.erro.slice('processando:'.length) : null
+        const postId = rede === 'instagram' ? await storyInstagram(peca, igUser, igToken, container) : await storyFacebook(peca, pageId, pageToken)
         await supabase.schema('pulso_content').from('stories').upsert({ ...linha, status: 'publicado', post_id: postId, publicado_em: new Date().toISOString(), erro: null }, { onConflict: 'ideia_id,rede,momento,tipo' })
         resultados.push({ rede, tipo: peca.tipo, ok: postId })
       } catch (e) {
-        const msg = e instanceof Error ? e.message : 'erro'
+        const msg = e instanceof ContainerProcessando ? `processando:${e.container}` : e instanceof Error ? e.message : 'erro'
         await supabase.schema('pulso_content').from('stories').upsert({ ...linha, status: 'erro', erro: msg.slice(0, 500) }, { onConflict: 'ideia_id,rede,momento,tipo' })
         resultados.push({ rede, tipo: peca.tipo, erro: msg })
       }
-    }
+    }))
     // manuais: TikTok e Kwai entram na lista do dia; quem posta é o dono
     for (const rede of ['tiktok', 'kwai']) {
       if (feito(rede, peca.tipo)) continue
