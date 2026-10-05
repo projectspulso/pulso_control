@@ -31,10 +31,12 @@ export function StoriesDoDia() {
     queryKey: ['stories-do-dia'],
     refetchInterval: 5 * 60 * 1000,
     queryFn: async (): Promise<Story[]> => {
-      const inicio = new Date(Date.now() - 20 * 3600 * 1000).toISOString()
+      // os de HOJE + qualquer pendente anterior: com janela fixa de 20h, o manual de ontem sumia da
+      // lista antes de ser marcado (os 10 de 03–04/10 ficaram "pendente" sem aparecer em lugar nenhum)
+      const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
       const { data } = await supabase.schema('pulso_content').from('stories')
         .select('id, rede, momento, tipo, asset_url, status, modo, erro, publicado_em, created_at')
-        .gte('created_at', inicio).order('created_at')
+        .or(`created_at.gte.${hoje}T03:00:00Z,status.eq.pendente`).order('created_at')
       return (data || []) as Story[]
     },
   })
