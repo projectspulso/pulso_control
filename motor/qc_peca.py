@@ -39,6 +39,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("video"); ap.add_argument("--roteiro")
     ap.add_argument("--audio"); ap.add_argument("--marca", default="pulso"); ap.add_argument("--taty-ia", action="store_true")
+    # cartela final é estática de propósito (Mello: 5 s) — parado ali não é defeito
+    ap.add_argument("--cartela-s", type=float, default=None)
     a = ap.parse_args()
     t0 = time.time()
     roteiro = open(a.roteiro, encoding="utf-8").read() if a.roteiro else ""
@@ -69,7 +71,8 @@ def main():
 
     r = subprocess.run(["ffmpeg", "-i", a.video, "-vf", "freezedetect=n=0.003:d=2", "-map", "0:v", "-f", "null", "-"],
                        capture_output=True, text=True, timeout=900)
-    congel = re.findall(r"freeze_start: ([\d.]+)", r.stderr or "")
+    cartela = a.cartela_s if a.cartela_s is not None else (5.0 if a.marca == "mello" else 0.0)
+    congel = [c for c in re.findall(r"freeze_start: ([\d.]+)", r.stderr or "") if float(c) < vdur - cartela - 0.5]
     if congel: avisos.append("trecho parado > 2s em %s s" % ", ".join(c[:5] for c in congel[:5]))
 
     if a.marca == "mello":
