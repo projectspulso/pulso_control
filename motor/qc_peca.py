@@ -41,6 +41,8 @@ def main():
     ap.add_argument("--audio"); ap.add_argument("--marca", default="pulso"); ap.add_argument("--taty-ia", action="store_true")
     # cartela final é estática de propósito (Mello: 5 s) — parado ali não é defeito
     ap.add_argument("--cartela-s", type=float, default=None)
+    # acervo com áudio antigo (dono 07/10: não regravar): o fecho vem só na cartela, declarado pelo montador
+    ap.add_argument("--fecho-na-cartela", action="store_true")
     a = ap.parse_args()
     t0 = time.time()
     roteiro = open(a.roteiro, encoding="utf-8").read() if a.roteiro else ""
@@ -80,7 +82,10 @@ def main():
             erros.append("menciona preço (regra da Mello: nunca preço)")
         fim = " ".join(t for s, e, t in segs if e >= vdur - 8)
         if segs and not RE_FECHO.search(norm(fim)) and not RE_FECHO.search(norm(roteiro[-300:])):
-            erros.append('sem o fecho "veja no site mellooticas.com.br" no final')
+            if a.fecho_na_cartela:
+                avisos.append('fecho só na cartela (áudio antigo) — conferir "veja no site" no frame final')
+            else:
+                erros.append('sem o fecho "veja no site mellooticas.com.br" no final')
         if a.taty_ia: avisos.append("Taty por IA: conferir o aviso na tela (texto na imagem não é lido por este QC)")
 
     # frames vão para D:/tmp/qc — nunca para a pasta do vídeo, que pode ser de outro app (piloto da Mello)
