@@ -14,7 +14,7 @@ Confere:
                · com --taty-ia, lembra de conferir o aviso na tela (texto na imagem não é lido aqui)
 
 Uso:
-  python qc_peca.py <video.mp4> --roteiro <roteiro.txt> [--audio narracao.mp3] [--marca mello] [--taty-ia]
+  python qc_peca.py <video.mp4> [--roteiro <roteiro.txt>] [--audio narracao.mp3] [--marca mello] [--taty-ia]
 Saída: JSON com erros (barram), avisos (olho humano) e info (tempos, overlap, transcrição).
 """
 import os, re, sys, json, argparse, subprocess, unicodedata, time
@@ -37,11 +37,11 @@ RE_FECHO = re.compile(r"veja no site|mello\s*oticas|mellooticas", re.I)
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("video"); ap.add_argument("--roteiro", required=True)
+    ap.add_argument("video"); ap.add_argument("--roteiro")
     ap.add_argument("--audio"); ap.add_argument("--marca", default="pulso"); ap.add_argument("--taty-ia", action="store_true")
     a = ap.parse_args()
     t0 = time.time()
-    roteiro = open(a.roteiro, encoding="utf-8").read()
+    roteiro = open(a.roteiro, encoding="utf-8").read() if a.roteiro else ""
     erros, avisos, info = [], [], {}
 
     vdur = dur(a.video); info["duracao_video_s"] = round(vdur, 1)
@@ -59,7 +59,8 @@ def main():
         rt, tt = toks(roteiro), toks(fala)
         ov = len(rt & tt) / len(rt) if rt else 0.0
         info["overlap_roteiro"] = round(ov, 2)
-        if ov < 0.80: erros.append("fala diverge do roteiro (overlap %.0f%%)" % (ov * 100))
+        if not roteiro: avisos.append("sem roteiro: fala × roteiro não conferida"); info.pop("overlap_roteiro", None)
+        elif ov < 0.80: erros.append("fala diverge do roteiro (overlap %.0f%%)" % (ov * 100))
         if segs:
             info["primeira_fala_s"] = round(segs[0][0], 2)
             if segs[0][0] > 2.0: erros.append("gancho tarde: primeira fala aos %.1fs (limite 2s)" % segs[0][0])
@@ -79,7 +80,8 @@ def main():
             erros.append('sem o fecho "veja no site mellooticas.com.br" no final')
         if a.taty_ia: avisos.append("Taty por IA: conferir o aviso na tela (texto na imagem não é lido por este QC)")
 
-    qcdir = os.path.splitext(a.video)[0] + "_qc"; os.makedirs(qcdir, exist_ok=True)
+    # frames vão para D:/tmp/qc — nunca para a pasta do vídeo, que pode ser de outro app (piloto da Mello)
+    qcdir = "D:/tmp/qc/" + os.path.splitext(os.path.basename(a.video))[0] + "_qc"; os.makedirs(qcdir, exist_ok=True)
     for nm, t in [("inicio", 1.0), ("meio", round(vdur / 2, 1)), ("fim", max(0, round(vdur - 1.5, 1)))]:
         subprocess.run(["ffmpeg", "-v", "error", "-ss", str(t), "-i", a.video, "-frames:v", "1", "-q:v", "3", f"{qcdir}/{nm}.jpg", "-y"], capture_output=True)
     info["frames"] = qcdir
