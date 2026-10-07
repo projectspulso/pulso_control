@@ -104,7 +104,7 @@ def enriquecer_novos():
     for ep in ("tag?limit=12", "embed?limit=60"):  # tag primeiro (a visão alimenta o embedding)
         try:
             req = urllib.request.Request(f"{base}/{ep}", method="POST", data=b"{}",
-                                         headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
+                                         headers={"apikey": key, "Authorization": "Bearer " + key, "Content-Type": "application/json"})
             urllib.request.urlopen(req, timeout=90)
         except Exception:
             pass
@@ -174,7 +174,7 @@ def _subir_storage(hid, filepath):
         data = open(filepath, "rb").read()
         req = urllib.request.Request(
             f"{url_base}/storage/v1/object/banco-clips/videos/{hid}.mp4", data=data, method="POST",
-            headers={"Authorization": "Bearer " + key, "Content-Type": "video/mp4", "x-upsert": "true"})
+            headers={"apikey": key, "Authorization": "Bearer " + key, "Content-Type": "video/mp4", "x-upsert": "true"})
         urllib.request.urlopen(req, timeout=90)
         return f"{url_base}/storage/v1/object/public/banco-clips/videos/{hid}.mp4"
     except Exception:
