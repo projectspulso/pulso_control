@@ -377,7 +377,8 @@ export async function POST(request: NextRequest) {
   const igDeadlineMs = Date.now() + 52_000
 
   for (const plataforma of plataformas) {
-    if (redesPausadas.includes(plataforma)) {
+    // o teste de API com validade (dono, 07/10) passa pela pausa — ver publicar-agendados `teste_api`
+    if (redesPausadas.includes(plataforma) && payload.metodo !== 'api_teste') {
       resultados.push({ plataforma, status: 'PAUSADO', erro: 'rede pausada em configuracoes.linha_producao.redes_pausadas' })
       continue
     }
