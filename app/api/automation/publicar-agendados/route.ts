@@ -118,13 +118,20 @@ async function publicarAgendados(request: NextRequest) {
   // Rede pausada pelo dono (ver lib/publicacao/redes-pausadas.ts) sai da ordem E do remendo — senão o
   // remendo de "rede faltante" reenviaria o YouTube pausado na rodada seguinte.
   let redesPausadas: string[] = [...REDES_API_SEGURAS]
+  // TESTE DE API COM VALIDADE (dono, 07/10/2026): "ligar youtube, face e tiktok hoje e desligar
+  // amanhã, pra ver se vão flopar de novo". Até a data `ate` (dia BRT), as redes do teste saem por
+  // API mesmo pausadas ou proibidas, marcadas metodo=api_teste. Passada a data, desliga sozinho.
+  let testeApi: { redes: string[]; ate: string; tiktok_direto?: boolean } | null = null
   try {
     const raw = cfgQ.data?.valor
     const cfg = typeof raw === 'string' ? JSON.parse(raw) : raw
     if (cfg?.publicar_dia) tetoDia = cfg.publicar_dia
     if (!cfgQ.error) redesPausadas = Array.isArray(cfg?.redes_pausadas) ? cfg.redes_pausadas.map(String) : []
+    if (cfg?.teste_api?.ate && Array.isArray(cfg.teste_api.redes)) testeApi = cfg.teste_api
   } catch { /* mantém o padrão — e, sem ler a pausa, não publica por API nesta rodada */ }
-  const redesAtivas = REDES_API_SEGURAS.filter((r) => !redesPausadas.includes(r))
+  const testeHoje = testeApi && diaBRT(agora) <= testeApi.ate ? testeApi : null
+  const redesBase: string[] = REDES_API_SEGURAS.filter((r) => !redesPausadas.includes(r))
+  const redesAtivas: string[] = [...new Set([...redesBase, ...(testeHoje?.redes || [])])]
 
   // Quantos VÍDEOS já saíram hoje (por ideia, não por linha — 1 vídeo em 3 redes conta 1).
   //
@@ -249,11 +256,11 @@ async function publicarAgendados(request: NextRequest) {
     // Instagram vai por último, com prazo curto — a gente solta o pedido e segue, e a
     // reconciliação amarra o post depois. Assim ele nunca mais come o tempo do TikTok.
     const ORCAMENTO_MS: Record<string, number> = { tiktok: 18_000, youtube: 22_000, instagram: 10_000, facebook: 12_000 }
-    const ORDEM = ['tiktok', 'youtube', 'instagram'].filter((r) => (redesAtivas as readonly string[]).includes(r))
+    const ORDEM = ['tiktok', 'youtube', 'instagram'].filter((r) => redesAtivas.includes(r))
     // Facebook entra só se o experimento estiver valendo E este vídeo for do braço da API.
     // Fica por ÚLTIMO: se o orçamento de 60s acabar, quem perde é o experimento, não a operação.
     const fbNesteVideo = !!expFb && vaiPorApi(md.numero, expFb)
-    if (fbNesteVideo) ORDEM.push('facebook')
+    if (fbNesteVideo || testeHoje?.redes.includes('facebook')) ORDEM.push('facebook')
     const porRede: string[] = []
     for (const rede of ORDEM) {
       const prazo = ORCAMENTO_MS[rede] ?? 20_000
@@ -265,6 +272,7 @@ async function publicarAgendados(request: NextRequest) {
           body: JSON.stringify({
             pipeline_id: p.id, video_url: md.video_url, caption: md.caption,
             plataformas: [rede], confirmar: true,
+            ...(testeHoje?.redes.includes(rede) ? { metodo: 'api_teste', tiktok_direto: rede === 'tiktok' && !!testeHoje.tiktok_direto } : {}),
           }),
         })
         const d = await r.json().catch(() => ({}))
@@ -333,7 +341,7 @@ async function publicarAgendados(request: NextRequest) {
       const q = quandoSaiu.get(p.ideia_id)
       if (!q || new Date(q) < limite24h) return false
       const tem = redesPorIdeia.get(p.ideia_id) || new Set()
-      return redesAtivas.some((r) => !tem.has(r))
+      return redesBase.some((r) => !tem.has(r)) // o remendo NÃO entra no teste: não republica vídeo de ontem
     })
 
     // Uma rede por rodada: o cron bate de hora em hora, então o remendo se completa sozinho sem
@@ -342,7 +350,7 @@ async function publicarAgendados(request: NextRequest) {
     if (alvo) {
       const md = alvo.metadata || {}
       const tem = redesPorIdeia.get(alvo.ideia_id) || new Set()
-      const rede = redesAtivas.find((r) => !tem.has(r))
+      const rede = redesBase.find((r) => !tem.has(r))
       if (rede && md.video_url) {
         try {
           const r = await fetch(`${origin}/api/automation/publicar`, {
@@ -352,6 +360,7 @@ async function publicarAgendados(request: NextRequest) {
             body: JSON.stringify({
               pipeline_id: alvo.id, video_url: md.video_url, caption: md.caption,
               plataformas: [rede], confirmar: true,
+            ...(testeHoje?.redes.includes(rede) ? { metodo: 'api_teste', tiktok_direto: rede === 'tiktok' && !!testeHoje.tiktok_direto } : {}),
             }),
           })
           const d = await r.json().catch(() => ({}))

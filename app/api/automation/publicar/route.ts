@@ -213,7 +213,7 @@ async function publicarYouTube(videoUrl: string, titulo: string, descricao: stri
 
 // ---- TikTok (inbox/rascunho via Content Posting API) ----
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function publicarTikTok(videoUrl: string, supabase: any) {
+async function publicarTikTok(videoUrl: string, supabase: any, direto?: { legenda: string }) {
   const { data: cfg } = await supabase
     .schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'tiktok_oauth').single()
   if (!cfg?.valor) throw new Error('TikTok não autorizado (rode o OAuth)')
@@ -236,6 +236,40 @@ async function publicarTikTok(videoUrl: string, supabase: any) {
   const vid = await fetch(videoUrl)
   if (!vid.ok) throw new Error(`Não baixei o vídeo (${vid.status})`)
   const buf = Buffer.from(await vid.arrayBuffer())
+  // PUBLICAÇÃO DIRETA (teste do dono, 07/10/2026): o app foi aprovado e o token tem video.publish —
+  // o /publish/video/init/ posta público, com legenda e o rótulo de IA, sem passar pelo celular.
+  // Se o TikTok recusar (app não auditado etc.), cai no rascunho de sempre.
+  if (direto) {
+    const info = await fetch('https://open.tiktokapis.com/v2/post/publish/creator_info/query/', {
+      method: 'POST', headers: { Authorization: `Bearer ${oauth.access_token}`, 'Content-Type': 'application/json; charset=UTF-8' }, body: '{}',
+    }).then((x) => x.json())
+    const opcoes: string[] = info?.data?.privacy_level_options || []
+    if (opcoes.includes('PUBLIC_TO_EVERYONE')) {
+      const ini = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${oauth.access_token}`, 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify({
+          post_info: {
+            title: direto.legenda.slice(0, 2200), privacy_level: 'PUBLIC_TO_EVERYONE', is_aigc: true,
+            disable_duet: false, disable_stitch: false, disable_comment: false,
+            brand_content_toggle: false, brand_organic_toggle: false,
+          },
+          source_info: { source: 'FILE_UPLOAD', video_size: buf.length, chunk_size: buf.length, total_chunk_count: 1 },
+        }),
+      }).then((x) => x.json())
+      const urlDireto = ini?.data?.upload_url
+      if (urlDireto) {
+        const up = await fetch(urlDireto, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'video/mp4', 'Content-Length': String(buf.length), 'Content-Range': `bytes 0-${buf.length - 1}/${buf.length}` },
+          body: buf,
+        })
+        if (!up.ok) throw new Error(`TikTok upload direto (${up.status})`)
+        return { post_id: ini.data.publish_id as string, url: 'publicado direto pela API (público, rótulo de IA ligado)' }
+      }
+      console.error('[tiktok] direto recusado, caindo no rascunho:', JSON.stringify(ini?.error || ini).slice(0, 200))
+    }
+  }
   const init = await fetch('https://open.tiktokapis.com/v2/post/publish/inbox/video/init/', {
     method: 'POST',
     headers: { Authorization: `Bearer ${oauth.access_token}`, 'Content-Type': 'application/json' },
@@ -375,7 +409,7 @@ export async function POST(request: NextRequest) {
       } else if (plataforma === 'youtube') {
         res = await publicarYouTube(video_url, ideia?.titulo || 'PULSO', legenda, supabase, ideia?.formato === 'longo' ? 'longo' : 'short')
       } else if (plataforma === 'tiktok') {
-        res = await publicarTikTok(video_url, supabase)
+        res = await publicarTikTok(video_url, supabase, payload.tiktok_direto ? { legenda } : undefined)
       } else {
         resultados.push({ plataforma, status: 'MANUAL', erro: 'Plataforma sem API direta (usar kit + navegador)' })
         continue
@@ -392,7 +426,7 @@ export async function POST(request: NextRequest) {
         data_publicacao: agora,
         hora_publicacao: horaPub,
         dia_semana: diaSemPub,
-        metadata: { metodo: 'api' },
+        metadata: { metodo: payload.metodo === 'api_teste' ? 'api_teste' : 'api' },
       })
 
       resultados.push({ plataforma, status: 'PUBLICADO', url: res.url, post_id: res.post_id })

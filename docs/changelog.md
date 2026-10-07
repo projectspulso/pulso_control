@@ -4,6 +4,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (07/10) — teste de API com validade (YouTube, Facebook, TikTok direto)
+- Pedido do dono: ligar as 3 redes por API hoje e desligar amanhã, para medir se voltam a flopar. `linha_producao.teste_api = {redes, ate, tiktok_direto}`: até a data `ate` (dia BRT) as redes do teste saem por API mesmo pausadas (YouTube) ou proibidas (Facebook), marcadas `metodo=api_teste`. Passada a data, desliga sozinho.
+- **TikTok direto:** o app usava o `/inbox/` (rascunho finalizado no celular). Com o app aprovado e o token com `video.publish`, o teste usa o `/publish/video/init/` — público, com legenda e rótulo de IA. Se o TikTok recusar, cai no rascunho.
+- O remendo de redes faltantes não entra no teste (não republica o vídeo de ontem).
+
 ### Corrigido/Adicionado (05/10) — stories: Instagram estável e medição do teste
 - **Story de imagem no Instagram falhava sempre** ("Media ID is not available", 2 de 2): o container de foto também precisa terminar de processar antes de publicar. Agora espera.
 - **Teaser do Instagram que passa de 36s processando** ficava em erro. O container é guardado e a repescagem (+15 min, pg_cron) só publica, sem subir de novo. Redes em paralelo; peças em sequência (pergunta antes do teaser).
