@@ -5,6 +5,7 @@ import { getYoutubeAccessToken } from '@/lib/youtube/oauth'
 import { fetchYoutubeRetention, fetchYoutubeWatchTime } from '@/lib/youtube/retention'
 import { resolverRascunhosTikTok } from '@/lib/publicacao/tiktok-rascunho'
 import { coletarGanhosFacebook } from '@/lib/automation/ganhos-facebook'
+import { credenciaisTikTok } from '@/lib/publicacao/tiktok-chave'
 
 /**
  * POST|GET /api/automation/coletar-metricas
@@ -180,8 +181,8 @@ async function coletar(request: NextRequest) {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
-            client_key: (process.env.TIKTOK_SANDBOX_KEY || process.env.TIKTOK_CLIENT_KEY) ?? '',
-            client_secret: (process.env.TIKTOK_SANDBOX_SECRET || process.env.TIKTOK_CLIENT_SECRET) ?? '',
+            client_key: credenciaisTikTok(oauth.app).key,
+            client_secret: credenciaisTikTok(oauth.app).secret,
             grant_type: 'refresh_token',
             refresh_token: oauth.refresh_token,
           }),

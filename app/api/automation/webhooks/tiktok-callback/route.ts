@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { credenciaisTikTok, TIKTOK_REDIRECT_URI } from '@/lib/publicacao/tiktok-chave'
 
 /**
  * GET /api/automation/webhooks/tiktok-callback
@@ -12,8 +13,10 @@ export async function GET(request: NextRequest) {
   if (erro) return new NextResponse(`Autorização negada: ${erro}`, { status: 400 })
   if (!code) return new NextResponse('Faltou o code', { status: 400 })
 
-  const clientKey = (process.env.TIKTOK_SANDBOX_KEY || process.env.TIKTOK_CLIENT_KEY)
-  const clientSecret = (process.env.TIKTOK_SANDBOX_SECRET || process.env.TIKTOK_CLIENT_SECRET)
+  // o `state` diz qual app pediu a autorização (o /api/tiktok/oauth/start manda 'producao');
+  // sem state = fluxo antigo, sandbox
+  const app = request.nextUrl.searchParams.get('state') === 'producao' ? 'producao' : 'sandbox'
+  const { key: clientKey, secret: clientSecret } = credenciaisTikTok(app)
   if (!clientKey || !clientSecret) {
     return new NextResponse('TIKTOK_CLIENT_KEY/SECRET não configuradas', { status: 500 })
   }
@@ -26,7 +29,7 @@ export async function GET(request: NextRequest) {
       client_secret: clientSecret,
       code,
       grant_type: 'authorization_code',
-      redirect_uri: 'https://pulsoprojects.vercel.app/api/automation/webhooks/tiktok-callback',
+      redirect_uri: TIKTOK_REDIRECT_URI,
     }),
   })
   const tok = await resp.json()
@@ -41,6 +44,7 @@ export async function GET(request: NextRequest) {
     refresh_token: tok.refresh_token,
     open_id: tok.open_id,
     scope: tok.scope,
+    app,
     expires_at: Date.now() + (tok.expires_in || 86400) * 1000,
     refresh_expires_at: Date.now() + (tok.refresh_expires_in || 31536000) * 1000,
   })

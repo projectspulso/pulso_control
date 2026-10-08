@@ -4,6 +4,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Mudado (07/10) — TikTok passa para o app de produção
+- Todo o app usava a chave do app de TESTE (sandbox) do TikTok, que não publica direto — o #214 caiu no rascunho por isso. Agora `lib/publicacao/tiktok-chave.ts` escolhe a chave pelo `app` gravado no token; o callback grava `app` pelo `state`, e `/api/tiktok/oauth/start` abre a autorização no app de PRODUÇÃO (auditado). Token antigo segue renovando no sandbox até o dono reautorizar — nada quebra no meio.
+- Teste de API (`metodo=api_teste`) passa também pela pausa de rede dentro de `/api/automation/publicar` (era a 2ª trava que segurou o YouTube às 19h).
+
 ### Adicionado (07/10) — teste de API com validade (YouTube, Facebook, TikTok direto)
 - Pedido do dono: ligar as 3 redes por API hoje e desligar amanhã, para medir se voltam a flopar. `linha_producao.teste_api = {redes, ate, tiktok_direto}`: até a data `ate` (dia BRT) as redes do teste saem por API mesmo pausadas (YouTube) ou proibidas (Facebook), marcadas `metodo=api_teste`. Passada a data, desliga sozinho.
 - **TikTok direto:** o app usava o `/inbox/` (rascunho finalizado no celular). Com o app aprovado e o token com `video.publish`, o teste usa o `/publish/video/init/` — público, com legenda e rótulo de IA. Se o TikTok recusar, cai no rascunho.

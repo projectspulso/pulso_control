@@ -3,6 +3,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
 import type { NextRequest } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
+import { credenciaisTikTok } from '@/lib/publicacao/tiktok-chave'
 
 const REDES = ['youtube', 'instagram', 'facebook', 'tiktok', 'kwai'] as const
 
@@ -89,8 +90,8 @@ export async function GET(request: NextRequest) {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
-            client_key: (process.env.TIKTOK_SANDBOX_KEY || process.env.TIKTOK_CLIENT_KEY) ?? '',
-            client_secret: (process.env.TIKTOK_SANDBOX_SECRET || process.env.TIKTOK_CLIENT_SECRET) ?? '',
+            client_key: credenciaisTikTok(oauth.app).key,
+            client_secret: credenciaisTikTok(oauth.app).secret,
             grant_type: 'refresh_token',
             refresh_token: oauth.refresh_token,
           }),

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { guardApi } from '@/lib/auth/api-guard'
+import { credenciaisTikTok } from '@/lib/publicacao/tiktok-chave'
 
 /**
  * POST|GET /api/automation/reconciliar-publicacoes
@@ -236,8 +237,8 @@ async function reconciliar(request: NextRequest) {
         const rr = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
           method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
-            client_key: (process.env.TIKTOK_SANDBOX_KEY || process.env.TIKTOK_CLIENT_KEY) ?? '',
-            client_secret: (process.env.TIKTOK_SANDBOX_SECRET || process.env.TIKTOK_CLIENT_SECRET) ?? '',
+            client_key: credenciaisTikTok(oauth.app).key,
+            client_secret: credenciaisTikTok(oauth.app).secret,
             grant_type: 'refresh_token', refresh_token: oauth.refresh_token,
           }),
         }).then((x) => x.json())
