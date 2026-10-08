@@ -4,6 +4,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Mudado (08/10) — Estrelas como prioridade nos stories do Facebook
+- O story do Facebook das 19h40 passa a usar a arte `teaser_depois_estrelas` ("SAIU! VÍDEO COMPLETO NO PERFIL" + "APOIE COM ESTRELAS", estrelas desenhadas). Instagram segue com a arte de sempre (lá não há Estrelas). Gerada pelo `motor/gerar_stories.py` junto das outras.
+- Redes: YouTube, Instagram e TikTok por API; Facebook manual (`redes_pausadas=[]`, dono 08/10, após o teste do #214).
+
 ### Mudado (07/10) — TikTok passa para o app de produção
 - Todo o app usava a chave do app de TESTE (sandbox) do TikTok, que não publica direto — o #214 caiu no rascunho por isso. Agora `lib/publicacao/tiktok-chave.ts` escolhe a chave pelo `app` gravado no token; o callback grava `app` pelo `state`, e `/api/tiktok/oauth/start` abre a autorização no app de PRODUÇÃO (auditado). Token antigo segue renovando no sandbox até o dono reautorizar — nada quebra no meio.
 - Teste de API (`metodo=api_teste`) passa também pela pausa de rede dentro de `/api/automation/publicar` (era a 2ª trava que segurou o YouTube às 19h).

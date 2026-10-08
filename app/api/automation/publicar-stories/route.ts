@@ -133,11 +133,15 @@ export async function POST(request: NextRequest) {
     // as duas redes em paralelo; as peças em sequência (no story, a pergunta vem antes do teaser)
     await Promise.all((['instagram', 'facebook'] as const).map(async (rede) => {
       if (feito(rede, peca.tipo)) { resultados.push({ rede, tipo: peca.tipo, pulado: 'já publicado' }); return }
-      const linha = { ideia_id: p.ideia_id, rede, momento, tipo: peca.tipo, asset_url: peca.url, modo: 'auto' }
+      // ESTRELAS (dono, 08/10/2026: prioridade): no Facebook o story das 19h40 pede Estrelas — só lá
+      // elas existem. Sem a arte nova (vídeo gerado antes da mudança), vai a de sempre.
+      const pecaRede: Peca = rede === 'facebook' && momento === 'depois' && st.teaser_depois_estrelas
+        ? { ...peca, url: st.teaser_depois_estrelas } : peca
+      const linha = { ideia_id: p.ideia_id, rede, momento, tipo: peca.tipo, asset_url: pecaRede.url, modo: 'auto' }
       try {
         const anterior = (existentes || []).find((e: { rede: string; tipo: string; erro: string | null }) => e.rede === rede && e.tipo === peca.tipo)
         const container = anterior?.erro?.startsWith('processando:') ? anterior.erro.slice('processando:'.length) : null
-        const postId = rede === 'instagram' ? await storyInstagram(peca, igUser, igToken, container) : await storyFacebook(peca, pageId, pageToken)
+        const postId = rede === 'instagram' ? await storyInstagram(pecaRede, igUser, igToken, container) : await storyFacebook(pecaRede, pageId, pageToken)
         await supabase.schema('pulso_content').from('stories').upsert({ ...linha, status: 'publicado', post_id: postId, publicado_em: new Date().toISOString(), erro: null }, { onConflict: 'ideia_id,rede,momento,tipo' })
         resultados.push({ rede, tipo: peca.tipo, ok: postId })
       } catch (e) {

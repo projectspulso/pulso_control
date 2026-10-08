@@ -102,6 +102,27 @@ def faixa_png(texto, saida):
         d.text((W // 2, topo + k * alt), ln, font=f, fill=(255, 255, 255), anchor="mt")
     im.save(saida)
 
+def estrela(d, cx, cy, r, cor=(245, 196, 66)):
+    import math
+    pts = []
+    for k in range(10):
+        ang = -math.pi / 2 + k * math.pi / 5
+        rr = r if k % 2 == 0 else r * 0.42
+        pts.append((cx + rr * math.cos(ang), cy + rr * math.sin(ang)))
+    d.polygon(pts, fill=cor)
+
+def faixa_estrelas(saida):
+    """ESTRELAS DO FACEBOOK (dono, 08/10/2026: prioridade nos stories). Só vai no story do Facebook
+    das 19h40 — no Instagram não existe Estrela. Estrela desenhada à mão: o Pillow não pinta emoji."""
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    topo = 250
+    d.rounded_rectangle((60, topo, W - 60, topo + 300), radius=44, fill=ROXO + (240,))
+    f1 = ImageFont.truetype(F_FAIXA, 64); f2 = ImageFont.truetype(F_FAIXA, 64)
+    d.text((W // 2, topo + 40), "SAIU! VÍDEO COMPLETO NO PERFIL", font=f1, fill=(255, 255, 255), anchor="mt")
+    estrela(d, 175, topo + 205, 52); estrela(d, W - 175, topo + 205, 52)
+    d.text((W // 2, topo + 170), "APOIE COM ESTRELAS", font=f2, fill=(245, 196, 66), anchor="mt")
+    im.save(saida)
+
 def teaser(video, faixa, saida, segundos=9):
     subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", video, "-i", faixa, "-t", str(segundos),
         "-filter_complex", f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H}[v];[v][1:v]overlay=0:0,fade=t=out:st={segundos - 0.6}:d=0.6[o]",
@@ -124,11 +145,14 @@ def gerar(p, titulo):
     faixa_png("SAIU! VÍDEO COMPLETO NO PERFIL", f"{d}/faixa_depois.png")
     teaser(video, f"{d}/faixa_antes.png", f"{d}/teaser_antes.mp4")
     teaser(video, f"{d}/faixa_depois.png", f"{d}/teaser_depois.mp4")
+    faixa_estrelas(f"{d}/faixa_estrelas.png")
+    teaser(video, f"{d}/faixa_estrelas.png", f"{d}/teaser_depois_estrelas.mp4")
     pasta = "stories/%03d_%s" % (num, slug)
     st = {
         "pergunta": subir(f"{d}/pergunta.jpg", pasta + "/pergunta.jpg", "image/jpeg"),
         "teaser_antes": subir(f"{d}/teaser_antes.mp4", pasta + "/teaser_antes.mp4", "video/mp4"),
         "teaser_depois": subir(f"{d}/teaser_depois.mp4", pasta + "/teaser_depois.mp4", "video/mp4"),
+        "teaser_depois_estrelas": subir(f"{d}/teaser_depois_estrelas.mp4", pasta + "/teaser_depois_estrelas.mp4", "video/mp4"),
         "gerado_em": datetime.datetime.now().isoformat(timespec="seconds"),
     }
     atual = g._db("GET", "/rest/v1/pipeline_producao?id=eq.%s&select=metadata" % p["id"], schema="pulso_content")[0]["metadata"] or {}
@@ -152,7 +176,7 @@ def main():
     for p in fila:
         if feitos >= n: break
         md = p.get("metadata") or {}
-        if md.get("stories") or not md.get("video_url"): continue
+        if (md.get("stories") or {}).get("teaser_depois_estrelas") or not md.get("video_url"): continue
         try:
             gerar(p, titulo_da_ideia(p["ideia_id"])); feitos += 1
         except Exception as e:
