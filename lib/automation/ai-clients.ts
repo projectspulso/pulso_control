@@ -71,6 +71,8 @@ export async function callElevenLabsTTS(
   if (!apiKey) throw new Error('ELEVENLABS_API_KEY não configurada — voz oficial PULSO indisponível')
 
   const voiceId = options?.voiceId || 'GmzLAnPHSUkxG3P5yfca' // PULSO (Voice Design 14/06)
+  // marcação que a voz lê errado: o "*" de "M87*" virou "M87i" no #246 (09/10/2026)
+  text = text.replace(/[*_#`~>|]/g, '').replace(/[ 	]+/g, ' ').trim()
   const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'xi-api-key': apiKey },

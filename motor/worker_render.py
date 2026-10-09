@@ -136,7 +136,13 @@ def cenas_do_item(p):
     except Exception as e:
         log("rota inacessível:", e); return None
 
+def limpar_para_voz(texto):
+    """Tira marcação que a voz lê errado: o "*" de "M87*" virou "M87i" no #246 (09/10/2026)."""
+    t = re.sub(r"[*_#`~>|]", "", texto or "")
+    return re.sub(r"[ 	]+", " ", t).strip()
+
 def tts(texto):
+    texto = limpar_para_voz(texto)
     body = {"text": texto, "model_id": "eleven_multilingual_v2", "voice_settings": {"stability": 0.5, "similarity_boost": 0.8, "style": 0.2}}
     d = json.loads(urllib.request.urlopen(urllib.request.Request(
         f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE}/with-timestamps",

@@ -211,15 +211,24 @@ def srt(al,path):
             cur+=c;fim=e
     if cur:words.append((cur,ini,fim))
     words=[w for w in words if w[1] is not None and w[1]<CTA_T0]  # regra: legenda some na janela do CTA
-    ch=[];i=0
-    while i<len(words): g=words[i:i+3];ch.append((" ".join(w[0] for w in g),g[0][1],g[-1][2]));i+=3
+    # BLOCO POR LARGURA, não por contagem (09/10/2026): 3 palavras fixas punham "CARACTERÍSTICAS
+    # MISTERIOSAS. COM" na tela e a palavra longa estourava as bordas (#246). Até 3 palavras e até
+    # 16 caracteres por bloco; palavra longa vai sozinha.
+    ch=[];g=[]
+    for w in words:
+        if g and (len(g)>=3 or len(" ".join(x[0] for x in g+[w]))>16):
+            ch.append((" ".join(x[0] for x in g),g[0][1],g[-1][2])); g=[]
+        g.append(w)
+    if g: ch.append((" ".join(x[0] for x in g),g[0][1],g[-1][2]))
     def ts(t):
         h=int(t//3600);m=int((t%3600)//60);s=int(t%60);ms=int((t-int(t))*1000);return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
     open(path,"w",encoding="utf-8").write("".join(f"{n}\n{ts(a)} --> {ts(b)}\n{x.upper()}\n\n" for n,(x,a,b) in enumerate(ch,1)))
 s=f"{tmp}/l.srt"; srt(al,s); sff=s.replace(chr(92),'/').replace(':','\\:')
 run([FF,"-y","-i",ov,"-i",NARR,"-stream_loop","-1","-i",TRILHA,
      "-filter_complex",
-     f"[0:v]subtitles='{sff}':force_style='Fontname=Arial,Fontsize=20,Bold=1,PrimaryColour=&H00FFFFFF,Outline=3,OutlineColour=&H00101020,Alignment=2,MarginV=170'[v];"
-     f"[2:a]volume=0.12,afade=t=out:st={dur-2:.1f}:d=2[m];[1:a][m]amix=inputs=2:duration=first[a]",
+     f"[0:v]subtitles='{sff}':force_style='Fontname=Arial,Fontsize=18,Bold=1,PrimaryColour=&H00FFFFFF,Outline=3,OutlineColour=&H00101020,Alignment=2,MarginV=170,MarginL=12,MarginR=12'[v];"
+     # VOLUME (09/10/2026): o amix padrão DIVIDE as entradas pela metade — os vídeos saíam a −24 LUFS,
+     # ~10 dB abaixo do feed (as redes trabalham perto de −14). normalize=0 + loudnorm no fim.
+     f"[2:a]volume=0.12,afade=t=out:st={dur-2:.1f}:d=2[m];[1:a][m]amix=inputs=2:duration=first:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11[a]",
      "-map","[v]","-map","[a]","-c:v","libx264","-preset","veryfast","-pix_fmt","yuv420p","-c:a","aac","-b:a","192k","-t",f"{dur:.2f}",OUT])
 print(f"OK -> {OUT}  (regra PULSO-CTA embutida: mascote grande na janela, audio original)")

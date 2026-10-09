@@ -4,6 +4,13 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Corrigido (09/10) — qualidade do vídeo: CTA, volume, legenda e voz
+- **A cópia do montador que roda na máquina (`D:/tmp/make_video.py`) era de 16/07** — a correção do fecho do CTA (19/08) nunca chegou nela. O montador antigo casava "segue" dentro de "con**segue**" (#246: mascote gigante aos 45 s cobrindo a resposta, sem legenda) e não via "Siga o PULSO" (mascote só nos 3 s finais). ~76 de 163 publicados desde 16/07 afetados. Cópia atualizada.
+- **Volume:** o `amix` dividia narração e trilha pela metade → −24 LUFS. Agora `normalize=0` + `loudnorm` a −14 LUFS (padrão das redes).
+- **Legenda:** blocos por largura (até 3 palavras e 16 caracteres), fonte 18 — palavra longa não estoura mais a tela.
+- **Voz:** `*` e marcação saem do texto antes da TTS ("M87*" era lido "M87i").
+- Prova: #246 remontado com os mesmos clipes — CTA aos 61,6 s, legenda até o fecho, −14,4 LUFS.
+
 ### Mudado (08/10) — Estrelas como prioridade nos stories do Facebook
 - O story do Facebook das 19h40 passa a usar a arte `teaser_depois_estrelas` ("SAIU! VÍDEO COMPLETO NO PERFIL" + "APOIE COM ESTRELAS", estrelas desenhadas). Instagram segue com a arte de sempre (lá não há Estrelas). Gerada pelo `motor/gerar_stories.py` junto das outras.
 - Redes: YouTube, Instagram e TikTok por API; Facebook manual (`redes_pausadas=[]`, dono 08/10, após o teste do #214).
