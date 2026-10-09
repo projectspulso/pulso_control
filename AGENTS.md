@@ -174,3 +174,13 @@ Render é LOCAL (Tarefa Agendada 08/16/23h → `D:/tmp/worker_render.py`, teto `
 - **Owner deste arquivo:** quem mantém Pulso
 
 > Em caso de dúvida, **pause e pergunte ao humano**. Pulso publica em rede social pública da DIGIAI — erro vira post real que afeta marca.
+
+## O que depende da Vercel (mapa para migração futura — Geral/dono, 09/10/2026)
+
+Decisão do dono (09/10): o PULSO **fica na Vercel**; Cloudflare é ideia com gatilho (Vercel cobrar ou limitar, PULSO ganhar receita), não fila.
+- **Domínio:** `pulsoprojects.vercel.app` (produção). Ele está gravado fora do código em: callback do OAuth TikTok (`/api/automation/webhooks/tiktok-callback`) e YouTube (`/api/youtube/oauth/*`) nos portais; ~20 jobs do **pg_cron** (`net.http_post` para `https://pulsoprojects.vercel.app/api/...`); `NEXT_PUBLIC_SITE_URL` do hub não depende dele.
+- **Build:** `next build` (Next.js 16, app router, middleware de sessão Supabase). Deploy = push no `main` (GitHub `projectspulso/pulso_control`).
+- **Funções:** rotas `app/api/**` com `maxDuration` 30–300 s (11 rotas em 60, 3 em 300, 1 em 180) — exigem *fluid compute*; numa troca, conferir limite de duração do destino.
+- **Crons do `vercel.json`:** 14 entradas (reconciliar-publicacoes 4×/dia, resolver-post-ids 2×, coletar-metricas, status-contas, decisor/analisar, auto-funil, agenda/popular, auto-audio, aprender e extrato-semanal semanais). No plano Hobby **não são a fonte da verdade**: o agendamento real é o **pg_cron** do Supabase (lista: `select jobname, schedule from cron.job`). Só `status-contas` e `reconciliar/resolver` dependem hoje do cron da Vercel.
+- **Variáveis no painel (nomes, nunca valores):** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `WEBHOOK_SECRET`, `CRON_SECRET`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `TTS_PROVIDER`, `INSTAGRAM_ACCESS_TOKEN`, `META_IG_USER_ID`, `META_PAGE_ID`, `META_PAGE_ACCESS_TOKEN`, `META_SYSTEM_USER_TOKEN`, `YOUTUBE_API_KEY`, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`, `TIKTOK_SANDBOX_KEY`, `TIKTOK_SANDBOX_SECRET`, `ESPELHO_SECRET`, `AGENDA_GJ_SECRET`, `MANUS_WEBHOOK_URL`, `ENABLE_DEBUG_API`.
+- **Fora da Vercel (não migra junto):** banco e pg_cron no Supabase; render e artes de story na máquina local (`D:/tmp`, Tarefa Agendada).
