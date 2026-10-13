@@ -21,8 +21,8 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 export const maxDuration = 300
 
-type Data = { slug: string; nome: string; data: string; videos?: number; canal_id?: string; angulo?: string }
-type Vaga = { slug: string; nome: string; data: string; slot: string; ordem: number; canal_id?: string; angulo?: string }
+type Data = { slug: string; nome: string; data: string; videos?: number; canal_id?: string; angulo?: string; angulos?: string[] }
+type Vaga = { slug: string; nome: string; data: string; slot: string; ordem: number; canal_id?: string; angulo?: string; vizinhas?: string }
 
 function somarDias(iso: string, n: number) {
   const d = new Date(`${iso}T12:00:00Z`)
@@ -55,7 +55,8 @@ export async function POST(request: NextRequest) {
     for (let k = 0; k < n; k++) {
       const slot = somarDias(d.data, k - 1)
       if (slot <= hoje || somarDias(hoje, antecedencia) < slot) continue
-      vagas.push({ slug: d.slug, nome: d.nome, data: d.data, slot, ordem: k + 1, canal_id: d.canal_id, angulo: d.angulo })
+      // um ângulo por vaga: com o mesmo, a trava anti-duplicidade barrou o 2º vídeo do Halloween (12/10)
+      vagas.push({ slug: d.slug, nome: d.nome, data: d.data, slot, ordem: k + 1, canal_id: d.canal_id, angulo: d.angulos?.[k] || d.angulo })
     }
   }
   if (!vagas.length) { await log('ocioso', { motivo: `nenhuma data nos próximos ${antecedencia} dias` }); return NextResponse.json({ ok: true, nada: 'sem data na janela' }) }
@@ -69,8 +70,10 @@ export async function POST(request: NextRequest) {
     return j
   }
 
-  const { data: ideias } = await supabase.schema('pulso_content').from('ideias')
+  const { data: lidas } = await supabase.schema('pulso_content').from('ideias')
     .select('id, titulo, status, metadata').not('metadata->data_especial', 'is', null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ideias: any[] = [...(lidas || [])]
   const resultados: Array<Record<string, unknown>> = []
 
   for (const v of vagas) {
@@ -78,11 +81,17 @@ export async function POST(request: NextRequest) {
     const r: Record<string, unknown> = { vaga: chave }
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const ideia = (ideias || []).find((i: any) => i.status !== 'DESCARTADA' && `${i.metadata?.data_especial?.slug}|${i.metadata?.data_especial?.slot}` === chave)
+      const ideia = ideias.find((i: any) => i.status !== 'DESCARTADA' && `${i.metadata?.data_especial?.slug}|${i.metadata?.data_especial?.slot}` === chave)
 
       if (!ideia) {
+        // datas vizinhas puxam o mesmo assunto (Finados saiu "celtas e máscaras" logo após o Halloween)
+        v.vizinhas = ideias.filter((i: { status: string; metadata?: { data_especial?: { slot?: string } } }) => {
+          const s = i.metadata?.data_especial?.slot
+          return i.status !== 'DESCARTADA' && s && Math.abs(Date.parse(s) - Date.parse(v.slot)) <= 10 * 864e5
+        }).map((i: { titulo: string }) => `"${i.titulo}"`).join(', ')
         const assunto = `${v.nome} (${v.data.split('-').reverse().join('/')}) — vídeo ${v.ordem} de ${v.ordem === 1 ? 'véspera' : 'dia'}. Ângulo: ${v.angulo || 'a origem e a história por trás da data'}`
           + (v.ordem === 2 ? '. Conte uma história DIFERENTE do vídeo de véspera.' : '')
+          + (v.vizinhas ? `. Já existem vídeos de datas próximas sobre: ${v.vizinhas} — NÃO repita esses assuntos.` : '')
         const g = await chamar('/api/automation/do-momento', { assunto, canal_id: v.canal_id })
         if (!g?.ideia?.id) { r.passo = 'ideia barrada'; r.motivo = g?.aviso || g?.motivo || JSON.stringify(g).slice(0, 200); resultados.push(r); continue }
         const { data: atual } = await supabase.schema('pulso_content').from('ideias').select('metadata').eq('id', g.ideia.id).single()
@@ -93,6 +102,7 @@ export async function POST(request: NextRequest) {
         await supabase.schema('pulso_content').from('agenda_atribuicoes').upsert({
           data: v.slot, horario, canal_id: v.canal_id || null, ideia_id: g.ideia.id, estagio: 'ideia', status: 'planejado', fixado: true, updated_at: new Date().toISOString(),
         }, { onConflict: 'data,horario' })
+        ideias.push({ id: g.ideia.id, titulo: g.ideia.titulo, status: 'APROVADA', metadata: { data_especial: { slug: v.slug, slot: v.slot } } })
         r.passo = g.precisa_revisao ? 'ideia criada — PRECISA REVISÃO do dono' : 'ideia criada e aprovada'; r.titulo = g.ideia.titulo
         resultados.push(r); continue
       }
