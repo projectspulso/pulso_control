@@ -59,3 +59,6 @@ public/pulso/avatar_dono/
 # config local de MCP. Nao tem segredo hoje, mas JA teve um JWT (ec523ea) — e config que
 # guarda credencial nao deve morar em repo, ainda mais publico.
 .mcp.json
+
+# rascunhos de sessão (repo PÚBLICO) — 12/10/2026 uma rotina commitou 324 deles com git add geral
+scratchpad/*
