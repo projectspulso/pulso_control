@@ -4,6 +4,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Mudado (13/10) — métricas do Kwai: um script só, a rotina não escreve código
+- Em 12/10 a rotina das 21h escreveu um script novo de cabeça com endereço e chave de um Supabase inexistente, concluiu que "a URL mudou" e não gravou nada; no mesmo turno commitou 324 rascunhos no repositório público (desfeito antes do push; `scratchpad/*` agora no `.gitignore`).
+- `motor/kwai_gravar.py` (cópia em `D:/tmp`): recebe o JSON lido dos prints, casa card→ideia (card já conhecido → legenda → palavras → `#pulsoNNN`), soma os cards carimbados, barra print menor que o banco e card ambíguo, nunca cria ideia, grava `metricas_publicacao`, `leituras_metricas`, `kwai_perfil` e o histórico de seguidores. Simula por padrão; `--grava` grava.
+- A rotina agora só lê os prints, preenche `D:/tmp/kwai_leituras/<data>.json` e roda o script; proibido escrever código, digitar credencial, git e memória.
+- Leitura de 12/10 gravada pelo script: 44 vídeos (46 cards), 517 seguidores.
+
 ### Adicionado (12/10) — calendário de datas especiais
 - **Dia das Crianças passou sem vídeo.** A raia "do Momento" só gerava quando alguém digitava o assunto, e com ~6 semanas de estoque uma ideia nova levaria semanas para ir ao ar.
 - Config `datas_especiais` (12 meses, migration `docs/migrations/075_datas_especiais.sql`) + rota `/api/automation/datas-especiais` (cron `pulso-datas-especiais`, 09:40 e 16:40 UTC). A partir de 20 dias antes, cada rodada avança um passo por vaga: ideia aprovada (prioridade 10) → roteiro → áudio → cenas → render → data cravada. Quem ocupava o dia perde a data e o comprometer realoca. Roteiro em rascunho para a esteira (aprovação segue humana).
