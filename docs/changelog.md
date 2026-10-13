@@ -11,7 +11,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 - Worker: vídeo de data especial renderiza antes do resto da fila.
 
 ### Corrigido (12/10) — TikTok #243 não chegou como rascunho
-- O envio subiu os 45,2 MB inteiros, mas o TikTok deixou o vídeo em `PROCESSING_UPLOAD` e nunca entregou na caixa. Falha do lado do TikTok (rascunhos de 10 e 11/10 chegaram). Postagem manual pelo arquivo do OneDrive.
+- O envio subiu os 45,2 MB inteiros, mas o TikTok deixou o vídeo em `PROCESSING_UPLOAD` por mais de 3h e nunca entregou na caixa. Reenviado recomprimido (32 MB): chegou em ~70 s (`SEND_TO_USER_INBOX`); `post_id` atualizado.
 
 ### Corrigido (09/10) — qualidade do vídeo: CTA, volume, legenda e voz
 - **A cópia do montador que roda na máquina (`D:/tmp/make_video.py`) era de 16/07** — a correção do fecho do CTA (19/08) nunca chegou nela. O montador antigo casava "segue" dentro de "con**segue**" (#246: mascote gigante aos 45 s cobrindo a resposta, sem legenda) e não via "Siga o PULSO" (mascote só nos 3 s finais). ~76 de 163 publicados desde 16/07 afetados. Cópia atualizada.
