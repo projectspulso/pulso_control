@@ -82,7 +82,7 @@ def proximo_da_fila(excluir=None):
     excluir = excluir or set()
     pipe = g._db('GET', '/rest/v1/pipeline_producao?select=id,ideia_id,roteiro_id,status,metadata', schema='pulso_content') or []
     pipe = [p for p in pipe if p.get('id') not in excluir]
-    ideias = g._db('GET', '/rest/v1/ideias?select=id,titulo,canal_id', schema='pulso_content') or []
+    ideias = g._db('GET', '/rest/v1/ideias?select=id,titulo,canal_id,metadata', schema='pulso_content') or []
     canais = g._db('GET', '/rest/v1/canais?select=id,nome', schema='pulso_core') or []
     cn = {c['id']: (c.get('nome') or '').replace('PULSO ', '') for c in canais}
     cid = {i['id']: i.get('canal_id') for i in ideias}
@@ -93,7 +93,9 @@ def proximo_da_fila(excluir=None):
     # erro factual, foi re-subido daqui e publicado pelo cron. Liberar = apagar metadata.segurado.
     aud = [p for p in pipe if p.get('status') == 'EM_EDICAO' and (p.get('metadata') or {}).get('cenas')
            and not (p.get('metadata') or {}).get('segurado')]
-    aud.sort(key=lambda p: (tier(cn.get(cid.get(p['ideia_id']), '')), (p.get('metadata') or {}).get('numero', 999)))
+    # DATA ESPECIAL fura a fila (12/10/2026: Dia das Crianças passou sem vídeo) — a vaga mais próxima primeiro.
+    vaga = {i['id']: ((i.get('metadata') or {}).get('data_especial') or {}).get('slot') or '9999' for i in ideias}
+    aud.sort(key=lambda p: (vaga.get(p['ideia_id'], '9999'), tier(cn.get(cid.get(p['ideia_id']), '')), (p.get('metadata') or {}).get('numero', 999)))
     # TETO DE RENDER POR DIA (linha_producao.render_dia_max). Até 29/09/2026 o teto só limitava o botão
     # "Produzir o dia"; este robô renderizava tudo o que estivesse em EM_EDICAO, 3 rodadas por dia.
     # Com a publicação em 1/dia (desde 23/09) isso virou estoque de 6 semanas e crédito gasto adiantado.

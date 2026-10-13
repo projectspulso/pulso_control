@@ -92,6 +92,7 @@ Toda rodada chama a rota da Vercel com `x-webhook-secret` lido do Vault (`pulso_
 | `pulso-coletar-stories` | 19:30 | métricas de story do IG (só existem 24h) + visitas ao perfil |
 | `pulso-stories-antes` (+repescagem 20:15) | 20:00 | stories 17h BRT: pergunta + teaser (IG/FB auto; TikTok/Kwai manual) |
 | `pulso-stories-depois` (+repescagem 22:55) | 22:40 | story 19h40 BRT: "saiu, no perfil" |
+| `pulso-datas-especiais` | 09:40, 16:40 | calendário `datas_especiais`: produz e crava os vídeos de véspera/dia (log DATAS_ESPECIAIS) |
 
 Render é LOCAL (Tarefa Agendada 08/16/23h → `D:/tmp/worker_render.py`, teto `render_dia_max`; gera também as artes de story via `gerar_stories.py`).
 
