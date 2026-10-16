@@ -112,7 +112,7 @@ async function publicarAgendados(request: NextRequest) {
     // e comeria uma vaga do teto da grade de Shorts. Filtrado na ORIGEM: some do teto, dos
     // vencidos e do remendo de uma vez. Ver _DESPACHO_VIDEOS_LONGOS_2026-08-24.md.
     supabase.schema('pulso_content').from('ideias').select('id').eq('formato', 'longo'),
-    supabase.schema('pulso_content').from('ideias').select('id, canal_id'),
+    supabase.schema('pulso_content').from('ideias').select('id, canal_id, metadata'),
     supabase.schema('pulso_core').from('canais').select('id, nome, metadata'),
     supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'teste_temas').maybeSingle(),
   ])
@@ -196,7 +196,11 @@ async function publicarAgendados(request: NextRequest) {
   // plano antigo, antecipação). Vídeo segurado aqui fica PRONTO e volta no próximo convite do plano.
   const regrasTeste = lerRegras(regrasTesteQ.data?.valor)
   const canalDaIdeia = new Map<string, string>()
-  for (const i of (ideiasCanalQ.data || []) as Array<{ id: string; canal_id: string | null }>) if (i.canal_id) canalDaIdeia.set(i.id, i.canal_id)
+  const dataEspecial = new Set<string>()
+  for (const i of (ideiasCanalQ.data || []) as Array<{ id: string; canal_id: string | null; metadata: { data_especial?: unknown } | null }>) {
+    if (i.canal_id) canalDaIdeia.set(i.id, i.canal_id)
+    if (i.metadata?.data_especial) dataEspecial.add(i.id)
+  }
   const estadosTeste = estadoDosTestes(
     ((canaisQ.data || []) as Array<{ id: string; nome: string; metadata: { teste?: TesteDoCanal } | null }>)
       .map((c): CanalComTeste => ({ id: c.id, nome: c.nome, teste: c.metadata?.teste ?? null })),
@@ -251,6 +255,8 @@ async function publicarAgendados(request: NextRequest) {
       .filter((p) => {
         if (p.status !== 'PRONTO_PUBLICACAO' || !p.metadata?.video_url) return false
         if (jaSaiu.has(p.ideia_id)) return false
+        // DATA ESPECIAL É TRAVADA (dono, 15/10/2026): vídeo de Halloween não sai antes da vaga dele
+        if (dataEspecial.has(p.ideia_id)) return false
         return horaMarcada(p.data_publicacao_planejada) > agora && liberadoPeloTeste(p)
       })
       .sort((a, b) => (a.data_publicacao_planejada < b.data_publicacao_planejada ? -1 : 1))

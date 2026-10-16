@@ -10,7 +10,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
  * assunto, e com 6 semanas de estoque pronto uma ideia nova levaria semanas para chegar ao ar.
  * Datas vivem no banco (config `datas_especiais`), nunca em constante.
  *
- * Cada data tem 1 ou 2 vagas: 2 = véspera + o dia; 1 = véspera (o Short leva ~1 dia para distribuir).
+ * Cada data tem 1 ou 2 vagas, sempre às 19h: 2 = dois dias antes + véspera; 1 = véspera (no dia, o vídeo já circula).
  * A partir de `antecedencia_dias` antes, cada rodada avança UM passo por vaga, furando a fila:
  *   sem ideia → cria pela raia do Momento no canal da data, já APROVADA, prioridade 10
  *   sem roteiro → gera; roteiro em RASCUNHO → para e avisa (aprovação continua humana)
@@ -53,7 +53,9 @@ export async function POST(request: NextRequest) {
   for (const d of cfg.datas as Data[]) {
     const n = d.videos === 2 ? 2 : 1
     for (let k = 0; k < n; k++) {
-      const slot = somarDias(d.data, k - 1)
+      // LANÇA ATÉ A VÉSPERA ÀS 19h (dono, 15/10/2026): no dia da data o vídeo já está circulando o dia
+      // inteiro. Com 2 vídeos: 2 dias antes e véspera; com 1: véspera. Nunca no próprio dia, às 19h — tarde demais.
+      const slot = somarDias(d.data, k - n)
       if (slot <= hoje || somarDias(hoje, antecedencia) < slot) continue
       // um ângulo por vaga: com o mesmo, a trava anti-duplicidade barrou o 2º vídeo do Halloween (12/10)
       vagas.push({ slug: d.slug, nome: d.nome, data: d.data, slot, ordem: k + 1, canal_id: d.canal_id, angulo: d.angulos?.[k] || d.angulo })
@@ -89,8 +91,8 @@ export async function POST(request: NextRequest) {
           const s = i.metadata?.data_especial?.slot
           return i.status !== 'DESCARTADA' && s && Math.abs(Date.parse(s) - Date.parse(v.slot)) <= 10 * 864e5
         }).map((i: { titulo: string }) => `"${i.titulo}"`).join(', ')
-        const assunto = `${v.nome} (${v.data.split('-').reverse().join('/')}) — vídeo ${v.ordem} de ${v.ordem === 1 ? 'véspera' : 'dia'}. Ângulo: ${v.angulo || 'a origem e a história por trás da data'}`
-          + (v.ordem === 2 ? '. Conte uma história DIFERENTE do vídeo de véspera.' : '')
+        const assunto = `${v.nome} (${v.data.split('-').reverse().join('/')}) — sai ${v.slot === somarDias(v.data, -1) ? 'na véspera' : 'dois dias antes'}, às 19h. Ângulo: ${v.angulo || 'a origem e a história por trás da data'}`
+          + (v.ordem === 2 ? '. Conte uma história DIFERENTE do outro vídeo desta data.' : '')
           + (v.vizinhas ? `. Já existem vídeos de datas próximas sobre: ${v.vizinhas} — NÃO repita esses assuntos.` : '')
         const g = await chamar('/api/automation/do-momento', { assunto, canal_id: v.canal_id })
         if (!g?.ideia?.id) { r.passo = 'ideia barrada'; r.motivo = g?.aviso || g?.motivo || JSON.stringify(g).slice(0, 200); resultados.push(r); continue }
