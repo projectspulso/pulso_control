@@ -40,8 +40,19 @@ export async function POST(request: NextRequest) {
       supabase.schema('pulso_content').from('ideias').select('id, canal_id, status, titulo, formato'),
       supabase.schema('pulso_content').from('roteiros').select('ideia_id, conteudo_md'),
       supabase.schema('pulso_content').from('audios').select('ideia_id'),
-      supabase.schema('pulso_content').from('metricas_publicacao').select('ideia_id, plataforma, taxa_retencao, data_publicacao'),
-      supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status, metadata, updated_at'),
+      // em páginas: passou de 1.000 linhas (teto da API) em out/2026 e o "já publicado" ficava furado
+      (async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const linhas: any[] = []
+        for (let de = 0; ; de += 1000) {
+          const r = await supabase.schema('pulso_content').from('metricas_publicacao')
+            .select('ideia_id, plataforma, taxa_retencao, data_publicacao').order('id').range(de, de + 999)
+          if (r.error) return { data: null, error: r.error }
+          linhas.push(...(r.data || []))
+          if ((r.data || []).length < 1000) return { data: linhas, error: null }
+        }
+      })(),
+      supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status, metadata, updated_at, data_publicacao_planejada'),
       supabase.schema('pulso_content').from('agenda_atribuicoes').select('id, data, horario, ideia_id, fixado, status'),
       supabase.schema('pulso_core').from('canais').select('id, nome, metadata'),
       supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'teste_temas').maybeSingle(),
@@ -58,8 +69,8 @@ export async function POST(request: NextRequest) {
       if (r.ideia_id && r.conteudo_md && !roteiroDaIdeia.has(r.ideia_id)) roteiroDaIdeia.set(r.ideia_id, r.conteudo_md)
     }
     const comAudio = new Set((audiosQ.data || []).map((a: { ideia_id: string }) => a.ideia_id))
-    const publicado = new Set((metricasQ.data || []).map((m: { ideia_id: string }) => m.ideia_id))
-    const videoPronto = new Set(
+    const publicado = new Set<string>((metricasQ.data || []).map((m: { ideia_id: string }) => m.ideia_id))
+    const videoPronto = new Set<string>(
       (pipeQ.data || []).filter((p: { status: string }) => p.status === 'PRONTO_PUBLICACAO').map((p: { ideia_id: string }) => p.ideia_id)
     )
 
@@ -199,6 +210,17 @@ export async function POST(request: NextRequest) {
     // slot escolhia sozinho dentro do seu canal, então ninguém comparava um slot com o outro —
     // e o melhor vídeo do estoque podia cair num horário fraco enquanto o nobre pegava sobra.
     const aPreencher: (SlotParaPreencher & { slotId: string | null })[] = []
+    // A DATA REAL MANDA (dono, 15/10/2026: "alinhar o calendário com as datas reais"). Quem publica é
+    // `pipeline_producao.data_publicacao_planejada`; o plano escolhia outro vídeo para o mesmo dia e a
+    // tela mostrava #255 em 18/10 enquanto o robô ia soltar o #234. Vídeo pronto com data ocupa o slot
+    // daquele dia e sai do sorteio; o roteador só decide os slots que ninguém marcou.
+    const dataReal = new Map<string, string>()
+    for (const p of (pipeQ.data || []) as Array<{ ideia_id: string; status: string; data_publicacao_planejada: string | null }>) {
+      if (p.status !== 'PRONTO_PUBLICACAO' || !p.data_publicacao_planejada || publicado.has(p.ideia_id)) continue
+      const v = String(p.data_publicacao_planejada).replace('T', ' ')
+      dataReal.set(`${v.slice(0, 10)}|${v.slice(11, 16)}`, p.ideia_id)
+      usados.add(p.ideia_id)
+    }
     for (let d = 0; d < diasVarridos; d++) {
       const dt = new Date(hoje)
       dt.setDate(hoje.getDate() + d)
@@ -220,10 +242,18 @@ export async function POST(request: NextRequest) {
           // congelado com a escolha da grade antiga. Ou seja: o roteador novo nunca chegava ao
           // plano que já estava na tela. Como o critério agora melhora conforme os dados chegam,
           // o plano futuro precisa acompanhar; quem quiser travar uma data usa `fixado`.
+          const real = dataReal.get(`${dataIso}|${String(g.horario).slice(0, 5)}`)
+          if (real) { reavaliar.push({ id: existente.id, ideia_id: real, estagio: 'video' }); continue }
           aPreencher.push({ chave, data: dataIso, horario: g.horario, faixa: (g.faixa === 'sazonal' ? 'sazonal' : 'perene') as Faixa, canalIdPreferido: g.canal_id, slotId: existente.id })
           continue
         }
         if (d >= horizonte) continue
+        const realNovo = dataReal.get(`${dataIso}|${String(g.horario).slice(0, 5)}`)
+        if (realNovo) {
+          novos.push({ data: dataIso, horario: g.horario, canal_id: g.canal_id ?? null, ideia_id: realNovo, estagio: 'video', status: 'planejado' })
+          slotsExistentes.add(chave)
+          continue
+        }
         aPreencher.push({ chave, data: dataIso, horario: g.horario, faixa: (g.faixa === 'sazonal' ? 'sazonal' : 'perene') as Faixa, canalIdPreferido: g.canal_id, slotId: null })
         slotsExistentes.add(chave)
       }
