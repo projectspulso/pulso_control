@@ -94,8 +94,18 @@ async function publicarAgendados(request: NextRequest) {
     supabase.schema('pulso_content').from('pipeline_producao')
       .select('id, ideia_id, status, metadata, data_publicacao_planejada')
       .not('data_publicacao_planejada', 'is', null),
-    supabase.schema('pulso_content').from('metricas_publicacao')
-      .select('ideia_id, plataforma, data_publicacao'),
+    // EM PÁGINAS: a API devolve no máximo 1.000 linhas e em 15/10/2026 já eram 1.125 — o que
+    // passava disso sumia do "já saiu" e da conta do dia.
+    (async () => {
+      const linhas: unknown[] = []
+      for (let de = 0; ; de += 1000) {
+        const r = await supabase.schema('pulso_content').from('metricas_publicacao')
+          .select('ideia_id, plataforma, data_publicacao').order('id').range(de, de + 999)
+        if (r.error) return { data: null, error: r.error }
+        linhas.push(...(r.data || []))
+        if ((r.data || []).length < 1000) return { data: linhas, error: null }
+      }
+    })(),
     supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle(),
     // VÍDEO LONGO NÃO É DESTE CRON. A série de bastidores (formato=longo) publica deliberada e
     // manualmente só no YouTube — se entrasse aqui, sairia nas 5 redes (TikTok/Kwai com 10min!)
@@ -158,6 +168,18 @@ async function publicarAgendados(request: NextRequest) {
   // Agora conta só vídeos cujo agendamento é de hoje e que já têm alguma publicação.
   const daGradeDeHoje = pipeTodos.filter((p) => diaBRT(horaMarcada(p.data_publicacao_planejada)) === hoje)
   const publicadosHoje = new Set(daGradeDeHoje.filter((p) => jaSaiu.has(p.ideia_id)).map((p) => p.ideia_id))
+  // ...E todo vídeo cuja PRIMEIRA publicação foi hoje, seja qual for a data marcada. O antecipado
+  // continua carimbado com o dia futuro: sem isto ele não contava, e em 15/10/2026 a vaga "abriu"
+  // de novo a cada hora — #227 às 19h, #222 às 20h, #233 às 21h. Completar rede de vídeo antigo
+  // segue fora da conta (a primeira publicação dele não é de hoje).
+  const primeiraPub = new Map<string, string>()
+  for (const p of pubs) {
+    if (!p.ideia_id || !p.data_publicacao) continue
+    const dia = diaBRT(new Date(p.data_publicacao))
+    const atual = primeiraPub.get(p.ideia_id)
+    if (!atual || dia < atual) primeiraPub.set(p.ideia_id, dia)
+  }
+  for (const [ideia, dia] of primeiraPub) if (dia === hoje) publicadosHoje.add(ideia)
 
   // TEMA EM TESTE (lib/agenda/teste-temas.ts) — a última porta. O plano já respeita o intervalo
   // de 7 dias e o veredito; esta checagem pega o que chegou por outro caminho (data posta à mão,
