@@ -4,6 +4,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Mudado (15/10) — datas especiais: lança até a véspera e fica travada
+- Dono: o vídeo da data sai até a véspera às 19h, para no dia ele já estar circulando. 2 vídeos = dois dias antes + véspera; 1 = véspera. Halloween passou para 29/10 (Origem Sombria) e 30/10 (Jack-o'-lantern); #229 foi para 10/11.
+- A antecipação do publicar-agendados nunca puxa vídeo de data especial (4cc24cf).
+
 ### Corrigido (15/10) — calendário = datas reais
 - O plano da agenda escolhia outro vídeo para o mesmo dia (tela: #255 em 18/10; robô: #234). Agora vídeo pronto com data ocupa o slot daquele dia e sai do sorteio; o roteador só decide slots sem marcação. `metricas_publicacao` lida em páginas também aqui (08c62c0).
 - Datas especiais: quem divide o dia com o vídeo da data sai sempre (o #229 ficou em 31/10 junto do Jack-o'-lantern) e vai para o 1º dia livre seguinte — antes ficava sem data e sumia da fila, porque nenhum robô dá data nova (o comprometer só simula). #229 movido para 30/10.
