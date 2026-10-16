@@ -4,6 +4,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Corrigido (15/10) — três vídeos no mesmo dia
+- #247 (Espaço) foi segurado pelo teste de tema às 19h e a regra "dia nunca fica sem vídeo" adiantou o #227. O antecipado guarda a data futura e a conta "já saiu hoje" só olhava vídeos marcados para hoje: a vaga reabriu a cada hora (#222 às 20h, #233 às 21h). Robô pausado antes das 22:05.
+- A conta agora inclui todo vídeo cuja primeira publicação é de hoje; `metricas_publicacao` (1.125 linhas, acima do teto de 1.000 da API) passa a ser lida em páginas (9a07063).
+- `linha_producao.dias_sem_publicar` (dono): 16 e 17/10 sem disparo para compensar; stories também respeitam, e o story "antes" não anuncia vídeo já saído (3caa56a).
+- Agenda: os 3 com a data real (15/10), #247 volta ao estoque sem data, fila a partir de 19/10 recuada 1 dia (18/10 = #234), 16 e 17 travados vazios no plano.
+
 ### Mudado (13/10) — métricas do Kwai: um script só, a rotina não escreve código
 - Em 12/10 a rotina das 21h escreveu um script novo de cabeça com endereço e chave de um Supabase inexistente, concluiu que "a URL mudou" e não gravou nada; no mesmo turno commitou 324 rascunhos no repositório público (desfeito antes do push; `scratchpad/*` agora no `.gitignore`).
 - `motor/kwai_gravar.py` (cópia em `D:/tmp`): recebe o JSON lido dos prints, casa card→ideia (card já conhecido → legenda → palavras → `#pulsoNNN`), soma os cards carimbados, barra print menor que o banco e card ambíguo, nunca cria ideia, grava `metricas_publicacao`, `leituras_metricas`, `kwai_perfil` e o histórico de seguidores. Simula por padrão; `--grava` grava.
