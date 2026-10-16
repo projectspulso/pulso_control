@@ -145,6 +145,10 @@ def _get(url, headers=None):
         return {}
 
 
+# links que o filtro de imagem recusou nesta execução — a busca pula e devolve o próximo
+RECUSADOS = set()
+
+
 def _pexels(q, dur, orientacao="portrait", exigir=None):
     key = _env("PEXELS_API_KEY")
     if not key:
@@ -163,6 +167,8 @@ def _pexels(q, dur, orientacao="portrait", exigir=None):
         if not arquivos:
             continue
         arquivos.sort(key=lambda f: f.get("height", 0))   # o menor que ainda é full HD
+        if arquivos[0].get("link") in RECUSADOS:
+            continue
         return arquivos[0].get("link")
     return None
 
@@ -184,7 +190,7 @@ def _pixabay(q, dur, exigir=None):
             continue
         vids = v.get("videos") or {}
         alvo = vids.get("large") or vids.get("medium")
-        if not (alvo and alvo.get("url")):
+        if not (alvo and alvo.get("url")) or alvo["url"] in RECUSADOS:
             continue
         # o make_video corta pra 9:16; clip deitado vira zoom pesado, então vertical primeiro
         vertical = (alvo.get("height") or 0) >= (alvo.get("width") or 0)
@@ -193,8 +199,19 @@ def _pixabay(q, dur, exigir=None):
     return cands[0][1] if cands else None
 
 
-def gerar(prompt_cena, dur, out):
-    """Procura b-roll real que sirva pra cena. Retorna (ok:bool, fonte:str, usd:float=0)."""
+def _passa(link, out, aceitar):
+    """Baixou: o filtro de imagem olha o clipe. Recusado vai para RECUSADOS e a busca segue."""
+    if aceitar is None or aceitar(out):
+        return True
+    RECUSADOS.add(link)
+    try: os.remove(out)
+    except Exception: pass
+    return False
+
+
+def gerar(prompt_cena, dur, out, aceitar=None):
+    """Procura b-roll real que sirva pra cena. Retorna (ok:bool, fonte:str, usd:float=0).
+    aceitar(path)->bool: filtro de imagem (motor/visao_broll.py); recusado, a mesma busca devolve o próximo."""
     # TIER 0 — O LUGAR PELO NOME. Filmagem real do Taj Mahal existe de graça no acervo; o que
     # faltava era pedir por ela. Só entra material que PROVE ser do lugar (ver _confere): sem essa
     # trava, "Pavlopetri" volta placa de Petri e "Fordlandia" volta feira de carros Ford.
@@ -202,13 +219,16 @@ def gerar(prompt_cena, dur, out):
         for fonte, fn in (("pexels-nome", lambda n=nome: _pexels(n, dur, "portrait", exigir=n)),
                           ("pixabay-nome", lambda n=nome: _pixabay(n, dur, exigir=n)),
                           ("pexels-nome-wide", lambda n=nome: _pexels(n, dur, "", exigir=n))):
-            try:
-                link = fn()
-            except Exception:
-                link = None
-            if link and _baixar(link, out):
-                print(f"      [stock] {fonte}: '{nome}' -> filmagem REAL do lugar (R$0)", flush=True)
-                return (True, fonte, 0.0)
+            for _ in range(3):
+                try:
+                    link = fn()
+                except Exception:
+                    link = None
+                if not (link and _baixar(link, out)):
+                    break
+                if _passa(link, out, aceitar):
+                    print(f"      [stock] {fonte}: '{nome}' -> filmagem REAL do lugar (R$0)", flush=True)
+                    return (True, fonte, 0.0)
 
     queries = _queries(prompt_cena)
     if not queries:
@@ -222,15 +242,16 @@ def gerar(prompt_cena, dur, out):
             ("pexels-wide", lambda q=q: _pexels(q, dur, "")),
         )
         for nome, fn in tentativas:
-            try:
-                link = fn()
-            except Exception:
-                link = None
-            if not link:
-                continue
-            if _baixar(link, out):
-                print(f"      [stock] {nome}: '{q}' -> clip real (R$0)", flush=True)
-                return (True, nome, 0.0)
+            for _ in range(3):
+                try:
+                    link = fn()
+                except Exception:
+                    link = None
+                if not (link and _baixar(link, out)):
+                    break
+                if _passa(link, out, aceitar):
+                    print(f"      [stock] {nome}: '{q}' -> clip real (R$0)", flush=True)
+                    return (True, nome, 0.0)
     print(f"      [stock] nada util pra '{queries[0]}' (nem afrouxando) -> cai pro Wan", flush=True)
     return (False, "", 0.0)
 

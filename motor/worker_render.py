@@ -248,7 +248,7 @@ def run(ideia_id=None):
     for s in cenas['scenes']:
         acc += dur; spans.append([s['name'], round(audio_dur * acc / (n * dur), 2)])
     scenes_out = [{"name": s['name'], "prompt": s['prompt'], "dur": dur} for s in cenas['scenes']]
-    json.dump({"slug": slug, "base": cenas['base'], "scenes": scenes_out, "spans": spans},
+    json.dump({"slug": slug, "base": cenas['base'], "scenes": scenes_out, "spans": spans, "titulo": rot.get('titulo') or ''},
               open(d + "/scenes.json", "w", encoding="utf-8"), ensure_ascii=False)
     log("audio %.1fs | %d cenas x %ds | fator ~%.2f" % (audio_dur, n, dur, audio_dur / (n * dur)))
 

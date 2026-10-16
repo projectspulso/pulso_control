@@ -252,6 +252,16 @@ if _os.path.exists(_SJ):
 else:
     SC=SETS[slug]; _BASE=BASE_BY.get(slug,BASE)
 _ORDER=list(SC.keys()); _USADOS=set()   # banco de clips: ordem das cenas + clips já usados neste render
+_TITULO=(_d.get("titulo") if _os.path.exists(_SJ) else None) or slug.replace("_"," ")
+def _visao(path, prompt, name):
+    """Filtro de imagem (motor/visao_broll.py): sem pessoa, sem texto legível, combina com a cena.
+    A cena do fecho (cta) é paisagem calma de propósito — lá só vale pessoa e texto."""
+    try:
+        import visao_broll as vb
+        return vb.checar(path, prompt, _TITULO, exigir_relevancia=("cta" not in name))
+    except Exception as e:
+        print(f"      [visao] indisponível ({str(e)[:60]}) — clipe passa sem filtro", flush=True)
+        return {"ok": True, "checado": False}
 def _split(v):
     return (v,8) if isinstance(v,str) else (v[0],v[1])
 def _valido(path):
@@ -282,10 +292,11 @@ def gen(name):
     try:
         import banco_clips as bc
         _idx=_ORDER.index(name)
-        hit=bc.buscar_semantico(pr,dur,idx_cena=_idx,usados_run=_USADOS) or bc.buscar(pr,dur,idx_cena=_idx,usados_run=_USADOS)
-        if hit:
+        for _ in range(4):  # recusado pelo filtro de imagem: pede o próximo parecido do banco
+            hit=bc.buscar_semantico(pr,dur,idx_cena=_idx,usados_run=_USADOS) or bc.buscar(pr,dur,idx_cena=_idx,usados_run=_USADOS)
+            if not hit: break
             shutil.copy2(hit["file"],out); _USADOS.add(hit["id"])
-            if _valido(out):  # clip do banco também pode estar corrompido — só reusa se abrir
+            if _valido(out) and _visao(out,pr,name)["ok"]:  # corrompido ou recusado não entra
                 bc.usar(hit["id"]); return (name,"REUSO",hit["id"])
             try: os.remove(out)
             except Exception: pass
@@ -295,7 +306,7 @@ def gen(name):
     # não faz sentido queimar cota de IA. Só cai pro Wan quando o acervo não tem nada.
     try:
         import stock_gen
-        oks,fonte,_=stock_gen.gerar(pr,dur,out)
+        oks,fonte,_=stock_gen.gerar(pr,dur,out,aceitar=lambda p: _visao(p,pr,name)["ok"])
         if oks and _valido(out):
             try:
                 import banco_clips as bc; bc.adicionar(pr,dur,out,tema=slug,modelo=fonte,usd=0.0)
@@ -306,7 +317,13 @@ def gen(name):
     # WAN depois (b-roll ~US$0,10/s, cota grátis) — Veo/Higgsfield vira fallback (caro).
     try:
         import wan_gen
-        okw,modelo,usd=wan_gen.gerar(full,dur,out)
+        for _tw in range(2):  # Wan também erra (gente, assunto): 1 nova tentativa, depois a cena falha honesta
+            okw,modelo,usd=wan_gen.gerar(full,dur,out)
+            if not (okw and _valido(out)): break
+            if _visao(out,pr,name)["ok"]: break
+            try: os.remove(out)
+            except Exception: pass
+            okw=False
         if okw and _valido(out):
             try:
                 import banco_clips as bc; bc.adicionar(pr,dur,out,tema=slug,modelo=modelo,usd=usd)  # durável
@@ -380,11 +397,16 @@ if __name__=="__main__":
             else: _f="outro"
             _fontes[_f]=_fontes.get(_f,0)+1
         _veo_cr=sum(_split(SC[_n])[1] for _n,_s in res.items() if _s=="OK" and str(fontes_por_cena.get(_n,"")).startswith("veo:"))
+        try:
+            import visao_broll as _vb; _visao_stats=dict(_vb.STATS)
+        except Exception:
+            _visao_stats=None
         _ledger={"slug":slug,"quando":_dt.datetime.now().isoformat(timespec="seconds"),
-                 "cenas":len(names),"fontes":_fontes,"veo_cr":_veo_cr,"economizado_cr":_cr_eco}
+                 "cenas":len(names),"fontes":_fontes,"veo_cr":_veo_cr,"economizado_cr":_cr_eco,
+                 "filtro_imagem":_visao_stats}
         with open(f"D:/tmp/pulso_lote4/{slug}/ledger_render.json","w",encoding="utf-8") as _fh:
             _json.dump(_ledger,_fh,ensure_ascii=False)
-        print(f"ledger: {_fontes} veo={_veo_cr}cr eco={_cr_eco}cr",flush=True)
+        print(f"ledger: {_fontes} veo={_veo_cr}cr eco={_cr_eco}cr filtro={_visao_stats}",flush=True)
     except Exception as _e:
         print("aviso: ledger falhou:",str(_e)[:80],flush=True)
     print(f"(novos Veo={ok}, reusados do banco={reuso} ~{_cr_eco}cr economizados, ja existiam={skip})")

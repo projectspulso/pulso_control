@@ -4,6 +4,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (15/10) — filtro de imagem do b-roll
+- `motor/visao_broll.py`: 3 quadros de cada clipe candidato vão ao Gemini 2.5 flash (chave do PULSO). Recusa pessoa em destaque, texto legível destacado e relevância < 5/10 para a cena dentro do tema do vídeo; cena de fecho (cta) só checa pessoa/texto. Cache em `D:/tmp/visao_cache.json`; erro da API deixa passar marcado e conta no ledger (`filtro_imagem`).
+- Ligado nos três caminhos: banco pede o próximo parecido (até 4), acervo pula o link recusado e tenta o próximo da mesma busca (3×), Wan tenta mais 1 vez e senão a cena falha honesta. O worker grava o título do vídeo no `scenes.json`.
+- Prova no #258: as 6 cenas ruins (copos de St. Patrick's, peru no lugar de nabos, gente, rio, túnel abstrato) refeitas — 95 candidatos olhados, 89 recusados, 6 aprovados (3 Pexels, 1 Pixabay, 2 Wan). Calibração: a 1ª pergunta recusava 10/10 (exigia a ação exata).
+
 ### Adicionado (15/10) — mascote temático por data (Halloween)
 - `public/pulso/temas/halloween/` (12 visemas da bolha + 8 quadros do CTA): chapéu de bruxa (1 crédito Higgsfield, flux_2) por cima do boné e casaco laranja por troca de cor. Gerador reutilizável: `motor/mascote_tema.py`.
 - `make_video.py --tema <tema>` usa a bolha e o CTA do tema; a margem de topo do chapéu (`pad_topo.txt`) sai da conta da escala, o mascote não encolhe.
