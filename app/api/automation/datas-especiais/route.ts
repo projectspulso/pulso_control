@@ -129,14 +129,27 @@ export async function POST(request: NextRequest) {
       } else if (p.status === 'EM_EDICAO') {
         r.passo = p.metadata?.segurado ? 'parada: segurado' : 'aguardando o worker renderizar'
       } else if (p.status === 'PRONTO_PUBLICACAO') {
-        if (String(p.data_publicacao_planejada || '').slice(0, 16) === quando.slice(0, 16)) { r.passo = 'pronto e cravado na vaga'; resultados.push(r); continue }
+        // quem divide o dia sai SEMPRE, mesmo com o nosso já no lugar: em 15/10 a fila recuada pôs o #229
+        // em 31/10 junto do Jack-o'-lantern, e o early-return antigo deixava os dois
+        const jaCravado = String(p.data_publicacao_planejada || '').replace('T', ' ').slice(0, 16) === quando.replace('T', ' ').slice(0, 16)
         const { data: ocupantes } = await supabase.schema('pulso_content').from('pipeline_producao').select('id, metadata')
           .gte('data_publicacao_planejada', `${v.slot}T00:00:00`).lte('data_publicacao_planejada', `${v.slot}T23:59:59`).neq('id', p.id)
+        // o desalojado vai para o 1º dia livre depois da vaga — sem data ele sumia da fila (nenhum robô
+        // dá data nova: o comprometer só simula), e dia de outra data especial fica reservado
+        const { data: datados } = await supabase.schema('pulso_content').from('pipeline_producao').select('data_publicacao_planejada')
+          .gt('data_publicacao_planejada', `${v.slot}T23:59:59`)
+        const ocupados = new Set<string>([
+          ...(datados || []).map((x: { data_publicacao_planejada: string }) => String(x.data_publicacao_planejada).slice(0, 10)),
+          ...vagas.map((x) => x.slot),
+        ])
+        let livre = v.slot
         for (const o of ocupantes || []) {
-          await supabase.schema('pulso_content').from('pipeline_producao').update({ data_publicacao_planejada: null }).eq('id', o.id)
+          do { livre = somarDias(livre, 1) } while (ocupados.has(livre))
+          ocupados.add(livre)
+          await supabase.schema('pulso_content').from('pipeline_producao').update({ data_publicacao_planejada: `${livre}T${horario.slice(0, 5)}:00` }).eq('id', o.id)
         }
-        await supabase.schema('pulso_content').from('pipeline_producao').update({ data_publicacao_planejada: quando }).eq('id', p.id)
-        r.passo = 'cravado na vaga'; r.desalojados = (ocupantes || []).map((o: { metadata: { numero?: number } | null }) => o.metadata?.numero ?? null)
+        if (!jaCravado) await supabase.schema('pulso_content').from('pipeline_producao').update({ data_publicacao_planejada: quando }).eq('id', p.id)
+        r.passo = jaCravado ? 'pronto e cravado na vaga' : 'cravado na vaga'; r.desalojados = (ocupantes || []).map((o: { metadata: { numero?: number } | null }) => o.metadata?.numero ?? null); r.desalojados_ate = livre
       } else {
         r.passo = `status ${p.status} — nada a fazer`
       }
