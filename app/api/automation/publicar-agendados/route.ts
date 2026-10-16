@@ -132,12 +132,14 @@ async function publicarAgendados(request: NextRequest) {
   // amanhã, pra ver se vão flopar de novo". Até a data `ate` (dia BRT), as redes do teste saem por
   // API mesmo pausadas ou proibidas, marcadas metodo=api_teste. Passada a data, desliga sozinho.
   let testeApi: { redes: string[]; ate: string; tiktok_direto?: boolean } | null = null
+  let diasSemPublicar: string[] = []
   try {
     const raw = cfgQ.data?.valor
     const cfg = typeof raw === 'string' ? JSON.parse(raw) : raw
     if (cfg?.publicar_dia) tetoDia = cfg.publicar_dia
     if (!cfgQ.error) redesPausadas = Array.isArray(cfg?.redes_pausadas) ? cfg.redes_pausadas.map(String) : []
     if (cfg?.teste_api?.ate && Array.isArray(cfg.teste_api.redes)) testeApi = cfg.teste_api
+    if (Array.isArray(cfg?.dias_sem_publicar)) diasSemPublicar = cfg.dias_sem_publicar.map(String)
   } catch { /* mantém o padrão — e, sem ler a pausa, não publica por API nesta rodada */ }
   const testeHoje = testeApi && diaBRT(agora) <= testeApi.ate ? testeApi : null
   const redesBase: string[] = REDES_API_SEGURAS.filter((r) => !redesPausadas.includes(r))
@@ -150,6 +152,14 @@ async function publicarAgendados(request: NextRequest) {
   // em UTC, cai no dia seguinte. Teto cheio, nada disparou, e como nada dispara não grava log:
   // some sem deixar rastro. Qualquer publicação depois das 21h BRT roubava a vaga do dia seguinte.
   const hoje = diaBRT(agora)
+  // DIA SEM PUBLICAR (dono, 15/10/2026): três vídeos saíram no dia 15 por erro de contagem; 16 e 17
+  // ficam sem disparo para a média voltar a 1/dia. Nada sai — nem vídeo novo, nem remendo de rede.
+  if (diasSemPublicar.includes(hoje)) {
+    await supabase.schema('pulso_content').from('logs_workflows').insert({
+      workflow_name: 'PUBLICAR_AGENDADOS', status: 'ocioso', detalhes: { dia_brt: hoje, motivo: 'dia sem publicar (linha_producao.dias_sem_publicar)' },
+    })
+    return NextResponse.json({ success: true, disparados: 0, motivo: `dia sem publicar: ${hoje}` })
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pubs = (pubQ.data || []) as any[]
   const ehLongo = new Set(((longosQ.data || []) as Array<{ id: string }>).map((i) => i.id))

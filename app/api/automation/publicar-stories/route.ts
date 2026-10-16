@@ -98,6 +98,15 @@ export async function POST(request: NextRequest) {
     supabase.schema('pulso_content').from('logs_workflows').insert({ workflow_name: 'PUBLICAR_STORIES', status, detalhes: { momento, hoje, ...detalhes } })
 
   if (!p) { await log('ocioso', { motivo: 'nenhum vídeo agendado para hoje' }); return NextResponse.json({ ok: true, nada: 'sem vídeo hoje' }) }
+  // vídeo já publicado em outro dia (antecipado) não ganha story de "sai às 19h"; dia sem publicar também não
+  const { data: cfgLinha } = await supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle()
+  const linha = typeof cfgLinha?.valor === 'string' ? JSON.parse(cfgLinha.valor) : cfgLinha?.valor
+  if (Array.isArray(linha?.dias_sem_publicar) && linha.dias_sem_publicar.includes(hoje)) {
+    await log('ocioso', { motivo: 'dia sem publicar' }); return NextResponse.json({ ok: true, nada: 'dia sem publicar' })
+  }
+  if (p.status === 'PUBLICADO' && momento === 'antes') {
+    await log('ocioso', { motivo: 'vídeo do dia já saiu antes (antecipado)', ideia_id: p.ideia_id }); return NextResponse.json({ ok: true, nada: 'já publicado' })
+  }
   const st = p.metadata?.stories
   if (!st?.pergunta) { await log('erro', { motivo: 'vídeo do dia sem artes de story (motor local não gerou)', ideia_id: p.ideia_id }); return NextResponse.json({ ok: false, erro: 'sem artes de story' }) }
 
