@@ -118,6 +118,20 @@ def proximo_da_fila(excluir=None):
     if sem: log("aviso: %d AUDIO_GERADO sem cenas (pulados — gere o áudio no app pra criar as cenas)" % sem)
     return aud[0] if aud else None
 
+def tema_da_data(p):
+    """Tema do mascote se a ideia é de data especial com `mascote_tema` no calendário; senão None."""
+    try:
+        ide = g._db('GET', '/rest/v1/ideias?id=eq.%s&select=metadata' % p['ideia_id'], schema='pulso_content') or []
+        slug = (((ide[0].get('metadata') or {}) if ide else {}).get('data_especial') or {}).get('slug')
+        if not slug: return None
+        cfg = g._db('GET', '/rest/v1/configuracoes?chave=eq.datas_especiais&select=valor', schema='pulso_core') or []
+        v = cfg[0]['valor'] if cfg else {}
+        v = json.loads(v) if isinstance(v, str) else (v or {})
+        tema = next((d.get('mascote_tema') for d in v.get('datas', []) if d.get('slug') == slug), None)
+        return tema if tema and os.path.isdir(f"D:/projetos/pulso_control/public/pulso/temas/{tema}/cta") else None
+    except Exception as e:
+        log("aviso: não leu o tema da data (%s) — mascote padrão" % str(e)[:60]); return None
+
 def get_item(ideia_id):
     p = g._db('GET', '/rest/v1/pipeline_producao?ideia_id=eq.%s&select=id,ideia_id,roteiro_id,status,metadata' % ideia_id, schema='pulso_content')
     return p[0] if p else None
@@ -254,7 +268,10 @@ def run(ideia_id=None):
             set_render_status(p, 'erro', motivo[:180])
             return
         log("montando (ffmpeg + CTA)...")
-        r2 = subprocess.run(["python", "D:/tmp/make_video.py", slug], capture_output=True, text=True, timeout=5400)
+        # MASCOTE TEMÁTICO: vídeo de data especial usa o mascote da data (config datas_especiais.mascote_tema)
+        tema = tema_da_data(p)
+        if tema: log(f"mascote temático: {tema}")
+        r2 = subprocess.run(["python", "D:/tmp/make_video.py", slug] + (["--tema", tema] if tema else []), capture_output=True, text=True, timeout=5400)
         # 5400s (90min), era 900s (15min). A montagem extrai TODOS os frames pra PNG pro
         # lip-sync do mascote (~1.957 frames em 1080x1920) e leva ~35min por video. Com 15min
         # o worker matava a montagem no meio, SEMPRE — o #112 ficou preso em "renderizando"

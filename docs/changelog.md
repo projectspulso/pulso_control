@@ -4,6 +4,13 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (15/10) — mascote temático por data (Halloween)
+- `public/pulso/temas/halloween/` (12 visemas da bolha + 8 quadros do CTA): chapéu de bruxa (1 crédito Higgsfield, flux_2) por cima do boné e casaco laranja por troca de cor. Gerador reutilizável: `motor/mascote_tema.py`.
+- `make_video.py --tema <tema>` usa a bolha e o CTA do tema; a margem de topo do chapéu (`pad_topo.txt`) sai da conta da escala, o mascote não encolhe.
+- Calendário: `datas_especiais[].mascote_tema` (Halloween = halloween); o worker passa o tema ao montador para vídeos de data especial. Finados e datas de respeito ficam sem fantasia.
+- #258 (Jack-o'-lantern) remontado com o tema: QC aprovado (fala 99% do roteiro), arquivo novo `jackolantern_abobora_258_halloween.mp4`, OneDrive e stories atualizados.
+- Achado: a conta Higgsfield do PULSO está no plano gratuito (1,38 crédito) — modelo Nano Banana recusou por exigir plano pago.
+
 ### Mudado (15/10) — datas especiais: lança até a véspera e fica travada
 - Dono: o vídeo da data sai até a véspera às 19h, para no dia ele já estar circulando. 2 vídeos = dois dias antes + véspera; 1 = véspera. Halloween passou para 29/10 (Origem Sombria) e 30/10 (Jack-o'-lantern); #229 foi para 10/11.
 - A antecipação do publicar-agendados nunca puxa vídeo de data especial (4cc24cf).

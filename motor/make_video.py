@@ -8,6 +8,13 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageChops, ImageFont
 FF=r"C:/Users/junio/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/ffmpeg.exe"
 AV=r"D:/projetos/pulso_control/public/pulso/expression"
+# MASCOTE TEMÁTICO (dono, 15/10/2026): "--tema halloween" troca a bolha e o mascote do CTA pelos de
+# public/pulso/temas/<tema>/ (expression/ + cta/). Quem decide o tema é a data especial (config datas_especiais).
+TEMA=sys.argv[sys.argv.index("--tema")+1] if "--tema" in sys.argv else None
+TEMADIR=f"D:/projetos/pulso_control/public/pulso/temas/{TEMA}" if TEMA else None
+if TEMA:
+    assert os.path.isdir(f"{TEMADIR}/expression") and os.path.isdir(f"{TEMADIR}/cta"), f"tema {TEMA} sem arquivos em {TEMADIR}"
+    AV=f"{TEMADIR}/expression"
 slug=sys.argv[1]
 VID=f"D:/tmp/pulso_lote4/{slug}"; BR=f"{VID}/clips"
 TRILHA=f"{VID}/trilha.mp3"; NARR=f"{VID}/narracao_DANIEL.mp3"; ALIGN=f"{VID}/alignment.json"
@@ -151,7 +158,9 @@ def _pisca(t):
     return ph<0.09 or (2.55<ph<2.62)  # piscada normal + as vezes uma dupla rapida
 BX=28; BY=int(0.78*H)-SIZE//2  # opcao B: sobe a bolha p/ rosto (metade de cima) ficar acima da UI do TikTok
 # --- mascote grande do CTA (8 quadros transparentes), ancorado pelos pes ---
-CTADIR=r"D:/tmp/cta_frames"
+CTADIR=f"{TEMADIR}/cta" if TEMA else r"D:/tmp/cta_frames"
+# o chapéu do tema aumenta a altura do quadro; a margem de topo sai da conta da escala (senão o mascote encolhe)
+CPAD=int(open(f"{CTADIR}/pad_topo.txt").read()) if os.path.exists(f"{CTADIR}/pad_topo.txt") else 0
 CNAMES=["1_enter_squash","2_pop_up","3_present_open","4_present_closed","5_point_open","6_point_closed","7_thumbs_up","8_thumbs_wink"]
 CTAF={}; CANC={}
 for nm in CNAMES:
@@ -159,7 +168,7 @@ for nm in CNAMES:
     aa=np.array(im)[:,:,3]>40; bb=aa[int(aa.shape[0]*0.86):,:]
     xs=np.where(bb.any(axis=0))[0]; ax=(xs.min()+xs.max())/2 if len(xs) else im.width/2
     CANC[nm]=(ax,im.height)
-CREF=float(np.median([CTAF[n].height for n in ["3_present_open","5_point_open","7_thumbs_up"]]))
+CREF=float(np.median([CTAF[n].height-CPAD for n in ["3_present_open","5_point_open","7_thumbs_up"]]))
 CSCALE=820.0/CREF; CCX,CBASE=W//2,1180
 FT=ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf",112); FB=ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf",56)
 VOG=set("aàáâãeéêiíïoóôõuúüy")
