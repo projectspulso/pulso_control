@@ -8,6 +8,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 - De 13 a 28/10 saíram só 9 vídeos prontos e 8 ficaram em erro. O filtro de imagem recusava ~87% dos clipes (991 olhados: 503 fora do assunto, 256 pessoa, 101 texto), a cota grátis do Wan acabou (5 modelos "FreeTierOnly") e o Veo está desligado: a cena que sobrava falhava e derrubava o vídeo.
 - `gen_scenes.py`: MELHOR DISPONÍVEL — clipe recusado só por relevância (≥ 2/10, sem pessoa e sem texto) fica guardado e entra se nada passar. Pessoa e texto seguem recusa dura. Ledger conta `melhor_disponivel`.
 - `worker_render.py`: saída dos filhos lida em UTF-8 — o travessão do filtro quebrava o cp1252 e derrubava o item (#266, "NoneType is not iterable").
+- Config `linha_producao.render_dia_max` 1 → 3 TEMPORÁRIO (dono 28/10) para esvaziar os 8 travados; volta a 1 quando a fila de EM_EDICAO zerar (nota em `render_dia_max_nota`).
 
 ### Adicionado (15/10) — filtro de imagem do b-roll
 - `motor/visao_broll.py`: 3 quadros de cada clipe candidato vão ao Gemini 2.5 flash (chave do PULSO). Recusa pessoa em destaque, texto legível destacado e relevância < 5/10 para a cena dentro do tema do vídeo; cena de fecho (cta) só checa pessoa/texto. Cache em `D:/tmp/visao_cache.json`; erro da API deixa passar marcado e conta no ledger (`filtro_imagem`).
