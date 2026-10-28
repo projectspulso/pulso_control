@@ -21,7 +21,10 @@ Uso:
   python worker_render.py <ideia_id>      # item específico
 """
 import os, re, json, base64, shutil, subprocess, urllib.request, urllib.error, sys, datetime
-sys.path.insert(0, "D:/tmp"); import pulso_guard as g
+sys.path.insert(0, "D:/tmp")
+# filhos (gen_scenes, make_video) escrevem em UTF-8: o filtro de imagem imprime acento e travessão, e o
+# cp1252 do Windows quebrava a leitura e derrubava o item ("NoneType is not iterable", #266, 28/10/2026)
+os.environ["PYTHONIOENCODING"] = "utf-8"; import pulso_guard as g
 
 ENV = {}
 for l in open(r"D:/projetos/pulso_control/.env", encoding="utf-8", errors="ignore"):
@@ -48,7 +51,7 @@ def atualizar_saldo_higgsfield():
     """Lê o saldo do Higgsfield (CLI) e grava em configuracoes pro app avisar
     ANTES de o render falhar por falta de crédito. Roda a cada invocação (3x/dia)."""
     try:
-        out = subprocess.run([HF_CLI, "account", "status"], capture_output=True, text=True, timeout=60).stdout
+        out = subprocess.run([HF_CLI, "account", "status"], capture_output=True, encoding="utf-8", errors="replace", timeout=60).stdout
         m = re.search(r"([\d.]+)\s*credits", out)
         plano = re.search(r"—\s*([a-z]+)\s*plan", out, re.I)
         if not m:
@@ -166,7 +169,7 @@ def tts(texto):
     return base64.b64decode(d["audio_base64"]), d["alignment"]
 
 def ffprobe_dur(path):
-    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", path], capture_output=True, text=True).stdout.strip()
+    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", path], capture_output=True, encoding="utf-8", errors="replace").stdout.strip()
     try: return float(out)
     except: return 0.0
 
@@ -201,7 +204,7 @@ def qc_completo(final, audio_dur, roteiro_texto, qcdir):
     try:
         ini = max(0, vdur - 8)
         r = subprocess.run(["ffmpeg", "-ss", str(ini), "-i", final, "-vf", "freezedetect=n=0.003:d=2", "-map", "0:v", "-f", "null", "-"],
-                           capture_output=True, text=True, timeout=120)
+                           capture_output=True, encoding="utf-8", errors="replace", timeout=120)
         if "freeze_start" in (r.stderr or ""):
             avisos.append("possível congelamento no fim (freezedetect) — conferir CTA")
     except Exception:
@@ -259,7 +262,7 @@ def run(ideia_id=None):
     else:
         set_render_status(p, 'renderizando')
         log("gerando cenas (Veo)...")
-        r1 = subprocess.run(["python", "D:/tmp/gen_scenes.py", slug], capture_output=True, text=True, timeout=1800)
+        r1 = subprocess.run(["python", "D:/tmp/gen_scenes.py", slug], capture_output=True, encoding="utf-8", errors="replace", timeout=1800)
         if "DONE" not in r1.stdout:
             log("gen_scenes falhou:", r1.stdout[-300:], r1.stderr[-200:])
             # motivo real: última linha útil do gen_scenes (ex.: "FALHOU: 3 cenas nao geradas: [...]")
@@ -271,7 +274,7 @@ def run(ideia_id=None):
         # MASCOTE TEMÁTICO: vídeo de data especial usa o mascote da data (config datas_especiais.mascote_tema)
         tema = tema_da_data(p)
         if tema: log(f"mascote temático: {tema}")
-        r2 = subprocess.run(["python", "D:/tmp/make_video.py", slug] + (["--tema", tema] if tema else []), capture_output=True, text=True, timeout=5400)
+        r2 = subprocess.run(["python", "D:/tmp/make_video.py", slug] + (["--tema", tema] if tema else []), capture_output=True, encoding="utf-8", errors="replace", timeout=5400)
         # 5400s (90min), era 900s (15min). A montagem extrai TODOS os frames pra PNG pro
         # lip-sync do mascote (~1.957 frames em 1080x1920) e leva ~35min por video. Com 15min
         # o worker matava a montagem no meio, SEMPRE — o #112 ficou preso em "renderizando"
@@ -422,7 +425,7 @@ if __name__ == "__main__":
     # ARTES DE STORY dos próximos agendados (motor de stories, 03/10/2026): custo zero, sai do vídeo
     # pronto. A rota /api/automation/publicar-stories só publica o que estiver em metadata.stories.
     try:
-        r = subprocess.run(["python", "D:/tmp/gerar_stories.py", "--pendentes", "3"], capture_output=True, text=True, timeout=1200)
+        r = subprocess.run(["python", "D:/tmp/gerar_stories.py", "--pendentes", "3"], capture_output=True, encoding="utf-8", errors="replace", timeout=1200)
         log((r.stdout or '').strip().splitlines()[-1] if (r.stdout or '').strip() else "stories: sem saída")
     except Exception as _e:
         log("aviso: gerar_stories falhou: %s" % str(_e)[:100])

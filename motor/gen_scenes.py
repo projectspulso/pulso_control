@@ -258,10 +258,23 @@ def _visao(path, prompt, name):
     A cena do fecho (cta) é paisagem calma de propósito — lá só vale pessoa e texto."""
     try:
         import visao_broll as vb
-        return vb.checar(path, prompt, _TITULO, exigir_relevancia=("cta" not in name))
+        r = vb.checar(path, prompt, _TITULO, exigir_relevancia=("cta" not in name))
     except Exception as e:
         print(f"      [visao] indisponível ({str(e)[:60]}) — clipe passa sem filtro", flush=True)
         return {"ok": True, "checado": False}
+    # MELHOR DISPONÍVEL (28/10/2026): com a cota grátis do Wan esgotada, cena que nenhum clipe passava em
+    # "combina com a cena" derrubava o vídeo inteiro — 8 travados e 9 prontos em 15 dias. Pessoa e texto
+    # continuam recusa dura; recusado SÓ por relevância fica guardado e, se nada melhor aparecer, entra.
+    if not r.get("ok") and not r.get("pessoa") and not r.get("texto") and isinstance(r.get("relevancia"), (int, float)):
+        atual = _MELHOR.get(name)
+        if r["relevancia"] >= RELEVANCIA_PISO and (atual is None or r["relevancia"] > atual[0]):
+            guarda = f"{OUT}/_melhor_{name}.mp4"
+            try:
+                shutil.copy2(path, guarda); _MELHOR[name] = (r["relevancia"], guarda)
+            except Exception: pass
+    return r
+_MELHOR = {}          # cena -> (relevância, arquivo) do melhor clipe recusado só por relevância
+RELEVANCIA_PISO = 2   # abaixo disso é outro assunto mesmo (peru no lugar de nabo): não entra nem como sobra
 def _split(v):
     return (v,8) if isinstance(v,str) else (v[0],v[1])
 def _valido(path):
@@ -338,6 +351,14 @@ def gen(name):
     # material grátis, em vez de travar a fila inteira.
     # Para religar (só com crédito e decisão explícita): PULSO_VEO=1 no ambiente.
     if os.environ.get("PULSO_VEO") != "1":
+        if name in _MELHOR:
+            rel, guarda = _MELHOR[name]
+            try:
+                shutil.move(guarda, out)
+                if _valido(out):
+                    print(f"      [visao] {name}: nenhum clipe passou — usa o melhor disponível ({rel}/10, sem pessoa e sem texto)", flush=True)
+                    return (name, "OK", f"melhor_disponivel:{rel}")
+            except Exception: pass
         return (name, "ERRO", "sem clip gratis (banco/acervo/wan nao acharam) — Veo desligado")
     for tent in range(2):
         r=subprocess.run([HF,"generate","create","veo3_1_lite","--prompt",full,
@@ -394,6 +415,7 @@ if __name__=="__main__":
             elif _info.startswith("stock:"): _f=_info.split(":")[1] or "stock"
             elif _info.startswith("wan:"): _f="wan"
             elif _info.startswith("veo:"): _f="veo"
+            elif _info.startswith("melhor_disponivel:"): _f="melhor_disponivel"
             else: _f="outro"
             _fontes[_f]=_fontes.get(_f,0)+1
         _veo_cr=sum(_split(SC[_n])[1] for _n,_s in res.items() if _s=="OK" and str(fontes_por_cena.get(_n,"")).startswith("veo:"))
