@@ -4,6 +4,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (28/10) — reabrir tema reprovado (desempate)
+- `TesteDoCanal.reaberto_em`: o dono reabre um tema reprovado; daí em diante a tentativa nova desempata — fez ≥ 40% do piso vira tema normal, abaixo disso volta a reprovado. As tentativas antigas ficam à mostra mas não decidem.
+- Espaço & Astronomia reaberto (1ª 133%, 2ª 32%); #247 Fomalhaut b é a 3ª tentativa, data 18/11 19h.
+
 ### Corrigido (28/10) — render travado: filtro duro demais + Wan sem cota
 - De 13 a 28/10 saíram só 9 vídeos prontos e 8 ficaram em erro. O filtro de imagem recusava ~87% dos clipes (991 olhados: 503 fora do assunto, 256 pessoa, 101 texto), a cota grátis do Wan acabou (5 modelos "FreeTierOnly") e o Veo está desligado: a cena que sobrava falhava e derrubava o vídeo.
 - `gen_scenes.py`: MELHOR DISPONÍVEL — clipe recusado só por relevância (≥ 2/10, sem pessoa e sem texto) fica guardado e entra se nada passar. Pessoa e texto seguem recusa dura. Ledger conta `melhor_disponivel`.

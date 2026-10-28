@@ -70,6 +70,9 @@ export interface TesteDoCanal {
   tentativas?: TentativaAvaliada[]
   decidido_em?: string
   motivo?: string
+  /** Dia (BRT) em que o dono reabriu um tema reprovado. Daí em diante a tentativa nova desempata:
+   *  as anteriores ficam à mostra mas não decidem mais (dono 28/10/2026, Espaço & Astronomia). */
+  reaberto_em?: string
 }
 
 export interface CanalComTeste {
@@ -287,6 +290,17 @@ export function avaliarTeste(
     }
     return { ideia_id: ideia, estreia, razao: razoes.length ? Math.round(mediana(razoes) * 100) / 100 : null, por_rede }
   })
+
+  const reaberto = canal.teste?.reaberto_em
+  if (reaberto) {
+    const nova = tentativas.find((t) => t.estreia >= reaberto && t.razao != null)
+    if (!nova) return { status: 'em_teste', tentativas, motivo: `reaberto em ${reaberto} — aguardando a tentativa de desempate` }
+    const n = tentativas.indexOf(nova) + 1
+    const pct = Math.round((nova.razao ?? 0) * 100)
+    return nova.razao! < regras.pisoRelativo
+      ? { status: 'reprovado', tentativas, motivo: `desempate: tentativa ${n} (${nova.estreia}) fez ${pct}% do piso — abaixo dos ${Math.round(regras.pisoRelativo * 100)}%` }
+      : { status: 'aprovado', tentativas, motivo: `desempate: tentativa ${n} (${nova.estreia}) fez ${pct}% do piso — vira tema normal` }
+  }
 
   const flop = tentativas.find((t) => t.razao != null && t.razao < regras.pisoRelativo)
   if (flop) {
