@@ -4,6 +4,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Corrigido (28/10) — "Gerar ideias" sorteava canal pelo Facebook e caía no do Momento
+- O botão deu 7 ideias de Copa/futebol no do Momento (sem assunto, a descrição do canal cita a Copa): sazonal fica abaixo da mediana, o formato é sem pessoas e a Copa já passou. Descartadas (DESCARTADA + `metadata.descarte`).
+- `escolher-canal.ts`: peso = mediana da SOMA das redes por vídeo com 7+ dias (era só Facebook, que virou manual em 08/10), ao quadrado para o melhor canal se distinguir do pior (antes 6–10% para todos). Fora do sorteio: `canais.metadata.sorteio = false` (do Momento e Bastidores — o do Momento nasce pelo calendário ou com assunto) e canal em teste/reprovado.
+- `gerar-ideias`: métricas paginadas (passam de 1.000 linhas); devolve `canal_fora`. Tela de Ideias mostra as chances do sorteio e quem ficou fora.
+
 ### Adicionado (28/10) — reabrir tema reprovado (desempate)
 - `TesteDoCanal.reaberto_em`: o dono reabre um tema reprovado; daí em diante a tentativa nova desempata — fez ≥ 40% do piso vira tema normal, abaixo disso volta a reprovado. As tentativas antigas ficam à mostra mas não decidem.
 - Espaço & Astronomia reaberto (1ª 133%, 2ª 32%); #247 Fomalhaut b é a 3ª tentativa, data 18/11 19h.

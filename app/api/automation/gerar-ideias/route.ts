@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     let canal
     let motivoCanal: string | null = null
     let pesosCanal: Array<{ nome: string; peso: number; mediana: number; n: number }> = []
+    let foraSorteio: Array<{ nome: string; motivo: string }> = []
     if (payload.canal_id) {
       const { data } = await supabase
         .schema('pulso_core')
@@ -51,37 +52,54 @@ export async function POST(request: NextRequest) {
       // a estratégia de tema, então o canal errado já perde antes do prompt. E os canais diferem
       // 13× em mediana de Facebook (IA 86 × Mistérios & História 1.151), diferença que a contagem
       // ignorava. Ver lib/automation/escolher-canal.ts.
-      const [canaisQ, ideiasCanalQ, metricasQ] = await Promise.all([
-        supabase.schema('pulso_core').from('canais').select('id, nome, descricao, idioma, slug'),
+      const [canaisQ, ideiasCanalQ] = await Promise.all([
+        supabase.schema('pulso_core').from('canais').select('id, nome, descricao, idioma, slug, metadata'),
         supabase.schema('pulso_content').from('ideias').select('id, canal_id'),
-        supabase
-          .schema('pulso_content')
-          .from('metricas_publicacao')
-          .select('ideia_id, views')
-          .eq('plataforma', 'facebook'),
       ])
       if (canaisQ.error) {
         return NextResponse.json({ error: `Canais: ${canaisQ.error.message}` }, { status: 500 })
+      }
+      // metricas_publicacao passa de 1.000 linhas (teto do PostgREST): sem paginar, o peso some calado
+      const metricas: Array<{ ideia_id: string | null; views: number | null; data_publicacao: string | null }> = []
+      for (let de = 0; ; de += 1000) {
+        const { data: pag, error } = await supabase
+          .schema('pulso_content').from('metricas_publicacao')
+          .select('ideia_id, views, data_publicacao')
+          .range(de, de + 999)
+        if (error) return NextResponse.json({ error: `Métricas: ${error.message}` }, { status: 500 })
+        metricas.push(...(pag || []))
+        if (!pag || pag.length < 1000) break
       }
 
       const canalDaIdeia = new Map<string, string>()
       for (const i of ideiasCanalQ.data || []) if (i.canal_id) canalDaIdeia.set(i.id, i.canal_id)
 
+      // soma das redes por vídeo, só vídeo com 7+ dias (o novo ainda está subindo e puxaria o canal pra baixo)
+      const limite = Date.now() - 7 * 86_400_000
+      const somaPorIdeia = new Map<string, number>()
+      const estreia = new Map<string, number>()
+      for (const m of metricas) {
+        if (!m.ideia_id || !m.data_publicacao) continue
+        const t = new Date(m.data_publicacao).getTime()
+        if (!estreia.has(m.ideia_id) || t < estreia.get(m.ideia_id)!) estreia.set(m.ideia_id, t)
+        somaPorIdeia.set(m.ideia_id, (somaPorIdeia.get(m.ideia_id) || 0) + (m.views ?? 0))
+      }
       const viewsPorCanal = new Map<string, number[]>()
-      for (const m of metricasQ.data || []) {
-        const c = m.ideia_id ? canalDaIdeia.get(m.ideia_id) : null
-        if (!c) continue
+      for (const [ideia, soma] of somaPorIdeia) {
+        const c = canalDaIdeia.get(ideia)
+        if (!c || (estreia.get(ideia) ?? Infinity) > limite) continue
         if (!viewsPorCanal.has(c)) viewsPorCanal.set(c, [])
-        viewsPorCanal.get(c)!.push(m.views ?? 0)
+        viewsPorCanal.get(c)!.push(soma)
       }
 
       const escolha = escolherCanalPorDesempenho(
         (canaisQ.data || []) as CanalCandidato[],
-        [...viewsPorCanal.entries()].map(([canalId, viewsFacebook]) => ({ canalId, viewsFacebook }))
+        [...viewsPorCanal.entries()].map(([canalId, views]) => ({ canalId, views }))
       )
       canal = escolha?.canal as typeof canal
       motivoCanal = escolha?.motivo ?? null
       pesosCanal = escolha?.pesos ?? []
+      foraSorteio = escolha?.fora ?? []
     }
 
     if (!canal) {
@@ -258,6 +276,7 @@ que já existe. Nomeie o caso.`
         canal: canal.nome,
         canal_motivo: motivoCanal,
         canal_pesos: pesosCanal,
+        canal_fora: foraSorteio,
         quantidade_gerada: 0,
         ideias: [],
         ignoradas_duplicidade: ignoradasTotal,
@@ -336,6 +355,7 @@ que já existe. Nomeie o caso.`
       // o porquê da escolha do canal — o dono precisa poder discordar do sorteio
       canal_motivo: motivoCanal,
       canal_pesos: pesosCanal,
+      canal_fora: foraSorteio,
       quantidade_gerada: saved?.length || 0,
       ideias: saved,
       ignoradas_duplicidade: ignoradasTotal,

@@ -28,6 +28,8 @@ export function EsteiraIdeias() {
   // história em 2003" contra o de 29k). Ver o que foi barrado é o que dá confiança na trava.
   const [gerarDetalhe, setGerarDetalhe] = useState<{
     motivo: string | null
+    pesos: Array<{ nome: string; peso: number }>
+    fora: Array<{ nome: string; motivo: string }>
     barradas: Array<{ titulo: string; similar_a: string }>
   } | null>(null)
 
@@ -50,6 +52,8 @@ export function EsteiraIdeias() {
       setGerarMsg(`✅ ${data.quantidade_gerada} ideia(s) gerada(s) em "${data.canal}"${ign ? ` · ${ign} barrada(s) por duplicidade` : ''}.`)
       setGerarDetalhe({
         motivo: data.canal_motivo ?? null,
+        pesos: data.canal_pesos || [],
+        fora: data.canal_fora || [],
         barradas: (data.ignoradas_duplicidade || []).map(
           (d: { titulo?: string; similar_a?: string }) => ({
             titulo: d.titulo || '(sem título)',
@@ -126,7 +130,8 @@ export function EsteiraIdeias() {
 
         {/* Gerar ideias com IA. O RÓTULO MENTIA: dizia "rotação automática (canal com menos
             ideias)", que é como funcionava até 29/07/2026. Hoje quem escolhe é
-            escolherCanalPorDesempenho (pondera views de Facebook por canal), e o prompt recebe o
+            escolherCanalPorDesempenho (desde 28/10 pondera a soma das redes por vídeo, não só o
+            Facebook, e deixa fora do sorteio do Momento, Bastidores e tema em teste), e o prompt recebe o
             briefing do momento — desempenho por tema medido agora, estoque por tema (freio contra
             clone) e o contrato por rede (o gancho vale 2,07× no TikTok e 0,68× no Facebook).
             Rótulo errado ensina o dono errado: ele escolheria manualmente achando que a máquina
@@ -147,8 +152,9 @@ export function EsteiraIdeias() {
           </div>
           <p className="w-full text-[11px] leading-snug text-zinc-500">
             O <b className="text-zinc-400">Decisor escolhe o canal</b> por desempenho medido (mediana
-            de views no Facebook, com sorteio ponderado e um piso de exploração para não cegar no que
-            já vence). O prompt recebe o retrato de agora: tema que rende, estoque por tema (freio
+            das views somando todas as redes, vídeos com 7+ dias, com sorteio ponderado e um piso de
+            exploração para não cegar no que já vence). Do Momento, Bastidores e tema em teste ficam
+            fora do sorteio: datas e assuntos do momento vêm pelo calendário. O prompt recebe o retrato de agora: tema que rende, estoque por tema (freio
             contra repetir o que já espera na fila) e o que cada rede premia.
           </p>
           <button
@@ -161,11 +167,23 @@ export function EsteiraIdeias() {
           </button>
           {gerarMsg && <span className="w-full text-sm text-zinc-300">{gerarMsg}</span>}
 
-          {gerarDetalhe && (gerarDetalhe.motivo || gerarDetalhe.barradas.length > 0) && (
+          {gerarDetalhe && (gerarDetalhe.motivo || gerarDetalhe.fora.length > 0 || gerarDetalhe.barradas.length > 0) && (
             <div className="w-full space-y-2 rounded-xl border border-white/8 bg-black/20 p-3.5">
               {gerarDetalhe.motivo && (
                 <p className="text-[11px] text-zinc-400">
                   <span className="text-zinc-500">Canal escolhido por desempenho:</span> {gerarDetalhe.motivo}
+                </p>
+              )}
+              {gerarDetalhe.pesos.length > 0 && (
+                <p className="text-[11px] text-zinc-500">
+                  Chances no sorteio:{' '}
+                  {gerarDetalhe.pesos.slice(0, 6).map((p) => `${p.nome.replace(/^PULSO /, '')} ${p.peso}%`).join(' · ')}
+                  {gerarDetalhe.pesos.length > 6 ? ' · …' : ''}
+                </p>
+              )}
+              {gerarDetalhe.fora.length > 0 && (
+                <p className="text-[11px] text-zinc-500">
+                  Fora do sorteio: {gerarDetalhe.fora.map((f) => `${f.nome.replace(/^PULSO /, '')} (${f.motivo})`).join(' · ')}
                 </p>
               )}
               {gerarDetalhe.barradas.length > 0 && (

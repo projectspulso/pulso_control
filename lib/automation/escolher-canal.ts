@@ -21,6 +21,13 @@
  *    descobrir o próximo campeão — e a amostra de vários canais ainda é pequena demais pra
  *    cravar que são ruins.
  * Sorteio (e não "sempre o melhor") porque escolher sempre o topo congela o acervo num canal só.
+ *
+ * 28/10/2026 (dono): o peso deixou de ser só o Facebook. O Facebook virou manual (08/10) e o foco é
+ * YouTube; o sorteio deu 7 ideias de Copa no "do Momento" (mediana 311 no FB, 0,89× no geral).
+ * Agora o peso é a mediana da SOMA das views de todas as redes por vídeo com 7+ dias — a mesma régua
+ * do ranking medido (Ciência 2,01× lidera). E fica FORA do sorteio quem não deve receber ideia solta:
+ * canal com `metadata.sorteio === false` (do Momento só nasce com assunto ou data especial; Bastidores
+ * é vídeo longo) e canal em teste de tema ou reprovado (o teste tem fila e regra próprias).
  */
 
 export interface CanalCandidato {
@@ -31,8 +38,17 @@ export interface CanalCandidato {
 
 export interface DesempenhoCanal {
   canalId: string
-  /** views no Facebook de cada vídeo publicado daquele canal */
-  viewsFacebook: number[]
+  /** soma das views de todas as redes de cada vídeo do canal com 7+ dias de estrada */
+  views: number[]
+}
+
+/** Por que um canal não entra no sorteio; null = entra. */
+export function foraDoSorteio(c: CanalCandidato): string | null {
+  const meta = (c.metadata || {}) as { sorteio?: boolean; teste?: { status?: string } }
+  if (meta.sorteio === false) return 'só recebe ideia com assunto ou pelo calendário'
+  const st = meta.teste?.status
+  if (st === 'em_teste' || st === 'reprovado') return st === 'em_teste' ? 'em teste de tema' : 'tema reprovado no teste'
+  return null
 }
 
 const SHRINK_K = 5 // publicações necessárias pra confiar na mediana do canal
@@ -60,6 +76,7 @@ export interface EscolhaCanal {
   /** o porquê, pra tela e pro log — nunca uma caixa-preta */
   motivo: string
   pesos: Array<{ nome: string; peso: number; mediana: number; n: number }>
+  fora: Array<{ nome: string; motivo: string }>
 }
 
 /**
@@ -70,10 +87,16 @@ export function escolherCanalPorDesempenho(
   desempenho: DesempenhoCanal[],
   sorteio: number = Math.random()
 ): EscolhaCanal | null {
+  const fora = canais.flatMap((c) => {
+    const m = foraDoSorteio(c)
+    return m ? [{ nome: c.nome, motivo: m }] : []
+  })
+  canais = canais.filter((c) => !foraDoSorteio(c))
   if (!canais.length) return null
 
-  const porCanal = new Map(desempenho.map((d) => [d.canalId, d.viewsFacebook]))
-  const todas = desempenho.flatMap((d) => d.viewsFacebook)
+  const elegiveis = new Set(canais.map((c) => c.id))
+  const porCanal = new Map(desempenho.map((d) => [d.canalId, d.views]))
+  const todas = desempenho.filter((d) => elegiveis.has(d.canalId)).flatMap((d) => d.views)
   const medianaGeral = mediana(todas) || 1
 
   const linhas = canais.map((c) => {
@@ -82,7 +105,8 @@ export function escolherCanalPorDesempenho(
     const bruta = n ? mediana(v) : medianaGeral
     // shrinkage rumo à mediana geral quando a amostra é curta
     const ajustada = (n * bruta + SHRINK_K * medianaGeral) / (n + SHRINK_K)
-    return { canal: c, n, mediana: Math.round(bruta), peso: ajustada }
+    // ao quadrado: linear, o shrinkage achatava tudo em 6–10% e o melhor canal mal se distinguia do pior
+    return { canal: c, n, mediana: Math.round(bruta), peso: (ajustada / medianaGeral) ** 2 }
   })
 
   const pesoMedio = linhas.reduce((s, l) => s + l.peso, 0) / linhas.length
@@ -90,7 +114,7 @@ export function escolherCanalPorDesempenho(
   for (const l of linhas) l.peso = Math.max(l.peso, piso)
 
   const total = linhas.reduce((s, l) => s + l.peso, 0)
-  if (total <= 0) return { canal: canais[0], motivo: 'sem dado de desempenho — primeiro canal', pesos: [] }
+  if (total <= 0) return { canal: canais[0], motivo: 'sem dado de desempenho — primeiro canal', pesos: [], fora }
 
   let acc = 0
   const alvo = Math.min(0.999999, Math.max(0, sorteio)) * total
@@ -105,7 +129,7 @@ export function escolherCanalPorDesempenho(
 
   const chance = Math.round((escolhido.peso / total) * 100)
   const motivo = escolhido.n
-    ? `mediana ${escolhido.mediana} no Facebook em ${escolhido.n} publicação(ões) — ${chance}% de chance no sorteio ponderado`
+    ? `mediana de ${escolhido.mediana} views somando as redes em ${escolhido.n} vídeo(s) — ${chance}% de chance no sorteio ponderado`
     : `sem publicação medida — entrou pelo piso de exploração (${chance}% de chance)`
 
   return {
@@ -114,5 +138,6 @@ export function escolherCanalPorDesempenho(
     pesos: linhas
       .map((l) => ({ nome: l.canal.nome, peso: Math.round((l.peso / total) * 100), mediana: l.mediana, n: l.n }))
       .sort((a, b) => b.peso - a.peso),
+    fora,
   }
 }
