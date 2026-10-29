@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
     // descartada por ERRO DE EXECUÇÃO não bloqueia a versão corrigida (ver bloqueiamDuplicidade)
     const existentesIdeias = bloqueiamDuplicidade(todasIdeias || [])
     const { aceitas, ignoradas } = filtrarDuplicatas(
-      ideias as Array<{ titulo: string; descricao?: string | null }>,
+      ideias as Array<{ titulo: string; descricao?: string | null; ancora?: string | null }>,
       existentesIdeias || []
     )
     // 2ª camada: duplicidade SEMÂNTICA via LLM — pega o que o Jaccard lexical perde
@@ -256,7 +256,7 @@ que já existe. Nomeie o caso.`
         const cand = (brutas as Array<{ titulo?: string }>).filter((i) => i && typeof i.titulo === 'string' && i.titulo)
         if (cand.length) {
           const lex2 = filtrarDuplicatas(
-            cand as Array<{ titulo: string; descricao?: string | null }>,
+            cand as Array<{ titulo: string; descricao?: string | null; ancora?: string | null }>,
             existentesIdeias || []
           )
           const sem2 = await filtrarDuplicatasSemantica(lex2.aceitas, existentesIdeias || [], (p) =>

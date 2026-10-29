@@ -9,6 +9,8 @@
  * transparente, nunca descartada em silêncio).
  */
 
+import { acharColisao } from './ancora'
+
 const STOP = new Set(
   ('a o e de da do das dos que com para por um uma uns umas no na nos nas em ao aos ' +
     'se os as mais como qual quais quando onde porque seu sua suas seus pra pelo pela ' +
@@ -34,7 +36,12 @@ export function jaccard(a: Set<string>, b: Set<string>): number {
 export interface DedupItem {
   titulo: string
   descricao?: string | null
+  /** o caso concreto (ideias.metadata.ancora na existente; `ancora` direto na candidata do GPT) */
+  ancora?: string | null
+  metadata?: { ancora?: string | null } | null
 }
+
+const ancoraDe = (i: DedupItem) => i.ancora || i.metadata?.ancora || null
 
 /**
  * QUEM BLOQUEIA UMA IDEIA NOVA — descartada também bloqueia, com uma exceção.
@@ -52,7 +59,7 @@ export interface DedupItem {
  */
 export interface IdeiaParaDedup extends DedupItem {
   status?: string | null
-  metadata?: { descarte?: { tipo?: string } } | null
+  metadata?: { descarte?: { tipo?: string }; ancora?: string | null } | null
 }
 
 export function bloqueiamDuplicidade<T extends IdeiaParaDedup>(existentes: T[]): T[] {
@@ -128,6 +135,39 @@ export function filtrarDuplicatas<T extends DedupItem>(
 }
 
 /**
+ * ÂNCORA NA IDEIA (29/10/2026) — até aqui ela só agia no roteiro.
+ *
+ * O que passou: "A ilha que ressurge a cada século!" (âncora `Ilha Bermeja`) entrou com o #214
+ * já publicado — "A ilha que flutua e muda de lugar no mapa", âncora `Ilha de Bermeja 1937`. O
+ * Jaccard de título deu ~0 e a camada semântica via só os TÍTULOS existentes, onde Bermeja não
+ * aparece.
+ *
+ * SUSPEITA, NÃO VETO. Rodada no acervo inteiro (277 âncoras), a colisão de âncora acusou 14 pares:
+ * ~8 eram mesmo caso (Roy Sullivan, UVB-76, Mar Morto, Planeta Nove, Bermeja), ~6 não eram
+ * ("escultura do MASP" × "hérnia de disco" por `sao-paulo`; "múmias Chinchorro" × "cactos do
+ * Atacama"; "M87*" × "buraco negro de Perseus"). Por isso a colisão vai para a camada semântica
+ * como pergunta explícita, com o caso dos dois lados, e o LLM decide.
+ */
+export interface SuspeitaAncora {
+  /** índice da candidata */
+  candidata: number
+  existente: string
+}
+
+export function suspeitasPorAncora(candidatas: DedupItem[], existentes: DedupItem[]): SuspeitaAncora[] {
+  const base = existentes
+    .map((e, n) => ({ id: String(n), titulo: e.titulo, ancora: ancoraDe(e) }))
+    .filter((e) => e.ancora)
+  const saida: SuspeitaAncora[] = []
+  candidatas.forEach((c, i) => {
+    const a = ancoraDe(c)
+    const col = a ? acharColisao(a, base) : null
+    if (col) saida.push({ candidata: i, existente: `${col.colideCom.titulo} [caso: ${base[Number(col.colideCom.id)]?.ancora ?? col.colideCom.ancora}]` })
+  })
+  return saida
+}
+
+/**
  * DUAS RAZÕES DIFERENTES PARA UM LOTE VAZIO — e elas não podiam continuar iguais na tela.
  *
  * A checagem semântica é fail-closed: se a IA cai ou devolve JSON quebrado, o lote é barrado em
@@ -157,7 +197,11 @@ export async function filtrarDuplicatasSemantica<T extends DedupItem>(
   existentes: DedupItem[],
   callLLM: (prompt: string) => Promise<string>
 ): Promise<ResultadoSemantico<T>> {
-  const titulos = existentes.map((e) => e.titulo).filter(Boolean)
+  const suspeitas = suspeitasPorAncora(candidatas, existentes)
+  // com o caso ao lado do título: "A ilha que flutua e muda de lugar no mapa" não diz Bermeja
+  const titulos = existentes
+    .filter((e) => e.titulo)
+    .map((e) => (ancoraDe(e) ? `${e.titulo} [caso: ${ancoraDe(e)}]` : e.titulo))
   if (candidatas.length === 0 || titulos.length === 0) {
     return { aceitas: candidatas, ignoradas: [], indisponivel: false }
   }
@@ -200,8 +244,18 @@ export async function filtrarDuplicatasSemantica<T extends DedupItem>(
     ...titulos.map((t, i) => `E${i + 1}. ${t}`),
     '',
     'IDEIAS CANDIDATAS:',
-    ...candidatas.map((c, i) => `C${i + 1}. ${c.titulo} — ${(c.descricao || '').slice(0, 140)}`),
+    ...candidatas.map((c, i) => `C${i + 1}. ${c.titulo}${ancoraDe(c) ? ` [caso: ${ancoraDe(c)}]` : ''} — ${(c.descricao || '').slice(0, 140)}`),
     '',
+    ...(suspeitas.length
+      ? [
+          '',
+          'ATENÇÃO — o CASO declarado destas candidatas colide com o de uma existente. Confira caso a caso',
+          '(mesmo lugar/objeto/evento = duplicata, mesmo que o título seja outro; nome em comum por acaso, como',
+          'uma cidade citada em duas histórias diferentes, NÃO é):',
+          ...suspeitas.map((x) => `- C${x.candidata + 1} × ${x.existente}`),
+          '',
+        ]
+      : []),
     'Responda APENAS JSON: {"duplicatas":[{"candidata":<n de C>,"igual_a":"<titulo existente>","motivo":"<curto>"}]}.',
     // Viés calibrado em 30/07: "na dúvida marque" sozinho zerou um lote inteiro (5 de 5 barradas,
     // 0 geradas), porque a dúvida virava "parece do mesmo tipo". A dúvida legítima é sobre o CASO
@@ -235,7 +289,7 @@ export async function filtrarDuplicatasSemantica<T extends DedupItem>(
   const aceitas: T[] = []
   const ignoradas: DuplicataMatch[] = []
   candidatas.forEach((c, i) => {
-    if (dup.has(i)) ignoradas.push({ titulo: c.titulo, similar_a: dup.get(i)!, score: 1 })
+    if (dup.has(i)) ignoradas.push({ titulo: c.titulo, similar_a: dup.get(i)!.replace(/ \[caso: [^\]]*\]$/, ''), score: 1 })
     else aceitas.push(c)
   })
   return { aceitas, ignoradas, indisponivel: false }

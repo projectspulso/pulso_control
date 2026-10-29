@@ -4,6 +4,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Corrigido (29/10) — trava de duplicidade da ideia não via o caso concreto
+- "A ilha que ressurge a cada século!" (âncora Ilha Bermeja) passou contra o #214 já publicado (âncora Ilha de Bermeja 1937): o Jaccard de título deu ~0 e a camada semântica só via os TÍTULOS existentes, onde Bermeja não aparece. Descartada.
+- `dedup.ts`: a camada semântica recebe o caso (`[caso: …]`) de cada existente e de cada candidata, e as colisões de âncora (`suspeitasPorAncora`, mesma régua do roteiro) entram como pergunta explícita. Suspeita, não veto: no acervo inteiro a colisão de âncora acusou 14 pares, ~6 falsos ("escultura do MASP" × "hérnia de disco" por `sao-paulo`). Vale para gerar-ideias e do-momento.
+
 ### Corrigido (28/10) — "Gerar ideias" sorteava canal pelo Facebook e caía no do Momento
 - O botão deu 7 ideias de Copa/futebol no do Momento (sem assunto, a descrição do canal cita a Copa): sazonal fica abaixo da mediana, o formato é sem pessoas e a Copa já passou. Descartadas (DESCARTADA + `metadata.descarte`).
 - `escolher-canal.ts`: peso = mediana da SOMA das redes por vídeo com 7+ dias (era só Facebook, que virou manual em 08/10), ao quadrado para o melhor canal se distinguir do pior (antes 6–10% para todos). Fora do sorteio: `canais.metadata.sorteio = false` (do Momento e Bastidores — o do Momento nasce pelo calendário ou com assunto) e canal em teste/reprovado.

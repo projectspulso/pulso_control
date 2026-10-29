@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       .select('titulo, descricao, status, metadata')
     // descartada por ERRO DE EXECUÇÃO não bloqueia a versão corrigida (ver bloqueiamDuplicidade)
     const existentes = bloqueiamDuplicidade(todas || [])
-    const candidata = [{ titulo: ideia.titulo as string, descricao: (ideia.descricao as string) || '' }]
+    const candidata = [{ titulo: ideia.titulo as string, descricao: (ideia.descricao as string) || '', ancora: (ideia.ancora as string) || null }]
     const barrada = (motivo: string) =>
       NextResponse.json({
         success: true,
