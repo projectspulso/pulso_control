@@ -2,6 +2,11 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplificado.
 
+## 2026-10-31
+
+- #242 saiu às 19h05 com render de 24/09 (mascote grande de ~8s até o fim, clipes fora do assunto e com pessoas): vídeo errado privado no YouTube e arquivado no Instagram; clipes refeitos com o filtro, remontado no montador atual (`chineses_piso_escala_242_v2.mp4`, CTA aos 82,9 s) e republicado às 19h58. Registros antigos guardados em `ideias.metadata.publicacoes_erradas_31_10`.
+- Causa: nada confere o vídeo de novo entre o render e a publicação. 11 vídeos da fila foram renderizados antes do filtro de imagem (15/10) e não foram remontados.
+
 ## [Não lançado]
 
 ### Corrigido (29/10) — trava de duplicidade da ideia não via o caso concreto
