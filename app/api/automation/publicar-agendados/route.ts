@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { motivoSemCertificado } from '@/lib/publicacao/certificado'
 import { guardApi } from '@/lib/auth/api-guard'
 import { repassarCredencial } from '@/lib/auth/repassar-credencial'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
@@ -217,11 +218,15 @@ async function publicarAgendados(request: NextRequest) {
     return r.pode
   }
 
+  const barrados: Array<{ numero: number | null; motivo: string }> = []
   const vencidos = pipeTodos
     .filter((p) => {
       if (p.status !== 'PRONTO_PUBLICACAO') return false
       const quando = horaMarcada(p.data_publicacao_planejada)
-      return quando <= agora && quando >= limiteAtraso && !jaSaiu.has(p.ideia_id) && liberadoPeloTeste(p)
+      if (!(quando <= agora && quando >= limiteAtraso && !jaSaiu.has(p.ideia_id) && liberadoPeloTeste(p))) return false
+      const motivo = motivoSemCertificado(p.metadata)
+      if (motivo) barrados.push({ numero: p.metadata?.numero ?? null, motivo })
+      return !motivo
     })
     .sort((a, b) => (a.data_publicacao_planejada < b.data_publicacao_planejada ? -1 : 1))
 
@@ -257,6 +262,7 @@ async function publicarAgendados(request: NextRequest) {
         if (jaSaiu.has(p.ideia_id)) return false
         // DATA ESPECIAL É TRAVADA (dono, 15/10/2026): vídeo de Halloween não sai antes da vaga dele
         if (dataEspecial.has(p.ideia_id)) return false
+        if (motivoSemCertificado(p.metadata)) return false
         return horaMarcada(p.data_publicacao_planejada) > agora && liberadoPeloTeste(p)
       })
       .sort((a, b) => (a.data_publicacao_planejada < b.data_publicacao_planejada ? -1 : 1))
@@ -438,6 +444,7 @@ async function publicarAgendados(request: NextRequest) {
       resultados,
       ...(remendos.length ? { remendos } : {}),
       ...(seguradosPorTeste.length ? { segurados_por_teste: seguradosPorTeste } : {}),
+      ...(barrados.length ? { barrados_sem_certificado: barrados } : {}),
     },
   })
   if (erroLog) console.error('[publicar-agendados] falhou ao gravar log:', erroLog.message)

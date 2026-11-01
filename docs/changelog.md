@@ -9,6 +9,13 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (31/10) — certificado do vídeo antes de publicar
+- `motor/certificar_video.py` confere o arquivo que vai ao ar: barra mascote grande antes dos 75% finais e render anterior ao filtro de imagem. O certificado vale para a URL; `/publicar` recusa (409) a 1ª saída sem ele e `publicar-agendados` passa para o próximo certificado, registrando `barrados_sem_certificado`.
+- O worker certifica a fila a cada rodada. 12 vídeos antigos barrados entraram em remontagem com clipes refeitos.
+
+### Corrigido (31/10) — Kwai: 4 vídeos sem casamento
+- A quebra de linha do card corta palavra na leitura ("pa rassem") e o prefixo da legenda falhava: `kwai_gravar.py` compara sem espaços. #241, #236, #258 e #242 gravados.
+
 ### Corrigido (29/10) — trava de duplicidade da ideia não via o caso concreto
 - "A ilha que ressurge a cada século!" (âncora Ilha Bermeja) passou contra o #214 já publicado (âncora Ilha de Bermeja 1937): o Jaccard de título deu ~0 e a camada semântica só via os TÍTULOS existentes, onde Bermeja não aparece. Descartada.
 - `dedup.ts`: a camada semântica recebe o caso (`[caso: …]`) de cada existente e de cada candidata, e as colisões de âncora (`suspeitasPorAncora`, mesma régua do roteiro) entram como pergunta explícita. Suspeita, não veto: no acervo inteiro a colisão de âncora acusou 14 pares, ~6 falsos ("escultura do MASP" × "hérnia de disco" por `sao-paulo`). Vale para gerar-ideias e do-momento.

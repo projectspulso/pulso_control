@@ -422,6 +422,10 @@ if __name__ == "__main__":
         _g.sync_transacoes()
     except Exception as _e:
         log("aviso: sync do extrato Higgsfield falhou: %s" % str(_e)[:100])
+    try:
+        subprocess.run(["python", "D:/tmp/certificar_video.py", "--fila"], capture_output=True, timeout=1800)
+    except Exception as _e:
+        log("aviso: certificar falhou: %s" % str(_e)[:100])
     # ARTES DE STORY dos próximos agendados (motor de stories, 03/10/2026): custo zero, sai do vídeo
     # pronto. A rota /api/automation/publicar-stories só publica o que estiver em metadata.stories.
     try:

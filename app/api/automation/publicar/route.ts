@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { lerRedesPausadas } from '@/lib/publicacao/redes-pausadas'
+import { motivoSemCertificado } from '@/lib/publicacao/certificado'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { withPulsoCodigo } from '@/lib/pulso-codigo'
@@ -348,6 +349,13 @@ export async function POST(request: NextRequest) {
       { error: `Vídeo segurado: ${item.metadata.segurado.motivo || 'sem motivo registrado'}` },
       { status: 409 },
     )
+  }
+
+  // Sem certificado do arquivo exato, não sai. O #242 foi ao ar em 31/10/2026 com render de 5 semanas
+  // antes: o QC só roda no render. Vale só para a 1ª saída; vídeo já publicado completa as outras redes.
+  if (item.status === 'PRONTO_PUBLICACAO') {
+    const motivo = motivoSemCertificado(item.metadata, video_url)
+    if (motivo) return NextResponse.json({ error: `Vídeo barrado: ${motivo}` }, { status: 409 })
   }
 
   const { data: ideia } = await supabase
