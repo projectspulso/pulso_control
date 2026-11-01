@@ -12,6 +12,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 ### Adicionado (31/10) — certificado do vídeo antes de publicar
 - `motor/certificar_video.py` confere o arquivo que vai ao ar: barra mascote grande antes dos 75% finais e render anterior ao filtro de imagem. O certificado vale para a URL; `/publicar` recusa (409) a 1ª saída sem ele e `publicar-agendados` passa para o próximo certificado, registrando `barrados_sem_certificado`.
 - O worker certifica a fila a cada rodada. 12 vídeos antigos barrados entraram em remontagem com clipes refeitos.
+- 01/11: 11 dos 12 remontados e certificados. #219 ficou barrado e sem data (cena sem clipe aprovado); #272 assumiu 02/11 e #247 foi para 22/11.
+
+### Corrigido (01/11) — `motor/remontar_fila.py`
+- Lia a saída do QC em cp1252: "Á" na transcrição derrubava a leitura e o vídeo aparecia como reprovado sem motivo. Agora lê em UTF-8.
+- Vídeo já remontado (`_v2`) gerava slug errado e reusava o nome do arquivo. Agora sai como `_v3`.
 
 ### Corrigido (31/10) — Kwai: 4 vídeos sem casamento
 - A quebra de linha do card corta palavra na leitura ("pa rassem") e o prefixo da legenda falhava: `kwai_gravar.py` compara sem espaços. #241, #236, #258 e #242 gravados.

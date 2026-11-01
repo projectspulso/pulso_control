@@ -29,7 +29,7 @@ PROMPT = ("Estes quadros vêm, em ordem, de um vídeo vertical. Numere-os a part
 
 def duracao(url):
     r = subprocess.run(["ffprobe", "-v", "error", "-rw_timeout", "30000000", "-show_entries", "format=duration", "-of", "csv=p=0", url],
-                       capture_output=True, text=True, timeout=120)
+                       capture_output=True, encoding="utf-8", errors="replace", timeout=120)
     return float(r.stdout.strip() or 0)
 
 def quadro(url, t, out):

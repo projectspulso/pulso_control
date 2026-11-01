@@ -32,11 +32,12 @@ def remontar(p):
     num = md.get("numero"); url = md.get("video_url", "")
     if md.get("remontado_em"):
         log(f"#{num} já remontado em {md['remontado_em']} — pula"); return
-    fn = url.rsplit("/", 1)[-1]; slug = fn.rsplit("_", 1)[0]
+    fn = url.rsplit("/", 1)[-1]; nome = re.match(r"(.+?)_\d{3}(?:_v(\d+))?\.mp4$", fn)
+    slug = nome.group(1); versao = int(nome.group(2) or 1) + 1
     d = f"D:/tmp/pulso_lote4/{slug}"; final = f"{d}/FINAL_{slug}.mp4"
     if os.path.exists(final) and not os.path.exists(f"{d}/FINAL_{slug}_ANTES_09-10.mp4"):
         shutil.copy2(final, f"{d}/FINAL_{slug}_ANTES_09-10.mp4")
-    r = subprocess.run(["python", "D:/tmp/make_video.py", slug], capture_output=True, text=True, timeout=3600)
+    r = subprocess.run(["python", "D:/tmp/make_video.py", slug], capture_output=True, encoding="utf-8", errors="replace", timeout=3600)
     cta = re.search(r"CTA janela ([\d.]+)s->fim \(([\d.]+)s\)", r.stdout or "")
     if r.returncode != 0 or not os.path.exists(final):
         log(f"#{num} montagem FALHOU: {(r.stderr or r.stdout)[-300:]}"); return
@@ -47,10 +48,10 @@ def remontar(p):
         final = web
     rot = g._db("GET", "/rest/v1/roteiros?id=eq.%s&select=conteudo_md" % p["roteiro_id"], schema="pulso_content")[0]["conteudo_md"]
     rp = f"{d}/roteiro_qc.txt"; open(rp, "w", encoding="utf-8").write(rot)
-    q = json.loads(subprocess.run(["python", QC, final, "--roteiro", rp], capture_output=True, text=True, timeout=1200).stdout or "{}")
+    q = json.loads(subprocess.run(["python", QC, final, "--roteiro", rp], capture_output=True, encoding="utf-8", errors="replace", timeout=1200).stdout or "{}")
     if not q.get("aprovada"):
         log(f"#{num} QC REPROVOU — mantém a versão antiga: {q.get('erros')}"); return
-    novo = f"{slug}_{int(num):03d}_v2.mp4"
+    novo = f"{slug}_{int(num):03d}_v{versao}.mp4"
     data = open(final, "rb").read()
     try:
         urllib.request.urlopen(urllib.request.Request(U + "/storage/v1/object/pulso-assets/videos/" + novo, data=data, method="POST",
