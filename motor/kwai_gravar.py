@@ -84,7 +84,9 @@ def casar(cards, pipe, linhas):
         if chave in conhecidos:
             out.append((c, conhecidos[chave], "já conhecido")); continue
         leg = norm(c["legenda"])
-        pref = {i for i, cap, _ in caps if cap and len(leg) >= 15 and cap.startswith(leg)}
+        # sem espaços: a quebra de linha do card corta palavra na leitura ("fábricas de vidro pa rassem")
+        colada = leg.replace(" ", "")
+        pref = {i for i, cap, _ in caps if cap and len(colada) >= 15 and cap.replace(" ", "").startswith(colada)}
         if len(pref) == 1:
             out.append((c, pref.pop(), "prefixo da legenda")); continue
         pal = set(leg.split())
