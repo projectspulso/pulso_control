@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, CheckCircle2, Download, Search, ShieldCheck } from 'lucide-react'
 import { useControleVideos } from '@/lib/hooks/use-controle-videos'
+import { ControleBarras } from '@/components/controle-barras'
 import { controleCsv, NOME_REDE, REDES, type Rede, type RedeControle, type VideoControle } from '@/lib/analytics/controle'
 
 const compacto = new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 })
@@ -80,6 +81,8 @@ export function ControleVideosPanel() {
           </ul>
         </div>
       )}
+
+      <ControleBarras videos={data.videos} />
 
       <SaudeColeta redes={data.redes} />
 

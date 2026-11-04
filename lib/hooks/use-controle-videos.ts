@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
-import { montarControle, type Controle } from '@/lib/analytics/controle'
+import { montarControle, type Controle, type GanhoDia } from '@/lib/analytics/controle'
 
 export function useControleVideos() {
   return useQuery<Controle>({
@@ -29,6 +29,23 @@ export function useControleVideos() {
         { metricas: met.data as any, pipeline: pipe.data as any, ideias: ide.data as any, canais: can.data || [], rodadas: rod.data as any, redesPausadas },
         Date.now(),
       )
+    },
+  })
+}
+
+/** Views ganhas por dia/rede/vertical (view 077) + a lista de verticais para o filtro das barras. */
+export function useGanhoDiario() {
+  return useQuery<{ ganhos: GanhoDia[]; canais: { id: string; nome: string }[] }>({
+    queryKey: ['ganho-diario'],
+    refetchInterval: 15 * 60 * 1000,
+    queryFn: async () => {
+      const [g, c] = await Promise.all([
+        supabase.schema('pulso_analytics').from('v_ganho_diario').select('dia, plataforma, canal_id, views_ganhas'),
+        supabase.schema('pulso_core').from('canais').select('id, nome').order('nome'),
+      ])
+      if (g.error) throw g.error
+      if (c.error) throw c.error
+      return { ganhos: (g.data || []) as GanhoDia[], canais: c.data || [] }
     },
   })
 }

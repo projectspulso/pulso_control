@@ -83,6 +83,7 @@ export interface VideoControle {
   numero: number | null
   titulo: string
   canal: string
+  canalId: string | null
   publicadoEm: string
   redes: Partial<Record<Rede, CelulaRede>>
   totalViews: number
@@ -140,7 +141,7 @@ export function montarControle(
     if (!v) {
       v = {
         ideiaId: m.ideia_id, numero: numeroDe.get(m.ideia_id) ?? null, titulo: ideia.titulo,
-        canal: canais.get(ideia.canal_id || '') || '—', publicadoEm: m.data_publicacao || '',
+        canal: canais.get(ideia.canal_id || '') || '—', canalId: ideia.canal_id, publicadoEm: m.data_publicacao || '',
         redes: {}, totalViews: 0, totalInteracoes: 0, alertas: [],
       }
       porVideo.set(m.ideia_id, v)
@@ -250,4 +251,87 @@ export function controleCsv(c: Controle): string {
     esc(v.alertas.map((a) => a.texto).join(' | ')),
   ].join(';'))
   return '﻿' + [cab.join(';'), ...linhas].join('\n')
+}
+
+// ── barras por período ─────────────────────────────────────────────────────────────────────────
+
+export type Escala = 'dia' | 'semana' | 'mes' | 'ano'
+
+export interface GanhoDia { dia: string; plataforma: string; canal_id: string | null; views_ganhas: number }
+
+export interface Barra { chave: string; rotulo: string; inicio: string; views: number; videos: number }
+
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+// quantas barras cada escala mostra: o bastante para ver tendência sem espremer o rótulo
+export const JANELA: Record<Escala, number> = { dia: 30, semana: 26, mes: 12, ano: 5 }
+
+function chaveDe(dia: string, escala: Escala): { chave: string; inicio: string; rotulo: string } {
+  const [a, m, d] = dia.slice(0, 10).split('-').map(Number)
+  if (escala === 'ano') return { chave: `${a}`, inicio: `${a}-01-01`, rotulo: `${a}` }
+  if (escala === 'mes') {
+    const mm = String(m).padStart(2, '0')
+    return { chave: `${a}-${mm}`, inicio: `${a}-${mm}-01`, rotulo: `${MESES[m - 1]}/${String(a).slice(2)}` }
+  }
+  if (escala === 'semana') {
+    const dt = new Date(Date.UTC(a, m - 1, d))
+    dt.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7)) // segunda-feira
+    const iso = dt.toISOString().slice(0, 10)
+    return { chave: iso, inicio: iso, rotulo: `${iso.slice(8, 10)}/${iso.slice(5, 7)}` }
+  }
+  const iso = dia.slice(0, 10)
+  return { chave: iso, inicio: iso, rotulo: `${iso.slice(8, 10)}/${iso.slice(5, 7)}` }
+}
+
+function passo(inicio: string, escala: Escala): string {
+  const [a, m, d] = inicio.split('-').map(Number)
+  const dt = new Date(Date.UTC(a, m - 1, d))
+  if (escala === 'dia') dt.setUTCDate(dt.getUTCDate() + 1)
+  else if (escala === 'semana') dt.setUTCDate(dt.getUTCDate() + 7)
+  else if (escala === 'mes') dt.setUTCMonth(dt.getUTCMonth() + 1)
+  else dt.setUTCFullYear(dt.getUTCFullYear() + 1)
+  return dt.toISOString().slice(0, 10)
+}
+
+/**
+ * Views GANHAS por período (não acumuladas: é o ganho que diz se acelerou) + vídeos estreados no
+ * período. Período sem dado entra como zero — buraco no eixo esconderia justamente o dia parado.
+ * `hoje` é o dia de Brasília (YYYY-MM-DD); o período corrente aparece mesmo incompleto.
+ */
+export function agruparGanho(
+  ganhos: GanhoDia[], videos: VideoControle[], escala: Escala,
+  filtro: { rede: string; canalId: string }, hoje: string,
+): Barra[] {
+  const ok = (rede: string, canal: string | null) =>
+    (filtro.rede === 'todas' || rede === filtro.rede) && (filtro.canalId === 'todos' || canal === filtro.canalId)
+  const fim = chaveDe(hoje, escala)
+  let inicio = fim.inicio
+  for (let i = 1; i < JANELA[escala]; i++) {
+    // volta um passo: avança a partir de um chute anterior até cair no período de trás
+    const [a, m, d] = inicio.split('-').map(Number)
+    const dt = new Date(Date.UTC(a, m - 1, d))
+    dt.setUTCDate(dt.getUTCDate() - 1)
+    inicio = chaveDe(dt.toISOString().slice(0, 10), escala).inicio
+  }
+  const barras = new Map<string, Barra>()
+  for (let p = inicio; p <= fim.inicio; p = passo(p, escala)) {
+    const k = chaveDe(p, escala)
+    barras.set(k.chave, { chave: k.chave, rotulo: k.rotulo, inicio: k.inicio, views: 0, videos: 0 })
+  }
+  for (const g of ganhos) {
+    if (!ok(g.plataforma, g.canal_id)) continue
+    const b = barras.get(chaveDe(g.dia, escala).chave)
+    if (b) b.views += Number(g.views_ganhas) || 0
+  }
+  for (const v of videos) {
+    if (!v.publicadoEm || (filtro.canalId !== 'todos' && v.canalId !== filtro.canalId)) continue
+    if (filtro.rede !== 'todas' && !v.redes[filtro.rede as Rede]) continue
+    // estreia no dia de Brasília
+    const diaBrt = new Date(v.publicadoEm).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+    const b = barras.get(chaveDe(diaBrt, escala).chave)
+    if (b) b.videos += 1
+  }
+  const lista = [...barras.values()]
+  // corta o vazio ANTES do primeiro dado (meses antes de a operação existir); vazio no meio fica
+  while (lista.length > 1 && lista[0].views === 0 && lista[0].videos === 0) lista.shift()
+  return lista
 }
