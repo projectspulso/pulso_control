@@ -21,7 +21,7 @@ import os, re, sys, json, argparse, subprocess, unicodedata, time
 
 def dur(path):
     out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", path],
-                         capture_output=True, text=True).stdout.strip()
+                         capture_output=True, encoding="utf-8", errors="replace").stdout.strip()
     try: return float(out)
     except ValueError: return 0.0
 
@@ -72,7 +72,7 @@ def main():
         avisos.append("transcrição não rodou (%s) — conferir à mão" % str(e)[:80])
 
     r = subprocess.run(["ffmpeg", "-i", a.video, "-vf", "freezedetect=n=0.003:d=2", "-map", "0:v", "-f", "null", "-"],
-                       capture_output=True, text=True, timeout=900)
+                       capture_output=True, encoding="utf-8", errors="replace", timeout=900)
     cartela = a.cartela_s if a.cartela_s is not None else (5.0 if a.marca == "mello" else 0.0)
     congel = [c for c in re.findall(r"freeze_start: ([\d.]+)", r.stderr or "") if float(c) < vdur - cartela - 0.5]
     if congel: avisos.append("trecho parado > 2s em %s s" % ", ".join(c[:5] for c in congel[:5]))

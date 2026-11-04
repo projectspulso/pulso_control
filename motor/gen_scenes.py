@@ -274,6 +274,8 @@ def _visao(path, prompt, name):
             except Exception: pass
     return r
 _MELHOR = {}          # cena -> (relevância, arquivo) do melhor clipe recusado só por relevância
+import threading as _threading
+_VEO_TRAVA = _threading.Lock()  # guard lê o gasto do banco: duas threads não podem passar no mesmo teto
 RELEVANCIA_PISO = 2   # abaixo disso é outro assunto mesmo (peru no lugar de nabo): não entra nem como sobra
 def _split(v):
     return (v,8) if isinstance(v,str) else (v[0],v[1])
@@ -282,7 +284,7 @@ def _valido(path):
     try:
         if not (os.path.exists(path) and os.path.getsize(path)>50000): return False
         r=subprocess.run(["ffprobe","-v","error","-show_entries","format=duration","-of","csv=p=0",path],
-            capture_output=True,text=True,timeout=30)
+            capture_output=True,encoding="utf-8", errors="replace",timeout=30)
         return r.returncode==0 and (r.stdout or "").strip() not in ("","N/A","0.000000")
     except Exception:
         return False
@@ -361,12 +363,22 @@ def gen(name):
             except Exception: pass
         return (name, "ERRO", "sem clip gratis (banco/acervo/wan nao acharam) — Veo desligado")
     for tent in range(2):
-        r=subprocess.run([HF,"generate","create","veo3_1_lite","--prompt",full,
-            "--aspect_ratio","9:16","--duration",str(dur),"--wait","--wait-timeout","18m","--wait-interval","10s"],
-            capture_output=True,text=True,timeout=1200)
-        sout=(r.stdout or "")+(r.stderr or "")
+        # o guard do lote passa com override do Wan; o Veo cobra de verdade, então cada geração pede
+        # o teto sozinha e é lançada antes de gerar (antes: no fim, 1x por cena, mesmo gerando 2x)
+        import pulso_guard as g
+        with _VEO_TRAVA:  # autoriza e lança juntos: lançar depois deixava 6 threads passarem no mesmo teto
+            if not g.autorizar(dur): return (name,"ERRO","guard bloqueou o Veo (teto do dia ou saldo)")
+            try: g.registrar_gasto("higgsfield", dur, round(dur*g.credito_brl(),2), f"{slug} {name} Veo")
+            except Exception as e: return (name,"ERRO",f"gasto do Veo nao lancado, nao gera: {e}")
+        try:
+            r=subprocess.run([HF,"generate","create","veo3_1_lite","--prompt",full,
+                "--aspect_ratio","9:16","--duration",str(dur),"--wait","--wait-timeout","18m","--wait-interval","10s"],
+                capture_output=True,encoding="utf-8",errors="replace",timeout=1200)
+            sout=(r.stdout or "")+(r.stderr or "")
+        except subprocess.TimeoutExpired:
+            sout=""
         m=re.findall(r"https?://\S+\.mp4",sout)
-        if not m: return (name,"ERRO",sout[-160:])
+        if not m: return (name,"ERRO",sout[-160:] or "Veo passou de 20min")
         if _baixar_ok(m[-1],out):
             try:
                 import banco_clips as bc; bc.adicionar(pr,dur,out,tema=slug,modelo="veo",usd=dur*1.0)  # clip novo (válido) entra no banco
@@ -439,8 +451,8 @@ if __name__=="__main__":
         # R$ 1,00/cr. Os dois erros juntos punham o custo 2,3× acima do extrato da conta (só entre
         # 22/07 e 01/08 foram 1.964 cr lançados com o saldo real em 10,38 cr). `_veo_cr`, calculado
         # logo acima pro ledger, já é exatamente a parte que foi pro Higgsfield.
-        if _veo_cr > 0:
-            g.registrar_gasto("higgsfield", _veo_cr, round(_veo_cr * g.credito_brl(), 2), f"{slug} cenas Veo")
+        # desde 03/11/2026 cada geração Veo é lançada na hora, dentro de gen(): aqui só confere
+        if _veo_cr > 0: print(f"Veo lançado por cena: {_veo_cr}cr", flush=True)
     except Exception: pass
     if bad:
         # NADA de DONE com cena faltando — o make_video crasharia adiante de forma críptica.

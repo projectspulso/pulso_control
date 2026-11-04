@@ -59,7 +59,7 @@ def transacoes_higgsfield(paginas=9):
     tudo, vistos = [], set()
     for p in range(paginas):
         out = subprocess.run([HF, "account", "transactions", "--size", "100", "--cursor", str(p * 100), "--json"],
-                             capture_output=True, text=True, timeout=120).stdout
+                             capture_output=True, encoding="utf-8", errors="replace", timeout=120).stdout
         try: lote = json.loads(out)
         except Exception: break
         if not isinstance(lote, list) or not lote: break
@@ -100,7 +100,7 @@ def sync_transacoes():
     return por_dia
 
 def saldo_higgsfield():
-    out = subprocess.run([HF, "account", "status"], capture_output=True, text=True, timeout=60).stdout
+    out = subprocess.run([HF, "account", "status"], capture_output=True, encoding="utf-8", errors="replace", timeout=60).stdout
     m = re.search(r"([\d.]+)\s*credits", out)
     cr = float(m.group(1)) if m else None
     if cr is not None:
@@ -111,9 +111,10 @@ def saldo_higgsfield():
 
 def gasto_higgsfield_hoje():
     hoje = datetime.now(timezone.utc).date().isoformat()
-    rows = _db("GET", "/rest/v1/logs_workflows?workflow_name=eq.GASTO_SERVICO&select=detalhes") or []
-    return sum((r["detalhes"].get("creditos") or 0) for r in rows
-               if r["detalhes"].get("servico") == "higgsfield" and r["detalhes"].get("data") == hoje)
+    # filtro no banco: sem ele vinham TODAS as linhas de gasto e um corte de página deixava as de hoje de fora
+    rows = _db("GET", "/rest/v1/logs_workflows?workflow_name=eq.GASTO_SERVICO&detalhes->>servico=eq.higgsfield"
+                      f"&detalhes->>data=eq.{hoje}&select=detalhes") or []
+    return sum((r["detalhes"].get("creditos") or 0) for r in rows)
 
 def autorizar(creditos_lote, override=None):
     t = travas()
@@ -128,7 +129,10 @@ def autorizar(creditos_lote, override=None):
         print(f"[GUARD] *** BLOQUEADO *** {gasto}+{creditos_lote} > teto {teto}. "
               f"Reduza o lote (menos cenas/modelo mais barato/banco de clips) ou peça override ao dono.")
         return False
-    if saldo is not None and creditos_lote > saldo:
+    if saldo is None:
+        print("[GUARD] *** BLOQUEADO *** saldo ilegível (CLI do Higgsfield fora do ar): sem saldo, não gasta.")
+        return False
+    if creditos_lote > saldo:
         print(f"[GUARD] *** BLOQUEADO *** lote ({creditos_lote}cr) maior que o saldo ({saldo}cr).")
         return False
     print("[GUARD] autorizado.")

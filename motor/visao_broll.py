@@ -51,7 +51,7 @@ def _save():
 def _quadros(arquivo):
     try:
         dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", arquivo],
-                                   capture_output=True, text=True, timeout=30).stdout.strip() or 0)
+                                   capture_output=True, encoding="utf-8", errors="replace", timeout=30).stdout.strip() or 0)
     except Exception:
         dur = 0
     tempos = [0.5, max(0.6, dur / 2), max(0.7, dur - 0.6)] if dur > 1.5 else [0.2]

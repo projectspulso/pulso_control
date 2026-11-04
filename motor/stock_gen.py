@@ -111,7 +111,7 @@ def _valido(path):
         if not (os.path.exists(path) and os.path.getsize(path) > 50000):
             return False
         r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-                            "-of", "csv=p=0", path], capture_output=True, text=True, timeout=30)
+                            "-of", "csv=p=0", path], capture_output=True, encoding="utf-8", errors="replace", timeout=30)
         return r.returncode == 0 and (r.stdout or "").strip() not in ("", "N/A", "0.000000")
     except Exception:
         return False

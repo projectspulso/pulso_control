@@ -69,6 +69,8 @@ if _viol:
     print("="*58)
 W,H,FPS=1080,1920,30
 tmp=tempfile.mkdtemp(prefix="vid_")
+# ~2.000 PNGs 1080x1920 por montagem; sem isto sobravam 61 GB em %TEMP% (03/11/2026)
+import atexit,shutil; atexit.register(shutil.rmtree,tmp,True)
 def run(a): subprocess.run(a,check=True,capture_output=True)
 VM={}
 for c in "aàáâãeéêiíïy":VM[c]="AEI"
@@ -108,7 +110,7 @@ CTA_T0 = min(CTA_T0, dur-3.0)
 print(f"{slug}: dur {dur:.1f}s | CTA janela {CTA_T0:.2f}s->fim ({dur-CTA_T0:.1f}s)")
 FFP=FF.replace("ffmpeg.exe","ffprobe.exe")
 def _srcdur(p):
-    r=subprocess.run([FFP,"-v","error","-show_entries","format=duration","-of","csv=p=0",p],capture_output=True,text=True)
+    r=subprocess.run([FFP,"-v","error","-show_entries","format=duration","-of","csv=p=0",p],capture_output=True,encoding="utf-8", errors="replace")
     try: return float(r.stdout.strip())
     except: return 8.0
 parts=[]; t0=0.0
@@ -239,5 +241,8 @@ run([FF,"-y","-i",ov,"-i",NARR,"-stream_loop","-1","-i",TRILHA,
      # VOLUME (09/10/2026): o amix padrão DIVIDE as entradas pela metade — os vídeos saíam a −24 LUFS,
      # ~10 dB abaixo do feed (as redes trabalham perto de −14). normalize=0 + loudnorm no fim.
      f"[2:a]volume=0.12,afade=t=out:st={dur-2:.1f}:d=2[m];[1:a][m]amix=inputs=2:duration=first:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11[a]",
-     "-map","[v]","-map","[a]","-c:v","libx264","-preset","veryfast","-pix_fmt","yuv420p","-c:a","aac","-b:a","192k","-t",f"{dur:.2f}",OUT])
+     "-map","[v]","-map","[a]","-c:v","libx264","-preset","veryfast","-pix_fmt","yuv420p","-c:a","aac","-b:a","192k","-t",f"{dur:.2f}",OUT+".parcial.mp4"])
+# grava ao lado e troca no fim: montagem morta no meio deixava um FINAL sem índice que o worker
+# reaproveitava para sempre (pula render se o FINAL existe)
+os.replace(OUT+".parcial.mp4",OUT)
 print(f"OK -> {OUT}  (regra PULSO-CTA embutida: mascote grande na janela, audio original)")

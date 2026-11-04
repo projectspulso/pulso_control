@@ -1,7 +1,7 @@
 # Banco de clips reusáveis do PULSO — economia de créditos Veo.
 # Indexa clips já gerados por palavra-chave do prompt da CENA (não da base de estilo,
 # que é igual em todo vídeo). gen_scenes consulta antes de gerar; casou = copia (0cr).
-import os, json, re, hashlib, shutil, datetime
+import os, json, re, hashlib, shutil, datetime, threading
 
 BANCO_DIR = "D:/tmp/banco_clips"
 IDX = BANCO_DIR + "/index.json"
@@ -19,17 +19,26 @@ STOP = set((
 os.makedirs(BANCO_DIR, exist_ok=True)
 
 
+# gen_scenes chama adicionar/usar de 6 threads. Sem trava, uma lia o índice no meio da escrita de
+# outra, o JSON quebrado virava [] e o próximo _save gravava o índice com 1 clip: em 03/11/2026 eram
+# 3.524 .mp4 no disco e 132 entradas. Agora: trava, escrita atômica e índice ilegível NUNCA vira [].
+_TRAVA = threading.RLock()
+
+
 def _load():
-    if os.path.exists(IDX):
-        try:
-            return json.load(open(IDX, encoding="utf-8"))
-        except Exception:
+    with _TRAVA:
+        if not os.path.exists(IDX):
             return []
-    return []
+        return json.load(open(IDX, encoding="utf-8"))  # ilegível = exceção: quem chama não sobrescreve
 
 
 def _save(d):
-    json.dump(d, open(IDX, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    with _TRAVA:
+        tmp = IDX + ".tmp"
+        json.dump(d, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        if os.path.exists(IDX):
+            shutil.copy2(IDX, IDX + ".bak")
+        os.replace(tmp, IDX)
 
 
 def tokens(prompt):
@@ -137,12 +146,13 @@ def buscar_semantico(prompt_cena, dur, idx_cena=None, usados_run=None):
 
 
 def usar(clip_id):
-    banco = _load()
-    for c in banco:
-        if c["id"] == clip_id:
-            c["usos"] = c.get("usos", 0) + 1
-            c["ultimo_uso"] = datetime.date.today().isoformat()
-    _save(banco)
+    with _TRAVA:
+        banco = _load()
+        for c in banco:
+            if c["id"] == clip_id:
+                c["usos"] = c.get("usos", 0) + 1
+                c["ultimo_uso"] = datetime.date.today().isoformat()
+        _save(banco)
 
 
 def _hash(fp):
@@ -185,14 +195,13 @@ def adicionar(prompt_cena, dur, filepath, tema="", modelo="veo", usd=0.0):
     """Copia o clip pro banco local + SOBE pro storage durável + indexa. Dedup por conteúdo (hash)."""
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return None
-    banco = _load()
     hid = _hash(filepath)
-    if any(c.get("hash") == hid for c in banco):
+    if any(c.get("hash") == hid for c in _load()):
         return None  # clip idêntico já no banco
     dest = f"{BANCO_DIR}/{hid}.mp4"
     if not os.path.exists(dest):
         shutil.copy2(filepath, dest)
-    video_url = _subir_storage(hid, dest)  # durável na hora — nunca mais se perde
+    video_url = _subir_storage(hid, dest)  # durável na hora — nunca mais se perde (fora da trava: rede lenta)
     entry = {
         "id": hid, "hash": hid, "file": dest, "prompt": prompt_cena,
         "prompt_hash": _prompt_hash(prompt_cena),
@@ -200,8 +209,12 @@ def adicionar(prompt_cena, dur, filepath, tema="", modelo="veo", usd=0.0):
         "modelo": modelo, "usd": round(float(usd), 3), "video_url": video_url,
         "usos": 0, "criado": datetime.date.today().isoformat(),
     }
-    banco.append(entry)
-    _save(banco)
+    with _TRAVA:
+        banco = _load()
+        if any(c.get("hash") == hid for c in banco):
+            return None
+        banco.append(entry)
+        _save(banco)
     return entry
 
 

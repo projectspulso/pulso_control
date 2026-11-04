@@ -70,7 +70,13 @@ def atualizar_saldo_higgsfield():
 def set_render_status(p, estado, motivo=None):
     """Grava o estado do render no metadata pro APP mostrar por que o card está
     (ou não está) em EM_EDICAO. estados: renderizando | erro | aguardando_cenas."""
-    md = dict(p.get('metadata') or {})
+    # relê do banco: o `p` de quem chama pode ser de antes do PRONTO, e gravar o metadata velho por
+    # cima apagava video_url, pronto_em e caption de um vídeo já pronto
+    try:
+        atual = g._db('GET', '/rest/v1/pipeline_producao?id=eq.%s&select=metadata' % p['id'], schema='pulso_content')
+        md = dict((atual[0].get('metadata') if atual else None) or p.get('metadata') or {})
+    except Exception:
+        md = dict(p.get('metadata') or {})
     prev = md.get('render_status') or {}
     md['render_status'] = {
         'estado': estado,
@@ -257,6 +263,9 @@ def run(ideia_id=None):
 
     final = f"{d}/FINAL_{slug}.mp4"
     # RENDER — pula se o FINAL já existe (resumível: corte depois do render não re-gasta Veo)
+    if os.path.exists(final) and ffprobe_dur(final) <= 0:
+        log("FINAL existe mas não abre (montagem morta no meio) — apagando para renderizar de novo.")
+        os.remove(final)
     if os.path.exists(final) and os.path.getsize(final) > 0:
         log("FINAL já existe — pulando render, indo direto pro QC (resume).")
     else:
@@ -309,9 +318,8 @@ def run(ideia_id=None):
 
     # upload + PRONTO + OneDrive
     if not num:
-        allp = g._db('GET', '/rest/v1/pipeline_producao?select=metadata', schema='pulso_content') or []
-        nums = [int(x.get('metadata', {}).get('numero')) for x in allp if str((x.get('metadata') or {}).get('numero')).isdigit()]
-        num = (max(nums) if nums else 0) + 1
+        # a sequência do banco (073): max+1 repetiu o #246 três vezes
+        num = int(g._db('POST', '/rest/v1/rpc/proximo_numero_video', {}, schema='pulso_content'))
     FN = "%s_%03d.mp4" % (slug, num)
 
     # TETO DE 50 MB DO STORAGE — a fila inteira parou por causa disto em 02/08 e ninguém viu.
@@ -364,9 +372,13 @@ def run(ideia_id=None):
     if info.get('transcricao'): nmd['transcricao'] = info['transcricao']
     nmd['pronto_em'] = datetime.datetime.now().isoformat(timespec='seconds')  # conta no teto de render do dia
     g._db('PATCH', '/rest/v1/pipeline_producao?id=eq.%s' % p['id'], {'status': 'PRONTO_PUBLICACAO', 'metadata': nmd}, schema='pulso_content')
-    dest = f"{ONE}/video_{num:03d}_{slug}"; os.makedirs(dest, exist_ok=True)
-    open(f"{dest}/FINAL_{slug}.mp4", "wb").write(data)
-    log("PRONTO #%d %s (%dMB) -> PRONTO_PUBLICACAO + OneDrive" % (num, slug, len(data) // 1024 // 1024))
+    dest = f"{ONE}/video_{num:03d}_{slug}"
+    try:  # o vídeo já está PRONTO: falha do OneDrive não pode virar "erro" no item
+        os.makedirs(dest, exist_ok=True)
+        open(f"{dest}/FINAL_{slug}.mp4", "wb").write(data)
+        log("PRONTO #%d %s (%dMB) -> PRONTO_PUBLICACAO + OneDrive" % (num, slug, len(data) // 1024 // 1024))
+    except Exception as e:
+        log("PRONTO #%d %s -> PRONTO_PUBLICACAO; AVISO cópia do OneDrive falhou: %s" % (num, slug, str(e)[:120]))
     # thumb (capa) do vídeo final -> Supabase + metadata.thumb
     try:
         subprocess.run(["python", "D:/tmp/video_thumbs.py", f"{dest}/FINAL_{slug}.mp4", str(num)], capture_output=True, timeout=120)
