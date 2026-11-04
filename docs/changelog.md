@@ -9,6 +9,13 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Corrigido (03/11) — revisão completa do código (rotas, motor, telas)
+- Segurança: callbacks OAuth do YouTube e do TikTok exigem sessão e state de uso único (qualquer um trocava o token de publicação); gerar-roteiro por ideia, financeiro-config e banco-clips sem guarda.
+- Publicação: trava atômica por (ideia, rede) (migration 076) e registro conferido; container do IG já publicado é achado pela legenda; agendador corta o prazo pelo que resta do teto.
+- Coleta: rodízio dos vídeos antigos no YouTube (62 nunca eram lidos); stories e conta do IG não gravam dia vazio quando a Graph falha; auto-funil para em vez de rodar com consulta vazia.
+- Motor: índice do banco de clips perdia entradas por gravação simultânea (132 de 3.524) — trava, escrita atômica e 1.570 entradas reconstruídas; Veo pede o teto e lança o gasto por geração; guard filtra o gasto do dia no banco e bloqueia sem saldo; worker não apaga video_url de vídeo pronto, refaz FINAL quebrado e numera pela sequência; make_video apaga os temporários (61 GB) e grava em .parcial; saída de subprocesso em UTF-8.
+- Telas: "Reverter aprovação" do roteiro gravava status inexistente; "hoje" em UTC virava o dia seguinte depois das 21h (Hoje, linha de produção, calendário, ficha, roteador); erros do eslint em Trends e Analytics.
+
 ### Corrigido (03/11) — 504 do YouTube e do Instagram na coleta
 - Desde 01/11 as fatias youtube e instagram morriam antes de gravar. O prazo contava de depois das consultas e da listagem do TikTok, que rodava em toda fatia. Agora conta do início da chamada e a fatia de outra rede não lista o TikTok. Medido em produção: YouTube 39s (181 lidos, 62 para a próxima rodada), Instagram 30s (247 lidos).
 
