@@ -136,7 +136,7 @@ export interface Database {
           versao: number
           conteudo_md: string
           duracao_estimado_segundos: number | null
-          status: 'RASCUNHO' | 'REVISAO' | 'APROVADO' | 'PRODUCAO' | 'CONCLUIDO'
+          status: 'RASCUNHO' | 'EM_REVISAO' | 'APROVADO' | 'PUBLICADO' | 'ARQUIVADO'
           linguagem: string | null
           criado_por: string | null
           revisado_por: string | null

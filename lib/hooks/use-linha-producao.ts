@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { supabase } from '@/lib/supabase/client'
+import { diaBRT, diaUtcNaive } from '@/lib/datas'
 
 /**
  * LINHA DE PRODUÇÃO — o ritmo diário da fábrica num hook só.
@@ -102,10 +103,10 @@ export function useLinhaProducao() {
         filaRender: porStatus('EM_EDICAO').length,
         prontos,
         publicadosHoje: new Set(
-          (pubQ.data || []).filter((p) => (p.data_publicacao || '').slice(0, 10) === hoje).map((p) => p.ideia_id),
+          (pubQ.data || []).filter((p) => diaBRT(p.data_publicacao) === hoje).map((p) => p.ideia_id),
         ).size,
-        roteirosHoje: (rotQ.data || []).filter((r) => (r.created_at || '').slice(0, 10) === hoje).length,
-        audiosHoje: (audQ.data || []).filter((a) => (a.created_at || '').slice(0, 10) === hoje).length,
+        roteirosHoje: (rotQ.data || []).filter((r) => diaUtcNaive(r.created_at) === hoje).length,
+        audiosHoje: (audQ.data || []).filter((a) => diaBRT(a.created_at) === hoje).length,
         audioPausado: audioGerado >= cfg.buffer_audio_max,
         fila10,
         custoLoteBrl,

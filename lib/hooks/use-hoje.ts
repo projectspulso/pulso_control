@@ -103,7 +103,7 @@ export function useHoje() {
           .schema('pulso_content')
           .from('metricas_publicacao')
           .select('ideia_id, plataforma, data_publicacao')
-          .gte('data_publicacao', HOJE_ISO()),
+          .gte('data_publicacao', `${HOJE_ISO()}T00:00:00-03:00`),
         supabase.schema('pulso_content').from('roteiros').select('ideia_id, nota_hook'),
         supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle(),
         supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'kwai_backfill').maybeSingle(),

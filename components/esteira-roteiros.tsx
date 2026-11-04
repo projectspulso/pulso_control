@@ -204,8 +204,8 @@ export function EsteiraRoteiros() {
                 <option value="RASCUNHO">RASCUNHO</option>
                 <option value="EM_REVISAO">EM_REVISAO</option>
                 <option value="APROVADO">APROVADO</option>
-                <option value="REJEITADO">REJEITADO</option>
-                <option value="EM_PRODUCAO">EM_PRODUCAO</option>
+                <option value="PUBLICADO">PUBLICADO</option>
+                <option value="ARQUIVADO">ARQUIVADO</option>
               </select>
             </div>
 

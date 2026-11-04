@@ -110,6 +110,7 @@ export default function AnalyticsPage() {
   const [filtros, setFiltros] = useState<BiFiltros>({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 })
   const [aba, setAba] = useState<'geral' | 'conteudo' | 'qualidade' | 'audiencia' | 'crescimento' | 'marcos' | 'flops' | 'financeiro' | 'biblioteca' | 'dados'>('geral')
   const [drill, setDrill] = useState<string | null>(null)
+  const [agora] = useState(() => Date.now())  // janelas de período: Date.now() no render é impuro
   const { data, isLoading, isError, refetch } = useBi(filtros)
   const { data: decisao } = useDecisao()
   const { data: statusContas } = useStatusContas()
@@ -124,7 +125,7 @@ export default function AnalyticsPage() {
     const comentarios = data.publicacoes.reduce((a, p) => a + p.comentarios, 0)
     const shares = data.publicacoes.reduce((a, p) => a + p.shares + p.saves, 0)
     // custo REAL vindo do ledger (mesma fonte do /financeiro), respeitando o período do filtro
-    const limite = filtros.periodoDias > 0 ? Date.now() - filtros.periodoDias * 864e5 : 0
+    const limite = filtros.periodoDias > 0 ? agora - filtros.periodoDias * 864e5 : 0
     const lancProducao = (fin?.lancamentos || []).filter(
       (l) => l.servico !== 'topup' && l.servico !== 'assinatura' && (!limite || new Date(l.data).getTime() >= limite)
     )
@@ -149,7 +150,7 @@ export default function AnalyticsPage() {
       reusos,
       receita: fin?.receitaMesBRL ?? 0, // live de pulso_content.receitas (migration 057); zero até o 1º gate abrir
     }
-  }, [data, fin, filtros.periodoDias, catalogoClips])
+  }, [data, fin, filtros.periodoDias, catalogoClips, agora])
 
   const rankingVertical = useMemo(() => {
     if (!data) return []
@@ -204,13 +205,13 @@ export default function AnalyticsPage() {
   const views90dPorRede = useMemo(() => {
     const m = new Map<string, number>()
     if (!data) return m
-    const limite = Date.now() - 90 * 864e5
+    const limite = agora - 90 * 864e5
     for (const p of data.publicacoes) {
       if (!p.dataPublicacao || new Date(p.dataPublicacao).getTime() < limite) continue
       m.set(p.plataforma, (m.get(p.plataforma) || 0) + p.views)
     }
     return m
-  }, [data])
+  }, [data, agora])
 
   const { data: pinterest } = usePinterest()
   const gatesCalc = useMemo(() => {

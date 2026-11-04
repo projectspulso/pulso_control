@@ -15,6 +15,7 @@ import { motivoDoTema, papelDoTema } from '@/lib/decisor/temas'
 import { respostaPronta } from '@/lib/automation/verificar-fontes'
 import { useTemasMedidos } from '@/lib/hooks/use-temas-medidos'
 import { PublicarPorRede } from '@/components/publicar-por-rede'
+import { hojeBRT } from '@/lib/datas'
 
 /**
  * A FICHA DO VÍDEO — um endereço só para a vida inteira dele: ideia → roteiro → áudio → cenas →
@@ -85,7 +86,7 @@ function Copiar({ texto }: { texto: string }) {
 
 /** A trilha: cada etapa acesa com a data em que aconteceu. É o "desde a ideia" numa linha. */
 function Trilha({ d }: { d: VideoDetalhe }) {
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeBRT()
   const publicadoEm = d.redes
     .map((r) => r.dataPublicacao)
     .filter(Boolean)
@@ -141,7 +142,7 @@ export default function FichaDoVideo({ params }: { params: Promise<{ id: string 
   const corTema = papel === 'sorteia' ? 'bg-emerald-500/12 text-emerald-300'
     : papel === 'morto' ? 'bg-red-500/12 text-red-300' : 'bg-zinc-700/40 text-zinc-400'
   const jaPublicou = d.redes.some((r) => r.dataPublicacao)
-  const hojeISO = new Date().toISOString().slice(0, 10)
+  const hojeISO = hojeBRT()
 
   return (
     <div className="space-y-3.5 p-6">

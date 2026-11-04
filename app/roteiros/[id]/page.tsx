@@ -203,7 +203,7 @@ export default function RoteiroDetalhesPage({
     try {
       const metadataAtual = toRecord(roteiro.metadata)
       const updates: RoteiroUpdate = {
-        status: 'REVISAO',
+        status: 'EM_REVISAO',
         metadata: {
           ...metadataAtual,
           motivo_rejeicao: motivoRejeicao.trim() || 'Nao especificado',
@@ -585,7 +585,7 @@ export default function RoteiroDetalhesPage({
                       Reverter aprovacao
                     </button>
                   </div>
-                ) : roteiro.status === 'REVISAO' ? (
+                ) : roteiro.status === 'EM_REVISAO' ? (
                   <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
                     <div className="text-sm font-medium text-red-400">
                       Roteiro em revisao
@@ -824,11 +824,13 @@ function ValidationRow({
 function StatusBadge({ status }: { status: string | null }) {
   const statusConfig: Record<string, { label: string; color: string }> = {
     RASCUNHO: { label: 'Rascunho', color: 'bg-zinc-600' },
-    REVISAO: { label: 'Em revisao', color: 'bg-yellow-600' },
+    EM_REVISAO: { label: 'Em revisao', color: 'bg-yellow-600' },
     APROVADO: { label: 'Aprovado', color: 'bg-green-600' },
     EM_PRODUCAO: { label: 'Em producao', color: 'bg-purple-600' },
     PRODUCAO: { label: 'Em producao', color: 'bg-purple-600' },
     CONCLUIDO: { label: 'Concluido', color: 'bg-cyan-600' },
+    PUBLICADO: { label: 'Publicado', color: 'bg-cyan-600' },
+    ARQUIVADO: { label: 'Arquivado', color: 'bg-zinc-700' },
   }
 
   const config = (status && statusConfig[status]) || { label: 'Indefinido', color: 'bg-zinc-600' }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
@@ -61,10 +61,37 @@ const ACENTO = {
   baixo: { borda: 'border-l-zinc-600', badge: 'bg-zinc-500/15 text-zinc-400 ring-zinc-500/30', rotulo: 'Baixo' },
 }
 
+function ResultadoBox({ res }: { res: GerarResultado }) {
+  if (res.error) return <p className="mt-2 text-sm text-red-300">Erro: {res.error}</p>
+  if (res.descartado) return <p className="mt-2 text-sm text-zinc-400">Descartado: {res.motivo}</p>
+  if (res.duplicada) return <p className="mt-2 text-sm text-amber-300">Ideia parecida já existe.</p>
+  if (res.ideia)
+    return (
+      <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">
+        <div className="flex items-center gap-2 font-semibold text-emerald-300">
+          <CheckCircle2 className="h-4 w-4" /> Ideia criada
+        </div>
+        <p className="mt-1 text-zinc-200">{res.ideia.titulo}</p>
+        {res.precisa_revisao && (
+          <p className="mt-1 flex items-center gap-1 text-amber-300">
+            <AlertTriangle className="h-3.5 w-3.5" /> Revisão humana: {res.motivo_revisao}
+          </p>
+        )}
+        <Link
+          href={`/ideias/${res.ideia.id}`}
+          className="mt-2 inline-flex items-center gap-1 text-rose-300 hover:text-rose-200"
+        >
+          Abrir ideia <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+    )
+  return null
+}
+
 export default function TrendsPage() {
   const [assuntoManual, setAssuntoManual] = useState('')
   const [resultados, setResultados] = useState<Record<string, GerarResultado>>({})
-  const [nivel, setNivel] = useState<NivelEncaixe>('todos')
+  const [nivelEscolhido, setNivel] = useState<NivelEncaixe | null>(null)
   const [fonte, setFonte] = useState<string>('todas')
   const [ocultarSensiveis, setOcultarSensiveis] = useState(false)
   const [busca, setBusca] = useState('')
@@ -118,14 +145,8 @@ export default function TrendsPage() {
   const trends = useMemo(() => data || [], [data])
   const fontes = useMemo(() => Array.from(new Set(trends.map((t) => t.fonte))), [trends])
 
-  // #2 — ao carregar, abre já filtrado em "Alto 7+" (se houver algum); senão fica em Todos
-  const autoNivel = useRef(false)
-  useEffect(() => {
-    if (!autoNivel.current && trends.length) {
-      autoNivel.current = true
-      if (trends.some((t) => t.encaixe >= 7)) setNivel('alto')
-    }
-  }, [trends])
+  // #2 — abre já filtrado em "Alto 7+" (se houver algum) até o dono escolher outro nível
+  const nivel: NivelEncaixe = nivelEscolhido ?? (trends.some((t) => t.encaixe >= 7) ? 'alto' : 'todos')
 
   const contagem = useMemo(
     () => ({
@@ -162,34 +183,8 @@ export default function TrendsPage() {
     )
   }
 
-  function ResultadoBox({ res }: { res: GerarResultado }) {
-    if (res.error) return <p className="mt-2 text-sm text-red-300">Erro: {res.error}</p>
-    if (res.descartado) return <p className="mt-2 text-sm text-zinc-400">Descartado: {res.motivo}</p>
-    if (res.duplicada) return <p className="mt-2 text-sm text-amber-300">Ideia parecida já existe.</p>
-    if (res.ideia)
-      return (
-        <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">
-          <div className="flex items-center gap-2 font-semibold text-emerald-300">
-            <CheckCircle2 className="h-4 w-4" /> Ideia criada
-          </div>
-          <p className="mt-1 text-zinc-200">{res.ideia.titulo}</p>
-          {res.precisa_revisao && (
-            <p className="mt-1 flex items-center gap-1 text-amber-300">
-              <AlertTriangle className="h-3.5 w-3.5" /> Revisão humana: {res.motivo_revisao}
-            </p>
-          )}
-          <Link
-            href={`/ideias/${res.ideia.id}`}
-            className="mt-2 inline-flex items-center gap-1 text-rose-300 hover:text-rose-200"
-          >
-            Abrir ideia <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-      )
-    return null
-  }
 
-  const ChipNivel = ({ v, label, count }: { v: NivelEncaixe; label: string; count?: number }) => (
+  const chipNivel = ({ v, label, count }: { v: NivelEncaixe; label: string; count?: number }) => (
     <button
       onClick={() => setNivel(v)}
       className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
@@ -252,10 +247,10 @@ export default function TrendsPage() {
 
         {/* FILTROS */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <ChipNivel v="todos" label="Todos" count={trends.length} />
-          <ChipNivel v="alto" label="🟢 Alto 7+" count={contagem.alto} />
-          <ChipNivel v="medio" label="🟡 Médio" count={contagem.medio} />
-          <ChipNivel v="baixo" label="⚪ Baixo" count={contagem.baixo} />
+          {chipNivel({ v: 'todos', label: 'Todos', count: trends.length })}
+          {chipNivel({ v: 'alto', label: '🟢 Alto 7+', count: contagem.alto })}
+          {chipNivel({ v: 'medio', label: '🟡 Médio', count: contagem.medio })}
+          {chipNivel({ v: 'baixo', label: '⚪ Baixo', count: contagem.baixo })}
           <span className="mx-1 h-5 w-px bg-zinc-700/50" />
           <select
             value={fonte}

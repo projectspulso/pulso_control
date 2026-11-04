@@ -27,6 +27,7 @@ import { CalendarioAgenda, SlotsTravando, type ItemAgenda } from '@/components/a
 import { AutoAgendar } from '@/components/auto-agendar'
 import { REDES_API_SEGURAS } from '@/lib/publicacao/redes-api'
 import { useAprendizados, REDE_LABEL, REDE_EMOJI } from '@/lib/hooks/use-aprendizados'
+import { hojeBRT } from '@/lib/datas'
 
 type FeedbackTone = 'success' | 'error' | 'info'
 
@@ -78,7 +79,7 @@ function getFeedbackClasses(tone: FeedbackTone) {
  */
 function AbaCalendario() {
   const { data, isLoading } = useAgenda(28)
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeBRT()
 
   const itens: ItemAgenda[] = useMemo(() => {
     if (!data) return []

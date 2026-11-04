@@ -44,6 +44,15 @@ export function diaBRT(ts: string | null | undefined): string | null {
 }
 
 /**
+ * O dia BRT de um timestamp SEM fuso gravado em UTC (`roteiros.created_at`, `ideias.created_at`:
+ * default `timezone('utc', now())`). Sem o "Z", o navegador lê como hora local e erra depois das 21h.
+ */
+export function diaUtcNaive(ts: string | null | undefined): string | null {
+  if (!ts) return null
+  return diaBRT(/(Z|[+-]\d\d:?\d\d)$/.test(ts) ? ts : `${ts}Z`)
+}
+
+/**
  * O dia de um timestamp SEM fuso (o caso de `pipeline_producao.data_publicacao_planejada`).
  * Aqui o valor JÁ está em Brasília: converter de novo tiraria três horas que não existem.
  */

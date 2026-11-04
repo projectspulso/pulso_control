@@ -28,6 +28,7 @@
 
 import { classificarTema, motivoDoTema, papelDoTema, type Tema, type TemasMedidos } from '@/lib/decisor/temas'
 import { podeOcuparVaga, somarDias, type EstadoTeste, type RegrasTeste } from './teste-temas'
+import { hojeBRT } from '@/lib/datas'
 
 export type Faixa = 'perene' | 'sazonal'
 
@@ -82,7 +83,7 @@ const DIAS_ATE_PRONTO: Record<CandidatoAgenda['estagio'], number> = { video: 0, 
 const PENALIDADE_NAO_DA_TEMPO = 60 // maior que o bônus de tema: estar pronto vem antes de ser bom
 
 function hojeISO() {
-  return new Date().toISOString().slice(0, 10)
+  return hojeBRT()
 }
 
 function diasEntre(deISO: string, ateISO: string): number | null {
