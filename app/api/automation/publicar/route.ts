@@ -80,8 +80,18 @@ async function publicarInstagram(videoUrl: string, caption: string, token: strin
   let status: string | undefined = 'IN_PROGRESS'
   while (Date.now() < deadlineMs) {
     status = await igStatusContainer(containerId, token)
-    if (status === 'FINISHED' || status === 'ERROR') break
+    if (status === 'FINISHED' || status === 'ERROR' || status === 'PUBLISHED') break
     await new Promise((res) => setTimeout(res, 5000))
+  }
+  // PUBLISHED: a chamada anterior publicou e morreu antes de registrar. Criar outro container
+  // publicaria de novo; aqui acha o post pela legenda entre os mais recentes e devolve ele.
+  if (status === 'PUBLISHED') {
+    const recentes = await fetch(`${GRAPH}/${igUserId}/media?fields=id,permalink,caption&limit=10&access_token=${token}`).then((r) => r.json())
+    const achado = ((recentes?.data || []) as Array<{ id: string; permalink?: string; caption?: string }>)
+      .find((m) => (m.caption || '').trim() === caption.trim())
+    if (!achado) throw new Error('Container IG já publicado, post não achado pela legenda: conferir no Instagram antes de repetir')
+    await igSetPendente(supabase, pipelineId, meta, null)
+    return { post_id: achado.id, url: achado.permalink || 'https://www.instagram.com/pulsoprojects/' }
   }
   if (status === 'ERROR') { await igSetPendente(supabase, pipelineId, meta, null); throw new Error('Container IG com erro') }
   if (status !== 'FINISHED') throw new Error(IG_PROCESSANDO) // container salvo → retry finaliza

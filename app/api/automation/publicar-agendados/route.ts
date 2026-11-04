@@ -81,6 +81,7 @@ const TETO_PADRAO_POR_DIA = 1
 const JANELA_ATRASO_HORAS = 12
 
 async function publicarAgendados(request: NextRequest) {
+  const inicio = Date.now()
   const denied = await guardApi(request)
   if (denied) return denied
 
@@ -307,7 +308,11 @@ async function publicarAgendados(request: NextRequest) {
     if (fbNesteVideo || testeHoje?.redes.includes('facebook')) ORDEM.push('facebook')
     const porRede: string[] = []
     for (const rede of ORDEM) {
-      const prazo = ORCAMENTO_MS[rede] ?? 20_000
+      // os orçamentos somam 62s com o Facebook, fora as consultas iniciais: corta pelo que resta do
+      // teto (60s menos 8s para o log). Rede sem tempo fica para a próxima rodada, que a varredura pega.
+      const resta = maxDuration * 1000 - 8_000 - (Date.now() - inicio)
+      if (resta < 5_000) { porRede.push(`${rede}:ADIADO(sem tempo nesta rodada)`); continue }
+      const prazo = Math.min(ORCAMENTO_MS[rede] ?? 20_000, resta)
       try {
         const r = await fetch(`${origin}/api/automation/publicar`, {
           method: 'POST',

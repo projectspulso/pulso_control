@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
 
   const ativos = await fetch(`${GRAPH}/${ig}/stories?fields=id,timestamp&access_token=${token}`).then((r) => r.json())
   const lidos: Array<Record<string, unknown>> = []
+  // erro da Graph não é "dia sem story": a métrica de story vive 24h, perdida em silêncio não volta
+  const erroStories = ativos?.error ? String(ativos.error.message || 'erro').slice(0, 160) : null
   for (const s of (ativos?.data || []) as Array<{ id: string; timestamp: string }>) {
     const m = await fetch(`${GRAPH}/${s.id}/insights?metric=views,reach,replies,shares,total_interactions,follows,profile_visits&access_token=${token}`).then((r) => r.json())
     const nav = await fetch(`${GRAPH}/${s.id}/insights?metric=navigation&breakdown=story_navigation_action_type&access_token=${token}`).then((r) => r.json())
@@ -53,7 +55,9 @@ export async function POST(request: NextRequest) {
   const { data: cfg } = await supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'ig_conta_diaria').maybeSingle()
   let hist: Array<Record<string, unknown>> = []
   try { hist = (typeof cfg?.valor === 'string' ? JSON.parse(cfg.valor) : cfg?.valor)?.historico || [] } catch { hist = [] }
-  hist = hist.filter((h) => h.data !== ontem)
+  // falha ao ler a conta não pode trocar o dia já gravado por uma linha vazia
+  const contaOk = Array.isArray(conta?.data) && conta.data.length > 0
+  if (contaOk) hist = hist.filter((h) => h.data !== ontem)
   // LINHA DE BASE: sem os dias ANTES do primeiro story (03/10) não há com o que comparar. Na primeira
   // rodada, busca os 28 dias anteriores (a API aceita no máximo ~30 dias para trás), um por um.
   if (hist.length < 20) {
@@ -68,12 +72,14 @@ export async function POST(request: NextRequest) {
       if (r?.data) hist.push(linha)
     }
   }
-  hist = [...hist, dia].sort((a, b) => String(a.data).localeCompare(String(b.data))).slice(-180)
+  hist = [...hist, ...(contaOk ? [dia] : [])].sort((a, b) => String(a.data).localeCompare(String(b.data))).slice(-180)
   await supabase.schema('pulso_core').from('configuracoes')
     .upsert({ chave: 'ig_conta_diaria', valor: JSON.stringify({ historico: hist }) }, { onConflict: 'chave' })
 
   await supabase.schema('pulso_content').from('logs_workflows').insert({
-    workflow_name: 'COLETAR_STORIES', status: lidos.length ? 'sucesso' : 'ocioso', detalhes: { stories: lidos, conta: dia },
+    workflow_name: 'COLETAR_STORIES',
+    status: erroStories || !contaOk ? 'erro' : lidos.length ? 'sucesso' : 'ocioso',
+    detalhes: { stories: lidos, conta: dia, erro_stories: erroStories, erro_conta: contaOk ? null : conta?.error?.message || 'sem dados' },
   })
-  return NextResponse.json({ ok: true, stories: lidos, conta: dia })
+  return NextResponse.json({ ok: !erroStories && contaOk, stories: lidos, conta: dia, erro_stories: erroStories })
 }

@@ -29,7 +29,7 @@ async function autoFunil(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
 
-  const [{ data: ideias }, { data: roteiros }, { data: pipe }, { data: canais }, gradeRes, { data: cfgRow }] = await Promise.all([
+  const consultas = await Promise.all([
     supabase.schema('pulso_content').from('ideias').select('id, titulo, canal_id, status, prioridade'),
     supabase.schema('pulso_content').from('roteiros').select('ideia_id'),
     supabase.schema('pulso_content').from('pipeline_producao').select('ideia_id, status'),
@@ -37,6 +37,16 @@ async function autoFunil(request: NextRequest) {
     supabase.from('vw_agenda_semanal').select('dia_semana, faixa, canal_nome').eq('ativo', true),
     supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'linha_producao').maybeSingle(),
   ])
+  // consulta que falha vira lista vazia: sem roteiros, ideia com roteiro volta a ser alvo; sem pipeline,
+  // o déficit infla. Melhor não rodar do que gerar roteiro duplicado ou no canal errado.
+  const falha = consultas.find((q: { error?: { message: string } | null }) => q.error)
+  if (falha) {
+    await supabase.schema('pulso_content').from('logs_workflows').insert({
+      workflow_name: 'AUTO_FUNIL', status: 'erro', detalhes: { motivo: `consulta falhou: ${falha.error.message}` },
+    }).then(() => {}, () => {})
+    return NextResponse.json({ error: `auto-funil não rodou: consulta falhou (${falha.error.message})` }, { status: 500 })
+  }
+  const [{ data: ideias }, { data: roteiros }, { data: pipe }, { data: canais }, gradeRes, { data: cfgRow }] = consultas
   // cap diário vem da linha de produção (fallback = MAX_POR_RUN)
   let maxPorRun = MAX_POR_RUN
   try { if (cfgRow?.valor) maxPorRun = JSON.parse(cfgRow.valor).roteiros_dia_max ?? MAX_POR_RUN } catch { /* default */ }
