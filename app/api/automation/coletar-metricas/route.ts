@@ -45,6 +45,9 @@ async function comPool<T>(itens: T[], limite: number, fn: (item: T) => Promise<v
 }
 
 async function coletar(request: NextRequest) {
+  // O prazo conta daqui, do inicio da chamada. Ate 03/11 contava de `agora`, que so nasce depois
+  // das consultas e da listagem do TikTok: 10-15s que a Vercel cobrava e o prazo nao via.
+  const inicio = Date.now()
   const denied = await guardApi(request)
   if (denied) return denied
 
@@ -159,7 +162,7 @@ async function coletar(request: NextRequest) {
 
   // YouTube Analytics OAuth — token p/ retenção (audienceWatchRatio). null = não conectado.
   let ytAnalyticsToken: string | null = null
-  try {
+  if (ytIds.length > 0) try {
     ytAnalyticsToken = await getYoutubeAccessToken()
   } catch {
     ytAnalyticsToken = null
@@ -171,7 +174,8 @@ async function coletar(request: NextRequest) {
   // TikTok via Display API (video.list) — token OAuth guardado em pulso_core.configuracoes
   const ttStats = new Map<string, { views: number; likes: number; comentarios: number; shares: number }>()
   const ttVideos: Array<{ id: string; title: string; view_count: number; like_count: number; comment_count: number; share_count: number; share_url: string }> = []
-  try {
+  // fatia de outra rede nao lista o TikTok: eram ate 15 paginas gastas no prazo do YouTube e do Instagram
+  if (!redeAlvo || redeAlvo === 'tiktok') try {
     const { data: cfg } = await supabase
       .schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'tiktok_oauth').single()
     if (cfg?.valor) {
@@ -234,7 +238,7 @@ async function coletar(request: NextRequest) {
   // guardado; o endpoint de status devolve o id do post real assim que o dono finaliza. Resolvido
   // aqui, o vídeo nunca chega a ser órfão — e o matcher abaixo vira só rede de segurança para o
   // que foi publicado fora do app.
-  try {
+  if (!redeAlvo || redeAlvo === 'tiktok') try {
     const rascunhos = await resolverRascunhosTikTok(supabase)
     if (rascunhos.resolvidos) avisos.push(`TikTok: ${rascunhos.resolvidos} rascunho(s) resolvido(s) pelo publish_id`)
     if (rascunhos.pendentes) avisos.push(`TikTok: ${rascunhos.pendentes} rascunho(s) ainda não finalizado(s) no celular`)
@@ -624,11 +628,11 @@ async function coletar(request: NextRequest) {
   let igPulados = 0
   await Promise.all([
     comPool(pubsResto, 16, async (p) => {
-      if (Date.now() - agora.getTime() > PRAZO_MS) { restoPulados++; return }
+      if (Date.now() - inicio > PRAZO_MS) { restoPulados++; return }
       await processarPub(p)
     }),
     comPool(igDaVez, 8, async (p) => {
-      if (Date.now() - agora.getTime() > PRAZO_MS) { igPulados++; return }
+      if (Date.now() - inicio > PRAZO_MS) { igPulados++; return }
       await processarPub(p)
       igLidos++
     }),
@@ -656,7 +660,7 @@ async function coletar(request: NextRequest) {
     coletados: resultados.filter((r) => r.status === 'SUCESSO').length,
     erros: resultados.filter((r) => r.status === 'ERRO').length,
     pulados_por_prazo: restoPulados + igPulados,
-    duracao_ms: Date.now() - agora.getTime(),
+    duracao_ms: Date.now() - inicio,
   }
   // Cron nunca falha em silencio: toda rodada deixa rastro, inclusive a que nao coletou nada.
   await supabase.schema('pulso_content').from('logs_workflows').insert({
@@ -673,7 +677,7 @@ async function coletar(request: NextRequest) {
     rede: resumo.rede,
     pulados_por_prazo: resumo.pulados_por_prazo,
     total: publicacoes.length,
-    duracao_ms: Date.now() - agora.getTime(),
+    duracao_ms: Date.now() - inicio,
     coletados: resultados.filter((r) => r.status === 'SUCESSO').length,
     manuais: resultados.filter((r) => r.status === 'MANUAL').length,
     erros: resultados.filter((r) => r.status === 'ERRO').length,
