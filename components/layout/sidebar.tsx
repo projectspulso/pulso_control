@@ -19,6 +19,7 @@ import {
   Workflow,
   Library,
   X,
+  History,
 } from 'lucide-react'
 
 import { getSupabaseBrowser } from '@/lib/supabase/browser'
@@ -46,6 +47,8 @@ const navigation = [
   // Trilha separada dos Shorts (série de vídeos longos — rumo às 3.000h do YPP)
   { name: 'Central de Publicação', href: '/publicar', icon: Send, badge: 'ai', soAdmin: false },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null, soAdmin: false },
+  // a história do PULSO por assunto; fonte das fichas de episódio do Limelight (04/11/2026)
+  { name: 'Bastidores', href: '/bastidores', icon: History, badge: null, soAdmin: false },
   { name: 'Configurações', href: '/settings', icon: Settings, badge: null, soAdmin: false },
 ]
 
