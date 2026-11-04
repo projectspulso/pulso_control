@@ -68,12 +68,12 @@ export default function BastidoresPage() {
                   </span>
                   <Link href={`/bastidores/${a.slug}`}
                     className="group flex flex-col overflow-hidden rounded-2xl border border-(--pulso-border) bg-(--pulso-surface) transition-colors hover:border-(--pulso-action)/50 sm:flex-row">
-                    <div className="aspect-video shrink-0 bg-(--pulso-surface-raised) sm:aspect-auto sm:w-56">
+                    <div className="relative h-36 shrink-0 bg-(--pulso-surface-raised) sm:h-auto sm:min-h-28 sm:w-56">
                       {a.capa ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={a.capa} alt="" className="h-full w-full object-cover" loading="lazy" />
+                        <img src={a.capa} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
                       ) : (
-                        <div className="flex h-full min-h-28 items-center justify-center">
+                        <div className="absolute inset-0 flex items-center justify-center">
                           <T.icone className={`h-8 w-8 opacity-40 ${T.cor}`} />
                         </div>
                       )}
