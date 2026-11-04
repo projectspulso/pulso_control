@@ -9,6 +9,15 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (04/11) — aba Controle no Analytics
+- Vídeo a vídeo e rede a rede: views por rede, total, alertas (rede faltando, sem leitura há 72h, 0 views em 3 dias), busca, filtro e exportação CSV para o kit de mídia e os Bastidores.
+- Saúde da coleta por rede e alertas gerais (coleta parada, prints do Kwai faltando, vídeo agendado que não saiu).
+- Barras de views ganhas por dia, semana, mês e ano, com filtro de rede e vertical (view `pulso_analytics.v_ganho_diario`, migration 077).
+
+### Corrigido (04/11) — travas de qualidade
+- Certificado v3: data do render vem do arquivo no ar (remontagem abortada regravava o ledger e o #219 de 24/09 passava); sem ledger, sem data ou com clipe não checado pelo filtro, barra.
+- QC reprova quando a transcrição falha (antes passava sem conferir fala × roteiro).
+
 ### Corrigido (03/11) — revisão completa do código (rotas, motor, telas)
 - Segurança: callbacks OAuth do YouTube e do TikTok exigem sessão e state de uso único (qualquer um trocava o token de publicação); gerar-roteiro por ideia, financeiro-config e banco-clips sem guarda.
 - Publicação: trava atômica por (ideia, rede) (migration 076) e registro conferido; container do IG já publicado é achado pela legenda; agendador corta o prazo pelo que resta do teto.
