@@ -9,6 +9,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (04/11) — Bastidores: linha do tempo por assunto
+- `/bastidores`: cards por assunto agrupados por mês, filtro por tipo; `/bastidores/[assunto]`: números da época com data, imagens do app, vídeos citados, fontes, episódio e anterior/próximo. Aprovar, editar texto e anexar imagem pela própria página.
+- Banco: `bastidores_assuntos` (078), bucket privado `bastidores` com URL assinada (078/080), rascunhos automáticos diários de degraus de 100 mil views e vídeos acima de 3 mil numa rede (079, pg_cron 08h).
+- 25 assuntos de 04/09 a 04/11 reconstituídos do diário, do changelog e das sessões (só com fonte) + 23 automáticos, todos como rascunho.
+
 ### Adicionado (04/11) — aba Controle no Analytics
 - Vídeo a vídeo e rede a rede: views por rede, total, alertas (rede faltando, sem leitura há 72h, 0 views em 3 dias), busca, filtro e exportação CSV para o kit de mídia e os Bastidores.
 - Saúde da coleta por rede e alertas gerais (coleta parada, prints do Kwai faltando, vídeo agendado que não saiu).
