@@ -25,6 +25,20 @@
   --glow-purple: rgba(168, 85, 247, 0.3);
   --glow-pink: rgba(236, 72, 153, 0.3);
   --glow-blue: rgba(59, 130, 246, 0.3);
+
+  /* Papéis do painel de Analytics (R-014: componente lê token, não cor). Valores = a paleta que a
+     tela de Analytics já usa; quando o app migrar para a fundação DIGIAI, troca-se só aqui. */
+  --pulso-surface: #1a1922;
+  --pulso-surface-raised: #232231;
+  --pulso-border: rgba(255, 255, 255, 0.08);
+  --pulso-text: #f5f4f8;
+  --pulso-text-muted: #a3a0b0;
+  --pulso-text-subtle: #6e6b7b;
+  --pulso-action: #9085e9;
+  --pulso-on-action: #0f0e16;
+  --pulso-ok: #34d399;
+  --pulso-warn: #fbbf24;
+  --pulso-danger: #f87171;
 }
 
 @theme inline {

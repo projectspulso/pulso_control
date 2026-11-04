@@ -39,6 +39,7 @@ import {
   ModalDrill,
   CardPinterest,
 } from '@/components/analytics-cards'
+import { ControleVideosPanel } from '@/components/controle-videos-panel'
 import { ASSINATURAS_MENSAIS_BRL } from '@/lib/config/custos'
 import { GATES_MONETIZACAO } from '@/lib/config/monetizacao'
 import { usePinterest } from '@/lib/hooks/use-pinterest'
@@ -108,7 +109,7 @@ function NaoSegueFiltro({ filtros, motivo }: { filtros: BiFiltros; motivo: strin
 
 export default function AnalyticsPage() {
   const [filtros, setFiltros] = useState<BiFiltros>({ plataforma: 'todas', canalId: 'todos', periodoDias: 0 })
-  const [aba, setAba] = useState<'geral' | 'conteudo' | 'qualidade' | 'audiencia' | 'crescimento' | 'marcos' | 'flops' | 'financeiro' | 'biblioteca' | 'dados'>('geral')
+  const [aba, setAba] = useState<'geral' | 'controle' | 'conteudo' | 'qualidade' | 'audiencia' | 'crescimento' | 'marcos' | 'flops' | 'financeiro' | 'biblioteca' | 'dados'>('geral')
   const [drill, setDrill] = useState<string | null>(null)
   const [agora] = useState(() => Date.now())  // janelas de período: Date.now() no render é impuro
   const { data, isLoading, isError, refetch } = useBi(filtros)
@@ -422,6 +423,8 @@ export default function AnalyticsPage() {
         )}
 
         {/* ══════ CONTEÚDO ══════ */}
+        {aba === 'controle' && <ControleVideosPanel />}
+
         {aba === 'conteudo' && (
           <div className="space-y-3.5">
             <div className="grid gap-3.5 lg:grid-cols-2">
