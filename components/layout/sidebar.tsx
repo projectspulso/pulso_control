@@ -60,7 +60,8 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       {itens.map((item) => {
-        const isActive = pathname === item.href
+        // subpágina (/bastidores/[assunto]) acende o item do pai; '/' só na raiz
+        const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`))
         const Icon = item.icon
         const area = areaFor(item.href)
         return (

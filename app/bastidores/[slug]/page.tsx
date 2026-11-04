@@ -86,7 +86,7 @@ export default function AssuntoPage({ params }: { params: Promise<{ slug: string
       {videos.length > 0 && (
         <section className="rounded-2xl border border-(--pulso-border) bg-(--pulso-surface) p-4">
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-(--pulso-text)"><PlayCircle className="h-4 w-4 text-(--pulso-action)" /> Vídeos citados</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
             {videos.map((v) => (
               <Link key={v.numero} href={`/video/${v.ideiaId}`} className="group">
                 <div className="aspect-9/16 overflow-hidden rounded-xl bg-(--pulso-surface-raised)">

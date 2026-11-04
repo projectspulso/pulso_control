@@ -57,7 +57,7 @@ export function useBastidores() {
     queryKey: ['bastidores'],
     queryFn: async () => {
       const { data, error } = await supabase.schema('pulso_content').from('bastidores_assuntos')
-        .select(COLUNAS).order('data', { ascending: false })
+        .select(COLUNAS).order('data', { ascending: false }).order('slug', { ascending: false })
       if (error) throw error
       const assuntos = (data || []) as Assunto[]
       const primeiras = assuntos.flatMap((a) => (a.imagens[0] ? [a.imagens[0]] : []))
@@ -82,15 +82,16 @@ export function useAssunto(slug: string) {
       if (error) throw error
       if (!data) return null
       const assunto = data as Assunto
-      const [imagens, videos, antes, depois] = await Promise.all([
+      // vizinhos pela MESMA ordem da linha do tempo (data, depois slug): comparar só a data pulava
+      // os assuntos do mesmo dia
+      const [imagens, videos, todos] = await Promise.all([
         assinar(assunto.imagens),
         videosCitados(assunto.videos),
-        supabase.schema('pulso_content').from('bastidores_assuntos').select('slug, titulo')
-          .lt('data', assunto.data).order('data', { ascending: false }).limit(1).maybeSingle(),
-        supabase.schema('pulso_content').from('bastidores_assuntos').select('slug, titulo')
-          .gt('data', assunto.data).order('data', { ascending: true }).limit(1).maybeSingle(),
+        supabase.schema('pulso_content').from('bastidores_assuntos').select('slug, titulo').order('data').order('slug'),
       ])
-      return { assunto, imagens, videos, vizinhos: { antes: antes.data ?? undefined, depois: depois.data ?? undefined } }
+      const lista = todos.data || []
+      const i = lista.findIndex((x) => x.slug === assunto.slug)
+      return { assunto, imagens, videos, vizinhos: { antes: i > 0 ? lista[i - 1] : undefined, depois: i >= 0 ? lista[i + 1] : undefined } }
     },
   })
 }
