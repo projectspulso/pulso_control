@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { guardApi } from '@/lib/auth/api-guard'
+import { repassarCredencial } from '@/lib/auth/repassar-credencial'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 /**
@@ -13,6 +15,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const denied = await guardApi(request)
+  if (denied) return denied
   try {
     const { id } = await params
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,10 +60,9 @@ export async function POST(
 
     // Gera DIRETO reusando o gerador (GPT-4o + trava de hook + atualiza pipeline)
     const origin = request.nextUrl.origin
-    const secret = process.env.CRON_SECRET || ''
     const resp = await fetch(`${origin}/api/automation/gerar-roteiro`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` },
+      headers: repassarCredencial(request),
       body: JSON.stringify({ ideia_id: id, canal_id: ideia.canal_id }),
     })
     const data = await resp.json().catch(() => ({}))

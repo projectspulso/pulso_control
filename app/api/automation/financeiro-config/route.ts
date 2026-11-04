@@ -1,8 +1,11 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 /** GET /api/automation/financeiro-config — travas + saldo Higgsfield (service role; RLS bloqueia o anon). */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const denied = await guardApi(request)
+  if (denied) return denied
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = getSupabaseAdminClient() as any
   const { data, error } = await supabase

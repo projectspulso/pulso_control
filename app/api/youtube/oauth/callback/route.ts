@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardApi } from '@/lib/auth/api-guard'
+import { estadoConfere } from '@/lib/auth/oauth-state'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 /**
@@ -7,6 +9,9 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
  * pulso_core.configuracoes (chave youtube_oauth). Mesmo padrão do tiktok_oauth.
  */
 export async function GET(request: NextRequest) {
+  const denied = await guardApi(request)
+  if (denied) return denied
+  if (!estadoConfere(request)) return NextResponse.redirect(`${request.nextUrl.origin}/analytics?yt=erro`)
   try {
     const code = request.nextUrl.searchParams.get('code')
     const erro = request.nextUrl.searchParams.get('error')

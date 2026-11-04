@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardApi } from '@/lib/auth/api-guard'
+import { estadoConfere } from '@/lib/auth/oauth-state'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { credenciaisTikTok, TIKTOK_REDIRECT_URI } from '@/lib/publicacao/tiktok-chave'
 
@@ -8,14 +10,16 @@ import { credenciaisTikTok, TIKTOK_REDIRECT_URI } from '@/lib/publicacao/tiktok-
  * e guarda em pulso_core.configuracoes (chave tiktok_oauth).
  */
 export async function GET(request: NextRequest) {
+  const denied = await guardApi(request)
+  if (denied) return denied
+  if (!estadoConfere(request)) return new NextResponse('Autorização sem state válido: abra /api/tiktok/oauth/start logado no app', { status: 400 })
   const code = request.nextUrl.searchParams.get('code')
   const erro = request.nextUrl.searchParams.get('error')
   if (erro) return new NextResponse(`Autorização negada: ${erro}`, { status: 400 })
   if (!code) return new NextResponse('Faltou o code', { status: 400 })
 
-  // o `state` diz qual app pediu a autorização (o /api/tiktok/oauth/start manda 'producao');
-  // sem state = fluxo antigo, sandbox
-  const app = request.nextUrl.searchParams.get('state') === 'producao' ? 'producao' : 'sandbox'
+  // o prefixo do `state` diz qual app pediu a autorização (o /api/tiktok/oauth/start manda 'producao.<aleatório>')
+  const app = (request.nextUrl.searchParams.get('state') || '').startsWith('producao.') ? 'producao' : 'sandbox'
   const { key: clientKey, secret: clientSecret } = credenciaisTikTok(app)
   if (!clientKey || !clientSecret) {
     return new NextResponse('TIKTOK_CLIENT_KEY/SECRET não configuradas', { status: 500 })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { guardApi } from '@/lib/auth/api-guard'
+import { repassarCredencial } from '@/lib/auth/repassar-credencial'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 /**
@@ -40,13 +41,12 @@ export async function POST(request: NextRequest) {
     const lote = elegiveis.slice(0, limite)
 
     const origin = request.nextUrl.origin
-    const secret = process.env.CRON_SECRET || ''
     const resultados = []
     for (const i of lote) {
       try {
         const r = await fetch(`${origin}/api/automation/gerar-roteiro`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` },
+          headers: repassarCredencial(request),
           body: JSON.stringify({ ideia_id: i.id }),
         })
         const d = await r.json()

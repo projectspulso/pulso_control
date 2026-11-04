@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
+import { gravarEstado, novoEstado } from '@/lib/auth/oauth-state'
 import { credenciaisTikTok, TIKTOK_ESCOPOS, TIKTOK_REDIRECT_URI } from '@/lib/publicacao/tiktok-chave'
 
 /**
@@ -16,6 +17,7 @@ export async function GET(request: NextRequest) {
   u.searchParams.set('scope', TIKTOK_ESCOPOS)
   u.searchParams.set('response_type', 'code')
   u.searchParams.set('redirect_uri', TIKTOK_REDIRECT_URI)
-  u.searchParams.set('state', 'producao')
-  return NextResponse.redirect(u.toString())
+  const estado = novoEstado('producao')
+  u.searchParams.set('state', estado)
+  return gravarEstado(NextResponse.redirect(u.toString()), estado)
 }

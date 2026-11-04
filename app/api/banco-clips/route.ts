@@ -1,4 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+
+import { guardApi } from '@/lib/auth/api-guard'
 
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
@@ -14,7 +16,9 @@ function parse(v?: string | null) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const denied = await guardApi(request)
+  if (denied) return denied
   try {
     const sb = getSupabaseAdminClient()
     const { data } = await sb

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardApi } from '@/lib/auth/api-guard'
+import { gravarEstado, novoEstado } from '@/lib/auth/oauth-state'
 
 /**
  * GET /api/youtube/oauth/start
@@ -7,6 +9,8 @@ import { NextRequest, NextResponse } from 'next/server'
  * ambos precisam estar registrados no cliente OAuth.
  */
 export async function GET(request: NextRequest) {
+  const denied = await guardApi(request)
+  if (denied) return denied
   const clientId = process.env.YOUTUBE_CLIENT_ID
   if (!clientId) {
     return new NextResponse('YOUTUBE_CLIENT_ID não configurada', { status: 500 })
@@ -22,5 +26,7 @@ export async function GET(request: NextRequest) {
   url.searchParams.set('include_granted_scopes', 'true')
   url.searchParams.set('scope', 'https://www.googleapis.com/auth/yt-analytics.readonly https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/youtube.upload')
 
-  return NextResponse.redirect(url.toString())
+  const estado = novoEstado('youtube')
+  url.searchParams.set('state', estado)
+  return gravarEstado(NextResponse.redirect(url.toString()), estado)
 }
