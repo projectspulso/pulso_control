@@ -19,7 +19,7 @@ sys.path.insert(0, "D:/tmp")
 import pulso_guard as g
 import visao_broll as v
 
-VERSAO = 1
+VERSAO = 3  # 3 (03/11): data do arquivo no ar; sem ledger ou com clipe não checado também barra
 FILTRO_DESDE = "2026-10-15"
 PONTOS = (.10, .20, .30, .40, .50, .60, .70, .73)
 PROMPT = ("Estes quadros vêm, em ordem, de um vídeo vertical. Numere-os a partir de 0. O vídeo tem um mascote roxo de boné "
@@ -46,17 +46,25 @@ def olhar(imgs):
     j = json.load(urllib.request.urlopen(req, timeout=120))
     return json.loads("".join(p.get("text", "") for p in j["candidates"][0]["content"]["parts"]))
 
-def render_em(url):
+def ledger(url):
     m = re.match(r"(.+?)_\d{3}(_.*)?\.mp4$", url.rsplit("/", 1)[-1])
     led = f"D:/tmp/pulso_lote4/{m.group(1)}/ledger_render.json" if m else ""
-    return json.load(open(led, encoding="utf-8")).get("quando", "")[:10] if led and os.path.exists(led) else None
+    return json.load(open(led, encoding="utf-8")) if led and os.path.exists(led) else None
 
 def certificar(p):
     md = p.get("metadata") or {}; url = md.get("video_url")
     if not url: return None
     motivos = []
-    feito = render_em(url)
-    if feito and feito < FILTRO_DESDE: motivos.append(f"render de {feito}, anterior ao filtro de imagem")
+    # sem registro de render não há como provar que os clipes passaram pelo filtro: barra (03/11/2026)
+    led = ledger(url)
+    # a data é a do ARQUIVO no ar (remontagem ou PRONTO), não a do ledger: uma remontagem abortada
+    # regrava o ledger e deixa o vídeo antigo (#219, 01/11: ledger de 01/11, vídeo de 24/09)
+    feito = (md.get("remontado_em") or md.get("pronto_em") or (md.get("ledger_render") or {}).get("quando") or "")[:10] or None
+    if not led: motivos.append("sem registro do render (ledger): origem dos clipes desconhecida")
+    elif not feito: motivos.append("data do render do arquivo no ar desconhecida")
+    elif feito < FILTRO_DESDE: motivos.append(f"render de {feito}, anterior ao filtro de imagem")
+    elif ((led.get("filtro_imagem") or {}).get("nao_checados") or 0) > 0:
+        motivos.append(f"{led['filtro_imagem']['nao_checados']} clipe(s) não passaram pelo filtro de imagem (API fora)")
     d = duracao(url)
     if d <= 0: raise RuntimeError("vídeo ilegível")
     with tempfile.TemporaryDirectory() as tmp:

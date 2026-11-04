@@ -69,7 +69,7 @@ def main():
             info["primeira_fala_s"] = round(segs[0][0], 2)
             if segs[0][0] > 2.0: erros.append("gancho tarde: primeira fala aos %.1fs (limite 2s)" % segs[0][0])
     except Exception as e:
-        avisos.append("transcrição não rodou (%s) — conferir à mão" % str(e)[:80])
+        erros.append("transcrição não rodou (%s) — fala × roteiro não conferida" % str(e)[:80])
 
     r = subprocess.run(["ffmpeg", "-i", a.video, "-vf", "freezedetect=n=0.003:d=2", "-map", "0:v", "-f", "null", "-"],
                        capture_output=True, encoding="utf-8", errors="replace", timeout=900)

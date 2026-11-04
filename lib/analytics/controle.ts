@@ -210,7 +210,7 @@ export function montarControle(
       // a rotina do Kwai grava por foto às 21h; dois dias sem nenhuma leitura = rotina parou
       if (!r.ultimaLeitura || agora - ms(r.ultimaLeitura) > 48 * HORA) {
         gerais.push({ tipo: 'rotina_manual', gravidade: 'alta', rede: r.rede,
-          texto: `${NOME_REDE[r.rede]}: rotina manual sem leitura desde ${r.ultimaLeitura ? new Date(r.ultimaLeitura).toLocaleDateString('pt-BR') : 'nunca'}` })
+          texto: `${NOME_REDE[r.rede]}: sem prints desde ${r.ultimaLeitura ? new Date(r.ultimaLeitura).toLocaleDateString('pt-BR') : 'nunca'} — mande os prints da Central de Dados na rotina das 21h` })
       }
       continue
     }

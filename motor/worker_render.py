@@ -205,7 +205,8 @@ def qc_completo(final, audio_dur, roteiro_texto, qcdir):
         if overlap < 0.80:
             erros.append("transcrição diverge do roteiro (overlap %.0f%%) — áudio enrolado/incompleto" % (overlap * 100))
     except Exception as e:
-        avisos.append("transcrição não rodou (%s) — checar áudio à mão" % e)
+        # sem transcrição não há como conferir fala × roteiro nem o gancho: reprova e a próxima rodada tenta de novo
+        erros.append("transcrição não rodou (%s) — fala × roteiro não conferida" % str(e)[:80])
     # 3) freeze nos últimos 8s (fim congelado / CTA travada)
     try:
         ini = max(0, vdur - 8)
