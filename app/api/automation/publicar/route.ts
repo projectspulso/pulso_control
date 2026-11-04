@@ -391,6 +391,10 @@ export async function POST(request: NextRequest) {
       resultados.push({ plataforma, status: 'PAUSADO', erro: 'rede pausada em configuracoes.linha_producao.redes_pausadas' })
       continue
     }
+    const trava = () =>
+      supabase.schema('pulso_content').from('publicacao_trava').delete()
+        .eq('ideia_id', item.ideia_id).eq('plataforma', plataforma).is('post_id', null)
+    let travada = false
     try {
       // IDEMPOTÊNCIA: se já existe publicação dessa plataforma pra esta ideia,
       // NÃO republica (blinda contra double-fire do botão / retry / chamada dupla).
@@ -411,6 +415,28 @@ export async function POST(request: NextRequest) {
         continue
       }
 
+      // TRAVA ATÔMICA (076): a leitura acima não segura duas chamadas no mesmo minuto — as duas
+      // veem a tabela vazia e sobem o vídeo (o upload leva 20-50s). A PK da trava deixa passar uma só.
+      // Trava sem post_id com mais de 10 min é de chamada que morreu: é liberada.
+      await supabase.schema('pulso_content').from('publicacao_trava').delete()
+        .eq('ideia_id', item.ideia_id).eq('plataforma', plataforma).is('post_id', null)
+        .lt('criado_em', new Date(Date.now() - 10 * 60_000).toISOString())
+      const { error: erroTrava } = await supabase.schema('pulso_content').from('publicacao_trava')
+        .insert({ ideia_id: item.ideia_id, plataforma })
+      if (erroTrava) {
+        const { data: t } = await supabase.schema('pulso_content').from('publicacao_trava')
+          .select('post_id, url').eq('ideia_id', item.ideia_id).eq('plataforma', plataforma).maybeSingle()
+        if (t?.post_id) {
+          resultados.push({ plataforma, status: 'JA_PUBLICADO', url: t.url, post_id: t.post_id })
+        } else if (erroTrava.code === '23505') {
+          resultados.push({ plataforma, status: 'EM_ANDAMENTO', erro: 'outra chamada está publicando esta rede agora' })
+        } else {
+          resultados.push({ plataforma, status: 'ERRO', erro: `trava de publicação indisponível: ${erroTrava.message}` })
+        }
+        continue
+      }
+      travada = true
+
       let res: { post_id: string; url: string }
       if (plataforma === 'instagram') {
         res = await publicarInstagram(video_url, legenda, token, igUserId, supabase, item.id, item.metadata, igDeadlineMs)
@@ -427,7 +453,7 @@ export async function POST(request: NextRequest) {
 
       // registra a publicação (fonte da coleta de métricas). metodo=api pro teste de alcance
       // (compara segunda com o baseline manual — quem publica manual grava metodo=manual).
-      await supabase.schema('pulso_content').from('metricas_publicacao').insert({
+      const registro = {
         ideia_id: item.ideia_id,
         roteiro_id: item.roteiro_id,
         plataforma,
@@ -437,10 +463,26 @@ export async function POST(request: NextRequest) {
         hora_publicacao: horaPub,
         dia_semana: diaSemPub,
         metadata: { metodo: payload.metodo === 'api_teste' ? 'api_teste' : 'api' },
-      })
+      }
+      let { error: erroRegistro } = await supabase.schema('pulso_content').from('metricas_publicacao').insert(registro)
+      if (erroRegistro) {
+        ;({ error: erroRegistro } = await supabase.schema('pulso_content').from('metricas_publicacao').insert(registro))
+      }
+      if (erroRegistro) {
+        // o post saiu e não ficou registrado: a trava guarda o post_id e segura a republicação
+        await supabase.schema('pulso_content').from('publicacao_trava')
+          .update({ post_id: res.post_id, url: res.url }).eq('ideia_id', item.ideia_id).eq('plataforma', plataforma)
+        travada = false
+        resultados.push({ plataforma, status: 'PUBLICADO', url: res.url, post_id: res.post_id,
+          erro: `publicado, mas o registro falhou (${erroRegistro.message}) — trava guardou o post para não republicar` })
+        continue
+      }
+      await trava()
+      travada = false
 
       resultados.push({ plataforma, status: 'PUBLICADO', url: res.url, post_id: res.post_id })
     } catch (err) {
+      if (travada) await trava()
       const msg = err instanceof Error ? err.message : 'Erro desconhecido'
       // IG passou de 60s processando: NÃO é erro — o container está salvo, é só rodar de novo.
       if (msg === IG_PROCESSANDO) {
