@@ -9,6 +9,9 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Corrigido (03/11) — 504 do YouTube e do Instagram na coleta
+- Desde 01/11 as fatias youtube e instagram morriam antes de gravar. O prazo contava de depois das consultas e da listagem do TikTok, que rodava em toda fatia. Agora conta do início da chamada e a fatia de outra rede não lista o TikTok. Medido em produção: YouTube 39s (181 lidos, 62 para a próxima rodada), Instagram 30s (247 lidos).
+
 ### Adicionado (31/10) — certificado do vídeo antes de publicar
 - `motor/certificar_video.py` confere o arquivo que vai ao ar: barra mascote grande antes dos 75% finais e render anterior ao filtro de imagem. O certificado vale para a URL; `/publicar` recusa (409) a 1ª saída sem ele e `publicar-agendados` passa para o próximo certificado, registrando `barrados_sem_certificado`.
 - O worker certifica a fila a cada rodada. 12 vídeos antigos barrados entraram em remontagem com clipes refeitos.
