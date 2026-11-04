@@ -31,6 +31,7 @@ interface LinhaPublicacao {
   data_publicacao: string
   views: number | null
   metadata: Record<string, unknown> | null
+  ultima_atualizacao: string | null
 }
 
 /** Roda fn sobre os itens com no máximo `limite` em voo — o laço era sequencial e estourava o tempo. */
@@ -66,7 +67,7 @@ async function coletar(request: NextRequest) {
   let consulta = supabase
     .schema('pulso_content')
     .from('metricas_publicacao')
-    .select('id, ideia_id, plataforma, post_id, url_publicacao, data_publicacao, views, metadata')
+    .select('id, ideia_id, plataforma, post_id, url_publicacao, data_publicacao, views, metadata, ultima_atualizacao')
     .not('post_id', 'is', null)
   if (redeAlvo) consulta = consulta.eq('plataforma', redeAlvo)
   const { data: linhas, error: fetchError } = await consulta
@@ -616,8 +617,15 @@ async function coletar(request: NextRequest) {
   // provado seguro contra o 504 — so passa a ser dividido de verdade. A escrita acontece dentro de
   // `processarPub`, entao o que passa do prazo e apenas o que ja estava em voo (no maximo 16 + 8).
   const PRAZO_MS = ORCAMENTO_LEITURA_MS
-  const maisNovoPrimeiro = (a: LinhaPublicacao, b: LinhaPublicacao) =>
-    String(b.data_publicacao || '').localeCompare(String(a.data_publicacao || ''))
+  // Ultimos 14 dias primeiro, do mais novo; depois o resto pela leitura mais antiga. So "mais novo
+  // primeiro" deixava a cauda (62 de 243 no YouTube em 03/11) sem leitura para sempre.
+  const recente = new Date(Date.now() - 14 * 86_400_000).toISOString()
+  const maisNovoPrimeiro = (a: LinhaPublicacao, b: LinhaPublicacao) => {
+    const ra = String(a.data_publicacao || '') >= recente, rb = String(b.data_publicacao || '') >= recente
+    if (ra !== rb) return ra ? -1 : 1
+    if (ra) return String(b.data_publicacao || '').localeCompare(String(a.data_publicacao || ''))
+    return String(a.ultima_atualizacao || '').localeCompare(String(b.ultima_atualizacao || ''))
+  }
 
   const pubsResto = publicacoes.filter((p) => p.plataforma !== 'instagram').sort(maisNovoPrimeiro)
   // Instagram com pool proprio de 8: a Graph aceita mais, mas e a rede que ja estourou cota antes
