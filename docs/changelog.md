@@ -9,6 +9,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (05/11) — Kit de mídia para patrocínio
+- `/analytics/kit` (botão "Kit de mídia" na aba Controle): prévia com os números de agora e "Congelar e gerar link". Cada envio grava a foto (seguidores do contador, views por vídeo, ganho de 30 dias, views por mês, público do YouTube e Instagram, top 5) com data, para quem, recado opcional e validade de 7 a 60 dias.
+- `/kit/<token>`: página do patrocinador sem login, aberta só pelo token de 48 hex, sem menu do app e fora dos buscadores; conta acessos; cancelável. Banco: `pulso_analytics.kit_midia_envios` + RPC `public.kit_midia_publico` (082).
+- Fica fora de propósito: tema × rede, desempenho por assunto e a lista de verticais (nomes internos).
+
 ### Adicionado (04/11) — Livro de Problemas (segredo da casa)
 - Aba "Livro de problemas" nos Bastidores: 105 casos reconstituídos de 235 commits de correção, notas e changelog (31/03 a 04/11). Cada caso: como percebemos, causa raiz, conserto, prova, trava e impacto.
 - A receita (o como exato) fica em `livro_problemas_receita`, só admin (081); outros apps leem só `v_livro_historia` (aprovados, sem receita). 14 casos ligados a assuntos da linha do tempo.

@@ -20,7 +20,7 @@ export function KitMidiaView({ kit, nota }: { kit: KitDados; nota?: string }) {
         <h1 className="mt-2 text-3xl font-bold text-(--pulso-text) sm:text-4xl">PULSO Histórias</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-(--pulso-text-muted)">
           Vídeos curtos de história, mistério e ciência, publicados todo dia em cinco redes.
-          {kit.desde && <> No ar desde {dataLonga(kit.desde)}.</>}
+          {kit.desde && <> No ar desde {dataLonga(kit.desde.slice(0, 10))}.</>}
         </p>
         <p className="mt-4 text-xs text-(--pulso-text-subtle)">
           Números medidos em {new Date(kit.medidoEm).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })} (horário de Brasília).
