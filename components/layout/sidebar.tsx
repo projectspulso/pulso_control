@@ -20,12 +20,14 @@ import {
   Library,
   X,
   History,
+  ScanLine,
 } from 'lucide-react'
 
 import { getSupabaseBrowser } from '@/lib/supabase/browser'
 import { useUsuario } from '@/lib/hooks/use-usuario'
 import { areaFor } from '@/lib/config/areas'
 import { Relogio } from '@/components/layout/relogio'
+import { MODOS, gravarModo, useModo, type Modo } from '@/lib/modo'
 
 // 14 -> 9 em 14/08/2026. Saíram /agenda e /aprendizado: as duas únicas telas com ZERO botões e
 // zero mutations — só exibiam. O calendário virou aba da Central de Publicação (onde a data é de
@@ -35,7 +37,7 @@ import { Relogio } from '@/components/layout/relogio'
 // E /ideias + /roteiros + /audios viraram a Esteira: três entradas para três estágios do MESMO
 // pipeline. As 229 ideias têm criado_por NULO — nenhuma nasceu de humano no app —, então essas
 // telas nunca foram de criação, e sim de conferência do que a máquina fez.
-const navigation = [
+const NAV_CURTOS = [
   // PRIMEIRO de propósito: é a pergunta que se faz ao abrir o app ("o que faço agora e por quê?").
   // As demais áreas são a biblioteca de consulta; o Decisor é a camada de decisão.
   { name: 'Decisor', href: '/', icon: Compass, badge: 'ai', soAdmin: false },
@@ -47,21 +49,58 @@ const navigation = [
   // Trilha separada dos Shorts (série de vídeos longos — rumo às 3.000h do YPP)
   { name: 'Central de Publicação', href: '/publicar', icon: Send, badge: 'ai', soAdmin: false },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, badge: null, soAdmin: false },
-  // a história do PULSO por assunto; fonte das fichas de episódio do Limelight (04/11/2026)
-  { name: 'Bastidores', href: '/bastidores', icon: History, badge: null, soAdmin: false },
   { name: 'Configurações', href: '/settings', icon: Settings, badge: null, soAdmin: false },
 ]
+
+// A cara dos Longos (05/11/2026): a fábrica dos Bastidores. A linha do tempo e o livro moram aqui
+// porque são a matéria-prima dos episódios; Assets, Kit e Configurações são das duas caras.
+const NAV_LONGOS = [
+  { name: 'Episódios', href: '/longos', icon: Film, badge: null, soAdmin: false },
+  { name: 'Bastidores', href: '/bastidores', icon: History, badge: null, soAdmin: false },
+  { name: 'Analytics', href: '/longos/analytics', icon: BarChart3, badge: null, soAdmin: false },
+  { name: 'Kit de mídia', href: '/analytics/kit', icon: ScanLine, badge: null, soAdmin: false },
+  { name: 'Assets', href: '/assets', icon: Library, badge: null, soAdmin: false },
+  { name: 'Configurações', href: '/settings', icon: Settings, badge: null, soAdmin: false },
+]
+
+function Seletor({ onNavigate }: { onNavigate?: () => void }) {
+  const modo = useModo()
+  const router = useRouter()
+  function ir(m: Modo) {
+    gravarModo(m)
+    onNavigate?.()
+    if (m !== modo) router.push(MODOS[m].inicio)
+  }
+  return (
+    <div role="radiogroup" aria-label="Cara do app" className="mx-3 mt-4 grid grid-cols-2 gap-1 rounded-xl border border-zinc-800 bg-zinc-900/60 p-1">
+      {(['curtos', 'longos'] as Modo[]).map((m) => {
+        const ativo = modo === m
+        return (
+          <button key={m} type="button" role="radio" aria-checked={ativo} onClick={() => ir(m)} title={MODOS[m].descricao}
+            className={`rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors ${ativo
+              ? (m === 'longos' ? 'bg-(--pulso-vl) text-[#1a1206]' : 'bg-(--pulso-vc) text-[#0f0e16]')
+              : 'text-zinc-400 hover:text-white'}`}>
+            {MODOS[m].nome} <span className="font-normal opacity-70">{MODOS[m].sigla}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
   const { papel } = useUsuario()
-  const itens = navigation.filter((i) => !i.soAdmin || papel === 'admin')
+  const modo = useModo()
+  const itens = (modo === 'longos' ? NAV_LONGOS : NAV_CURTOS).filter((i) => !i.soAdmin || papel === 'admin')
 
   return (
     <>
       {itens.map((item) => {
         // subpágina (/bastidores/[assunto]) acende o item do pai; '/' só na raiz
-        const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`))
+        const casa = (h: string) => pathname === h || (h !== '/' && pathname.startsWith(`${h}/`))
+        // o item de rota mais específica vence (/analytics/kit não acende /analytics)
+        const isActive = casa(item.href) && !itens.some((o) => o.href.length > item.href.length && o.href.startsWith(item.href) && casa(o.href))
         const Icon = item.icon
         const area = areaFor(item.href)
         return (
@@ -169,7 +208,8 @@ export function Sidebar() {
       <aside className="relative hidden h-screen w-64 flex-col overflow-hidden border-r border-zinc-800/50 bg-zinc-950/90 backdrop-blur-xl md:flex">
         <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-purple-600/5 via-transparent to-pink-600/5" />
         <Cabecalho />
-        <nav className="relative z-10 flex-1 space-y-1 overflow-y-auto px-3 py-6">
+        <div className="relative z-10"><Seletor /></div>
+        <nav className="relative z-10 flex-1 space-y-1 overflow-y-auto px-3 py-5">
           <NavLinks />
         </nav>
         <Rodape />
@@ -197,6 +237,7 @@ export function Sidebar() {
                 <X className="h-6 w-6" />
               </button>
             </div>
+            <Seletor onNavigate={() => setAberto(false)} />
             <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
               <NavLinks onNavigate={() => setAberto(false)} />
             </nav>

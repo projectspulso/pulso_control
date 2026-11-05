@@ -1,21 +1,27 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
+import { useEffect } from 'react'
 
 import { Sidebar } from '@/components/layout/sidebar'
+import { ehCompartilhada, gravarModo, useModo } from '@/lib/modo'
 
-const SEM_SHELL = ['/login', '/registrar']
+const SEM_SHELL = ['/login', '/registrar', '/escolha']
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const modo = useModo()
+  // tela própria de uma cara fixa a cara; tela compartilhada só herda
+  useEffect(() => { if (!ehCompartilhada(pathname)) gravarModo(modo) }, [pathname, modo])
 
+  if (pathname === '/escolha') return <div data-modo={modo}>{children}</div>
   // /kit/<token> é a página do patrocinador: sem menu do app
   if (SEM_SHELL.includes(pathname) || pathname.startsWith('/kit/')) {
     return <>{children}</>
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div data-modo={modo} className="flex h-screen overflow-hidden">
       <Sidebar />
       {/*
         O CONTAINER DA PÁGINA MORA AQUI, e só aqui.

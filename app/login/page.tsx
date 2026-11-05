@@ -11,7 +11,8 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser'
 function LoginForm() {
   const router = useRouter()
   const params = useSearchParams()
-  const next = params.get('next') || '/'
+  // sem destino pedido, entra pela escolha da cara (Curtos ou Longos)
+  const next = params.get('next') || '/escolha'
 
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')

@@ -39,6 +39,16 @@
   --pulso-ok: #34d399;
   --pulso-warn: #fbbf24;
   --pulso-danger: #f87171;
+
+  /* As duas caras do app (05/11/2026): Curtos = roxo de sempre; Longos = âmbar do círculo do avatar
+     do dono. Trocar a cara troca só o --pulso-action; o resto da paleta é o mesmo. */
+  --pulso-vc: #9085e9;
+  --pulso-vl: #e9a23b;
+}
+
+[data-modo="longos"] {
+  --pulso-action: var(--pulso-vl);
+  --pulso-on-action: #1a1206;
 }
 
 @theme inline {
