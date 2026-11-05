@@ -182,7 +182,9 @@ export function montarControle(
         v.alertas.push({ tipo: 'sem_leitura', gravidade: 'media', rede,
           texto: h ? `${NOME_REDE[rede]} sem leitura há ${h >= 48 ? `${Math.round(h / 24)} dias` : `${h}h`}` : `${NOME_REDE[rede]} nunca foi lido` })
       }
-      if (c.views === 0 && idade > 3 * DIA) {
+      // só nos últimos 30 dias: zero antigo é história conferida (#41/#58/#81/#104 do teste de API de
+      // julho têm 0 de verdade no Facebook, checado em 04/11), não algo a consertar
+      if (c.views === 0 && idade > 3 * DIA && idade < 30 * DIA) {
         v.alertas.push({ tipo: 'zerado', gravidade: 'media', rede, texto: `${NOME_REDE[rede]} com 0 views há ${Math.floor(idade / DIA)} dias` })
       }
     }
@@ -199,7 +201,7 @@ export function montarControle(
       republicacoes: celulas.reduce((s, { c }) => s + c.posts - 1, 0),
       lidas24h: celulas.filter(({ c }) => agora - ms(c.ultimaLeitura) <= 26 * HORA).length,
       paradas: celulas.filter(({ c }) => !c.ultimaLeitura || agora - ms(c.ultimaLeitura) > 72 * HORA).length,
-      zeradas: celulas.filter(({ c, pub }) => c.views === 0 && agora - ms(pub) > 3 * DIA).length,
+      zeradas: celulas.filter(({ c, pub }) => c.views === 0 && agora - ms(pub) > 3 * DIA && agora - ms(pub) < 30 * DIA).length,
       ultimaLeitura,
       ultimaRodada: r ? { quando: r.created_at, status: r.status, coletados: n(r.detalhes?.coletados), pulados: n(r.detalhes?.pulados_por_prazo) } : null,
     }
