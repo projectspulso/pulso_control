@@ -9,6 +9,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (05/11) — fábrica de cortes e ficha completa do episódio
+- `motor/cortes_longo.py`: cada ✂ CORTE do roteiro vira vertical 1080×1920 (título no topo, montagem no meio, legenda queimada, cartão final "episódio completo no YouTube" com a batida). E01: 6 cortes de 25 a 53 s.
+- `motor/ficha_longo.py`: trava do segredo automática (barra trecho de receita ou termo proibido), prévia 720p, legenda e cortes no bucket privado, ficha em `episodios.metadata` e `episodio_cortes` (083).
+- `/longos/[codigo]`: ficha completa no padrão dos Shorts, com trilha de etapas, vídeo, cortes com aprovar e descartar, pauta e fontes, trava, narração, roteiro, publicação e números. Aprovar a montagem leva o episódio a "pronto para publicar".
+- Montador: fala em destaque ao lado do avatar, terminal maior, legenda sem palavra solta, ✗/✓ desenhados.
+
 ### Adicionado (05/11) — montador dos Longos (16:9)
 - `motor/montar_longo.py`: monta o episódio a partir do roteiro aprovado. Usa a narração por bloco com o alinhamento, um mapa `visuais.json` de cada marcação, o avatar com lip-sync (grande nas marcações [AVATAR], no canto nas [TELA]), a vinheta depois do gancho, o encerramento padrão e a legenda `.srt`. Recusa episódio sem roteiro aprovado.
 - As telas são cartões desenhados com dado real do banco (contador, terminal, código errado e certo, esteira, calendário, alertas, números com quadros reais dos vídeos). Print cru do app fica de fora: a tela da esteira explicava a receita do sorteio de canal.
