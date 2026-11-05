@@ -9,6 +9,9 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (05/11) — voz dos Longos travada
+- Clone instantâneo da voz do dono no ElevenLabs, aprovado pelo dono na versão "mais energia + 1 tom abaixo". A configuração fica em `configuracoes.voz_bastidores` (voz, modelo, ajustes, tom e volume), e `motor/voz_dono.py` narra só com ela: sem config, não narra.
+
 ### Adicionado (05/11) — um app com duas caras: Curtos (VC) e Longos (VL)
 - Seletor no topo do menu e página `/escolha` depois do login. A cara muda o menu e a cor de destaque: roxo nos Curtos, âmbar nos Longos (tokens `--pulso-vc`/`--pulso-vl`). `/longos` e `/bastidores` são Longos; configurações, assets e kit ficam na cara em que você estava.
 - Longos: `/longos` (episódios da T01 e o checklist da fábrica, lido de `configuracoes.longos_fabrica`) e `/longos/analytics` (separado do Analytics dos Shorts). Bastidores saiu do menu dos Curtos.
