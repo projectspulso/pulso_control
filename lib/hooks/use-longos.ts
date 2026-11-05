@@ -31,6 +31,19 @@ export function useEpisodios() {
   })
 }
 
+export function useEpisodio(codigo: string) {
+  return useQuery<Episodio | null>({
+    queryKey: ['longos-episodio', codigo],
+    queryFn: async () => {
+      const { data, error } = await supabase.schema('pulso_content').from('episodios')
+        .select('id, codigo, titulo, gancho, status, roteiro_md, data_prevista, audio_url, video_url')
+        .eq('codigo', codigo).maybeSingle()
+      if (error) throw error
+      return (data as Episodio) || null
+    },
+  })
+}
+
 /** Checklist da fábrica (configuracoes.longos_fabrica): o que falta para o primeiro episódio sair. */
 export function useFabrica() {
   return useQuery<{ atualizadoEm: string | null; itens: ItemFabrica[] }>({

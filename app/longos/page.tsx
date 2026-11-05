@@ -70,7 +70,7 @@ export default function LongosPage() {
             return (
               <li key={e.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3">
                 <span className="w-14 shrink-0 font-mono text-xs text-(--pulso-text-subtle)">{e.codigo}</span>
-                <span className="min-w-0 flex-1 text-sm text-(--pulso-text)">{e.titulo}</span>
+                <Link href={`/longos/${e.codigo}`} className="min-w-0 flex-1 text-sm text-(--pulso-text) hover:text-(--pulso-action)">{e.titulo}</Link>
                 <span className="text-xs text-(--pulso-text-muted)">{min ? `roteiro ≈ ${min} min` : 'sem roteiro'}</span>
                 <span className="rounded-full bg-(--pulso-surface-raised) px-2 py-0.5 text-[11px] text-(--pulso-text-muted)">{STATUS_EP[e.status] || e.status}</span>
               </li>
