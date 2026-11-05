@@ -9,6 +9,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (05/11) — fábrica de cortes por dentro
+- Banco (084): destinos (`configuracoes.cortes_destinos`), tipo de cada corte e a agenda `corte_publicacoes` (corte × destino × rede).
+- `cortes_longo.py --destino`: versão própria por destino. `planejar_cortes.py --estreia`: monta a semana (trailer na véspera, 1 por dia, domingo nada; DIGIAI por job ao digiai_mkt; pessoal só com rosto real). `textos_cortes.py`: legenda por destino pela API do Claude, com trava do segredo e de números (falta a chave no ambiente).
+- `/longos/hoje`: o que sai hoje, o atrasado e a semana, com baixar, copiar e Postei. Testado com uma agenda de exemplo, depois apagada.
+
 ### Adicionado (05/11) — publicação dos Longos online e pronta para copiar
 - Final 1080p na nuvem (E01: 24 MB) com baixar vídeo, capa e legenda pela ficha, também do celular.
 - Título, descrição com capítulos automáticos, tags e aviso de conteúdo sintético do YouTube com botão de copiar; legenda pronta e baixar em cada corte.
