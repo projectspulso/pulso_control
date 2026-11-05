@@ -110,6 +110,10 @@ export function ControleVideosPanel() {
             className="inline-flex items-center gap-1.5 rounded-lg bg-(--pulso-action) px-3 py-1.5 text-xs font-medium text-(--pulso-on-action) hover:opacity-90">
             <Download className="h-3.5 w-3.5" /> Exportar CSV
           </button>
+          <Link href="/analytics/kit"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-(--pulso-border) px-3 py-1.5 text-xs text-(--pulso-text-muted) hover:text-(--pulso-text)">
+            Kit de mídia
+          </Link>
         </div>
 
         <div className="overflow-x-auto">

@@ -9,7 +9,8 @@ const SEM_SHELL = ['/login', '/registrar']
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  if (SEM_SHELL.includes(pathname)) {
+  // /kit/<token> é a página do patrocinador: sem menu do app
+  if (SEM_SHELL.includes(pathname) || pathname.startsWith('/kit/')) {
     return <>{children}</>
   }
 

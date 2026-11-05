@@ -2,7 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 // Protege TODAS as páginas. Exceções (matcher abaixo): /api (cron 8h + scripts sem sessão),
-// /termos e /privacidade (exigidos públicos pelo TikTok), assets e as próprias telas de auth.
+// /termos e /privacidade (exigidos públicos pelo TikTok), /kit/<token> (kit de mídia do patrocinador:
+// o token é a credencial, validado pela RPC 082), assets e as próprias telas de auth.
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request })
 
@@ -51,6 +52,6 @@ export const config = {
   matcher: [
     // tudo, EXCETO: api, _next, estáticos, termos/privacidade (TikTok), robots, manifest/ícones
     // (o hub público — /hub e /v/ — foi movido pra https://pulsohub.netlify.app)
-    '/((?!api|_next/static|_next/image|favicon.ico|termos|privacidade|robots.txt|manifest.json|icons|tiktok|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|termos|privacidade|kit/|robots.txt|manifest.json|icons|tiktok|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt)$).*)',
   ],
 }
