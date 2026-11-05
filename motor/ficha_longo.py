@@ -53,6 +53,32 @@ def fontes(roteiro):
     return {"casos": pega("Livro"), "assuntos": pega("Linha do tempo"), "banco": banco}
 
 
+def capitulos(roteiro, lt):
+    """Capítulos do YouTube a partir dos blocos (o 1º tem de ser 0:00; o YouTube pede ≥3 e ≥10 s cada)."""
+    corpo = roteiro.split("## Para o dono")[0]
+    nomes = {m.group(1): m.group(2).strip().capitalize() for m in re.finditer(r"\n## (\d+)\. ([^(\n]+)", corpo)}
+    out = []
+    for b in lt.get("blocos", []):
+        t = int(round(b["inicio"]))
+        out.append(f"{t // 60}:{t % 60:02d} {nomes.get(b['bloco'], 'Bloco ' + b['bloco'])}")
+    if out:
+        out[0] = "0:00 " + out[0].split(" ", 1)[1]
+    return out
+
+
+def textos(pasta, roteiro, lt, cortes):
+    """Tudo pronto para copiar na ficha: título, descrição com capítulos, tags e a legenda de cada corte.
+    O texto criativo vem de <pasta>/textos.json (escrito à mão no E01; depois, gerado)."""
+    arq = f"{pasta}/textos.json"
+    base = json.load(open(arq, encoding="utf-8")) if os.path.exists(arq) else {}
+    yt = base.get("youtube", {})
+    caps = capitulos(roteiro, lt)
+    descricao = (yt.get("descricao", "").rstrip() + "\n\nCapítulos\n" + "\n".join(caps) + "\n\n" + yt.get("rodape", "")).strip()
+    return {"youtube": {"titulo": yt.get("titulo", ""), "descricao": descricao, "tags": yt.get("tags", []),
+                        "aviso": yt.get("aviso", "")},
+            "cortes": base.get("cortes", {})}
+
+
 def sobe(local, caminho, tipo):
     U, K = g._env()
     req = urllib.request.Request(f"{U}/storage/v1/object/{BUCKET}/{caminho}", method="POST", data=open(local, "rb").read(),
@@ -88,14 +114,19 @@ def fechar(codigo):
     lt = json.load(open(f"{pasta}/linha_do_tempo.json", encoding="utf-8"))
     base = f"episodios/{codigo}"
     tmp = tempfile.mkdtemp(dir="D:/tmp")
-    previa = os.path.join(tmp, "previa.mp4")
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", montagem, "-vf", "scale=1280:-2", "-c:v", "libx264", "-preset", "slow",
-                    "-crf", "27", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", previa], check=True)
+    # tudo online (dono, 05/11): o FINAL em 1080p sobe para a nuvem, para publicar do celular. Telas
+    # quase paradas comprimem muito (stillimage): o E01 de 7 min ficou com 24 MB, abaixo dos 50 MB.
+    previa = os.path.join(tmp, "final.mp4")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", montagem, "-c:v", "libx264", "-preset", "slow", "-crf", "26",
+                    "-tune", "stillimage", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", previa], check=True)
     mb = os.path.getsize(previa) / 1e6
     if mb > 49:
-        raise SystemExit(f"prévia com {mb:.0f} MB passa do limite de 50 MB do armazenamento")
-    sobe(previa, f"{base}/montagem_720p.mp4", "video/mp4")
+        raise SystemExit(f"final com {mb:.0f} MB passa do limite de 50 MB do armazenamento")
+    sobe(previa, f"{base}/final_1080p.mp4", "video/mp4")
     sobe(montagem[:-4] + ".srt", f"{base}/legenda.srt", "application/x-subrip")
+    capa = f"{pasta}/capa.jpg"
+    if os.path.exists(capa):
+        sobe(capa, f"{base}/capa.jpg", "image/jpeg")
     os.remove(previa); os.rmdir(tmp)
 
     cortes_json = f"{pasta}/cortes/cortes.json"
@@ -116,13 +147,14 @@ def fechar(codigo):
         "narracao": {"blocos": narr, "total_s": round(sum(b["duracao_s"] for b in narr), 1), "caracteres": sum(b["caracteres"] for b in narr),
                      "voz": voz.get("nome"), "voz_aprovada_em": voz.get("aprovadaEm")},
         "montagem": {"versao": int(anterior.get("versao", 0)) + 1, "duracao_s": round(duracao(montagem), 1),
-                     "video": f"{base}/montagem_720p.mp4", "legenda": f"{base}/legenda.srt", "arquivo_local": os.path.basename(montagem),
-                     "em": __import__("datetime").datetime.now().isoformat(timespec="minutes"), "previa_mb": round(mb, 1),
+                     "video": f"{base}/final_1080p.mp4", "capa": f"{base}/capa.jpg" if os.path.exists(f"{pasta}/capa.jpg") else None, "legenda": f"{base}/legenda.srt", "arquivo_local": os.path.basename(montagem),
+                     "em": __import__("datetime").datetime.now().isoformat(timespec="minutes"), "final_mb": round(mb, 1),
                      "blocos": lt.get("blocos", [])},
     })
     meta.setdefault("publicacao", {"canal": None, "url": None, "data": None})
+    meta["textos"] = textos(pasta, ep["roteiro_md"], lt, cortes)
     novo_status = ep["status"] if ep["status"] in ("em_revisao", "publicado") else "em_revisao"
-    g._db("PATCH", f"/rest/v1/episodios?id=eq.{ep['id']}", {"metadata": meta, "status": novo_status, "video_url": f"{base}/montagem_720p.mp4"}, schema="pulso_content")
+    g._db("PATCH", f"/rest/v1/episodios?id=eq.{ep['id']}", {"metadata": meta, "status": novo_status, "video_url": f"{base}/final_1080p.mp4"}, schema="pulso_content")
     print(f"ficha gravada · status {novo_status} · montagem v{meta['montagem']['versao']} · {len(cortes)} cortes")
 
 

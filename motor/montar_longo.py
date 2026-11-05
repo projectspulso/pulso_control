@@ -583,7 +583,7 @@ def montar(codigo, rascunho=False, so_bloco=None):
                     "-c:a", "aac", "-b:a", "192k", "-af", "loudnorm=I=-16", saida], check=True)
     if so_bloco is None:
         open(saida[:-4] + ".srt", "w", encoding="utf-8").write(srt_de(trechos))
-        json.dump({"codigo": codigo, "duracao": round(t_global + 9.1, 1), "blocos": blocos_t, "cortes": cortes, "legenda": trechos and saida[:-4] + ".srt"},
+        json.dump({"codigo": codigo, "duracao": round(t_global + 11.1, 1), "blocos": blocos_t, "cortes": cortes, "legenda": trechos and saida[:-4] + ".srt"},
                   open(f"{pasta}/linha_do_tempo.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     for f in os.listdir(tmp):
         os.remove(os.path.join(tmp, f))

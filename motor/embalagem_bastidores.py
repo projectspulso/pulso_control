@@ -229,7 +229,10 @@ def encerramento(proximo, saida):
     chars, inicios, fins = al["characters"], al["character_start_times_seconds"], al["character_end_times_seconds"]
     atraso = 0.4
     fala_fim = atraso + fins[-1]
-    dur = fala_fim + 5.0  # os últimos 5 s ficam calmos para a tela final do YouTube
+    # 2 s com 'no próximo episódio' + 5 s finais com os ESPAÇOS da tela final do YouTube desenhados
+    # (vídeo seguinte e inscrição), para o dono só encaixar os elementos por cima (05/11)
+    dur = fala_fim + 7.0
+    tela_final = dur - 5.0
     n = int(dur * FPS)
 
     alt_av = 720
@@ -265,7 +268,7 @@ def encerramento(proximo, saida):
     texto_centro(dm, 62, "BASTIDORES  DO  PULSO", fonte(30, "SemiBold"), BRANCO, espaco=10, alfa=0.85)
     bg = Image.alpha_composite(bg, marca)
     f_rot, f_tit, f_cta = fonte(34, "SemiBold"), fonte(58, "Bold"), fonte(40, "Bold")
-    xa, xm = int(W * 0.22), int(W * 0.80)
+    xa, xm = int(W * 0.17), int(W * 0.84)
 
     def quadros():
         for i in range(n):
@@ -285,7 +288,15 @@ def encerramento(proximo, saida):
             dy = int(10 * math.sin(t * 2.2))
             img.alpha_composite(m, (xm - m.width // 2, H - m.height - 60 + dy))
             # coluna do meio: próximo episódio e inscreva-se
-            a = suave((t - (fala_fim - 0.6)) / 0.5)
+            a = suave((t - (fala_fim - 0.6)) / 0.5) * (1 - suave((t - (tela_final - 0.4)) / 0.4))
+            b = suave((t - tela_final) / 0.4)
+            if b > 0:
+                slot = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+                ds = ImageDraw.Draw(slot)
+                texto_centro(ds, 210, "ASSISTA O PRÓXIMO", f_rot, AMBAR, espaco=6, alfa=b)
+                ds.rounded_rectangle((W / 2 - 265, 280, W / 2 + 265, 280 + 298), radius=18, fill=(14, 13, 20, int(200 * b)), outline=AMBAR + (int(200 * b),), width=3)
+                ds.ellipse((W / 2 - 100, 660, W / 2 + 100, 860), fill=(14, 13, 20, int(200 * b)), outline=AMBAR + (int(200 * b),), width=3)
+                img = Image.alpha_composite(img, slot)
             if a > 0:
                 txt = Image.new("RGBA", (W, H), (0, 0, 0, 0))
                 d = ImageDraw.Draw(txt)
@@ -301,7 +312,7 @@ def encerramento(proximo, saida):
                 d.rounded_rectangle((x0, y, x0 + larg, y + 76), radius=38, fill=AMBAR + (int(255 * a),))
                 texto_centro(d, y + 14, "INSCREVA-SE", f_cta, (26, 18, 6), alfa=a)
                 img = Image.alpha_composite(img, txt)
-            luz = min(suave(t / 0.35), 1 - suave((t - (dur - 0.5)) / 0.5))
+            luz = min(suave(t / 0.35), 1 - suave((t - (dur - 0.3)) / 0.3))
             if luz < 1:
                 img = Image.blend(Image.new("RGB", (W, H)), img.convert("RGB"), luz).convert("RGBA")
             yield img

@@ -6,8 +6,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  ArrowLeft, BookOpen, Calendar, CheckCircle2, ChevronDown, Clapperboard, Download, Film, Loader2, Lock, Mic,
-  Scissors, Send, ShieldCheck, Video, BarChart3,
+  ArrowLeft, BookOpen, Calendar, Check, CheckCircle2, ChevronDown, Clapperboard, Copy, Download, Film, Loader2, Lock, Mic,
+  Scissors, Send, ShieldCheck, Video, BarChart3, Image as ImagemIcone, TriangleAlert,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useCortes, useEpisodio, useUrlsAssinadas, type Corte, type Episodio } from '@/lib/hooks/use-longos'
@@ -102,7 +102,7 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
   const { data: e, isLoading, error } = useEpisodio(codigo)
   const cortes = useCortes(e?.id)
   const m = e?.metadata || {}
-  const urls = useUrlsAssinadas([m.montagem?.video, m.montagem?.legenda, ...(cortes.data || []).map((c) => c.video)])
+  const urls = useUrlsAssinadas([m.montagem?.video, m.montagem?.legenda, m.montagem?.capa, ...(cortes.data || []).map((c) => c.video)])
   const qc = useQueryClient()
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -171,17 +171,40 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
               <Dado rot="Montado em" val={new Date(m.montagem.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} />
               <Dado rot="Cortes" val={`${cortes.data?.length ?? 0} de ${nCortes}`} />
             </dl>
-            <p className="text-[11px] text-(--pulso-text-subtle)">
-              Aqui é a prévia em 720p. O arquivo final em 1080p para subir no YouTube é <code>{m.montagem.arquivo_local}</code>, na pasta do episódio no OneDrive.
-            </p>
+            <p className="text-[11px] text-(--pulso-text-subtle)">Este é o arquivo final em 1080p{m.montagem.final_mb ? ` (${m.montagem.final_mb} MB)` : ''}: dá para baixar e publicar direto do celular.</p>
           </div>
         ) : <Vazio>Ainda não montado. A montagem sai depois do roteiro aprovado e da narração.</Vazio>}
+      </Secao>
+
+      <Secao icone={<Send className="h-4 w-4" />} titulo="Pronto para publicar no YouTube">
+        {m.textos?.youtube?.titulo ? (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {m.montagem?.video && urls.data?.[m.montagem.video] && <Baixar href={urls.data[m.montagem.video]} nome={`${e.codigo}_final_1080p.mp4`} rotulo="vídeo final 1080p" icone={<Film className="h-3.5 w-3.5" />} />}
+              {m.montagem?.capa && urls.data?.[m.montagem.capa] && <Baixar href={urls.data[m.montagem.capa]} nome={`${e.codigo}_capa.jpg`} rotulo="capa" icone={<ImagemIcone className="h-3.5 w-3.5" />} />}
+              {m.montagem?.legenda && urls.data?.[m.montagem.legenda] && <Baixar href={urls.data[m.montagem.legenda]} nome={`${e.codigo}_legenda.srt`} rotulo="legenda .srt" icone={<Download className="h-3.5 w-3.5" />} />}
+            </div>
+            {m.montagem?.capa && urls.data?.[m.montagem.capa] && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={urls.data[m.montagem.capa]} alt="Capa do episódio" className="w-full max-w-md rounded-xl" />
+            )}
+            <Copiavel rotulo="Título" texto={m.textos.youtube.titulo} />
+            <Copiavel rotulo="Descrição (com capítulos)" texto={m.textos.youtube.descricao} longo />
+            <Copiavel rotulo="Tags" texto={m.textos.youtube.tags.join(', ')} />
+            {m.textos.youtube.aviso && (
+              <p className="flex items-start gap-2 rounded-xl border border-(--pulso-warn)/40 bg-(--pulso-warn)/5 px-3 py-2 text-xs text-(--pulso-warn)">
+                <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {m.textos.youtube.aviso}
+              </p>
+            )}
+            <p className="text-[11px] text-(--pulso-text-subtle)">Tela final: os últimos 5 s do vídeo já têm os espaços desenhados. No YouTube Studio, coloque o elemento de vídeo no retângulo e o de inscrição no círculo.</p>
+          </div>
+        ) : <Vazio>Os textos de publicação entram quando a ficha é fechada pelo motor.</Vazio>}
       </Secao>
 
       <Secao icone={<Scissors className="h-4 w-4" />} titulo="Cortes verticais (Reels, Shorts, TikTok, stories, status)">
         {cortes.data?.length ? (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {cortes.data.map((c) => <CardCorte key={c.id} c={c} url={c.video ? urls.data?.[c.video] : undefined} />)}
+            {cortes.data.map((c) => <CardCorte key={c.id} c={c} url={c.video ? urls.data?.[c.video] : undefined} legenda={m.textos?.cortes?.[String(c.numero)]?.legenda} />)}
           </ul>
         ) : <Vazio>{nCortes ? `${nCortes} trechos marcados no roteiro; os cortes saem depois da montagem.` : 'Nenhum corte marcado no roteiro.'}</Vazio>}
       </Secao>
@@ -263,6 +286,33 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
   )
 }
 
+function Copiavel({ rotulo, texto, longo, pequeno }: { rotulo: string; texto: string; longo?: boolean; pequeno?: boolean }) {
+  const [ok, setOk] = useState(false)
+  async function copiar() {
+    await navigator.clipboard.writeText(texto)
+    setOk(true); setTimeout(() => setOk(false), 1800)
+  }
+  return (
+    <div className="rounded-xl bg-(--pulso-surface-raised) p-3">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-[10px] uppercase tracking-wide text-(--pulso-text-subtle)">{rotulo}</span>
+        <button type="button" onClick={copiar} className="inline-flex items-center gap-1 text-[11px] text-(--pulso-action) hover:underline">
+          {ok ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {ok ? 'copiado' : 'copiar'}
+        </button>
+      </div>
+      <p className={`whitespace-pre-line text-(--pulso-text) ${pequeno ? 'line-clamp-3 text-[11px]' : 'text-xs'} ${longo ? 'max-h-48 overflow-y-auto' : ''}`}>{texto}</p>
+    </div>
+  )
+}
+
+function Baixar({ href, nome, rotulo, icone }: { href: string; nome: string; rotulo: string; icone: ReactNode }) {
+  return (
+    <a href={href} download={nome} className="inline-flex items-center gap-1.5 rounded-lg border border-(--pulso-border) px-3 py-1.5 text-xs text-(--pulso-text-muted) hover:text-(--pulso-text)">
+      {icone} {rotulo}
+    </a>
+  )
+}
+
 function Dado({ rot, val }: { rot: string; val: string }) {
   return (
     <div className="rounded-xl bg-(--pulso-surface-raised) px-3 py-2">
@@ -272,7 +322,7 @@ function Dado({ rot, val }: { rot: string; val: string }) {
   )
 }
 
-function CardCorte({ c, url }: { c: Corte; url?: string }) {
+function CardCorte({ c, url, legenda }: { c: Corte; url?: string; legenda?: string }) {
   const qc = useQueryClient()
   const [ocupado, setOcupado] = useState(false)
   async function status(s: Corte['status']) {
@@ -287,6 +337,8 @@ function CardCorte({ c, url }: { c: Corte; url?: string }) {
         : <div className="aspect-[9/16] animate-pulse rounded-xl bg-(--pulso-surface-raised)" />}
       <p className="text-xs font-semibold text-(--pulso-text)">{c.numero}. {c.titulo}</p>
       <p className="text-[11px] text-(--pulso-text-subtle)">{Math.round(c.duracao_s)} s · {c.status}</p>
+      {legenda && <Copiavel rotulo="Legenda" texto={legenda} pequeno />}
+      {url && <Baixar href={url} nome={`corte_${c.numero}.mp4`} rotulo="baixar" icone={<Download className="h-3.5 w-3.5" />} />}
       <div className="flex gap-2">
         {c.status === 'pronto' && <button type="button" disabled={ocupado} onClick={() => status('aprovado')} className="rounded-lg bg-(--pulso-ok) px-2.5 py-1 text-[11px] font-medium text-(--pulso-on-action) disabled:opacity-50">Aprovar</button>}
         {c.status === 'aprovado' && <button type="button" disabled={ocupado} onClick={() => status('pronto')} className="rounded-lg border border-(--pulso-border) px-2.5 py-1 text-[11px] text-(--pulso-text-muted) disabled:opacity-50">Desfazer</button>}
