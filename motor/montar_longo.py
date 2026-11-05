@@ -213,7 +213,13 @@ def cartao_codigo(v):
                 larg = d.textlength(txt, font=f) + 160
                 x = (W - larg) / 2
                 d.rounded_rectangle((x, y, x + larg, y + 120), radius=20, fill=CARTAO + (int(255 * a),), outline=cor + (int(255 * a),), width=3)
-                d.text((x + 40, y + 22), sinal, font=f, fill=cor + (int(255 * a),))
+                # desenhado, não digitado: a Bahnschrift não tem ✗/✓ e saía um quadradinho (05/11)
+                cx, cy, rr = x + 70, y + 60, 22
+                if sinal == "✗":
+                    d.line((cx - rr, cy - rr, cx + rr, cy + rr), fill=cor + (int(255 * a),), width=9)
+                    d.line((cx - rr, cy + rr, cx + rr, cy - rr), fill=cor + (int(255 * a),), width=9)
+                else:
+                    d.line((cx - rr, cy, cx - 6, cy + rr - 4, cx + rr + 4, cy - rr), fill=cor + (int(255 * a),), width=9, joint="curve")
                 d.text((x + 120, y + 22), txt, font=f, fill=BRANCO + (int(255 * a),))
         else:
             larg = d.textlength(errado, font=f) + 120
