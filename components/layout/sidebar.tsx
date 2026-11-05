@@ -21,6 +21,7 @@ import {
   X,
   History,
   ScanLine,
+  CalendarCheck,
 } from 'lucide-react'
 
 import { getSupabaseBrowser } from '@/lib/supabase/browser'
@@ -56,6 +57,7 @@ const NAV_CURTOS = [
 // porque são a matéria-prima dos episódios; Assets, Kit e Configurações são das duas caras.
 const NAV_LONGOS = [
   { name: 'Episódios', href: '/longos', icon: Film, badge: null, soAdmin: false },
+  { name: 'Hoje', href: '/longos/hoje', icon: CalendarCheck, badge: null, soAdmin: false },
   { name: 'Bastidores', href: '/bastidores', icon: History, badge: null, soAdmin: false },
   { name: 'Analytics', href: '/longos/analytics', icon: BarChart3, badge: null, soAdmin: false },
   { name: 'Kit de mídia', href: '/analytics/kit', icon: ScanLine, badge: null, soAdmin: false },
