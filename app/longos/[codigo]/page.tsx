@@ -102,7 +102,7 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
   const { data: e, isLoading, error } = useEpisodio(codigo)
   const cortes = useCortes(e?.id)
   const m = e?.metadata || {}
-  const urls = useUrlsAssinadas([m.montagem?.video, m.montagem?.legenda, m.montagem?.capa, ...(cortes.data || []).map((c) => c.video)])
+  const urls = useUrlsAssinadas([m.montagem?.video, m.montagem?.legenda, m.montagem?.capa, ...(m.montagem?.capas || []), ...(cortes.data || []).map((c) => c.video)])
   const qc = useQueryClient()
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -184,10 +184,23 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
               {m.montagem?.capa && urls.data?.[m.montagem.capa] && <Baixar href={urls.data[m.montagem.capa]} nome={`${e.codigo}_capa.jpg`} rotulo="capa" icone={<ImagemIcone className="h-3.5 w-3.5" />} />}
               {m.montagem?.legenda && urls.data?.[m.montagem.legenda] && <Baixar href={urls.data[m.montagem.legenda]} nome={`${e.codigo}_legenda.srt`} rotulo="legenda .srt" icone={<Download className="h-3.5 w-3.5" />} />}
             </div>
-            {m.montagem?.capa && urls.data?.[m.montagem.capa] && (
+            {(m.montagem?.capas?.length ?? 0) > 0 ? (
+              <div className="space-y-2">
+                <p className="text-[11px] text-(--pulso-text-subtle)">3 capas para o teste do YouTube: no Studio, em <strong>Testar e comparar</strong> na miniatura, suba as três; o YouTube mostra cada uma a uma parte do público e fica com a que mais segura o clique.</p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {m.montagem!.capas!.map((c, i) => urls.data?.[c] && (
+                    <div key={c} className="space-y-1.5">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={urls.data[c]} alt={`Capa ${'ABC'[i]}`} className="w-full rounded-xl" />
+                      <Baixar href={urls.data[c]} nome={`${e.codigo}_capa_${'ABC'[i]}.jpg`} rotulo={`capa ${'ABC'[i]}`} icone={<ImagemIcone className="h-3.5 w-3.5" />} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : m.montagem?.capa && urls.data?.[m.montagem.capa] ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={urls.data[m.montagem.capa]} alt="Capa do episódio" className="w-full max-w-md rounded-xl" />
-            )}
+            ) : null}
             <Copiavel rotulo="Título" texto={m.textos.youtube.titulo} />
             <Copiavel rotulo="Descrição (com capítulos)" texto={m.textos.youtube.descricao} longo />
             <Copiavel rotulo="Tags" texto={m.textos.youtube.tags.join(', ')} />

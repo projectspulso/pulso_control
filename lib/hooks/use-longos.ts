@@ -21,7 +21,7 @@ export interface FichaEpisodio {
   fontes?: { casos: string[]; assuntos: string[]; banco: string[] }
   trava?: { em: string; receitas: number; trechos_comuns: number; termos_proibidos: string[]; passou: boolean }
   narracao?: { blocos: { bloco: string; caracteres: number; duracao_s: number }[]; total_s: number; caracteres: number; voz?: string; voz_aprovada_em?: string }
-  montagem?: { versao: number; duracao_s: number; video: string; capa?: string | null; legenda: string; arquivo_local: string; em: string; final_mb?: number }
+  montagem?: { versao: number; duracao_s: number; video: string; capa?: string | null; capas?: string[]; legenda: string; arquivo_local: string; em: string; final_mb?: number }
   textos?: { youtube: { titulo: string; descricao: string; tags: string[]; aviso: string }; cortes: Record<string, { legenda: string }> }
   publicacao?: { canal: string | null; url: string | null; data: string | null }
 }

@@ -132,5 +132,64 @@ def gerar(codigo):
     return resultado
 
 
+ESQUEMA_CAPAS = {
+    "type": "object",
+    "properties": {"capas": {"type": "array", "items": {
+        "type": "object",
+        "properties": {
+            "foto": {"type": "string", "description": "id de uma foto do catálogo"},
+            "numero": {"type": "string", "description": "número curto em destaque, tirado do roteiro, ou vazio"},
+            "linha": {"type": "string", "description": "frase da capa em CAIXA ALTA, até 28 caracteres"},
+            "na_foto": {"type": "string", "description": "texto para dentro da tela do celular ou da folha, se a foto tiver uma; senão vazio"},
+        },
+        "required": ["foto", "numero", "linha", "na_foto"], "additionalProperties": False}}},
+    "required": ["capas"], "additionalProperties": False,
+}
+
+
+def propor_capas(codigo):
+    """Propõe 3 capas (A/B/C, para o teste de miniaturas do YouTube) a partir do gancho do roteiro e do
+    catálogo de fotos. Barra número que não está no roteiro e foto que não existe no catálogo."""
+    import capa_longo
+    ep = g._db("GET", f"/rest/v1/episodios?codigo=eq.{codigo}&select=numero,titulo,gancho,roteiro_md", schema="pulso_content")[0]
+    cat = capa_longo.catalogo()
+    resumo_cat = "\n".join(f"- {k}: {v['pose']} ({v['emocao']}); usos: {', '.join(v['usos'])}"
+                           + ("; tem tela de celular" if v.get("tela") else "") + ("; tem folha" if v.get("folha") else "")
+                           for k, v in cat.items())
+    roteiro = ep["roteiro_md"].split("## Para o dono")[0]
+    pedido = (f"Episódio: {ep['titulo']}. Gancho: {ep['gancho']}.\n\nFOTOS DISPONÍVEIS:\n{resumo_cat}\n\n"
+              f"ROTEIRO (a única fonte de números):\n{roteiro[:12000]}\n\n"
+              "Proponha 3 capas de YouTube BEM diferentes entre si (ângulos diferentes da mesma história), cada uma com "
+              "uma foto do catálogo que combine com a emoção da frase. Use no máximo um número por capa, e só número que "
+              "está no roteiro. Frase curta, forte, sem ponto final.")
+    r = _cliente().beta.messages.create(
+        model=MODELO, max_tokens=4000, betas=["server-side-fallback-2026-07-01"], fallbacks="default",
+        output_config={"effort": "medium", "format": {"type": "json_schema", "schema": ESQUEMA_CAPAS}},
+        system=SISTEMA, messages=[{"role": "user", "content": pedido}],
+    )
+    if r.stop_reason == "refusal":
+        raise RuntimeError("proposta de capas recusada")
+    capas = json.loads(next(b.text for b in r.content if b.type == "text"))["capas"][:3]
+    nums_roteiro = _numeros(roteiro)
+    boas = []
+    for i, c in enumerate(capas):
+        if c["foto"] not in cat or (_numeros(c["numero"] + " " + c["na_foto"]) - nums_roteiro):
+            print("capa barrada:", c); continue
+        c["variante"] = "ABC"[len(boas)]
+        if not c["na_foto"]:
+            c.pop("na_foto")
+        boas.append(c)
+    pasta = f"{ONEDRIVE}/bastidores_ep{int(ep['numero']):02d}"
+    arq = f"{pasta}/textos.json"
+    t = json.load(open(arq, encoding="utf-8")) if os.path.exists(arq) else {}
+    t["capas"] = boas
+    os.makedirs(pasta, exist_ok=True)
+    json.dump(t, open(arq, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    return boas
+
+
 if __name__ == "__main__":
-    gerar(sys.argv[1])
+    if len(sys.argv) > 2 and sys.argv[2] == "--capas":
+        print(propor_capas(sys.argv[1]))
+    else:
+        gerar(sys.argv[1])

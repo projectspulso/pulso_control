@@ -134,6 +134,18 @@ def fechar(codigo):
         raise SystemExit(f"final com {mb:.0f} MB passa do limite de 50 MB do armazenamento")
     sobe(previa, f"{base}/final_1080p.mp4", "video/mp4")
     sobe(montagem[:-4] + ".srt", f"{base}/legenda.srt", "application/x-subrip")
+    # capas: as variantes A/B/C saem do spec de textos.json (escrito à mão ou proposto pelo textos_cortes)
+    capas = []
+    try:
+        import capa_longo
+        if json.load(open(f"{pasta}/textos.json", encoding="utf-8")).get("capas"):
+            capa_longo.do_spec(nn)
+    except FileNotFoundError:
+        pass
+    for v in "ABC":
+        arq = f"{pasta}/capa_{v}.jpg"
+        if os.path.exists(arq):
+            capas.append(sobe(arq, f"{base}/capa_{v}.jpg", "image/jpeg"))
     capa = f"{pasta}/capa.jpg"
     if os.path.exists(capa):
         sobe(capa, f"{base}/capa.jpg", "image/jpeg")
@@ -157,7 +169,7 @@ def fechar(codigo):
         "narracao": {"blocos": narr, "total_s": round(sum(b["duracao_s"] for b in narr), 1), "caracteres": sum(b["caracteres"] for b in narr),
                      "voz": voz.get("nome"), "voz_aprovada_em": voz.get("aprovadaEm")},
         "montagem": {"versao": int(anterior.get("versao", 0)) + 1, "duracao_s": round(duracao(montagem), 1),
-                     "video": f"{base}/final_1080p.mp4", "capa": f"{base}/capa.jpg" if os.path.exists(f"{pasta}/capa.jpg") else None, "legenda": f"{base}/legenda.srt", "arquivo_local": os.path.basename(montagem),
+                     "video": f"{base}/final_1080p.mp4", "capa": f"{base}/capa.jpg" if os.path.exists(f"{pasta}/capa.jpg") else None, "capas": capas, "legenda": f"{base}/legenda.srt", "arquivo_local": os.path.basename(montagem),
                      "em": __import__("datetime").datetime.now().isoformat(timespec="minutes"), "final_mb": round(mb, 1),
                      "blocos": lt.get("blocos", [])},
     })
