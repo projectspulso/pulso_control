@@ -36,6 +36,7 @@ function Paragrafo({ children }: { children?: ReactNode }) {
       </p>
     )
   }
+  if (/^\[(VINHETA|ENCERRAMENTO)\]/.test(t)) return <p className="my-3 rounded-lg bg-(--pulso-surface-raised) px-3 py-2 text-xs text-(--pulso-text-muted)">{children}</p>
   if (/^\[(TELA|AVATAR|CARTELA)\]/.test(t)) return <p className="my-2 text-xs text-(--pulso-text-subtle)">{children}</p>
   return <p className="mb-3 text-sm leading-relaxed text-(--pulso-text-muted)">{children}</p>
 }

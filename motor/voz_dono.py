@@ -30,23 +30,33 @@ def _chave():
     raise SystemExit("ELEVENLABS_API_KEY ausente no .env")
 
 
-def narrar(texto, saida):
+def narrar(texto, saida, tempos=False):
+    """tempos=True devolve o alinhamento por caractere (para o lip-sync). O tom muda depois, mas o
+    andamento não (rubberband com pitch só), então os tempos continuam valendo."""
     c = config()
+    rota = "/with-timestamps" if tempos else ""
     req = urllib.request.Request(
-        f"https://api.elevenlabs.io/v1/text-to-speech/{c['voice_id']}?output_format=mp3_44100_128", method="POST",
+        f"https://api.elevenlabs.io/v1/text-to-speech/{c['voice_id']}{rota}?output_format=mp3_44100_128", method="POST",
         data=json.dumps({"text": texto, "model_id": c["model_id"], "voice_settings": c["voice_settings"]}).encode(),
         headers={"xi-api-key": _chave(), "Content-Type": "application/json"})
     bruto = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False).name
+    alinhamento = None
     try:
         with urllib.request.urlopen(req) as r, open(bruto, "wb") as f:
-            f.write(r.read())
+            if tempos:
+                import base64
+                d = json.loads(r.read())
+                f.write(base64.b64decode(d["audio_base64"]))
+                alinhamento = d.get("alignment")
+            else:
+                f.write(r.read())
         pos = c.get("pos", {})
         fator = 2 ** (float(pos.get("semitons", 0)) / 12)
         filtro = f"rubberband=pitch={fator:.4f}:formant=preserved,loudnorm=I={pos.get('lufs', -16)}"
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", bruto, "-af", filtro, saida], check=True)
     finally:
         os.remove(bruto)
-    return saida
+    return (saida, alinhamento) if tempos else saida
 
 
 if __name__ == "__main__":
