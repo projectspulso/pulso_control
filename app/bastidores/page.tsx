@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Clapperboard } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { ArrowRight, CheckCircle2, Clapperboard, Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
-import { useBastidores, type TipoAssunto } from '@/lib/hooks/use-bastidores'
+import { supabase } from '@/lib/supabase/client'
+import { useBastidores, type Assunto, type TipoAssunto } from '@/lib/hooks/use-bastidores'
 import { TIPOS, dataLonga, mesAno } from '@/lib/bastidores/tipos'
 
 /**
@@ -15,24 +17,36 @@ import { TIPOS, dataLonga, mesAno } from '@/lib/bastidores/tipos'
 export default function BastidoresPage() {
   const { data, isLoading, isError, error } = useBastidores()
   const [tipo, setTipo] = useState<TipoAssunto | 'todos'>('todos')
+  // abre em "aguardando": é a fila de trabalho de quem aprova
+  const [situacao, setSituacao] = useState<'todos' | Assunto['status']>('rascunho')
 
   const grupos = useMemo(() => {
     const m = new Map<string, NonNullable<typeof data>>()
-    for (const a of (data || []).filter((x) => tipo === 'todos' || x.tipo === tipo)) {
+    for (const a of (data || []).filter((x) => (tipo === 'todos' || x.tipo === tipo) && (situacao === 'todos' || x.status === situacao))) {
       const k = a.data.slice(0, 7)
       m.set(k, [...(m.get(k) || []), a])
     }
     return [...m.entries()]
-  }, [data, tipo])
+  }, [data, tipo, situacao])
 
-  const contagem = (t: TipoAssunto) => (data || []).filter((a) => a.tipo === t).length
+  const naSituacao = (data || []).filter((a) => situacao === 'todos' || a.status === situacao)
+  const contagem = (t: TipoAssunto) => naSituacao.filter((a) => a.tipo === t).length
+  const porStatus = (st: Assunto['status']) => (data || []).filter((a) => a.status === st).length
 
   return (
     <div className="space-y-5">
       <PageHeader titulo="Bastidores" subtitulo="A história do PULSO por assunto: o que aconteceu, com os números e as telas da época" />
 
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrar por situação">
+        <Chip ativo={situacao === 'rascunho'} onClick={() => setSituacao('rascunho')}>Aguardando aprovação ({porStatus('rascunho')})</Chip>
+        <Chip ativo={situacao === 'aprovado'} onClick={() => setSituacao('aprovado')}>
+          <CheckCircle2 className="h-3.5 w-3.5 text-(--pulso-ok)" /> Aprovados ({porStatus('aprovado')})
+        </Chip>
+        <Chip ativo={situacao === 'todos'} onClick={() => setSituacao('todos')}>Todos ({data?.length ?? 0})</Chip>
+      </div>
+
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrar por tipo">
-        <Chip ativo={tipo === 'todos'} onClick={() => setTipo('todos')}>Todos ({data?.length ?? 0})</Chip>
+        <Chip ativo={tipo === 'todos'} onClick={() => setTipo('todos')}>Todos os tipos ({naSituacao.length})</Chip>
         {(Object.keys(TIPOS) as TipoAssunto[]).map((t) => {
           const T = TIPOS[t]
           return (
@@ -66,35 +80,7 @@ export default function BastidoresPage() {
                   <span className={`absolute -left-[27px] top-5 flex h-3.5 w-3.5 items-center justify-center rounded-full ring-4 ring-(--background) ${T.fundo}`}>
                     <span className={`h-1.5 w-1.5 rounded-full bg-current ${T.cor}`} />
                   </span>
-                  <Link href={`/bastidores/${a.slug}`}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-(--pulso-border) bg-(--pulso-surface) transition-colors hover:border-(--pulso-action)/50 sm:flex-row">
-                    <div className="relative h-36 shrink-0 bg-(--pulso-surface-raised) sm:h-auto sm:min-h-28 sm:w-56">
-                      {a.capa ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={a.capa} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <T.icone className={`h-8 w-8 opacity-40 ${T.cor}`} />
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1 p-4">
-                      <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[11px]">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${T.fundo} ${T.cor}`}>
-                          <T.icone className="h-3 w-3" /> {T.rotulo}
-                        </span>
-                        <span className="text-(--pulso-text-subtle)">{dataLonga(a.data)}</span>
-                        {a.episodio && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-(--pulso-surface-raised) px-2 py-0.5 text-(--pulso-text-muted)">
-                            <Clapperboard className="h-3 w-3" /> {a.episodio}
-                          </span>
-                        )}
-                        {a.status === 'rascunho' && <span className="rounded-full border border-dashed border-(--pulso-border) px-2 py-0.5 text-(--pulso-text-subtle)">rascunho</span>}
-                      </div>
-                      <h3 className="text-base font-semibold leading-snug text-(--pulso-text) group-hover:text-(--pulso-action)">{a.titulo}</h3>
-                      <p className="mt-1 line-clamp-2 text-sm text-(--pulso-text-muted)">{a.resumo}</p>
-                    </div>
-                  </Link>
+                  <CardAssunto a={a} />
                 </li>
               )
             })}
@@ -113,5 +99,80 @@ function Chip({ ativo, onClick, children }: { ativo: boolean; onClick: () => voi
         : 'border border-(--pulso-border) bg-(--pulso-surface) text-(--pulso-text-muted) hover:text-(--pulso-text)'}`}>
       {children}
     </button>
+  )
+}
+
+/** Card da linha do tempo: aprova sem sair da lista; o título, a capa e "Ver detalhes" abrem o assunto. */
+function CardAssunto({ a }: { a: Assunto & { capa: string | null } }) {
+  const T = TIPOS[a.tipo]
+  const qc = useQueryClient()
+  const [ocupado, setOcupado] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+
+  async function mudarStatus(status: Assunto['status']) {
+    setOcupado(true); setErro(null)
+    const { error } = await supabase.schema('pulso_content').from('bastidores_assuntos')
+      .update({ status, atualizado_em: new Date().toISOString() }).eq('id', a.id)
+    setOcupado(false)
+    if (error) { setErro(error.message); return }
+    await qc.invalidateQueries({ queryKey: ['bastidores'] })
+  }
+
+  return (
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-(--pulso-border) bg-(--pulso-surface) sm:flex-row">
+      <Link href={`/bastidores/${a.slug}`} tabIndex={-1} aria-hidden="true"
+        className="relative h-36 shrink-0 bg-(--pulso-surface-raised) sm:h-auto sm:min-h-28 sm:w-56">
+        {a.capa ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={a.capa} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <T.icone className={`h-8 w-8 opacity-40 ${T.cor}`} />
+          </div>
+        )}
+      </Link>
+      <div className="flex min-w-0 flex-1 flex-col p-4">
+        <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[11px]">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${T.fundo} ${T.cor}`}>
+            <T.icone className="h-3 w-3" /> {T.rotulo}
+          </span>
+          <span className="text-(--pulso-text-subtle)">{dataLonga(a.data)}</span>
+          {a.episodio && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-(--pulso-surface-raised) px-2 py-0.5 text-(--pulso-text-muted)">
+              <Clapperboard className="h-3 w-3" /> {a.episodio}
+            </span>
+          )}
+          {a.status === 'aprovado' ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-(--pulso-ok)/12 px-2 py-0.5 text-(--pulso-ok)">
+              <CheckCircle2 className="h-3 w-3" /> aprovado
+            </span>
+          ) : (
+            <span className="rounded-full border border-dashed border-(--pulso-border) px-2 py-0.5 text-(--pulso-text-subtle)">aguardando aprovação</span>
+          )}
+        </div>
+        <Link href={`/bastidores/${a.slug}`} className="text-base font-semibold leading-snug text-(--pulso-text) hover:text-(--pulso-action)">
+          {a.titulo}
+        </Link>
+        <p className="mt-1 line-clamp-2 text-sm text-(--pulso-text-muted)">{a.resumo}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {a.status === 'rascunho' ? (
+            <button type="button" disabled={ocupado} onClick={() => mudarStatus('aprovado')}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-(--pulso-ok) px-3 py-1.5 text-xs font-medium text-(--pulso-on-action) disabled:opacity-50">
+              {ocupado ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Aprovar
+            </button>
+          ) : (
+            <button type="button" disabled={ocupado} onClick={() => mudarStatus('rascunho')}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-(--pulso-border) px-3 py-1.5 text-xs text-(--pulso-text-muted) hover:text-(--pulso-text) disabled:opacity-50">
+              {ocupado && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Desfazer aprovação
+            </button>
+          )}
+          <Link href={`/bastidores/${a.slug}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-(--pulso-border) px-3 py-1.5 text-xs text-(--pulso-text-muted) hover:text-(--pulso-text)">
+            Ver detalhes <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+          {erro && <span className="text-xs text-(--pulso-danger)">Não salvou: {erro}</span>}
+        </div>
+      </div>
+    </div>
   )
 }
