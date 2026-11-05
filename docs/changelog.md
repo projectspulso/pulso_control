@@ -9,6 +9,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (05/11) — um app com duas caras: Curtos (VC) e Longos (VL)
+- Seletor no topo do menu e página `/escolha` depois do login. A cara muda o menu e a cor de destaque: roxo nos Curtos, âmbar nos Longos (tokens `--pulso-vc`/`--pulso-vl`). `/longos` e `/bastidores` são Longos; configurações, assets e kit ficam na cara em que você estava.
+- Longos: `/longos` (episódios da T01 e o checklist da fábrica, lido de `configuracoes.longos_fabrica`) e `/longos/analytics` (separado do Analytics dos Shorts). Bastidores saiu do menu dos Curtos.
+
 ### Adicionado (05/11) — Kit de mídia para patrocínio
 - `/analytics/kit` (botão "Kit de mídia" na aba Controle): prévia com os números de agora e "Congelar e gerar link". Cada envio grava a foto (seguidores do contador, views por vídeo, ganho de 30 dias, views por mês, público do YouTube e Instagram, top 5) com data, para quem, recado opcional e validade de 7 a 60 dias.
 - `/kit/<token>`: página do patrocinador sem login, aberta só pelo token de 48 hex, sem menu do app e fora dos buscadores; conta acessos; cancelável. Banco: `pulso_analytics.kit_midia_envios` + RPC `public.kit_midia_publico` (082).
