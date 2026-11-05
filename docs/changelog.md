@@ -9,6 +9,15 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (04/11) — Livro de Problemas (segredo da casa)
+- Aba "Livro de problemas" nos Bastidores: 105 casos reconstituídos de 235 commits de correção, notas e changelog (31/03 a 04/11). Cada caso: como percebemos, causa raiz, conserto, prova, trava e impacto.
+- A receita (o como exato) fica em `livro_problemas_receita`, só admin (081); outros apps leem só `v_livro_historia` (aprovados, sem receita). 14 casos ligados a assuntos da linha do tempo.
+
+### Corrigido (04/11) — vídeos e telas
+- #261: frase do Halloween cortada da narração sem áudio novo (v3, conferido por transcrição do final); #219 remontado e agendado 23/11; #265/#266 com todas as cenas; #129 ganhou cenas.
+- Aba Marcos não carregava: leituras em páginas de 20 mil, 4 por vez, com desempate por id.
+- Bastidores: aprovar no card, ver detalhes e filtro aguardando/aprovados.
+
 ### Adicionado (04/11) — Bastidores: linha do tempo por assunto
 - `/bastidores`: cards por assunto agrupados por mês, filtro por tipo; `/bastidores/[assunto]`: números da época com data, imagens do app, vídeos citados, fontes, episódio e anterior/próximo. Aprovar, editar texto e anexar imagem pela própria página.
 - Banco: `bastidores_assuntos` (078), bucket privado `bastidores` com URL assinada (078/080), rascunhos automáticos diários de degraus de 100 mil views e vídeos acima de 3 mil numa rede (079, pg_cron 08h).
