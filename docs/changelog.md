@@ -9,6 +9,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (05/11) — publicação dos Longos online e pronta para copiar
+- Final 1080p na nuvem (E01: 24 MB) com baixar vídeo, capa e legenda pela ficha, também do celular.
+- Título, descrição com capítulos automáticos, tags e aviso de conteúdo sintético do YouTube com botão de copiar; legenda pronta e baixar em cada corte.
+- `motor/capa_longo.py` (miniatura 1280×720) e espaços da tela final do YouTube desenhados nos 5 s finais do encerramento.
+- Avatar com pose fixa por trecho (só a boca e a piscada mudam).
+
 ### Adicionado (05/11) — fábrica de cortes e ficha completa do episódio
 - `motor/cortes_longo.py`: cada ✂ CORTE do roteiro vira vertical 1080×1920 (título no topo, montagem no meio, legenda queimada, cartão final "episódio completo no YouTube" com a batida). E01: 6 cortes de 25 a 53 s.
 - `motor/ficha_longo.py`: trava do segredo automática (barra trecho de receita ou termo proibido), prévia 720p, legenda e cortes no bucket privado, ficha em `episodios.metadata` e `episodio_cortes` (083).
