@@ -5,11 +5,15 @@ import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CheckCircle2, Loader2, Scissors, Video } from 'lucide-react'
+import {
+  ArrowLeft, BookOpen, Calendar, CheckCircle2, ChevronDown, Clapperboard, Download, Film, Loader2, Lock, Mic,
+  Scissors, Send, ShieldCheck, Video, BarChart3,
+} from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
-import { useEpisodio } from '@/lib/hooks/use-longos'
+import { useCortes, useEpisodio, useUrlsAssinadas, type Corte, type Episodio } from '@/lib/hooks/use-longos'
 
 const CARTAO = 'rounded-2xl border border-(--pulso-border) bg-(--pulso-surface)'
+const minseg = (s?: number) => (s == null ? '—' : `${Math.floor(s / 60)} min ${String(Math.round(s % 60)).padStart(2, '0')} s`)
 
 function texto(n: ReactNode): string {
   if (typeof n === 'string' || typeof n === 'number') return String(n)
@@ -53,20 +57,60 @@ const MD = {
   hr: () => null,
 }
 
-const STATUS: Record<string, string> = { planejado: 'aguardando aprovação do roteiro', roteiro_ok: 'roteiro aprovado' }
+const ETAPAS: { status: string; rotulo: string }[] = [
+  { status: 'planejado', rotulo: 'Pauta' },
+  { status: 'roteiro_ok', rotulo: 'Roteiro aprovado' },
+  { status: 'em_revisao', rotulo: 'Montado, em revisão' },
+  { status: 'pronto_publicacao', rotulo: 'Pronto para publicar' },
+  { status: 'publicado', rotulo: 'Publicado' },
+]
+const ORDEM: Record<string, number> = { planejado: 0, roteiro_ok: 1, narracao_gerada: 1, capturas_coletadas: 1, montado: 2, em_revisao: 2, pronto_publicacao: 3, publicado: 4 }
 
-/** Ficha do episódio dos Longos (05/11/2026): ler o roteiro com as marcações e aprovar. */
+function Secao({ icone, titulo, acao, children }: { icone: ReactNode; titulo: string; acao?: ReactNode; children: ReactNode }) {
+  return (
+    <section className={`${CARTAO} p-5`}>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-(--pulso-text)"><span className="text-(--pulso-action)">{icone}</span>{titulo}</h2>
+        {acao}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function Vazio({ children }: { children: ReactNode }) {
+  return <p className="text-sm text-(--pulso-text-subtle)">{children}</p>
+}
+
+function Trilha({ status }: { status: string }) {
+  const atual = ORDEM[status] ?? 0
+  return (
+    <ol className="mt-4 grid grid-cols-5 gap-1.5" aria-label="Etapas do episódio">
+      {ETAPAS.map((e, i) => (
+        <li key={e.status} className="space-y-1.5">
+          <div className={`h-1.5 rounded-full ${i <= atual ? 'bg-(--pulso-action)' : 'bg-(--pulso-surface-raised)'}`} />
+          <p className={`text-[11px] ${i === atual ? 'font-semibold text-(--pulso-text)' : 'text-(--pulso-text-subtle)'}`}>{e.rotulo}</p>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+/** Ficha completa do episódio dos Longos (05/11/2026), no padrão da ficha única dos Shorts (/video/[id]). */
 export default function EpisodioPage({ params }: { params: Promise<{ codigo: string }> }) {
   const { codigo } = use(params)
   const { data: e, isLoading, error } = useEpisodio(codigo)
+  const cortes = useCortes(e?.id)
+  const m = e?.metadata || {}
+  const urls = useUrlsAssinadas([m.montagem?.video, m.montagem?.legenda, ...(cortes.data || []).map((c) => c.video)])
   const qc = useQueryClient()
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
-  async function mudar(status: string) {
+  async function mudar(campos: Partial<Episodio>) {
     setOcupado(true); setErro(null)
     const { error: x } = await supabase.schema('pulso_content').from('episodios')
-      .update({ status, updated_at: new Date().toISOString() }).eq('codigo', codigo)
+      .update({ ...campos, updated_at: new Date().toISOString() }).eq('codigo', codigo)
     setOcupado(false)
     if (x) { setErro(x.message); return }
     await qc.invalidateQueries({ queryKey: ['longos-episodio', codigo] })
@@ -78,43 +122,176 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
   if (!e) return <p className={`${CARTAO} p-6 text-sm text-(--pulso-text-muted)`}>Episódio não encontrado. <Link href="/longos" className="text-(--pulso-action) hover:underline">Voltar</Link></p>
 
   const md = e.roteiro_md || ''
-  const cortes = (md.match(/✂ \*\*CORTE \d+/g) || []).length
-  const voce = (md.match(/\*\*\[VOCÊ\]\*\*/g) || []).length
+  const nCortes = (md.match(/✂ \*\*CORTE \d+/g) || []).length
+  const botao = 'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50'
 
   return (
-    <article className="mx-auto max-w-3xl space-y-4">
+    <article className="mx-auto max-w-4xl space-y-4">
       <Link href="/longos" className="inline-flex items-center gap-1.5 text-xs text-(--pulso-text-subtle) hover:text-(--pulso-text)">
         <ArrowLeft className="h-3.5 w-3.5" /> Episódios
       </Link>
 
       <header className={`${CARTAO} p-6`}>
-        <p className="font-mono text-xs text-(--pulso-text-subtle)">{e.codigo} · {STATUS[e.status] || e.status}</p>
+        <p className="font-mono text-xs text-(--pulso-text-subtle)">{e.codigo}</p>
         <h1 className="mt-1 text-2xl font-bold text-(--pulso-text)">{e.titulo}</h1>
         {e.gancho && <p className="mt-2 text-sm italic text-(--pulso-text-muted)">“{e.gancho}”</p>}
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-full bg-(--pulso-surface-raised) px-2.5 py-1 text-(--pulso-text-muted)"><Scissors className="mr-1 inline h-3 w-3" />{cortes} cortes</span>
-          <span className="rounded-full bg-(--pulso-surface-raised) px-2.5 py-1 text-(--pulso-text-muted)"><Video className="mr-1 inline h-3 w-3" />{voce} trechos seus em vídeo</span>
-          <span className="ml-auto" />
+        <Trilha status={e.status} />
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           {e.status === 'planejado' && (
-            <button type="button" disabled={ocupado || !md} onClick={() => mudar('roteiro_ok')}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-(--pulso-ok) px-3 py-1.5 font-medium text-(--pulso-on-action) disabled:opacity-50">
+            <button type="button" disabled={ocupado || !md} onClick={() => mudar({ status: 'roteiro_ok' })} className={`${botao} bg-(--pulso-ok) text-(--pulso-on-action)`}>
               {ocupado ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Aprovar roteiro
             </button>
           )}
-          {e.status === 'roteiro_ok' && (
-            <button type="button" disabled={ocupado} onClick={() => mudar('planejado')}
-              className="rounded-lg border border-(--pulso-border) px-3 py-1.5 text-(--pulso-text-muted) hover:text-(--pulso-text) disabled:opacity-50">
-              Desfazer aprovação
+          {e.status === 'em_revisao' && (
+            <button type="button" disabled={ocupado} onClick={() => mudar({ status: 'pronto_publicacao' })} className={`${botao} bg-(--pulso-ok) text-(--pulso-on-action)`}>
+              {ocupado ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Aprovar a montagem
             </button>
           )}
+          {e.status === 'pronto_publicacao' && (
+            <button type="button" disabled={ocupado} onClick={() => mudar({ status: 'em_revisao' })} className={`${botao} border border-(--pulso-border) text-(--pulso-text-muted)`}>
+              Voltar para revisão
+            </button>
+          )}
+          {erro && <span className="text-xs text-(--pulso-danger)">Não salvou: {erro}</span>}
         </div>
-        {erro && <p className="mt-2 text-xs text-(--pulso-danger)">Não salvou: {erro}</p>}
       </header>
 
-      <section className={`${CARTAO} p-6`}>
-        {md ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD}>{md}</ReactMarkdown>
-          : <p className="text-sm text-(--pulso-text-subtle)">Sem roteiro ainda.</p>}
-      </section>
+      <Secao icone={<Film className="h-4 w-4" />} titulo="O episódio"
+        acao={m.montagem?.legenda && urls.data?.[m.montagem.legenda] ? (
+          <a href={urls.data[m.montagem.legenda]} download="legenda.srt" className="inline-flex items-center gap-1 text-xs text-(--pulso-action) hover:underline"><Download className="h-3.5 w-3.5" /> legenda .srt</a>
+        ) : null}>
+        {m.montagem ? (
+          <div className="space-y-3">
+            {urls.data?.[m.montagem.video]
+              ? <video src={urls.data[m.montagem.video]} controls preload="metadata" className="w-full rounded-xl bg-black" />
+              : <div className="aspect-video animate-pulse rounded-xl bg-(--pulso-surface-raised)" />}
+            <dl className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+              <Dado rot="Duração" val={minseg(m.montagem.duracao_s)} />
+              <Dado rot="Versão da montagem" val={`v${m.montagem.versao}`} />
+              <Dado rot="Montado em" val={new Date(m.montagem.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} />
+              <Dado rot="Cortes" val={`${cortes.data?.length ?? 0} de ${nCortes}`} />
+            </dl>
+            <p className="text-[11px] text-(--pulso-text-subtle)">
+              Aqui é a prévia em 720p. O arquivo final em 1080p para subir no YouTube é <code>{m.montagem.arquivo_local}</code>, na pasta do episódio no OneDrive.
+            </p>
+          </div>
+        ) : <Vazio>Ainda não montado. A montagem sai depois do roteiro aprovado e da narração.</Vazio>}
+      </Secao>
+
+      <Secao icone={<Scissors className="h-4 w-4" />} titulo="Cortes verticais (Reels, Shorts, TikTok, stories, status)">
+        {cortes.data?.length ? (
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {cortes.data.map((c) => <CardCorte key={c.id} c={c} url={c.video ? urls.data?.[c.video] : undefined} />)}
+          </ul>
+        ) : <Vazio>{nCortes ? `${nCortes} trechos marcados no roteiro; os cortes saem depois da montagem.` : 'Nenhum corte marcado no roteiro.'}</Vazio>}
+      </Secao>
+
+      <Secao icone={<BookOpen className="h-4 w-4" />} titulo="Pauta e fontes">
+        {m.fontes ? (
+          <div className="space-y-3 text-sm">
+            {m.fontes.casos.length > 0 && (
+              <div><p className="mb-1 text-[11px] uppercase tracking-wide text-(--pulso-text-subtle)">Livro de problemas</p>
+                <ul className="flex flex-wrap gap-2">{m.fontes.casos.map((s) => <li key={s}><Link href={`/bastidores/livro/${s}`} className="rounded-full bg-(--pulso-surface-raised) px-2.5 py-1 text-xs text-(--pulso-text-muted) hover:text-(--pulso-text)">{s}</Link></li>)}</ul></div>
+            )}
+            {m.fontes.assuntos.length > 0 && (
+              <div><p className="mb-1 text-[11px] uppercase tracking-wide text-(--pulso-text-subtle)">Linha do tempo</p>
+                <ul className="flex flex-wrap gap-2">{m.fontes.assuntos.map((s) => <li key={s}><Link href={`/bastidores/${s}`} className="rounded-full bg-(--pulso-surface-raised) px-2.5 py-1 text-xs text-(--pulso-text-muted) hover:text-(--pulso-text)">{s}</Link></li>)}</ul></div>
+            )}
+            {m.fontes.banco.length > 0 && (
+              <div><p className="mb-1 text-[11px] uppercase tracking-wide text-(--pulso-text-subtle)">Conferido no banco</p>
+                <ul className="list-disc space-y-1 pl-5 text-xs text-(--pulso-text-muted)">{m.fontes.banco.map((b) => <li key={b}>{b}</li>)}</ul></div>
+            )}
+          </div>
+        ) : <Vazio>As fontes entram quando a ficha é fechada pelo motor.</Vazio>}
+      </Secao>
+
+      <Secao icone={<ShieldCheck className="h-4 w-4" />} titulo="Trava do segredo (interno)">
+        {m.trava ? (
+          <p className={`flex items-start gap-2 text-sm ${m.trava.passou ? 'text-(--pulso-ok)' : 'text-(--pulso-danger)'}`}>
+            {m.trava.passou ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <Lock className="mt-0.5 h-4 w-4 shrink-0" />}
+            <span>
+              {m.trava.passou ? 'Passou.' : 'Barrou.'} Roteiro comparado com as {m.trava.receitas} receitas do livro: {m.trava.trechos_comuns} com trecho de 5 palavras em comum
+              {m.trava.termos_proibidos.length ? `; termos proibidos: ${m.trava.termos_proibidos.join(', ')}` : '; nenhum termo proibido'}. Conferido em {new Date(`${m.trava.em}T12:00:00Z`).toLocaleDateString('pt-BR')}.
+            </span>
+          </p>
+        ) : <Vazio>A trava roda antes de subir a montagem.</Vazio>}
+      </Secao>
+
+      <Secao icone={<Mic className="h-4 w-4" />} titulo="Narração">
+        {m.narracao ? (
+          <div className="space-y-3">
+            <dl className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+              <Dado rot="Voz" val={m.narracao.voz || '—'} />
+              <Dado rot="Voz aprovada em" val={m.narracao.voz_aprovada_em ? new Date(`${m.narracao.voz_aprovada_em}T12:00:00Z`).toLocaleDateString('pt-BR') : '—'} />
+              <Dado rot="Tempo de voz" val={minseg(m.narracao.total_s)} />
+              <Dado rot="Caracteres narrados" val={m.narracao.caracteres.toLocaleString('pt-BR')} />
+            </dl>
+            <ul className="grid grid-cols-3 gap-1.5 text-[11px] sm:grid-cols-5">
+              {m.narracao.blocos.map((b) => (
+                <li key={b.bloco} className="rounded-lg bg-(--pulso-surface-raised) px-2 py-1.5 text-(--pulso-text-muted)">bloco {b.bloco} · {Math.round(b.duracao_s)} s</li>
+              ))}
+            </ul>
+          </div>
+        ) : <Vazio>Sem narração ainda.</Vazio>}
+      </Secao>
+
+      <Secao icone={<Clapperboard className="h-4 w-4" />} titulo="Roteiro">
+        <details className="group">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs text-(--pulso-action)">
+            <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" /> ver o roteiro completo com as marcações
+          </summary>
+          <div className="mt-4">
+            {md ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD}>{md}</ReactMarkdown> : <Vazio>Sem roteiro ainda.</Vazio>}
+          </div>
+        </details>
+      </Secao>
+
+      <Secao icone={<Calendar className="h-4 w-4" />} titulo="Publicação">
+        <dl className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-3">
+          <Dado rot="Canal do YouTube" val={m.publicacao?.canal || 'a decidir pelo dono'} />
+          <Dado rot="Data" val={m.publicacao?.data ? new Date(m.publicacao.data).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'não marcada'} />
+          <Dado rot="Endereço" val={m.publicacao?.url || '—'} />
+        </dl>
+        <p className="mt-3 flex items-center gap-1.5 text-[11px] text-(--pulso-text-subtle)"><Send className="h-3.5 w-3.5" /> Quem publica é o dono (R-011). Depois de publicado, o endereço entra aqui e a medição começa.</p>
+      </Secao>
+
+      <Secao icone={<BarChart3 className="h-4 w-4" />} titulo="Números">
+        {e.status === 'publicado' ? <Vazio>A medição do longo (horas de exibição e retenção) entra com a coleta do YouTube.</Vazio>
+          : <Vazio>Quando o episódio for ao ar: horas de exibição, retenção minuto a minuto, de onde veio o público e quanto cada corte trouxe de volta.</Vazio>}
+      </Secao>
     </article>
+  )
+}
+
+function Dado({ rot, val }: { rot: string; val: string }) {
+  return (
+    <div className="rounded-xl bg-(--pulso-surface-raised) px-3 py-2">
+      <dt className="text-[10px] uppercase tracking-wide text-(--pulso-text-subtle)">{rot}</dt>
+      <dd className="mt-0.5 break-words text-sm text-(--pulso-text)">{val}</dd>
+    </div>
+  )
+}
+
+function CardCorte({ c, url }: { c: Corte; url?: string }) {
+  const qc = useQueryClient()
+  const [ocupado, setOcupado] = useState(false)
+  async function status(s: Corte['status']) {
+    setOcupado(true)
+    await supabase.schema('pulso_content').from('episodio_cortes').update({ status: s, atualizado_em: new Date().toISOString() }).eq('id', c.id)
+    setOcupado(false)
+    await qc.invalidateQueries({ queryKey: ['longos-cortes'] })
+  }
+  return (
+    <li className="space-y-2">
+      {url ? <video src={url} controls preload="metadata" className="aspect-[9/16] w-full rounded-xl bg-black object-cover" />
+        : <div className="aspect-[9/16] animate-pulse rounded-xl bg-(--pulso-surface-raised)" />}
+      <p className="text-xs font-semibold text-(--pulso-text)">{c.numero}. {c.titulo}</p>
+      <p className="text-[11px] text-(--pulso-text-subtle)">{Math.round(c.duracao_s)} s · {c.status}</p>
+      <div className="flex gap-2">
+        {c.status === 'pronto' && <button type="button" disabled={ocupado} onClick={() => status('aprovado')} className="rounded-lg bg-(--pulso-ok) px-2.5 py-1 text-[11px] font-medium text-(--pulso-on-action) disabled:opacity-50">Aprovar</button>}
+        {c.status === 'aprovado' && <button type="button" disabled={ocupado} onClick={() => status('pronto')} className="rounded-lg border border-(--pulso-border) px-2.5 py-1 text-[11px] text-(--pulso-text-muted) disabled:opacity-50">Desfazer</button>}
+        {c.status !== 'descartado' && c.status !== 'publicado' && <button type="button" disabled={ocupado} onClick={() => status('descartado')} className="text-[11px] text-(--pulso-text-subtle) hover:text-(--pulso-danger) disabled:opacity-50">descartar</button>}
+      </div>
+    </li>
   )
 }

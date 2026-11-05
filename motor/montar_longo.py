@@ -39,6 +39,7 @@ PAUSA = 0.45  # respiro entre blocos
 # ── roteiro → linha do tempo ───────────────────────────────────────────────────────────────────
 
 MARCA = re.compile(r"\*\*\[(TELA|AVATAR|CARTELA|VINHETA|ENCERRAMENTO)\]\*\*\s*(.*)")
+CORTE = re.compile(r'✂ \*\*CORTE (\d+) — "([^"]+)"\*\*(?:\s*·\s*gancho:\s*\*"([^"]+)"\*)?')
 
 
 def blocos_do_roteiro(md):
@@ -48,6 +49,13 @@ def blocos_do_roteiro(md):
         num = b.split(".")[0].strip()
         itens = []  # ("marca", tipo, texto) | ("fala", texto)
         for l in b.splitlines():
+            c = CORTE.match(l)
+            if c:
+                itens.append(("corte", int(c.group(1)), c.group(2), c.group(3) or ""))
+                continue
+            if l.strip() == "✂ fim":
+                itens.append(("corte_fim",))
+                continue
             m = MARCA.match(l)
             if m:
                 itens.append(("marca", m.group(1), m.group(2)))
@@ -55,6 +63,36 @@ def blocos_do_roteiro(md):
                 itens.append(("fala", re.sub(r"\*\*", "", l[2:].strip())))
         saida.append((num, itens))
     return saida
+
+
+def fins_das_falas(itens, alinhamento):
+    falas = [x[1] for x in itens if x[0] == "fala"]
+    texto = " ".join(falas)
+    fim = alinhamento["character_end_times_seconds"]
+    pos, res = 0, []
+    for f in falas:
+        i = texto.find(f, pos)
+        res.append(fim[min(i + len(f) - 1, len(fim) - 1)]); pos = i + len(f)
+    return res
+
+
+def cortes_do_bloco(itens, al, t_bloco):
+    """Faixas [início, fim] (tempo global) de cada ✂ CORTE do bloco: da 1ª fala depois da marca ao fim
+    da última fala antes do "✂ fim"."""
+    ini, fim = tempos_das_falas(itens, al), fins_das_falas(itens, al)
+    res, aberto, k = [], None, 0
+    for it in itens:
+        if it[0] == "fala":
+            if aberto is not None and aberto.get("ini") is None:
+                aberto["ini"] = t_bloco + ini[k]
+            if aberto is not None:
+                aberto["fim"] = t_bloco + fim[k] + 0.35
+            k += 1
+        elif it[0] == "corte":
+            aberto = {"numero": it[1], "titulo": it[2], "gancho": it[3], "ini": None, "fim": None}
+        elif it[0] == "corte_fim" and aberto is not None:
+            res.append(aberto); aberto = None
+    return res
 
 
 def tempos_das_falas(itens, alinhamento):
@@ -136,7 +174,7 @@ def cartao_terminal(v):
     linhas, titulo = v["linhas"], v.get("titulo", "")
     cores = v.get("cores", {})
     from PIL import ImageFont
-    f, ft = ImageFont.truetype("C:/Windows/Fonts/consola.ttf", 30), emb.fonte(30, "SemiBold")
+    f, ft = ImageFont.truetype("C:/Windows/Fonts/consola.ttf", 38), emb.fonte(32, "SemiBold")
     vel = float(v.get("velocidade", 6))  # linhas por segundo que entram
 
     def r(t):
@@ -148,10 +186,10 @@ def cartao_terminal(v):
         if titulo:
             d.text((x0 + 150, y0 + 20), titulo, font=ft, fill=CINZA + (255,))
         vis = min(len(linhas), int(t * vel) + 1)
-        maxl = (y1 - y0 - 110) // 44
+        maxl = (y1 - y0 - 110) // 54
         mostra = linhas[max(0, vis - maxl):vis]
         for i, l in enumerate(mostra):
-            y = y0 + 90 + i * 44
+            y = y0 + 90 + i * 54
             cor = BRANCO
             for k, c in cores.items():
                 if k in l:
@@ -351,7 +389,7 @@ def quadros_bloco(num, itens, al, dur, visuais, avatar, ep, rascunho):
     for it in itens:
         if it[0] == "fala":
             fala_i += 1
-        elif it[1] in ("TELA", "AVATAR", "CARTELA"):
+        elif it[0] == "marca" and it[1] in ("TELA", "AVATAR", "CARTELA"):
             t0 = inicios[fala_i] if fala_i < len(inicios) else dur
             spec = visuais[viz_i] if viz_i < len(visuais) else {"tipo": "avatar", "pose": "pose_neutro"}
             viz_i += 1
@@ -361,6 +399,40 @@ def quadros_bloco(num, itens, al, dur, visuais, avatar, ep, rascunho):
     segs[0] = (0.0,) + segs[0][1:]
     renders = [(t0, k, s, None if s.get("tipo") == "avatar" else RENDER[s["tipo"]](s)) for t0, k, s in segs]
     selo = emb.fonte(24, "SemiBold")
+
+    # fala em destaque ao lado do avatar grande (05/11: o avatar sozinho no fundo liso ficava parado
+    # demais): a linha que está sendo dita, com as palavras acendendo no tempo da voz
+    falas = [x[1] for x in itens if x[0] == "fala"]
+    texto = " ".join(falas)
+    posicoes, p = [], 0
+    for f_ in falas:
+        i_ = texto.find(f_, p); posicoes.append(i_); p = i_ + len(f_)
+    ini_c = al["character_start_times_seconds"]
+    f_dest = emb.fonte(68, "Bold")
+    medidor = ImageDraw.Draw(Image.new("RGBA", (10, 10)))
+
+    def destaque(img, t):
+        k = max((j for j, t0 in enumerate(inicios) if t0 <= t), default=None)
+        if k is None:
+            return
+        dito = sum(1 for a in ini_c if a <= t)
+        linhas, atual = [], []
+        for w_ in falas[k].split():
+            if atual and medidor.textlength(" ".join(atual + [w_]), font=f_dest) > 820:
+                linhas.append(atual); atual = []
+            atual.append(w_)
+        linhas.append(atual)
+        d = ImageDraw.Draw(img)
+        y = H / 2 - len(linhas) * 44
+        pos = posicoes[k]
+        for linha in linhas:
+            x = 980
+            for w_ in linha:
+                cor = BRANCO + (255,) if pos < dito else (110, 107, 123, 255)
+                d.text((x, y), w_, font=f_dest, fill=cor)
+                x += medidor.textlength(w_ + " ", font=f_dest)
+                pos += len(w_) + 1
+            y += 88
     passo = 3 if rascunho else 1
     ultimo = None
     for i in range(int(dur * FPS)):
@@ -370,10 +442,11 @@ def quadros_bloco(num, itens, al, dur, visuais, avatar, ep, rascunho):
             yield ultimo; continue
         t0, k, spec, fn = atual
         tl = t - t0
-        if fn is None:  # avatar grande, centro
+        if fn is None:  # avatar grande à esquerda, a fala em destaque à direita
             img = base()
-            av = avatar.no_tempo(t, al, spec.get("pose", "pose_neutro"), 860)
-            img.alpha_composite(av, (W // 2 - av.width // 2, H - av.height - 20))
+            av = avatar.no_tempo(t, al, spec.get("pose", "pose_neutro"), 820)
+            img.alpha_composite(av, (int(W * 0.25) - av.width // 2, H - av.height - 20))
+            destaque(img, t)
         else:
             img = fn(tl)
             av = avatar.no_tempo(t, al, spec.get("pose", "pose_neutro"), 300)
@@ -407,7 +480,9 @@ def srt_de(trechos):
             palavras.append((atual, a0, fim[-1]))
         linha, l0, l1 = [], None, None
         for p, a, b in palavras:
-            if linha and (len(" ".join(linha + [p])) > 42 or (linha[-1][-1] in ".!?")):
+            # quebra no tamanho, ou no fim de frase quando a linha já tem corpo (senão sobra
+            # palavra solta, como o "falhou." da 1ª montagem do E01)
+            if linha and (len(" ".join(linha + [p])) > 42 or (linha[-1][-1] in ".!?" and len(" ".join(linha)) >= 18)):
                 out.append(f"{n}\n{ts(t0 + l0)} --> {ts(t0 + l1)}\n{' '.join(linha)}\n"); n += 1
                 linha, l0 = [], None
             linha.append(p); l0 = a if l0 is None else l0; l1 = b
@@ -430,7 +505,7 @@ def montar(codigo, rascunho=False, so_bloco=None):
     avatar = Avatar()
 
     tmp = tempfile.mkdtemp()
-    partes, audio, trechos, t_global = [], [], [], 0.0
+    partes, audio, trechos, t_global, cortes, blocos_t = [], [], [], 0.0, [], []
 
     for num, itens in blocos:
         if so_bloco is not None and num != str(so_bloco):
@@ -447,7 +522,10 @@ def montar(codigo, rascunho=False, so_bloco=None):
         mp4 = os.path.join(tmp, f"b{num}.mp4")
         print(f"bloco {num}: {dur:.1f}s")
         emb.codifica(quadros_bloco(num, itens, al, dur, visuais.get(num, []), avatar, tag, rascunho), int(dur * FPS), wav, mp4)
-        partes.append(mp4); trechos.append((t_global, al)); t_global += dur
+        partes.append(mp4); trechos.append((t_global, al))
+        cortes += cortes_do_bloco(itens, al, t_global)
+        blocos_t.append({"bloco": num, "inicio": round(t_global, 3), "duracao": round(dur, 3)})
+        t_global += dur
         tem_vinheta = any(x[0] == "marca" and x[1] == "VINHETA" for x in itens)
         if tem_vinheta and so_bloco is None:
             vin = os.path.join(tmp, "vinheta.mp4")
@@ -468,6 +546,8 @@ def montar(codigo, rascunho=False, so_bloco=None):
                     "-c:a", "aac", "-b:a", "192k", "-af", "loudnorm=I=-16", saida], check=True)
     if so_bloco is None:
         open(saida[:-4] + ".srt", "w", encoding="utf-8").write(srt_de(trechos))
+        json.dump({"codigo": codigo, "duracao": round(t_global + 9.1, 1), "blocos": blocos_t, "cortes": cortes, "legenda": trechos and saida[:-4] + ".srt"},
+                  open(f"{pasta}/linha_do_tempo.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     for f in os.listdir(tmp):
         os.remove(os.path.join(tmp, f))
     os.rmdir(tmp)
