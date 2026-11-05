@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, CheckCircle2, Clapperboard, Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
+import { BastidoresAbas } from '@/components/bastidores-abas'
 import { supabase } from '@/lib/supabase/client'
 import { useBastidores, type Assunto, type TipoAssunto } from '@/lib/hooks/use-bastidores'
 import { TIPOS, dataLonga, mesAno } from '@/lib/bastidores/tipos'
@@ -36,6 +37,7 @@ export default function BastidoresPage() {
   return (
     <div className="space-y-5">
       <PageHeader titulo="Bastidores" subtitulo="A história do PULSO por assunto: o que aconteceu, com os números e as telas da época" />
+      <BastidoresAbas />
 
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrar por situação">
         <Chip ativo={situacao === 'rascunho'} onClick={() => setSituacao('rascunho')}>Aguardando aprovação ({porStatus('rascunho')})</Chip>
