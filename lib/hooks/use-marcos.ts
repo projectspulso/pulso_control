@@ -93,14 +93,20 @@ function acumularPorData(datas: string[]): PontoSerie[] {
     .map(([data, n]) => ({ data, valor: (acc += n) }))
 }
 
+// Páginas de 20 mil, 4 por vez. Até 04/11/2026 eram páginas de 1.000 em fila: com 78 mil leituras a
+// aba levava quase um minuto e piorava todo dia. A página TEM de ser menor que o corte do PostgREST
+// do projeto (100 mil, ver use-bi): um lote menor que PAGINA é lido como fim da série.
+const PAGINA = 20_000
 async function paginado<T>(consulta: (de: number, ate: number) => PromiseLike<{ data: T[] | null; error: unknown }>) {
   let todas: T[] = []
-  for (let de = 0; ; de += 1000) {
-    const { data, error } = await consulta(de, de + 999)
-    if (error) throw error
-    const lote = data || []
-    todas = todas.concat(lote)
-    if (lote.length < 1000) return todas
+  for (let de = 0; ; de += PAGINA * 4) {
+    const lotes = await Promise.all([0, 1, 2, 3].map(async (k) => {
+      const { data, error } = await consulta(de + k * PAGINA, de + (k + 1) * PAGINA - 1)
+      if (error) throw error
+      return data || []
+    }))
+    for (const lote of lotes) todas = todas.concat(lote)
+    if (lotes.some((l) => l.length < PAGINA)) return todas
   }
 }
 
@@ -120,6 +126,7 @@ export function useMarcos() {
             .eq('estimado', false)
             .gte('data_ref', '2026-06-18')
             .order('data_ref')
+            .order('id') // desempate: só por data, páginas vizinhas repetiam e pulavam linhas do mesmo dia
             .range(de, ate)
         ),
         supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'seguidores_historico').maybeSingle(),
