@@ -9,6 +9,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (05/11) — montador dos Longos (16:9)
+- `motor/montar_longo.py`: monta o episódio a partir do roteiro aprovado. Usa a narração por bloco com o alinhamento, um mapa `visuais.json` de cada marcação, o avatar com lip-sync (grande nas marcações [AVATAR], no canto nas [TELA]), a vinheta depois do gancho, o encerramento padrão e a legenda `.srt`. Recusa episódio sem roteiro aprovado.
+- As telas são cartões desenhados com dado real do banco (contador, terminal, código errado e certo, esteira, calendário, alertas, números com quadros reais dos vídeos). Print cru do app fica de fora: a tela da esteira explicava a receita do sorteio de canal.
+- E01: sem vídeo real do dono (decisão de 05/11, o rosto real estreia no E03). O bloco 6 ganhou o número exato: em 43 das 48 rodadas automáticas de 09/09 a 16/09, o Instagram leu zero.
+
 ### Adicionado (05/11) — embalagem padrão dos Longos
 - `motor/embalagem_bastidores.py`: vinheta de abertura (3,6 s, linha de eletrocardiograma que bate e vira "BASTIDORES DO PULSO", com batida lub-dub) e encerramento (~9 s, avatar do dono com lip-sync dizendo a assinatura, mascote ao lado, "no próximo episódio" + inscreva-se, 5 s finais calmos para a tela final do YouTube). Config em `configuracoes.longos_embalagem`.
 - A assinatura é narrada uma vez, conferida por transcrição (uma geração saiu "besti dois") e reutilizada. O rosto do dono e as saídas ficam só no OneDrive, nunca no repositório.
