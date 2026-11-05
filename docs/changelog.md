@@ -9,6 +9,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (05/11) — contrato de cortes com o digiai_mkt
+- 085: `public.cortes_para_mkt()` (jobs prontos sem PII, link assinado de 7 dias) e `public.estado_corte_mkt()` (agendado, publicado ou recusado). A conta do MKT fica em `leitores_contrato`, que abre só as duas funções. Provado: conta qualquer barrada, anônimo negado, admin lê.
+- Rota `assinar-cortes` + pg_cron diário (09h30 UTC) que renova os links e registra toda rodada.
+
 ### Adicionado (05/11) — fábrica de cortes por dentro
 - Banco (084): destinos (`configuracoes.cortes_destinos`), tipo de cada corte e a agenda `corte_publicacoes` (corte × destino × rede).
 - `cortes_longo.py --destino`: versão própria por destino. `planejar_cortes.py --estreia`: monta a semana (trailer na véspera, 1 por dia, domingo nada; DIGIAI por job ao digiai_mkt; pessoal só com rosto real). `textos_cortes.py`: legenda por destino pela API do Claude, com trava do segredo e de números (falta a chave no ambiente).
