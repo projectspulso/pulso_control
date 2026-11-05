@@ -9,6 +9,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (05/11) — primeiro episódio dos Longos
+- `/longos/[codigo]`: ficha do episódio com o roteiro marcado (fala, tela, avatar, trechos do dono em vídeo e cortes) e o botão de aprovar.
+- T01E01 reescrito ("15.086 erros e ninguém viu"): os fatos foram refeitos no banco (52 dias e 15.086 falhas; a v1 dizia "seis meses" e "241 vezes"), com 6 cortes marcados. Trava do segredo: comparado com as 105 receitas, sem nenhum trecho de 5 palavras em comum.
+
 ### Adicionado (05/11) — voz dos Longos travada
 - Clone instantâneo da voz do dono no ElevenLabs, aprovado pelo dono na versão "mais energia + 1 tom abaixo". A configuração fica em `configuracoes.voz_bastidores` (voz, modelo, ajustes, tom e volume), e `motor/voz_dono.py` narra só com ela: sem config, não narra.
 
