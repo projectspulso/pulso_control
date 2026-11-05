@@ -112,28 +112,59 @@ def tempos_das_falas(itens, alinhamento):
 # ── visemas do avatar ──────────────────────────────────────────────────────────────────────────
 
 class Avatar:
-    POSES = ["pose_neutro", "pose_apontando", "pose_apresentando", "pose_cabeca_esq", "pose_cabeca_dir", "pose_joinha", "sorriso_aberto"]
+    """A POSE FICA, SÓ A BOCA MEXE (dono, 05/11/2026: "se apontar, tem que manter apontado").
+    Antes o montador trocava o quadro inteiro entre boca (sem mão) e pose (com mão, boca parada) a cada
+    vírgula, e a mão piscava. Agora a pose da marcação é a base do trecho todo; a boca e a piscada são
+    recortadas dos quadros de fala e coladas por cima com borda suave, no deslocamento medido de cada pose
+    (o rosto das poses está 0 a 4 px abaixo do rosto dos quadros de fala). As poses de cabeça virada não
+    falam (a boca de frente não encaixa): viram pose_neutro."""
+    FALAM = {"pose_neutro": 0, "pose_apontando": 4, "pose_apresentando": 2, "pose_joinha": 4}
+    BOCA = (470, 520, 770, 760)    # caixa da boca+queixo nos quadros 1254×1254 (medida pela variação das bocas)
+    OLHOS = (420, 370, 830, 530)
 
     def __init__(self):
-        self.cache = {}
+        from PIL import ImageFilter
+        self.cache, self.bruto = {}, {}
+        self.mascaras = {}
+        for nome, (x0, y0, x1, y1), raio in (("boca", self.BOCA, 22), ("olhos", self.OLHOS, 16)):
+            m = Image.new("L", (x1 - x0, y1 - y0), 0)
+            ImageDraw.Draw(m).ellipse((raio, raio, x1 - x0 - raio, y1 - y0 - raio), fill=255)
+            self.mascaras[nome] = m.filter(ImageFilter.GaussianBlur(raio))
 
-    def quadro(self, nome, altura):
-        k = (nome, altura)
+    def _img(self, nome):
+        if nome not in self.bruto:
+            self.bruto[nome] = Image.open(f"{emb.AVATAR}/{nome}.png").convert("RGBA")
+        return self.bruto[nome]
+
+    def _cola(self, base, fonte, caixa, mascara, dy):
+        x0, y0, x1, y1 = caixa
+        pedaco = self._img(fonte).crop(caixa)
+        base.paste(pedaco, (x0, y0 + dy), self.mascaras[mascara])
+
+    def quadro(self, pose, boca, piscando, altura):
+        k = (pose, boca, piscando, altura)
         if k not in self.cache:
-            self.cache[k] = emb.carrega(f"{emb.AVATAR}/{nome}.png", altura)
+            dy = self.FALAM[pose]
+            im = self._img(pose).copy()
+            if boca:
+                self._cola(im, f"viseme_{boca}", self.BOCA, "boca", dy)
+            if piscando:
+                self._cola(im, "olhos_fechados", self.OLHOS, "olhos", dy)
+            self.cache[k] = im.resize((int(im.width * altura / im.height), altura), Image.LANCZOS)
         return self.cache[k]
 
     def no_tempo(self, t, al, pose, altura):
-        """al: alinhamento do bloco (t em segundos do bloco). Falando → boca; calado → a pose da marcação."""
-        pisca = (t % 3.6) < 0.12
+        """al: alinhamento do bloco (t em segundos do bloco). A pose vale o trecho inteiro."""
+        pose = pose if pose in self.FALAM else "pose_neutro"
+        piscando = (t % 3.6) < 0.12
+        boca = None
         if al:
             for c, a, b in zip(al["characters"], al["character_start_times_seconds"], al["character_end_times_seconds"]):
                 if a <= t < b:
-                    if not c.strip() or c in ",.!?:;":
-                        break
-                    v = emb.VISEMA.get(c.lower(), "meio")
-                    return self.quadro("blink_falando" if pisca else f"viseme_{v}", altura)
-        return self.quadro("olhos_fechados" if pisca else (pose if pose in self.POSES else "pose_neutro"), altura)
+                    if c.strip() and c not in ",.!?:;":
+                        boca = emb.VISEMA.get(c.lower(), "meio")
+                    break
+        return self.quadro(pose, boca, piscando, altura)
 
 
 # ── cartões (cada um: função t_local → imagem RGBA) ─────────────────────────────────────────────
@@ -460,8 +491,8 @@ def quadros_bloco(num, itens, al, dur, visuais, avatar, ep, rascunho):
         d = ImageDraw.Draw(img)
         d.text((48, 36), f"BASTIDORES DO PULSO · {ep}", font=selo, fill=(163, 160, 176, 150))
         # transição: 0,2 s de entrada em cada troca de cartão
-        if 0 <= tl < 0.2 and t0 > 0 and ultimo is not None:
-            img = Image.blend(ultimo.convert("RGBA"), img, tl / 0.2)
+        if 0 <= tl < 0.35 and t0 > 0 and ultimo is not None:
+            img = Image.blend(ultimo.convert("RGBA"), img, emb.suave(tl / 0.35))
         ultimo = img
         yield img
 
