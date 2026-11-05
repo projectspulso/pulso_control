@@ -111,8 +111,13 @@ def planejar(codigo, estreia, com_video=True):
             dia_do_corte.setdefault(c["id"], set()).add(dia)
             for rede, modo in dest["redes"].items():
                 status = "planejado" if dest.get("contas_criadas") or modo == "job" else "aguarda_conta"
-                linhas.append({"corte_id": c["id"], "destino": dest["id"], "rede": rede, "modo": modo,
-                               "agendado_para": quando(dia, hora), "video": video_por_corte.get(c["numero"]),
+                video = video_por_corte.get(c["numero"])
+                extra = {}
+                if modo == "job" and video:  # o digiai_mkt baixa por link assinado (7 dias, renovado todo dia)
+                    extra = {"video_url_assinada": ficha_longo.assina(video),
+                             "url_expira": (datetime.now() + timedelta(days=7)).astimezone().isoformat()}
+                linhas.append({"corte_id": c["id"], "destino": dest["id"], "rede": rede, "modo": modo, **extra,
+                               "agendado_para": quando(dia, hora), "video": video,
                                "legenda": legenda_de(textos_dest.get(dest["id"]), textos_base, c["numero"]), "status": status})
             print(f"{dest['nome']:18s} {dia.strftime('%a %d/%m')} {hora}  corte {c['numero']} · {c['titulo']}")
     if linhas:

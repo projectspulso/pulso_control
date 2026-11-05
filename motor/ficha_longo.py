@@ -87,6 +87,16 @@ def sobe(local, caminho, tipo):
     return caminho
 
 
+def assina(caminho, segundos=7 * 86400):
+    """Link assinado do bucket privado (o vídeo tem o rosto do dono): é o que o digiai_mkt baixa."""
+    U, K = g._env()
+    req = urllib.request.Request(f"{U}/storage/v1/object/sign/{BUCKET}/{caminho}", method="POST",
+                                 data=json.dumps({"expiresIn": segundos}).encode(),
+                                 headers={"apikey": K, "Authorization": f"Bearer {K}", "Content-Type": "application/json"})
+    rel = json.loads(urllib.request.urlopen(req).read())["signedURL"]
+    return f"{U}/storage/v1{rel}" if rel.startswith("/") else rel
+
+
 def duracao(arq):
     return float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", arq],
                                 capture_output=True, text=True, encoding="utf-8").stdout.strip() or 0)
