@@ -9,6 +9,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Mudou (06/11) — o longo sai no PULSO Histórias
+- O dono publicou o E01 no canal dos Curtos (Gaxf4poTUT0, 06/11 02h57 UTC). O Pulso esperava o @bastidoresdigiai e não lia nada. Agora `cortes_destinos.principal` aponta para o PULSO Histórias (o @bastidoresdigiai ficou guardado, uso em aberto) e o E01 está como publicado, com o link.
+- A coleta dos Longos lê horas, retenção média, curva e origens das views (092, `origens`) pelo acesso ao Analytics que o canal já tinha. O YouTube atrasa cerca de 48 h: hoje só views (1).
+- Botão "Atualizar dados" no Analytics dos Longos roda a coleta na hora e mostra o resultado; a última coleta aparece ao lado.
+
 ### Adicionado (06/11) — Analytics dos Longos completo e a medição
 - Dono: "o analytics do VC tem que ser referência para os do VL". `/longos/analytics` com 9 abas no molde dos Curtos:
   - visão geral com as metas do YouTube Partner Program em `longos_metas`;
