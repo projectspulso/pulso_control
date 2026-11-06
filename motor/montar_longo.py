@@ -184,15 +184,18 @@ def base():
 
 
 def cartao_contador(v):
-    alvo, rot, sub = int(v["valor"]), v.get("rotulo", ""), v.get("sub", "")
-    de, dur = int(v.get("de", 0)), float(v.get("anima", 1.6))
+    alvo, rot, sub = float(v["valor"]), v.get("rotulo", ""), v.get("sub", "")
+    de, dur = float(v.get("de", 0)), float(v.get("anima", 1.6))
+    # E02 (06/11): dinheiro e porcentagem ("R$ 93,80", "87%") no mesmo cartão
+    casas, pre, suf = int(v.get("casas", 0)), v.get("prefixo", ""), v.get("sufixo", "")
     f1, f2, f3 = emb.fonte(220, "Bold"), emb.fonte(46, "SemiBold"), emb.fonte(34, "SemiBold")
 
     def r(t):
         img = base(); d = ImageDraw.Draw(img)
         x = emb.suave(t / dur)
-        n = int(de + (alvo - de) * x)
-        emb.texto_centro(d, H / 2 - 170, f"{n:,}".replace(",", "."), f1, AMBAR if x >= 1 else BRANCO)
+        n = de + (alvo - de) * x
+        num = f"{n:,.{casas}f}".replace(",", "#").replace(".", ",").replace("#", ".")
+        emb.texto_centro(d, H / 2 - 170, f"{pre}{num}{suf}", f1, AMBAR if x >= 1 else BRANCO)
         if rot:
             emb.texto_centro(d, H / 2 + 90, rot, f2, BRANCO, alfa=emb.suave((t - 0.3) / 0.4))
         if sub:

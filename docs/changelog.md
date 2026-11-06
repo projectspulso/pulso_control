@@ -9,6 +9,14 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Andou (06/11) — E02 "R$ 1.710 num dia"
+
+- **Roteiro:** v1 aprovada pelo dono em 06/11, com os padrões propostos (título novo, sem cartão de custo completo, rosto real prometido no E03). Status `roteiro_ok`. A trava do segredo passou: 105 receitas, nenhum trecho em comum, nenhum termo proibido. A narração estimada é de ~5 min 45 s; o rascunho previa 7 min 30 s.
+- **Plano visual:** `visuais.json` com 16 cartões de dado real, conferidos contra as marcações do roteiro. Prévia renderizada; a seta "→" sai como quadradinho na fonte e foi trocada por ":".
+- **Contador do `montar_longo.py`:** aceita `prefixo`, `sufixo` e `casas` (R$ 93,80 → R$ 11,18, 87%).
+- **Texto do YouTube:** pronto em `textos.json`, com título "… | Bastidores do PULSO #02".
+- **Bloqueado:** a narração (ElevenLabs ainda em 401 por pagamento) e as legendas dos cortes (falta a `ANTHROPIC_API_KEY`).
+
 ### Mudou (06/11) — o longo sai no PULSO Histórias
 - O dono publicou o E01 no canal dos Curtos (Gaxf4poTUT0, 06/11 02h57 UTC). O Pulso esperava o @bastidoresdigiai e não lia nada. Agora `cortes_destinos.principal` aponta para o PULSO Histórias (o @bastidoresdigiai ficou guardado, uso em aberto) e o E01 está como publicado, com o link.
 - A coleta dos Longos lê horas, retenção média, curva e origens das views (092, `origens`) pelo acesso ao Analytics que o canal já tinha. O YouTube atrasa cerca de 48 h: hoje só views (1).
