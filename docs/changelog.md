@@ -9,6 +9,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (05/11) — Bastidores na DIGIAI, com peças próprias
+- Dono decidiu: cortes também na DIGIAI, nunca o arquivo do canal de cortes. 090: tipo `carrossel` e `video`, `arquivos[]` e `urls_assinadas[]`, destino `digiai` em `cortes_destinos` (carrossel de lições no Instagram às terças 10h, corte técnico horizontal no LinkedIn às quintas 10h, nunca no dia em que aquele corte sai no canal de cortes). A view do contrato ganha `urls_assinadas` e `canal = digiai`.
+- `motor/digiai_pecas.py`: carrossel 1080×1350 em DIGIAI House (capa, lições tiradas do roteiro, fecho) e vídeo 16:9 sem avatar, com cartão final DIGIAI. `montar_longo.py` ganha `sem_avatar` e `selo_txt`.
+- Planejador grava as duas peças; teste com 56 peças lido pelo contrato, todos os links 200 (agenda de teste apagada depois).
+
 ### Mudou (05/11) — Bastidores v2: o Pulso é só fábrica, o digiai_mkt publica tudo
 - Decisão do dono (via Geral): canal principal no YouTube só com o longo; canais de cortes nas 5 redes apontando para o principal; DIGIAI e pessoal sem corte. Desenho: `Cockpit/bastidores/DESENHO-canais-stories-divisao-2026-11-05.md` v2.
 - 086: `cortes_destinos` v2 (um destino, o canal de cortes, tudo como job), contrato `v_bastidores_pecas_prontas` (corte, story e ficha do longo, sem PII) + `public.bastidores_pecas_para_mkt()` + `public.estado_peca_bastidores()`; saem `cortes_para_mkt` e `estado_corte_mkt` (085). Provado: conta qualquer barrada, anônimo negado, admin lê.
