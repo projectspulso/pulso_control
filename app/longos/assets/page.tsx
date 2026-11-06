@@ -88,7 +88,7 @@ export default function LongosAssetsPage() {
           })}
         </>
       )}
-      <p className="text-xs text-(--pulso-text-muted)">As fotos e o avatar do seu rosto não aparecem aqui de propósito: ficam só no OneDrive.</p>
+      <p className="text-xs text-(--pulso-text-muted)">As fotos originais e o avatar do seu rosto não aparecem aqui de propósito: ficam só no OneDrive. Aqui só o que já foi feito para publicar.</p>
     </div>
   )
 }

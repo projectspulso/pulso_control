@@ -53,7 +53,12 @@ export default function LongosAnalyticsPage() {
       <PageHeader titulo="Analytics dos Longos" subtitulo="Estreia de cada episódio, o que o digiai_mkt já publicou dos cortes e, depois, horas de exibição e retenção" />
       {isLoading && <div className={`h-40 animate-pulse ${CARTAO}`} />}
       {error && <p className={`${CARTAO} p-6 text-sm text-(--pulso-danger)`}>Não deu para ler: {error.message}</p>}
-      {data?.map((e) => <Episodio key={e.codigo} e={e} />)}
+      {data?.filter((e) => e.estreia || e.pecas.length > 0 || e.status !== 'planejado').map((e) => <Episodio key={e.codigo} e={e} />)}
+      {data && (
+        <p className="text-xs text-(--pulso-text-muted)">
+          {data.filter((e) => !(e.estreia || e.pecas.length > 0 || e.status !== 'planejado')).length} episódios ainda sem estreia marcada nem peças: aparecem aqui quando entrarem na agenda.
+        </p>
+      )}
       <section className={`${CARTAO} p-5`}>
         <h2 className="text-sm font-semibold text-(--pulso-text)">Quando entram as views</h2>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-(--pulso-text-muted)">

@@ -9,6 +9,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (06/11) — telas próprias dos Longos
+- `/longos/assets`: por episódio, tudo o que está no bucket `bastidores` (episódio, capas, cortes, stories, peças da DIGIAI), com prévia e baixar. As fotos originais do rosto do dono continuam só no OneDrive.
+- `/longos/configuracoes`: voz, embalagem, destinos dos cortes e fábrica, para leitura; quem muda é o dono pelo Claude do Pulso.
+- `/longos/analytics`: estreia e estado de cada peça que o digiai_mkt devolve (na fila, agendada, no ar, recusada com motivo). Views e horas de exibição entram quando os canais dos Bastidores existirem.
+- `/assets` e `/settings` voltam a ser só dos Curtos. Configs `longos_embalagem` e `cortes_destinos` corrigidas para Bastidores DIGIAI e para as peças próprias da DIGIAI.
+
 ### Adicionado (05/11) — Bastidores na DIGIAI, com peças próprias
 - Dono decidiu: cortes também na DIGIAI, nunca o arquivo do canal de cortes. 090: tipo `carrossel` e `video`, `arquivos[]` e `urls_assinadas[]`, destino `digiai` em `cortes_destinos` (carrossel de lições no Instagram às terças 10h, corte técnico horizontal no LinkedIn às quintas 10h, nunca no dia em que aquele corte sai no canal de cortes). A view do contrato ganha `urls_assinadas` e `canal = digiai`.
 - `motor/digiai_pecas.py`: carrossel 1080×1350 em DIGIAI House (capa, lições tiradas do roteiro, fecho) e vídeo 16:9 sem avatar, com cartão final DIGIAI. `montar_longo.py` ganha `sem_avatar` e `selo_txt`.
