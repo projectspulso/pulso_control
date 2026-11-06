@@ -66,7 +66,14 @@ def capitulos(roteiro, lt):
     return out
 
 
-def textos(pasta, roteiro, lt, cortes):
+def titulo_do_longo(titulo, numero):
+    """Geral/dono 06/11: o longo sai na casa do Pulso, sempre "… | Bastidores do PULSO #NN"; os cortes levam a marca da série."""
+    sufixo = f"Bastidores do PULSO #{int(numero):02d}"
+    titulo = (titulo or "").strip()
+    return titulo if sufixo in titulo else (f"{titulo} | {sufixo}" if titulo else sufixo)
+
+
+def textos(pasta, roteiro, lt, cortes, numero):
     """Tudo pronto para copiar na ficha: título, descrição com capítulos, tags e a legenda de cada corte.
     O texto criativo vem de <pasta>/textos.json (escrito à mão no E01; depois, gerado)."""
     arq = f"{pasta}/textos.json"
@@ -74,7 +81,7 @@ def textos(pasta, roteiro, lt, cortes):
     yt = base.get("youtube", {})
     caps = capitulos(roteiro, lt)
     descricao = (yt.get("descricao", "").rstrip() + "\n\nCapítulos\n" + "\n".join(caps) + "\n\n" + yt.get("rodape", "")).strip()
-    return {"youtube": {"titulo": yt.get("titulo", ""), "descricao": descricao, "tags": yt.get("tags", []),
+    return {"youtube": {"titulo": titulo_do_longo(yt.get("titulo"), numero), "descricao": descricao, "tags": yt.get("tags", []),
                         "aviso": yt.get("aviso", "")},
             "cortes": base.get("cortes", {})}
 
@@ -174,7 +181,7 @@ def fechar(codigo):
                      "blocos": lt.get("blocos", [])},
     })
     meta.setdefault("publicacao", {"canal": None, "url": None, "data": None})
-    meta["textos"] = textos(pasta, ep["roteiro_md"], lt, cortes)
+    meta["textos"] = textos(pasta, ep["roteiro_md"], lt, cortes, ep["numero"])
     novo_status = ep["status"] if ep["status"] in ("em_revisao", "publicado") else "em_revisao"
     g._db("PATCH", f"/rest/v1/episodios?id=eq.{ep['id']}", {"metadata": meta, "status": novo_status, "video_url": f"{base}/final_1080p.mp4"}, schema="pulso_content")
     print(f"ficha gravada · status {novo_status} · montagem v{meta['montagem']['versao']} · {len(cortes)} cortes")
