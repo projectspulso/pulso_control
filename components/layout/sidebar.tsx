@@ -61,8 +61,8 @@ const NAV_LONGOS = [
   { name: 'Bastidores', href: '/bastidores', icon: History, badge: null, soAdmin: false },
   { name: 'Analytics', href: '/longos/analytics', icon: BarChart3, badge: null, soAdmin: false },
   { name: 'Kit de mídia', href: '/analytics/kit', icon: ScanLine, badge: null, soAdmin: false },
-  { name: 'Assets', href: '/assets', icon: Library, badge: null, soAdmin: false },
-  { name: 'Configurações', href: '/settings', icon: Settings, badge: null, soAdmin: false },
+  { name: 'Assets', href: '/longos/assets', icon: Library, badge: null, soAdmin: false },
+  { name: 'Configurações', href: '/longos/configuracoes', icon: Settings, badge: null, soAdmin: false },
 ]
 
 function Seletor({ onNavigate }: { onNavigate?: () => void }) {

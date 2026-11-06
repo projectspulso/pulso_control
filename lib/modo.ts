@@ -7,7 +7,7 @@ import { useSyncExternalStore } from 'react'
  * UM APP, DUAS CARAS (dono, 05/11/2026): Curtos (VC) é o PULSO diário de Shorts; Longos (VL) é a
  * fábrica dos vídeos longos dos Bastidores e dos cortes que saem deles. A cara muda o menu, a cor
  * de destaque e os dados. A rota manda: /longos e /bastidores são Longos, o resto é Curtos, e as
- * telas compartilhadas (configurações, assets, kit) ficam na cara em que você estava.
+ * telas compartilhadas (integrações, kit) ficam na cara em que você estava.
  */
 export type Modo = 'curtos' | 'longos'
 
@@ -17,7 +17,7 @@ export const MODOS: Record<Modo, { nome: string; sigla: string; inicio: string; 
 }
 
 const ROTAS_LONGOS = ['/longos', '/bastidores']
-export const ROTAS_COMPARTILHADAS = ['/settings', '/integracoes', '/assets', '/analytics/kit', '/escolha']
+export const ROTAS_COMPARTILHADAS = ['/integracoes', '/analytics/kit', '/escolha']  // assets e configurações têm versão própria em /longos (06/11)
 
 const casa = (p: string, base: string) => p === base || p.startsWith(`${base}/`)
 export const ehCompartilhada = (p: string) => ROTAS_COMPARTILHADAS.some((b) => casa(p, b))

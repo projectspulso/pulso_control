@@ -117,22 +117,79 @@ export function useFabrica() {
   })
 }
 
-/** Vídeos longos já publicados (ideias formato=longo com publicação medida). */
-export function useLongosPublicados() {
-  return useQuery<{ titulo: string; plataforma: string; views: number; data: string | null }[]>({
-    queryKey: ['longos-publicados'],
+export interface PainelEpisodio {
+  codigo: string; titulo: string; status: string; estreia: string | null; url: string | null
+  pecas: { destino: string; rede: string; tipo: string; status: string; url: string | null; motivo: string | null }[]
+}
+
+/**
+ * Painel dos Longos (06/11/2026): por episódio, o estado da estreia e de cada peça que o digiai_mkt
+ * devolveu pelo contrato (agendado, publicado com link, recusado com motivo). Views e horas de
+ * exibição entram quando a coleta dos canais dos Bastidores existir (os canais ainda não nasceram).
+ */
+export function usePainelLongos() {
+  return useQuery<PainelEpisodio[]>({
+    queryKey: ['longos-painel'],
     queryFn: async () => {
-      const ide = await supabase.schema('pulso_content').from('ideias').select('id, titulo').eq('formato', 'longo')
-      if (ide.error) throw ide.error
-      const ids = (ide.data || []).map((i) => i.id)
-      if (!ids.length) return []
-      const met = await supabase.schema('pulso_content').from('metricas_publicacao')
-        .select('ideia_id, plataforma, views, data_publicacao').in('ideia_id', ids)
-      if (met.error) throw met.error
-      const titulo = new Map((ide.data || []).map((i) => [i.id, i.titulo as string]))
-      return (met.data || []).map((m) => ({
-        titulo: titulo.get(m.ideia_id) || '—', plataforma: m.plataforma, views: Number(m.views) || 0, data: m.data_publicacao,
-      }))
+      const ep = await supabase.schema('pulso_content').from('episodios').select('id, codigo, titulo, status, metadata').order('codigo')
+      if (ep.error) throw ep.error
+      const pub = await supabase.schema('pulso_content').from('corte_publicacoes')
+        .select('destino, rede, tipo, status, url, motivo, episodio_cortes!inner(episodio_id)')
+      if (pub.error) throw pub.error
+      return (ep.data || []).map((e) => {
+        const p = ((e.metadata as { publicacao?: { data?: string; url?: string } } | null)?.publicacao) || {}
+        return {
+          codigo: e.codigo, titulo: e.titulo, status: e.status, estreia: p.data || null, url: p.url || null,
+          pecas: (pub.data || []).filter((x) => (x.episodio_cortes as unknown as { episodio_id: string }).episodio_id === e.id)
+            .map((x) => ({ destino: x.destino, rede: x.rede, tipo: x.tipo, status: x.status, url: x.url, motivo: x.motivo })),
+        }
+      })
+    },
+  })
+}
+
+const CHAVES_LONGOS = ['voz_bastidores', 'longos_embalagem', 'longos_fabrica', 'cortes_destinos'] as const
+export type ChaveLongos = (typeof CHAVES_LONGOS)[number]
+
+/** As configurações que só valem para os Longos (voz, embalagem, fábrica e destinos dos cortes). */
+export function useConfigsLongos() {
+  return useQuery<Partial<Record<ChaveLongos, { valor: Record<string, unknown>; atualizado: string | null }>>>({
+    queryKey: ['longos-configs'],
+    queryFn: async () => {
+      const { data, error } = await supabase.schema('pulso_core').from('configuracoes')
+        .select('chave, valor, updated_at').in('chave', [...CHAVES_LONGOS])
+      if (error) throw error
+      const saida: Partial<Record<ChaveLongos, { valor: Record<string, unknown>; atualizado: string | null }>> = {}
+      for (const r of data || []) {
+        try { saida[r.chave as ChaveLongos] = { valor: JSON.parse(r.valor || '{}'), atualizado: r.updated_at } } catch { /* valor inválido fica de fora */ }
+      }
+      return saida
+    },
+  })
+}
+
+export interface ArquivoLongo { caminho: string; nome: string; pasta: string; bytes: number }
+
+/** Tudo o que um episódio já tem no Storage (bucket bastidores), pasta a pasta. */
+export function useArquivosEpisodio(codigo: string | undefined) {
+  return useQuery<ArquivoLongo[]>({
+    queryKey: ['longos-arquivos', codigo],
+    enabled: Boolean(codigo),
+    queryFn: async () => {
+      const raiz = `episodios/${codigo}`
+      const saida: ArquivoLongo[] = []
+      const fila = [raiz]
+      while (fila.length) {
+        const pasta = fila.shift() as string
+        const { data, error } = await supabase.storage.from('bastidores').list(pasta, { limit: 1000, sortBy: { column: 'name', order: 'asc' } })
+        if (error) throw error
+        for (const o of data || []) {
+          const caminho = `${pasta}/${o.name}`
+          if (!o.id) fila.push(caminho)
+          else saida.push({ caminho, nome: o.name, pasta: pasta.slice(raiz.length + 1) || '', bytes: Number((o.metadata as { size?: number } | null)?.size || 0) })
+        }
+      }
+      return saida
     },
   })
 }
