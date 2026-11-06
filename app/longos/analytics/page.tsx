@@ -319,7 +319,7 @@ export default function LongosAnalyticsPage() {
 
           {aba === 'funil' && (
             <Card titulo="Do corte ao episódio" sub="views dos cortes → pessoas que foram ao episódio → views do longo"
-              rodape="Toda peça aponta para o principal (cartão final e 1ª linha da legenda). Os cliques vêm de cada rede pelo digiai_mkt; o YouTube informa o tráfego vindo dos Shorts no Analytics do canal principal.">
+              rodape="Toda peça aponta para o principal (cartão final e 1ª linha da legenda). Nenhuma rede informa clique por post (digiai_mkt, 06/11): a chegada ao episódio vem do Analytics do canal principal (tráfego dos Shorts e de sites externos como Instagram e TikTok). Kwai e LinkedIn da empresa não têm API: os números deles só entram à mão.">
               <div className="grid gap-3 sm:grid-cols-3">
                 <Kpi rotulo="Views dos cortes" valor={c.viewsPecas ? n(c.viewsPecas) : '—'} />
                 <Kpi rotulo="Levados ao episódio" valor={c.cliques ? n(c.cliques) : '—'} sub={c.cliques && c.viewsPecas ? `${((c.cliques / c.viewsPecas) * 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} a cada mil views` : undefined} />
