@@ -9,6 +9,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (05/11) — capas com fotos reais do dono
+- `motor/recortar_fotos.py`: separa cada pose das pranchas do GPT e tira o fundo, inclusive o xadrez de transparência desenhado. Catálogo das 19 poses com emoção, direção e a tela/folha onde entra o número. As fotos ficam só no OneDrive.
+- `motor/capa_longo.py` reescrito: foto real (nunca espelhada) do lado para onde aponta, halo âmbar, número dentro do celular ou da folha, frase sem palavra órfã, variantes A/B/C para o teste de miniaturas do YouTube. `textos_cortes.py --capas` propõe as 3 capas pela API do Claude.
+- Ficha: as três capas com baixar; a capa A é a abertura do player.
+
 ### Adicionado (05/11) — contrato de cortes com o digiai_mkt
 - 085: `public.cortes_para_mkt()` (jobs prontos sem PII, link assinado de 7 dias) e `public.estado_corte_mkt()` (agendado, publicado ou recusado). A conta do MKT fica em `leitores_contrato`, que abre só as duas funções. Provado: conta qualquer barrada, anônimo negado, admin lê.
 - Rota `assinar-cortes` + pg_cron diário (09h30 UTC) que renova os links e registra toda rodada.

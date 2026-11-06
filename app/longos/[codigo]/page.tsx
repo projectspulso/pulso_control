@@ -163,7 +163,7 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
         {m.montagem ? (
           <div className="space-y-3">
             {urls.data?.[m.montagem.video]
-              ? <video src={urls.data[m.montagem.video]} controls preload="metadata" className="w-full rounded-xl bg-black" />
+              ? <video src={urls.data[m.montagem.video]} poster={m.montagem.capa ? urls.data[m.montagem.capa] : undefined} controls preload="metadata" className="w-full rounded-xl bg-black" />
               : <div className="aspect-video animate-pulse rounded-xl bg-(--pulso-surface-raised)" />}
             <dl className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
               <Dado rot="Duração" val={minseg(m.montagem.duracao_s)} />
