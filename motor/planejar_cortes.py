@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-AGENDA DOS CORTES — monta a semana de publicações de um episódio a partir da cadência de cada destino
-(configuracoes.cortes_destinos) e grava em pulso_content.corte_publicacoes (084). Gera e sobe a
-versão do vídeo de cada destino (cortes_longo --destino) para o bucket privado.
+AGENDA DAS PEÇAS DOS BASTIDORES (v2, dono 05/11/2026) — o Pulso é só fábrica; o digiai_mkt publica tudo.
 
-Regras (dono + digiai_mkt, 05/11/2026):
-  · domingo nada sai; o mesmo corte não sai no mesmo dia em dois destinos;
-  · Bastidores DIGIAI: trailer (o corte de gancho) na véspera da estreia, depois 1 corte por dia;
-    cada corte em todas as redes do destino, mais story e status;
-  · DIGIAI e pessoal: viram job para a fila do digiai_mkt (um publicador por conta); pessoal só com rosto
-    real, então fica de fora enquanto o episódio usa o avatar;
-  · enquanto as contas do Bastidores DIGIAI não existem, as linhas nascem 'aguarda_conta'.
-Replanejar apaga só o que ainda não saiu (planejado/aguarda_conta) e refaz.
+Monta a semana de um episódio a partir da estreia do longo e grava cada peça em
+pulso_content.corte_publicacoes (084/086), que o MKT lê pela view v_bastidores_pecas_prontas:
+  · véspera: o corte de gancho como trailer, mais 2 stories
+  · estreia (o longo no principal, 18h, quem sobe é o dono): o 1º corte à noite, apontando para o episódio
+  · depois: 1 corte por dia + 2 stories, domingo nada (regra da casa)
+  · toda peça aponta para o principal: cartão final do corte, 1ª linha da legenda e #BastidoresDIGIAI
+Gera e sobe as versões do canal de cortes (cortes_longo --destino) e os stories (stories_longo), com
+link assinado de 7 dias (renovado todo dia pela rota assinar-cortes). Grava a data da estreia na ficha
+do longo. Replanejar apaga só o que ainda não saiu (planejado/aguarda_conta) e refaz.
 
-Uso: python D:/tmp/planejar_cortes.py T01E01 --estreia 2026-11-10 [--sem-video]
+Uso: python D:/tmp/planejar_cortes.py T01E01 --estreia 2026-11-12 [--sem-video]
 """
 import argparse, json, os, sys
 from datetime import date, datetime, timedelta
@@ -22,114 +21,115 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pulso_guard as g  # noqa: E402
 import cortes_longo  # noqa: E402
 import ficha_longo  # noqa: E402
+import stories_longo  # noqa: E402
 
 ONEDRIVE = ficha_longo.ONEDRIVE
-
-
-def proximo_dia_valido(d, dias_semana, ocupados):
-    while d.isoweekday() == 7 or d.isoweekday() not in dias_semana or d in ocupados:
-        d += timedelta(days=1)
-    return d
+HORA_ANTES, HORA_DEPOIS, HORA_NOITE_ESTREIA = "09:30", "18:30", "20:30"
 
 
 def quando(d, hora):
     return f"{d.isoformat()}T{hora}:00-03:00"  # horário de Brasília
 
 
-def legenda_de(textos_dest, textos_base, n):
-    t = (textos_dest or {}).get(str(n))
-    if t and t.get("aprovado_pela_trava"):
-        return f"{t['legenda']}\n\n{' '.join(t['hashtags'])}".strip()
-    return ((textos_base.get("cortes") or {}).get(str(n)) or {}).get("legenda", "")
+def proximo_util(d):
+    while d.isoweekday() == 7:  # domingo nada sai
+        d += timedelta(days=1)
+    return d
+
+
+def textos_da_peca(principal, dest, tdest, tbase, n):
+    t = (tdest or {}).get(str(n)) or {}
+    if t.get("aprovado_pela_trava"):
+        titulo, corpo, tags = t["titulo"], t["legenda"], list(t.get("hashtags") or [])
+    else:
+        titulo = ""
+        bruto = ((tbase.get("cortes") or {}).get(str(n)) or {}).get("legenda", "")
+        linhas = bruto.split("\n")
+        tags = [w for l in linhas for w in l.split() if w.startswith("#")]
+        # a 1ª linha da legenda já aponta para o principal: frase "episódio completo" no corpo repetiria
+        corpo = "\n".join(l for l in linhas if not l.strip().startswith("#") and "episódio completo" not in l.lower()).strip()
+    fixa = dest.get("hashtag_fixa")
+    if fixa and fixa not in tags:
+        tags = [fixa] + tags
+    legenda = f"Episódio completo: {principal['url']}\n\n{corpo}".strip()
+    return titulo, legenda, tags
 
 
 def planejar(codigo, estreia, com_video=True):
-    ep = g._db("GET", f"/rest/v1/episodios?codigo=eq.{codigo}&select=id,numero", schema="pulso_content")[0]
+    ep = g._db("GET", f"/rest/v1/episodios?codigo=eq.{codigo}&select=id,numero,metadata", schema="pulso_content")[0]
     nn = int(ep["numero"])
     pasta = f"{ONEDRIVE}/bastidores_ep{nn:02d}"
-    cortes = g._db("GET", f"/rest/v1/episodio_cortes?episodio_id=eq.{ep['id']}&select=id,numero,titulo,tipo,status&order=numero", schema="pulso_content")
-    cortes = [c for c in cortes if c["status"] != "descartado"]
+    cortes = [c for c in g._db("GET", f"/rest/v1/episodio_cortes?episodio_id=eq.{ep['id']}&select=id,numero,titulo,tipo,status&order=numero", schema="pulso_content")
+              if c["status"] != "descartado"]
     cfg = json.loads(g._db("GET", "/rest/v1/configuracoes?chave=eq.cortes_destinos&select=valor", schema="pulso_core")[0]["valor"])
-    td_arq = f"{pasta}/cortes/textos_destinos.json"
-    textos_dest = json.load(open(td_arq, encoding="utf-8")) if os.path.exists(td_arq) else {}
-    tb_arq = f"{pasta}/textos.json"
-    textos_base = json.load(open(tb_arq, encoding="utf-8")) if os.path.exists(tb_arq) else {}
+    principal, dest = cfg["principal"], cfg["destinos"][0]
+    td = f"{pasta}/cortes/textos_destinos.json"
+    tdest = (json.load(open(td, encoding="utf-8")) if os.path.exists(td) else {}).get(dest["id"], {})
+    tb = f"{pasta}/textos.json"
+    tbase = json.load(open(tb, encoding="utf-8")) if os.path.exists(tb) else {}
     D = date.fromisoformat(estreia)
 
     ids = ",".join(c["id"] for c in cortes)
     g._db("DELETE", f"/rest/v1/corte_publicacoes?corte_id=in.({ids})&status=in.(planejado,aguarda_conta)", schema="pulso_content")
 
-    dia_do_corte = {}  # (corte_id) -> datas já usadas por outro destino
+    elegiveis = [c for c in cortes if c.get("tipo") in dest["tipos"]]
+    gancho = next((c for c in elegiveis if c["tipo"] == "gancho"), None)
+    resto = [c for c in elegiveis if c is not gancho]
+    agenda = []  # (corte, dia, hora do corte)
+    if gancho:
+        v = D - timedelta(days=1)
+        while v.isoweekday() == 7:
+            v -= timedelta(days=1)
+        agenda.append((gancho, v, dest["cadencia"].get("hora", "12:00")))
+    d = D
+    for i, c in enumerate(resto):
+        d = proximo_util(d)
+        agenda.append((c, d, HORA_NOITE_ESTREIA if d == D else dest["cadencia"].get("hora", "12:00")))
+        d += timedelta(days=1)
+
+    video, story = {}, {}
+    if com_video:
+        for f in cortes_longo.gerar(codigo, None, dest["id"]):
+            video[f["numero"]] = ficha_longo.sobe(f"{pasta}/cortes/{dest['id']}/{f['arquivo']}", f"episodios/{codigo}/cortes/{dest['id']}/{f['arquivo']}", "video/mp4")
+        for n, s in stories_longo.gerar(codigo).items():
+            story[n] = {"antes": ficha_longo.sobe(s["antes"], f"episodios/{codigo}/stories/story_{n}_antes.jpg", "image/jpeg"),
+                        "depois": ficha_longo.sobe(s["depois"], f"episodios/{codigo}/stories/story_{n}_depois.mp4", "video/mp4")}
+
+    expira = (datetime.now() + timedelta(days=7)).astimezone().isoformat()
     linhas = []
-    for dest in cfg["destinos"]:
-        if dest.get("so_rosto_real"):
-            print(f"{dest['nome']}: fora desta agenda (só com rosto real; o E{nn:02d} usa o avatar)")
-            continue
-        elegiveis = [c for c in cortes if c.get("tipo") in dest["tipos"]]
-        if not elegiveis:
-            continue
-        cad = dest["cadencia"]
-        hora = cad.get("hora", "12:00")
-        dias = cad.get("dias_semana", [1, 2, 3, 4, 5, 6])
-        agenda = []  # (corte, data)
-        if dest["publica"] == "pulso":
-            ocupados = set()
-            gancho = next((c for c in elegiveis if c["tipo"] == "gancho"), None)
-            resto = [c for c in elegiveis if c is not gancho]
-            if gancho and cad.get("trailer_vespera"):
-                v = D - timedelta(days=1)
-                while v.isoweekday() == 7:
-                    v -= timedelta(days=1)
-                agenda.append((gancho, v)); ocupados.add(v)
-            d = D + timedelta(days=1)
-            for c in resto:
-                d = proximo_dia_valido(d, dias, ocupados)
-                agenda.append((c, d)); ocupados.add(d)
-                d += timedelta(days=1)
-        else:
-            por_semana = int(cad.get("por_semana", 1))
-            d = D + timedelta(days=1)
-            semana_uso = {}
-            for c in elegiveis:
-                while True:
-                    d = proximo_dia_valido(d, dias, set())
-                    semana = d.isocalendar()[1]
-                    if semana_uso.get(semana, 0) < por_semana and d not in dia_do_corte.get(c["id"], set()):
-                        break
-                    d += timedelta(days=1)
-                agenda.append((c, d)); semana_uso[semana] = semana_uso.get(semana, 0) + 1
-                d += timedelta(days=1)
-
-        video_por_corte = {}
-        if com_video:
-            feitos = cortes_longo.gerar(codigo, None, dest["id"])
-            for f in feitos:
-                local = f"{pasta}/cortes/{dest['id']}/{f['arquivo']}"
-                video_por_corte[f["numero"]] = ficha_longo.sobe(local, f"episodios/{codigo}/cortes/{dest['id']}/{f['arquivo']}", "video/mp4")
-
-        for c, dia in agenda:
-            dia_do_corte.setdefault(c["id"], set()).add(dia)
-            for rede, modo in dest["redes"].items():
-                status = "planejado" if dest.get("contas_criadas") or modo == "job" else "aguarda_conta"
-                video = video_por_corte.get(c["numero"])
-                extra = {}
-                if modo == "job" and video:  # o digiai_mkt baixa por link assinado (7 dias, renovado todo dia)
-                    extra = {"video_url_assinada": ficha_longo.assina(video),
-                             "url_expira": (datetime.now() + timedelta(days=7)).astimezone().isoformat()}
-                linhas.append({"corte_id": c["id"], "destino": dest["id"], "rede": rede, "modo": modo, **extra,
-                               "agendado_para": quando(dia, hora), "video": video,
-                               "legenda": legenda_de(textos_dest.get(dest["id"]), textos_base, c["numero"]), "status": status})
-            print(f"{dest['nome']:18s} {dia.strftime('%a %d/%m')} {hora}  corte {c['numero']} · {c['titulo']}")
+    for c, dia, hora_corte in agenda:
+        n = c["numero"]
+        titulo, legenda, tags = textos_da_peca(principal, dest, tdest, tbase, n)
+        for rede in dest["redes"]:
+            if rede.endswith("_antes"):
+                tipo, hora, arq = "story", HORA_ANTES, (story.get(n) or {}).get("antes")
+            elif rede.endswith("_depois"):
+                tipo, arq = "story", (story.get(n) or {}).get("depois")
+                hora = "21:30" if hora_corte == HORA_NOITE_ESTREIA else HORA_DEPOIS
+            else:
+                tipo, hora, arq = "corte", hora_corte, video.get(n)
+            linhas.append({"corte_id": c["id"], "destino": dest["id"], "rede": rede, "modo": "job", "tipo": tipo,
+                           "agendado_para": quando(dia, hora), "video": arq, "titulo": titulo, "legenda": legenda, "hashtags": tags,
+                           "video_url_assinada": ficha_longo.assina(arq) if arq else None, "url_expira": expira if arq else None,
+                           "status": "planejado"})
+        print(f"{dia.strftime('%a %d/%m')} {hora_corte}  corte {n} · {c['titulo']}  (+2 stories)")
     if linhas:
         g._db("POST", "/rest/v1/corte_publicacoes", linhas, schema="pulso_content")
-    print(f"{len(linhas)} publicações planejadas")
+
+    # a ficha do longo entra na view quando o dono aprovar a montagem (pronto_publicacao); aqui vai a data
+    meta = dict(ep.get("metadata") or {})
+    pub = dict(meta.get("publicacao") or {})
+    pub["data"] = quando(D, dest["cadencia"].get("estreia_hora", "18:00"))
+    meta["publicacao"] = pub
+    g._db("PATCH", f"/rest/v1/episodios?id=eq.{ep['id']}", {"metadata": meta}, schema="pulso_content")
+    print(f"{len(linhas)} peças planejadas · estreia do longo {pub['data']}")
     return linhas
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("codigo")
-    ap.add_argument("--estreia", required=True, help="dia em que o episódio longo vai ao ar (AAAA-MM-DD)")
+    ap.add_argument("--estreia", required=True, help="dia em que o longo vai ao ar no principal (AAAA-MM-DD)")
     ap.add_argument("--sem-video", action="store_true", help="só a agenda, sem gerar e subir as versões")
     a = ap.parse_args()
     planejar(a.codigo, a.estreia, not a.sem_video)

@@ -26,13 +26,15 @@ interface Publicacao {
 const REDE: Record<string, string> = {
   youtube: 'YouTube Shorts', instagram: 'Instagram Reels', facebook: 'Facebook Reels', tiktok: 'TikTok', kwai: 'Kwai',
   instagram_story: 'Story do Instagram', facebook_story: 'Story do Facebook', whatsapp_status: 'Status do WhatsApp', fila_mkt: 'Fila do digiai_mkt',
+  instagram_story_antes: 'Story do Instagram (antes)', instagram_story_depois: 'Story do Instagram (depois)',
+  facebook_story_antes: 'Story do Facebook (antes)', facebook_story_depois: 'Story do Facebook (depois)',
 }
-const DESTINO: Record<string, string> = { bastidores_digiai: 'Bastidores DIGIAI', digiai: 'DIGIAI', pessoal: 'Pessoal do dono' }
+const DESTINO: Record<string, string> = { bastidores_cortes: 'Bastidores DIGIAI Cortes', bastidores_digiai: 'Bastidores DIGIAI', digiai: 'DIGIAI', pessoal: 'Pessoal do dono' }
 const MODO: Record<Publicacao['modo'], { rotulo: string; Icone: typeof Zap }> = {
   auto: { rotulo: 'sai sozinho', Icone: Zap },
   rascunho: { rotulo: 'chega no seu celular como rascunho', Icone: Smartphone },
   manual: { rotulo: 'você posta', Icone: Send },
-  job: { rotulo: 'vai para a fila do digiai_mkt', Icone: Send },
+  job: { rotulo: 'o digiai_mkt publica', Icone: Send },
 }
 
 const diaBrt = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
@@ -68,7 +70,7 @@ export default function HojeLongosPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader titulo="Hoje nos Longos" subtitulo="Os cortes de cada episódio: o que sai hoje, onde, com qual arquivo e qual legenda" />
+      <PageHeader titulo="Hoje nos Longos" subtitulo="As peças de cada episódio que o digiai_mkt publica: o que sai hoje, onde, com qual arquivo e qual legenda" />
       {isLoading && <div className={`h-60 animate-pulse ${CARTAO}`} />}
       {error && <p className={`${CARTAO} p-6 text-sm text-(--pulso-danger)`}>Não deu para ler a agenda: {error.message}</p>}
       {data && lista.length === 0 && (

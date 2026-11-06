@@ -9,6 +9,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Mudou (05/11) — Bastidores v2: o Pulso é só fábrica, o digiai_mkt publica tudo
+- Decisão do dono (via Geral): canal principal no YouTube só com o longo; canais de cortes nas 5 redes apontando para o principal; DIGIAI e pessoal sem corte. Desenho: `Cockpit/bastidores/DESENHO-canais-stories-divisao-2026-11-05.md` v2.
+- 086: `cortes_destinos` v2 (um destino, o canal de cortes, tudo como job), contrato `v_bastidores_pecas_prontas` (corte, story e ficha do longo, sem PII) + `public.bastidores_pecas_para_mkt()` + `public.estado_peca_bastidores()`; saem `cortes_para_mkt` e `estado_corte_mkt` (085). Provado: conta qualquer barrada, anônimo negado, admin lê.
+- `motor/stories_longo.py`: 2 stories por dia de corte ("novo corte hoje" e os 15 s iniciais com "episódio completo no YouTube · link na bio").
+- Planejador v2: trailer na véspera, estreia às 18h com o corte da noite, 1 corte e 2 stories por dia, domingo nada; legenda abre com o link do principal e #BastidoresDIGIAI; o cartão final aponta para o principal. A rota `assinar-cortes` também assina o vídeo e a capa da ficha do longo. Testado ponta a ponta com 54 peças, depois apagadas.
+
 ### Adicionado (05/11) — capas com fotos reais do dono
 - `motor/recortar_fotos.py`: separa cada pose das pranchas do GPT e tira o fundo, inclusive o xadrez de transparência desenhado. Catálogo das 19 poses com emoção, direção e a tela/folha onde entra o número. As fotos ficam só no OneDrive.
 - `motor/capa_longo.py` reescrito: foto real (nunca espelhada) do lado para onde aponta, halo âmbar, número dentro do celular ou da folha, frase sem palavra órfã, variantes A/B/C para o teste de miniaturas do YouTube. `textos_cortes.py --capas` propõe as 3 capas pela API do Claude.
