@@ -132,7 +132,7 @@ def gerar(codigo, so=None, destino_id=None):
     tmp = tempfile.mkdtemp(dir="D:/tmp")  # caminho sem acento nem espaço: o filtro de legenda do ffmpeg engasga
     final = os.path.join(tmp, "final.mp4")
     if dest:
-        cartao_final(tag, final, tuple(dest["final"]), f"Episódio completo: {dest.get('rodape') or dest['arroba']}")
+        cartao_final(tag, final, tuple(dest["final"]), "youtube.com/" + (dest.get('rodape') or dest['arroba']))
     else:
         cartao_final(tag, final)
     tipos = {}
