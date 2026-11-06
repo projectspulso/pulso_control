@@ -9,6 +9,19 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Adicionado (06/11) — Analytics dos Longos completo e a medição
+- Dono: "o analytics do VC tem que ser referência para os do VL". `/longos/analytics` com 9 abas no molde dos Curtos:
+  - visão geral com as metas do YouTube Partner Program em `longos_metas`;
+  - episódios, cortes por tipo e por rede, campeões;
+  - retenção, com a curva do longo;
+  - funil corte → episódio;
+  - audiência, crescimento;
+  - ideias por regra fixa sobre o medido, mais a pauta de assuntos aprovados;
+  - saúde da coleta.
+- 091: `pulso_analytics.leituras_longos` e `seguidores_longos` (1 leitura por post por dia, à parte dos Curtos); RPCs `leitura_peca_bastidores` e `seguidores_bastidores` para o digiai_mkt devolver as redes dele.
+- Rota `coletar-longos` lê o YouTube pela API pública, com pg_cron diário às 06h45 de Brasília, e registra toda rodada. Horas e retenção do longo pedem o OAuth do canal principal quando ele nascer.
+- Testado em produção com dado de teste marcado (52 leituras, 12 peças), apagado depois.
+
 ### Adicionado (06/11) — telas próprias dos Longos
 - `/longos/assets`: por episódio, tudo o que está no bucket `bastidores` (episódio, capas, cortes, stories, peças da DIGIAI), com prévia e baixar. As fotos originais do rosto do dono continuam só no OneDrive.
 - `/longos/configuracoes`: voz, embalagem, destinos dos cortes e fábrica, para leitura; quem muda é o dono pelo Claude do Pulso.
