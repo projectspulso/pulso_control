@@ -32,7 +32,7 @@ export default function LongosPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader titulo="Episódios" subtitulo="Bastidores do PULSO: vídeos longos no YouTube e a fábrica de cortes que sai de cada um" />
+      <PageHeader titulo="Episódios" subtitulo="Bastidores DIGIAI: vídeos longos no YouTube e a fábrica de cortes que sai de cada um" />
 
       <section className={`${CARTAO} p-5`}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">

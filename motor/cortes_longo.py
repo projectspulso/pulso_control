@@ -3,7 +3,7 @@
 FÁBRICA DE CORTES DOS LONGOS — cada "✂ CORTE" do roteiro vira um vertical 1080×1920 (Reels, Shorts,
 TikTok, stories, status) a partir da montagem do episódio (dono, 05/11/2026).
 
-  topo     o título do corte (o gancho escrito) + selo BASTIDORES DO PULSO · EP. NN
+  topo     o título do corte (o gancho escrito) + selo BASTIDORES DIGIAI · EP. NN
   meio     a montagem 16:9 por cima de um fundo desfocado dela mesma
   embaixo  legenda grande queimada (a maioria assiste sem som), recortada do .srt do episódio
   fim      2,5 s "episódio completo no YouTube" com a batida da marca: todo corte aponta pro longo
@@ -58,7 +58,7 @@ def srt_do_corte(legs, ini, fim, destino):
     open(destino, "w", encoding="utf-8").write("\n".join(linhas))
 
 
-def cartaz_topo(titulo, tag, destino, marca="BASTIDORES DO PULSO"):
+def cartaz_topo(titulo, tag, destino, marca="BASTIDORES DIGIAI"):
     img = Image.new("RGBA", (VW, VH), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     fs, ft = emb.fonte(34, "SemiBold"), emb.fonte(84, "Bold")
@@ -90,7 +90,7 @@ def cartao_final(tag, destino, linhas=("EPISÓDIO COMPLETO", "no YouTube"), roda
             d.line(pts, fill=emb.AMBAR + (255,), width=8, joint="curve")
         a = emb.suave((t - 0.5) / 0.4)
         for txt, f, y, cor in ((linhas[0], fa, VH / 2 - 330, emb.AMBAR), (linhas[1], fb, VH / 2 - 260, emb.BRANCO),
-                               (rodape or f"Bastidores do PULSO · {tag}", fc, VH / 2 + 240, (163, 160, 176))):
+                               (rodape or f"Bastidores DIGIAI · {tag}", fc, VH / 2 + 240, (163, 160, 176))):
             w = d.textlength(txt, font=f)
             d.text(((VW - w) / 2, y), txt, font=f, fill=cor + (int(255 * a),))
         img.convert("RGB").save(os.path.join(tmp, f"q{i:04d}.png"))
@@ -150,7 +150,7 @@ def gerar(codigo, so=None, destino_id=None):
         srt_do_corte(legs, ini, fim, srt)
         topo = os.path.join(tmp, "topo.png")
         titulo = (textos.get(str(c["numero"])) or {}).get("titulo") or c["titulo"]
-        cartaz_topo(titulo, tag, topo, dest["selo"] if dest else "BASTIDORES DO PULSO")
+        cartaz_topo(titulo, tag, topo, dest["selo"] if dest else "BASTIDORES DIGIAI")
         corpo = os.path.join(tmp, "corpo.mp4")
         estilo = "Fontname=Bahnschrift,Fontsize=17,Bold=1,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2.2,Shadow=0,Alignment=2,MarginV=52"
         filtro = (

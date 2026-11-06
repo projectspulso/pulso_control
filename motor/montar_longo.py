@@ -493,7 +493,7 @@ def quadros_bloco(num, itens, al, dur, visuais, avatar, ep, rascunho, sem_avatar
                 av = avatar.no_tempo(t, al, spec.get("pose", "pose_neutro"), 300)
                 img.alpha_composite(av, (W - av.width - 40, H - av.height - 30))
         d = ImageDraw.Draw(img)
-        d.text((48, 36), selo_txt or f"BASTIDORES DO PULSO · {ep}", font=selo, fill=(163, 160, 176, 150))
+        d.text((48, 36), selo_txt or f"BASTIDORES DIGIAI · {ep}", font=selo, fill=(163, 160, 176, 150))
         # transição: 0,2 s de entrada em cada troca de cartão
         if 0 <= tl < 0.35 and t0 > 0 and ultimo is not None:
             img = Image.blend(ultimo.convert("RGBA"), img, emb.suave(tl / 0.35))

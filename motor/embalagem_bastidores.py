@@ -4,7 +4,7 @@ EMBALAGEM DOS BASTIDORES — a abertura (vinheta) e o encerramento padrão de to
 dos Longos (dono, 05/11/2026: "criar uma apresentação padrão em todos os vídeos").
 
   vinheta       3,6 s · a linha de um eletrocardiograma corta a tela, bate uma vez e vira
-                "BASTIDORES DO PULSO". A batida (lub-dub) é a assinatura sonora da marca.
+                "BASTIDORES DIGIAI". A batida (lub-dub) é a assinatura sonora da marca.
   encerramento  ~9 s · o avatar do dono fala a assinatura com lip-sync, o mascote do PULSO ao lado,
                 "no próximo episódio" + título + inscreva-se; os últimos segundos ficam calmos para
                 a tela final do YouTube. Fecha com a mesma batida.
@@ -32,7 +32,7 @@ MASCOTE = "D:/projetos/pulso_control/public/pulso/expression"
 W, H, FPS, SR = 1920, 1080, 30, 44100
 BG_TOPO, BG_BASE = (16, 12, 38), (6, 6, 14)
 AMBAR, BRANCO, LILAS = (233, 162, 59), (245, 244, 248), (144, 133, 233)
-ASSINATURA = "Eu sou o dono do PULSO, e isso aqui são os bastidores."
+ASSINATURA = "Eu sou o dono da DIGIAI, e isso aqui são os bastidores."  # dono, 05/11: era "dono do PULSO"
 
 
 def fonte(tam, peso="Bold"):
@@ -152,7 +152,7 @@ def vinheta(ep, saida):
                 txt = Image.new("RGBA", (W, H), (0, 0, 0, 0))
                 dt = ImageDraw.Draw(txt)
                 texto_centro(dt, H / 2 - 345 + (1 - a) * 30, "BASTIDORES", f_titulo, BRANCO, espaco=6, alfa=a)
-                texto_centro(dt, H / 2 + 165, "DO PULSO", f_sub, AMBAR, espaco=22, alfa=a)
+                texto_centro(dt, H / 2 + 165, "DIGIAI", f_sub, AMBAR, espaco=22, alfa=a)
                 if ep:
                     texto_centro(dt, H - 150, ep, f_ep, LILAS, espaco=8, alfa=suave((t - 1.7) / 0.4))
                 img = Image.alpha_composite(img, txt)
@@ -203,7 +203,7 @@ def assinatura_aprovada(tentativas=5):
     """A assinatura é a MESMA em todo vídeo: narrada uma vez, conferida por transcrição e guardada.
     Nasceu de 05/11: uma geração saiu "besti dois" no lugar de "bastidores" e os dois modelos de
     transcrição ouviram igual. Sem take que passe, para em vez de usar o ruim."""
-    mp3, js = f"{SAIDA}/assinatura_voz.mp3", f"{SAIDA}/assinatura_voz.json"
+    mp3, js = f"{SAIDA}/assinatura_digiai_voz.mp3", f"{SAIDA}/assinatura_digiai_voz.json"
     if os.path.exists(mp3) and os.path.exists(js):
         return mp3, json.load(open(js, encoding="utf-8"))
     from faster_whisper import WhisperModel
@@ -213,7 +213,7 @@ def assinatura_aprovada(tentativas=5):
         _, al = voz_dono.narrar(ASSINATURA, cand, tempos=True)
         ouvido = " ".join(s.text for s in modelo.transcribe(cand, language="pt")[0]).lower()
         print(f"take {i + 1}: {ouvido.strip()}")
-        if "bastidores" in ouvido and "dono do pulso" in ouvido:
+        if "bastidores" in ouvido and "dono da" in ouvido and "digi" in ouvido.replace(" ", "").replace("-", ""):
             os.replace(cand, mp3)
             json.dump(al, open(js, "w", encoding="utf-8"), ensure_ascii=False)
             for f in os.listdir(SAIDA):
@@ -265,7 +265,7 @@ def encerramento(proximo, saida):
     y0, x0, larg = 150, W / 2 - 330, 660
     mini = [(0, 0), (0.40, 0), (0.45, -8), (0.48, 0), (0.50, 14), (0.53, -62), (0.56, 26), (0.59, 0), (1.0, 0)]
     dm.line([(x0 + x * larg, y0 + dy) for x, dy in mini], fill=AMBAR + (255,), width=4, joint="curve")
-    texto_centro(dm, 62, "BASTIDORES  DO  PULSO", fonte(30, "SemiBold"), BRANCO, espaco=10, alfa=0.85)
+    texto_centro(dm, 62, "BASTIDORES  DIGIAI", fonte(30, "SemiBold"), BRANCO, espaco=10, alfa=0.85)
     bg = Image.alpha_composite(bg, marca)
     f_rot, f_tit, f_cta = fonte(34, "SemiBold"), fonte(58, "Bold"), fonte(40, "Bold")
     xa, xm = int(W * 0.17), int(W * 0.84)
