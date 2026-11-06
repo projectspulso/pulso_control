@@ -12,7 +12,7 @@ export interface Leitura {
   episodio_id: string; peca_id: string | null; canal: string; rede: string; tipo: string; data_ref: string
   views: number; likes: number; comentarios: number; compartilhamentos: number
   horas_exibicao: number | null; retencao_media_pct: number | null; cliques_episodio: number | null
-  retencao_curva: { p: number; ret: number }[] | null; fonte: string
+  retencao_curva: { p: number; ret: number }[] | null; origens: Record<string, number> | null; fonte: string
 }
 export interface Peca {
   id: string; episodio_id: string; destino: string; rede: string; tipo: string; status: string; url: string | null
@@ -38,7 +38,7 @@ export function useAnalyticsLongos() {
         supabase.schema('pulso_content').from('corte_publicacoes')
           .select('id, destino, rede, tipo, status, url, motivo, agendado_para, episodio_cortes!inner(episodio_id, numero, titulo, tipo)'),
         supabase.schema('pulso_analytics').from('leituras_longos')
-          .select('episodio_id, peca_id, canal, rede, tipo, data_ref, views, likes, comentarios, compartilhamentos, horas_exibicao, retencao_media_pct, cliques_episodio, retencao_curva, fonte')
+          .select('episodio_id, peca_id, canal, rede, tipo, data_ref, views, likes, comentarios, compartilhamentos, horas_exibicao, retencao_media_pct, cliques_episodio, retencao_curva, origens, fonte')
           .order('data_ref').limit(20000),
         supabase.schema('pulso_analytics').from('seguidores_longos').select('canal, rede, data_ref, seguidores').order('data_ref'),
         supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'longos_metas').maybeSingle(),

@@ -1,6 +1,8 @@
 'use client'
 
 import { useMemo, useState, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { Loader2, RefreshCw } from 'lucide-react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { PageHeader } from '@/components/layout/page-header'
 import { mediana, serieDiaria, ultimas, useAnalyticsLongos, type AnalyticsLongos, type Leitura } from '@/lib/hooks/use-analytics-longos'
@@ -17,7 +19,13 @@ const pct = (v: number) => `${(v * 100).toLocaleString('pt-BR', { maximumFractio
 const dia = (v: string) => v.slice(5).split('-').reverse().join('/')
 const REDE: Record<string, string> = { youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', kwai: 'Kwai', linkedin: 'LinkedIn' }
 const TIPO_CORTE: Record<string, string> = { gancho: 'Gancho', historia: 'História', licao: 'Lição', tecnico: 'Técnico' }
-const CANAL: Record<string, string> = { principal: 'Principal (o longo)', cortes: 'Canal de cortes', digiai: 'DIGIAI' }
+const ORIGEM: Record<string, string> = {
+  SHORTS: 'Shorts do canal', YT_SEARCH: 'Busca do YouTube', RELATED_VIDEO: 'Vídeos sugeridos', SUBSCRIBER: 'Inscritos (início e feed)',
+  YT_CHANNEL: 'Página do canal', EXT_URL: 'Sites e apps externos', BROWSE: 'Página inicial do YouTube', NOTIFICATION: 'Notificações',
+  PLAYLIST: 'Playlists', YT_OTHER_PAGE: 'Outras páginas do YouTube', END_SCREEN: 'Tela final', NO_LINK_OTHER: 'Direto ou desconhecido',
+  HASHTAGS: 'Hashtags', ANNOTATION: 'Cards',
+}
+const CANAL: Record<string, string> = { principal: 'PULSO Histórias (o longo)', cortes: 'Canal de cortes', digiai: 'DIGIAI' }
 
 const ABAS = [
   { id: 'geral', label: 'Visão geral' }, { id: 'episodios', label: 'Episódios' }, { id: 'cortes', label: 'Cortes' },
@@ -156,6 +164,22 @@ function ideias(d: AnalyticsLongos, c: ReturnType<typeof calcular>) {
 export default function LongosAnalyticsPage() {
   const { data, isLoading, error } = useAnalyticsLongos()
   const [aba, setAba] = useState<Aba>('geral')
+  const qc = useQueryClient()
+  const [atualizando, setAtualizando] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
+  async function atualizar() {
+    setAtualizando(true); setAviso(null)
+    try {
+      const r = await fetch('/api/automation/coletar-longos', { method: 'POST' })
+      const j = await r.json().catch(() => ({}))
+      setAviso(r.ok ? `Coleta feita: ${j.gravadas ?? 0} leituras gravadas${j.falhas?.length ? ` · ${j.falhas.length} aviso(s): ${j.falhas.slice(0, 2).join('; ')}` : ''}` : `A coleta falhou: ${j.erro || j.error || r.status}`)
+      await qc.invalidateQueries({ queryKey: ['analytics-longos'] })
+    } catch (e) {
+      setAviso(`A coleta falhou: ${(e as Error).message}`)
+    } finally {
+      setAtualizando(false)
+    }
+  }
   const c = useMemo(() => (data ? calcular(data) : null), [data])
   const lista = useMemo(() => (data && c ? ideias(data, c) : []), [data, c])
   const semLeitura = data && data.leituras.length === 0
@@ -173,6 +197,16 @@ export default function LongosAnalyticsPage() {
               o digiai_mkt devolve as outras redes). Até lá, cada card diz o que vai mostrar.
             </p>
           )}
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={atualizar} disabled={atualizando}
+              className="inline-flex items-center gap-2 rounded-lg border border-(--pulso-vl) px-3 py-1.5 text-xs font-semibold text-(--pulso-vl) hover:bg-(--pulso-vl)/10 disabled:opacity-60">
+              {atualizando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {atualizando ? 'Atualizando…' : 'Atualizar dados'}
+            </button>
+            <span className="text-xs text-(--pulso-text-muted)">
+              {aviso || (data.ultimaColeta ? `Última coleta: ${new Date(data.ultimaColeta.criado).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })} · todo dia às 06h45` : 'Ainda sem coleta')}
+            </span>
+          </div>
           <div role="tablist" className="flex gap-1 overflow-x-auto rounded-full border border-(--pulso-border) bg-(--pulso-surface) p-1">
             {ABAS.map((t) => (
               <button key={t.id} type="button" role="tab" aria-selected={aba === t.id} onClick={() => setAba(t.id)}
@@ -325,11 +359,18 @@ export default function LongosAnalyticsPage() {
                 <Kpi rotulo="Levados ao episódio" valor={c.cliques ? n(c.cliques) : '—'} sub={c.cliques && c.viewsPecas ? `${((c.cliques / c.viewsPecas) * 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} a cada mil views` : undefined} />
                 <Kpi rotulo="Views do longo" valor={c.viewsLongo ? n(c.viewsLongo) : '—'} />
               </div>
+              <h3 className="mt-5 text-xs font-semibold text-(--pulso-text)">De onde vieram as views do episódio</h3>
+              {(() => {
+                const o: Record<string, number> = {}
+                for (const l of c.longos) for (const [k, v] of Object.entries(l.origens || {})) o[k] = (o[k] || 0) + v
+                const dados = Object.entries(o).map(([k, v]) => ({ nome: ORIGEM[k] || k, valor: v })).sort((x, y) => y.valor - x.valor)
+                return dados.length ? <Barras dados={dados} rotulo="views" /> : <div className="mt-2"><Vazio>O YouTube Analytics leva cerca de 48 h para mostrar as origens de um vídeo novo.</Vazio></div>
+              })()}
             </Card>
           )}
 
           {aba === 'audiencia' && (
-            <Card titulo="Seguidores dos canais dos Bastidores" sub="última contagem por canal e rede"
+            <Card titulo="Seguidores dos canais" sub="última contagem por canal e rede"
               rodape="O Pulso lê os inscritos do YouTube quando o id do canal estiver na config; as outras redes chegam pelo digiai_mkt.">
               {c.seguidoresAtual.length ? (
                 <ul className="divide-y divide-(--pulso-border) text-sm">

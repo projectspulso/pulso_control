@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { getYoutubeAccessToken } from '@/lib/youtube/oauth'
+import { fetchYoutubeRetention } from '@/lib/youtube/retention'
 
 /**
  * Coleta diária dos Longos (091, 06/11/2026). O Pulso lê pela API pública do YouTube o que é dele ler:
@@ -60,6 +62,13 @@ export async function POST(request: NextRequest) {
       return { ...a, data_ref, views: Number(s.viewCount || 0), likes: Number(s.likeCount || 0), comentarios: Number(s.commentCount || 0), fonte: 'pulso', coletado_em: new Date().toISOString() }
     })
     for (const a of lote) if (!stats.has(a.post_id)) falhas.push(`${a.post_id}: não achado no YouTube`)
+    // o longo sai no PULSO Histórias (dono, 06/11), canal que já tem o acesso ao Analytics: horas, retenção e origens
+    const token = linhas.some((l) => l.tipo === 'longo') ? await getYoutubeAccessToken().catch(() => null) : null
+    for (const l of linhas) {
+      if (l.tipo !== 'longo') continue
+      if (!token) { falhas.push(`${l.post_id}: sem acesso ao Analytics do canal`); continue }
+      Object.assign(l, await analyticsDoLongo(l.post_id, token, falhas))
+    }
     for (const l of linhas) {
       // o índice único usa coalesce(peca_id): o upsert do PostgREST não o enxerga, então apaga o do dia e grava
       let q = supabase.schema('pulso_analytics').from('leituras_longos').delete().eq('episodio_id', l.episodio_id).eq('rede', l.rede).eq('data_ref', data_ref)
@@ -102,6 +111,34 @@ export async function POST(request: NextRequest) {
 
   const status = !alvos.length && !inscritos ? 'ocioso' : falhas.length ? 'parcial' : 'sucesso'
   return registra(supabase, status, { data_ref, alvos: alvos.length, gravadas, canais_lidos: inscritos, falhas }, 200)
+}
+
+/** Horas, retenção média, curva e origens do longo. O Analytics atrasa ~48 h: vídeo novo volta vazio e fica nulo. */
+async function analyticsDoLongo(videoId: string, token: string, falhas: string[]) {
+  const hoje = new Date().toISOString().slice(0, 10)
+  const relatorio = async (metrics: string, dimensions?: string) => {
+    const url = new URL('https://youtubeanalytics.googleapis.com/v2/reports')
+    url.searchParams.set('ids', 'channel==MINE')
+    url.searchParams.set('startDate', '2026-01-01')
+    url.searchParams.set('endDate', hoje)
+    url.searchParams.set('metrics', metrics)
+    url.searchParams.set('filters', `video==${videoId}`)
+    if (dimensions) url.searchParams.set('dimensions', dimensions)
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    if (!r.ok) { falhas.push(`${videoId}: Analytics ${r.status}`); return [] }
+    return ((await r.json()).rows || []) as (string | number)[][]
+  }
+  const extra: { horas_exibicao?: number; retencao_media_pct?: number; retencao_curva?: { p: number; ret: number }[]; origens?: Record<string, number> } = {}
+  const [tot] = await relatorio('views,estimatedMinutesWatched,averageViewPercentage')
+  if (tot && Number(tot[0]) > 0) {
+    extra.horas_exibicao = Math.round((Number(tot[1]) / 60) * 10) / 10
+    extra.retencao_media_pct = Math.round(Number(tot[2]) * 10) / 10
+  }
+  const curva = await fetchYoutubeRetention(videoId, token)
+  if (curva) extra.retencao_curva = Object.entries(curva).map(([t, ret]) => ({ p: Number(t) / 40, ret })).sort((a, b) => a.p - b.p)
+  const orig = await relatorio('views', 'insightTrafficSourceType')
+  if (orig.length) extra.origens = Object.fromEntries(orig.map(([o, v]) => [String(o), Number(v)]))
+  return extra
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
