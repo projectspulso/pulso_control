@@ -22,6 +22,7 @@ import pulso_guard as g  # noqa: E402
 import cortes_longo  # noqa: E402
 import ficha_longo  # noqa: E402
 import stories_longo  # noqa: E402
+import digiai_pecas  # noqa: E402
 
 ONEDRIVE = ficha_longo.ONEDRIVE
 HORA_ANTES, HORA_DEPOIS, HORA_NOITE_ESTREIA = "09:30", "18:30", "20:30"
@@ -113,7 +114,46 @@ def planejar(codigo, estreia, com_video=True):
                            "video_url_assinada": ficha_longo.assina(arq) if arq else None, "url_expira": expira if arq else None,
                            "status": "planejado"})
         print(f"{dia.strftime('%a %d/%m')} {hora_corte}  corte {n} · {c['titulo']}  (+2 stories)")
+    # DIGIAI (dono 05/11): peças PRÓPRIAS, nunca o arquivo do canal de cortes, nunca no mesmo dia daquele corte
+    dia_no_canal = {c["numero"]: dia for c, dia, _ in agenda}
+    por_numero = {c["numero"]: c for c in cortes}
+    for dd in cfg["destinos"][1:]:
+        if dd["id"] != "digiai":
+            continue
+        pecas = digiai_pecas.gerar(codigo) if com_video else {}
+        for pc in dd.get("pecas", []):
+            gerado = pecas.get(pc["tipo"] if pc["tipo"] == "carrossel" else "video")
+            if not gerado:
+                continue
+            n, arquivo = gerado
+            dia = D + timedelta(days=1)
+            while dia.isoweekday() == 7 or dia.isoweekday() not in pc["dias_semana"] or dia == dia_no_canal.get(n):
+                dia += timedelta(days=1)
+            if pc["tipo"] == "carrossel":
+                caminhos = [ficha_longo.sobe(a, f"episodios/{codigo}/digiai/carrossel/{os.path.basename(a)}", "image/jpeg") for a in arquivo]
+                capa_txt, _ = digiai_pecas.licoes_do_roteiro(g._db("GET", f"/rest/v1/episodios?id=eq.{ep['id']}&select=roteiro_md", schema="pulso_content")[0]["roteiro_md"], n)
+                legenda = (f"{capa_txt}.\n\nO que um erro real ensinou ao construir uma empresa com IA, em {len(caminhos) - 2} lições."
+                           f"\n\nEpisódio completo: {principal['url']}")
+                linhas.append({"corte_id": por_numero[n]["id"], "destino": "digiai", "rede": pc["rede"], "modo": "job", "tipo": "carrossel",
+                               "agendado_para": quando(dia, pc["hora"]), "arquivos": caminhos, "urls_assinadas": [ficha_longo.assina(c_) for c_ in caminhos],
+                               "url_expira": expira, "titulo": capa_txt, "legenda": legenda,
+                               "hashtags": [dd["hashtag_fixa"]] + dd.get("hashtags", []), "status": "planejado"})
+            else:
+                cam = ficha_longo.sobe(arquivo, f"episodios/{codigo}/digiai/{os.path.basename(arquivo)}", "video/mp4")
+                titulo = por_numero[n]["titulo"]
+                legenda = (f"{titulo}.\n\nUm trecho dos Bastidores DIGIAI sobre um erro real do nosso sistema e como ele foi consertado."
+                           f"\n\nEpisódio completo: {principal['url']}")
+                linhas.append({"corte_id": por_numero[n]["id"], "destino": "digiai", "rede": pc["rede"], "modo": "job", "tipo": "video",
+                               "agendado_para": quando(dia, pc["hora"]), "video": cam, "video_url_assinada": ficha_longo.assina(cam),
+                               "url_expira": expira, "titulo": titulo, "legenda": legenda,
+                               "hashtags": [dd["hashtag_fixa"]] + dd.get("hashtags", []), "status": "planejado"})
+            print(f"DIGIAI {pc['rede']:9s} {dia.strftime('%a %d/%m')} {pc['hora']}  {pc['tipo']} do corte {n}")
+
     if linhas:
+        # o envio em lote exige as MESMAS chaves em todas as linhas (o carrossel tem arquivos[] e o corte não)
+        padrao = {"arquivos": [], "urls_assinadas": [], "video": None, "video_url_assinada": None, "url_expira": None}
+        chaves = set().union(*(l.keys() for l in linhas))
+        linhas = [{k: l.get(k, padrao.get(k)) for k in chaves} for l in linhas]
         g._db("POST", "/rest/v1/corte_publicacoes", linhas, schema="pulso_content")
 
     # a ficha do longo entra na view quando o dono aprovar a montagem (pronto_publicacao); aqui vai a data

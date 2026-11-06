@@ -418,7 +418,7 @@ def le_wav(mp3):
     return a
 
 
-def quadros_bloco(num, itens, al, dur, visuais, avatar, ep, rascunho):
+def quadros_bloco(num, itens, al, dur, visuais, avatar, ep, rascunho, sem_avatar=False, selo_txt=None):
     """Gera os quadros de um bloco. visuais: lista na ordem das marcações TELA/AVATAR/CARTELA do bloco."""
     inicios = tempos_das_falas(itens, al)
     # cada marcação vale a partir da fala seguinte a ela
@@ -448,14 +448,14 @@ def quadros_bloco(num, itens, al, dur, visuais, avatar, ep, rascunho):
     f_dest = emb.fonte(68, "Bold")
     medidor = ImageDraw.Draw(Image.new("RGBA", (10, 10)))
 
-    def destaque(img, t):
+    def destaque(img, t, x0=980, larg=820):
         k = max((j for j, t0 in enumerate(inicios) if t0 <= t), default=None)
         if k is None:
             return
         dito = sum(1 for a in ini_c if a <= t)
         linhas, atual = [], []
         for w_ in falas[k].split():
-            if atual and medidor.textlength(" ".join(atual + [w_]), font=f_dest) > 820:
+            if atual and medidor.textlength(" ".join(atual + [w_]), font=f_dest) > larg:
                 linhas.append(atual); atual = []
             atual.append(w_)
         linhas.append(atual)
@@ -463,7 +463,7 @@ def quadros_bloco(num, itens, al, dur, visuais, avatar, ep, rascunho):
         y = H / 2 - len(linhas) * 44
         pos = posicoes[k]
         for linha in linhas:
-            x = 980
+            x = x0
             for w_ in linha:
                 cor = BRANCO + (255,) if pos < dito else (110, 107, 123, 255)
                 d.text((x, y), w_, font=f_dest, fill=cor)
@@ -479,17 +479,21 @@ def quadros_bloco(num, itens, al, dur, visuais, avatar, ep, rascunho):
             yield ultimo; continue
         t0, k, spec, fn = atual
         tl = t - t0
-        if fn is None:  # avatar grande à esquerda, a fala em destaque à direita
+        if fn is None and sem_avatar:  # peça sem rosto de IA (DIGIAI, T-4): só a fala em destaque, larga
+            img = base()
+            destaque(img, t, 200, 1520)
+        elif fn is None:  # avatar grande à esquerda, a fala em destaque à direita
             img = base()
             av = avatar.no_tempo(t, al, spec.get("pose", "pose_neutro"), 820)
             img.alpha_composite(av, (int(W * 0.25) - av.width // 2, H - av.height - 20))
             destaque(img, t)
         else:
             img = fn(tl)
-            av = avatar.no_tempo(t, al, spec.get("pose", "pose_neutro"), 300)
-            img.alpha_composite(av, (W - av.width - 40, H - av.height - 30))
+            if not sem_avatar:
+                av = avatar.no_tempo(t, al, spec.get("pose", "pose_neutro"), 300)
+                img.alpha_composite(av, (W - av.width - 40, H - av.height - 30))
         d = ImageDraw.Draw(img)
-        d.text((48, 36), f"BASTIDORES DO PULSO · {ep}", font=selo, fill=(163, 160, 176, 150))
+        d.text((48, 36), selo_txt or f"BASTIDORES DO PULSO · {ep}", font=selo, fill=(163, 160, 176, 150))
         # transição: 0,2 s de entrada em cada troca de cartão
         if 0 <= tl < 0.35 and t0 > 0 and ultimo is not None:
             img = Image.blend(ultimo.convert("RGBA"), img, emb.suave(tl / 0.35))
