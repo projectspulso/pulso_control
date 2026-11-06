@@ -63,7 +63,11 @@ def planejar(codigo, estreia, com_video=True):
     cortes = [c for c in g._db("GET", f"/rest/v1/episodio_cortes?episodio_id=eq.{ep['id']}&select=id,numero,titulo,tipo,status&order=numero", schema="pulso_content")
               if c["status"] != "descartado"]
     cfg = json.loads(g._db("GET", "/rest/v1/configuracoes?chave=eq.cortes_destinos&select=valor", schema="pulso_core")[0]["valor"])
-    principal, dest = cfg["principal"], cfg["destinos"][0]
+    principal, dest = dict(cfg["principal"]), cfg["destinos"][0]
+    # dono 06/11: os cortes apontam para o PULSO Histórias; com o episódio no ar, o link é o do próprio vídeo
+    link_ep = ((ep.get("metadata") or {}).get("publicacao") or {}).get("url")
+    if link_ep:
+        principal["url"] = link_ep.replace("https://", "")
     td = f"{pasta}/cortes/textos_destinos.json"
     tdest = (json.load(open(td, encoding="utf-8")) if os.path.exists(td) else {}).get(dest["id"], {})
     tb = f"{pasta}/textos.json"
