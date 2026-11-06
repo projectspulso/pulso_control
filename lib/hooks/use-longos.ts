@@ -117,37 +117,6 @@ export function useFabrica() {
   })
 }
 
-export interface PainelEpisodio {
-  codigo: string; titulo: string; status: string; estreia: string | null; url: string | null
-  pecas: { destino: string; rede: string; tipo: string; status: string; url: string | null; motivo: string | null }[]
-}
-
-/**
- * Painel dos Longos (06/11/2026): por episódio, o estado da estreia e de cada peça que o digiai_mkt
- * devolveu pelo contrato (agendado, publicado com link, recusado com motivo). Views e horas de
- * exibição entram quando a coleta dos canais dos Bastidores existir (os canais ainda não nasceram).
- */
-export function usePainelLongos() {
-  return useQuery<PainelEpisodio[]>({
-    queryKey: ['longos-painel'],
-    queryFn: async () => {
-      const ep = await supabase.schema('pulso_content').from('episodios').select('id, codigo, titulo, status, metadata').order('codigo')
-      if (ep.error) throw ep.error
-      const pub = await supabase.schema('pulso_content').from('corte_publicacoes')
-        .select('destino, rede, tipo, status, url, motivo, episodio_cortes!inner(episodio_id)')
-      if (pub.error) throw pub.error
-      return (ep.data || []).map((e) => {
-        const p = ((e.metadata as { publicacao?: { data?: string; url?: string } } | null)?.publicacao) || {}
-        return {
-          codigo: e.codigo, titulo: e.titulo, status: e.status, estreia: p.data || null, url: p.url || null,
-          pecas: (pub.data || []).filter((x) => (x.episodio_cortes as unknown as { episodio_id: string }).episodio_id === e.id)
-            .map((x) => ({ destino: x.destino, rede: x.rede, tipo: x.tipo, status: x.status, url: x.url, motivo: x.motivo })),
-        }
-      })
-    },
-  })
-}
-
 const CHAVES_LONGOS = ['voz_bastidores', 'longos_embalagem', 'longos_fabrica', 'cortes_destinos'] as const
 export type ChaveLongos = (typeof CHAVES_LONGOS)[number]
 
