@@ -11,6 +11,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ### Andou (06/11) — E01 pronto para o MKT puxar
 
+- **Ajuste pedido pelo MKT:**
+  - Story no Facebook saiu da cadência: a Graph API não posta. As 12 peças foram canceladas.
+  - Kwai fica em `aguarda_conta` (config `aguarda_conta`), fora da view, até a conta existir.
+  - A view caiu de 56 para 38 peças.
+  - Conta leitora do MKT registrada e testada.
+
 - **Agenda:** 56 peças em `v_bastidores_pecas_prontas`:
   - 30 cortes (5 redes);
   - 24 stories;

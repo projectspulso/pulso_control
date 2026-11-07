@@ -123,7 +123,8 @@ def planejar(codigo, estreia, com_video=True):
             linhas.append({"corte_id": c["id"], "destino": dest["id"], "rede": rede, "modo": "job", "tipo": tipo,
                            "agendado_para": quando(dia, hora), "video": arq, "titulo": titulo, "legenda": legenda, "hashtags": tags,
                            "video_url_assinada": ficha_longo.assina(arq) if arq else None, "url_expira": expira if arq else None,
-                           "status": "planejado"})
+                           # rede sem conta ainda (Kwai, 06/11): a peça existe mas fica fora da view do MKT
+                           "status": "aguarda_conta" if rede in dest.get("aguarda_conta", []) else "planejado"})
         print(f"{dia.strftime('%a %d/%m')} {hora_corte}  corte {n} · {c['titulo']}  (+2 stories)")
     # DIGIAI (dono 05/11): peças PRÓPRIAS, nunca o arquivo do canal de cortes, nunca no mesmo dia daquele corte
     dia_no_canal = {c["numero"]: dia for c, dia, _ in agenda}
