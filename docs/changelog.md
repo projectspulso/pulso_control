@@ -9,6 +9,21 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Andou (06/11) — E01 pronto para o MKT puxar
+
+- **Agenda:** 56 peças em `v_bastidores_pecas_prontas`:
+  - 30 cortes (5 redes);
+  - 24 stories;
+  - carrossel DIGIAI na quarta 11/11, às 14h;
+  - LinkedIn na quinta 12/11, às 10h.
+- **Datas sugeridas:** de 07/11 a 13/11, sem domingo; o MKT só sai com o "pode" do dono.
+- **Conferência:** todos os links assinados respondem. A legenda abre com o link do episódio no PULSO Histórias.
+- **`planejar_cortes.py` com episódio já publicado:**
+  - sem véspera nem noite de estreia;
+  - a agenda começa pelo gancho;
+  - a data real da publicação não é sobrescrita.
+- **Título:** cai no título do corte quando não há texto próprio, porque o YouTube não aceita Short sem título.
+
 ### Andou (06/11) — E02 "R$ 1.710 num dia"
 
 - **Roteiro:** v1 aprovada pelo dono em 06/11, com os padrões propostos (título novo, sem cartão de custo completo, rosto real prometido no E03). Status `roteiro_ok`. A trava do segredo passou: 105 receitas, nenhum trecho em comum, nenhum termo proibido. A narração estimada é de ~5 min 45 s; o rascunho previa 7 min 30 s.

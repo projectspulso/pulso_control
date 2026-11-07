@@ -13,6 +13,7 @@ link assinado de 7 dias (renovado todo dia pela rota assinar-cortes). Grava a da
 do longo. Replanejar apaga só o que ainda não saiu (planejado/aguarda_conta) e refaz.
 
 Uso: python D:/tmp/planejar_cortes.py T01E01 --estreia 2026-11-12 [--sem-video]
+     (episódio já publicado: --estreia é o dia do 1º corte; não há véspera e a data real fica)
 """
 import argparse, json, os, sys
 from datetime import date, datetime, timedelta
@@ -81,6 +82,11 @@ def planejar(codigo, estreia, com_video=True):
     gancho = next((c for c in elegiveis if c["tipo"] == "gancho"), None)
     resto = [c for c in elegiveis if c is not gancho]
     agenda = []  # (corte, dia, hora do corte)
+    # episódio já no ar (E01, 06/11): sem véspera nem noite de estreia; a agenda começa em D, pelo gancho,
+    # e a data real da publicação não é tocada
+    ja_no_ar = ((ep.get("metadata") or {}).get("publicacao") or {}).get("estado") == "publicado"
+    if ja_no_ar:
+        gancho, resto = None, ([gancho] if gancho else []) + resto
     if gancho:
         v = D - timedelta(days=1)
         while v.isoweekday() == 7:
@@ -89,7 +95,7 @@ def planejar(codigo, estreia, com_video=True):
     d = D
     for i, c in enumerate(resto):
         d = proximo_util(d)
-        agenda.append((c, d, HORA_NOITE_ESTREIA if d == D else dest["cadencia"].get("hora", "12:00")))
+        agenda.append((c, d, HORA_NOITE_ESTREIA if d == D and not ja_no_ar else dest["cadencia"].get("hora", "12:00")))
         d += timedelta(days=1)
 
     video, story = {}, {}
@@ -105,6 +111,7 @@ def planejar(codigo, estreia, com_video=True):
     for c, dia, hora_corte in agenda:
         n = c["numero"]
         titulo, legenda, tags = textos_da_peca(principal, dest, tdest, tbase, n)
+        titulo = titulo or c["titulo"]  # o YouTube não aceita Short sem título (06/11)
         for rede in dest["redes"]:
             if rede.endswith("_antes"):
                 tipo, hora, arq = "story", HORA_ANTES, (story.get(n) or {}).get("antes")
@@ -163,6 +170,9 @@ def planejar(codigo, estreia, com_video=True):
     # a ficha do longo entra na view quando o dono aprovar a montagem (pronto_publicacao); aqui vai a data
     meta = dict(ep.get("metadata") or {})
     pub = dict(meta.get("publicacao") or {})
+    if ja_no_ar:
+        print(f"{len(linhas)} peças planejadas a partir de {D} · longo já no ar desde {pub.get('data')}")
+        return linhas
     pub["data"] = quando(D, dest["cadencia"].get("estreia_hora", "18:00"))
     meta["publicacao"] = pub
     g._db("PATCH", f"/rest/v1/episodios?id=eq.{ep['id']}", {"metadata": meta}, schema="pulso_content")
