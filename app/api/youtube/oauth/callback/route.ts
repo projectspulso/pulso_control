@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth/api-guard'
 import { estadoConfere } from '@/lib/auth/oauth-state'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { canaisYoutube } from '@/lib/youtube/oauth'
 
 /**
  * GET /api/youtube/oauth/callback
  * Callback do OAuth do Google. Troca o code por access/refresh token e guarda em
- * pulso_core.configuracoes (chave youtube_oauth). Mesmo padrão do tiktok_oauth.
+ * pulso_core.configuracoes na chave do canal (youtube_canais), só se o canal autorizado for o esperado.
  */
 export async function GET(request: NextRequest) {
   const denied = await guardApi(request)
@@ -42,6 +43,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${request.nextUrl.origin}/analytics?yt=erro`)
     }
 
+    // o token vale para o canal que o dono escolheu na tela do Google: confere antes de gravar,
+    // senão autorizar o canal de cortes sobrescreveria o do PULSO Histórias (10/11)
+    const canal = (request.nextUrl.searchParams.get('state') || '').split('.')[0].replace(/^youtube-?/, '') || 'principal'
+    const alvo = (await canaisYoutube()).find((c) => c.canal === canal)
+    if (!alvo) return NextResponse.redirect(`${request.nextUrl.origin}/analytics?yt=canal_desconhecido`)
+    const meu = await fetch('https://www.googleapis.com/youtube/v3/channels?part=id&mine=true', {
+      headers: { Authorization: `Bearer ${tok.access_token}` },
+    }).then((x) => x.json())
+    if (meu?.items?.[0]?.id !== alvo.channel_id) {
+      return NextResponse.redirect(`${request.nextUrl.origin}/analytics?yt=canal_errado&esperado=${encodeURIComponent(alvo.nome)}`)
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = getSupabaseAdminClient() as any
     const valor = JSON.stringify({
@@ -53,11 +66,11 @@ export async function GET(request: NextRequest) {
     })
     await supabase.schema('pulso_core').from('configuracoes').upsert(
       {
-        chave: 'youtube_oauth',
+        chave: alvo.chave,
         valor,
         tipo: 'json',
         categoria: 'integracao',
-        descricao: 'OAuth YouTube Analytics API (yt-analytics.readonly) — retenção de Shorts',
+        descricao: `OAuth YouTube (publicação + Analytics) · ${alvo.nome} (${alvo.channel_id})`,
       },
       { onConflict: 'chave' }
     )
