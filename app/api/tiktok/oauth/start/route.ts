@@ -17,7 +17,11 @@ export async function GET(request: NextRequest) {
   u.searchParams.set('scope', TIKTOK_ESCOPOS)
   u.searchParams.set('response_type', 'code')
   u.searchParams.set('redirect_uri', TIKTOK_REDIRECT_URI)
-  const estado = novoEstado('producao')
+  // ?conta=<id de tiktok_contas> (10/11): cada conta de cortes do PULSO guarda o próprio token; sem
+  // isso, autorizar uma delas apagava o token do @pulsoprojects e parava a publicação diária
+  const conta = request.nextUrl.searchParams.get('conta') || 'principal'
+  if (!/^[a-z0-9_]{1,40}$/.test(conta)) return new NextResponse('conta inválida', { status: 400 })
+  const estado = novoEstado(conta === 'principal' ? 'producao' : `producao-${conta}`)
   u.searchParams.set('state', estado)
   return gravarEstado(NextResponse.redirect(u.toString()), estado)
 }
