@@ -161,6 +161,31 @@ def planejar(codigo, estreia, com_video=True):
                                "hashtags": [dd["hashtag_fixa"]] + dd.get("hashtags", []), "status": "planejado"})
             print(f"DIGIAI {pc['rede']:9s} {dia.strftime('%a %d/%m')} {pc['hora']}  {pc['tipo']} do corte {n}")
 
+    # canais de cortes DO PULSO (dono 10/11): o PULSO publica (modo=auto, fora da view do MKT, que só lê job), versão
+    # própria por canal e nunca no mesmo dia em que aquele corte sai no canal de cortes da DIGIAI
+    for dp in [x for x in cfg["destinos"] if x.get("publica") == "pulso"]:
+        arquivos = {}
+        if com_video:
+            for f in cortes_longo.gerar(codigo, None, dp["id"]):
+                arquivos[f["numero"]] = ficha_longo.sobe(f"{pasta}/cortes/{dp['id']}/{f['arquivo']}", f"episodios/{codigo}/cortes/{dp['id']}/{f['arquivo']}", "video/mp4")
+        tdp = (json.load(open(td, encoding="utf-8")) if os.path.exists(td) else {}).get(dp["id"], {})
+        dia = D
+        for c in [c for c in cortes if c.get("tipo") in dp["tipos"]]:
+            dia = proximo_util(dia)
+            while dia == dia_no_canal.get(c["numero"]):
+                dia = proximo_util(dia + timedelta(days=1))
+            n = c["numero"]
+            titulo, legenda, tags = textos_da_peca(principal, dp, tdp, tbase, n)
+            for rede in dp["redes"]:
+                arq = arquivos.get(n)
+                linhas.append({"corte_id": c["id"], "destino": dp["id"], "rede": rede, "modo": "auto", "tipo": "corte",
+                               "agendado_para": quando(dia, dp["cadencia"].get("hora", "13:00")), "video": arq,
+                               "titulo": titulo or c["titulo"], "legenda": legenda, "hashtags": tags,
+                               "video_url_assinada": ficha_longo.assina(arq) if arq else None, "url_expira": expira if arq else None,
+                               "status": "planejado"})
+            print(f"PULSO {dp['id']:16s} {dia.strftime('%a %d/%m')} {dp['cadencia'].get('hora')}  corte {n} · {c['titulo']}")
+            dia += timedelta(days=1)
+
     if linhas:
         # o envio em lote exige as MESMAS chaves em todas as linhas (o carrossel tem arquivos[] e o corte não)
         padrao = {"arquivos": [], "urls_assinadas": [], "video": None, "video_url_assinada": None, "url_expira": None}
