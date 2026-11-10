@@ -9,6 +9,29 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 ## [Não lançado]
 
+### Novo (10/11) — canais de cortes do PULSO
+
+O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. A DIGIAI usa a mesma fábrica, mas pelo MKT.
+
+**Os dois canais**, criados pelo dono no Chrome do PULSO e autorizados:
+
+| Canal | Arroba | ID | Recebe |
+|---|---|---|---|
+| Cortes PULSO Histórias | @cortespulsohistorias | `UCHVKmFuQgMxy0tYyrq1L1wg` | gancho e história |
+| Bastidores PULSO Histórias | @bastidorespulsohistorias | `UCE63Lo9BS6gxrBU_c3DILvg` | técnico e lição |
+
+**Um acesso por canal no YouTube:**
+- Cada canal tem a sua chave: `youtube_oauth:<canal>`, com a lista em `youtube_canais`. Pelo fluxo antigo, autorizar um canal de cortes sobrescreveria o token do PULSO Histórias.
+- `/api/youtube/oauth/start?canal=` escolhe o canal. O callback confere `channels?mine` antes de gravar.
+
+**Publicador `/api/automation/publicar-cortes-pulso`:**
+- Usa `modo=auto`; a view do MKT só lê `job`.
+- Sobe com o token do próprio canal, 1 peça por rodada.
+- O pg_cron chama de hora em hora (093), e toda rodada fica registrada em `PUBLICAR_CORTES_PULSO`.
+- O portão `cortes_pulso.publicar` fica `false` até o "pode" do dono.
+
+**Planejador:** gera a versão própria de cada canal do PULSO. O mesmo corte nunca sai no mesmo dia em que sai no canal de cortes da DIGIAI.
+
 ### Andou (06/11) — E01 pronto para o MKT puxar
 
 - **Ajuste pedido pelo MKT:**
