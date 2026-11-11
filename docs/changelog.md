@@ -593,3 +593,8 @@ O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. 
 - **Causa:** o FB agendado pela API (teste) foi gravado em `metricas_publicacao` com data futura (19h). O `publicar-agendados` contou isso como publicação do dia, e o **remendo** de rede faltante soltou o YouTube na rodada das 00h05.
 - **Conserto:** publicação com data futura não conta como saída (71b7107), e o remendo espera a hora marcada do vídeo (4449bd6). Rodada de conferência às 00h10: nada disparado.
 - **Efeito:** o YouTube do #253 ficou no ar desde 00h05. O IG e o TikTok saem pelo remendo depois das 19h (1 rede por rodada: 19h05 e 20h05). O FB continua agendado para as 19h.
+
+## 11/11/2026 — comentário com o link do episódio no Facebook dos cortes
+- **Pedido do dono:** link em legenda de Reel não é garantido clicável; em comentário é.
+- **Como funciona:** depois que o reel agendado entra no ar (conferido por `published=true`), a Página comenta "▶ Episódio completo no PULSO Histórias: https://youtu.be/<id>". O link vem da legenda da peça.
+- **Registro:** a peça vira `publicado` com `motivo=comentado:<id>`. Erro no comentário não derruba o reel: fica em `erro` e a próxima rodada tenta de novo (até 3 por rodada). Permissão usada: `pages_manage_engagement`, já concedida.

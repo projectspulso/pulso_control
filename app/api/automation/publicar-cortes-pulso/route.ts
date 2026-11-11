@@ -32,6 +32,16 @@ export async function POST(request: NextRequest) {
       .lte('agendado_para', new Date(Date.now() + 26 * 3600_000).toISOString()).order('agendado_para').limit(1)
     // não devolve aqui: a mesma rodada segue para o YouTube/Instagram vencido, senão o FB atrasaria os outros
     if (fb?.length) await agendaFacebook(supabase, fb[0])
+
+    // depois que o reel agendado entra no ar, a Página comenta o link do episódio completo (dono, 11/11):
+    // link em legenda de Reel não é garantido clicável; em comentário é
+    const { data: semComentario } = await supabase.schema('pulso_content').from('corte_publicacoes')
+      .select('id, destino, post_id, legenda, motivo')
+      .eq('modo', 'auto').eq('rede', 'facebook').eq('status', 'agendado').not('post_id', 'is', null)
+      .lte('agendado_para', new Date(Date.now() - 3 * 60_000).toISOString()).limit(3)
+    for (const p of (semComentario || []).filter((x: { motivo?: string }) => !String(x.motivo || '').startsWith('comentado:'))) {
+      await comentaLink(supabase, p)
+    }
   }
 
   const { data: fila, error } = await supabase.schema('pulso_content').from('corte_publicacoes')
@@ -197,5 +207,33 @@ ${(p.hashtags || []).join(' ')}`.trim()
     const msg = (e as Error).message
     await supabase.schema('pulso_content').from('corte_publicacoes').update({ status: 'erro', erro: msg.slice(0, 500) }).eq('id', p.id)
     return registra(supabase, 'erro', { peca: p.id, destino: p.destino, rede: 'facebook', erro: msg }, 500)
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function comentaLink(supabase: any, p: any) {
+  try {
+    const m = String(p.legenda || '').match(/youtu\.be\/([\w-]{11})|youtube\.com\/watch\?v=([\w-]{11})/)
+    if (!m) throw new Error('legenda sem link do episódio')
+    const link = `https://youtu.be/${m[1] || m[2]}`
+    const { data: cfg } = await supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'cortes_destinos').single()
+    const dest = (JSON.parse(cfg.valor).destinos || []).find((d: { id: string }) => d.id === p.destino)
+    const token = process.env.INSTAGRAM_ACCESS_TOKEN
+    const pt = await fetch(`${GRAPH}/${dest?.facebook_page_id}?fields=access_token&access_token=${token}`).then((r) => r.json())
+    if (!pt?.access_token) throw new Error('sem token da Página')
+    const st = await fetch(`${GRAPH}/${p.post_id}?fields=published&access_token=${pt.access_token}`).then((r) => r.json())
+    if (st?.published !== true) return // ainda não entrou no ar: a próxima rodada tenta
+    const c = await fetch(`${GRAPH}/${p.post_id}/comments`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: `▶ Episódio completo no PULSO Histórias: ${link}`, access_token: pt.access_token }),
+    }).then((r) => r.json())
+    if (!c?.id) throw new Error(`comentário: ${c?.error?.message || JSON.stringify(c)}`)
+    await supabase.schema('pulso_content').from('corte_publicacoes')
+      .update({ status: 'publicado', publicado_em: new Date().toISOString(), motivo: `comentado:${c.id}` }).eq('id', p.id)
+    await registra(supabase, 'sucesso', { peca: p.id, rede: 'facebook', comentario: c.id }, 200)
+  } catch (e) {
+    // o reel já está no ar; erro de comentário não derruba a peça, só fica registrado
+    await supabase.schema('pulso_content').from('corte_publicacoes').update({ erro: (e as Error).message.slice(0, 500) }).eq('id', p.id)
+    await registra(supabase, 'erro', { peca: p.id, rede: 'facebook', etapa: 'comentario', erro: (e as Error).message }, 500)
   }
 }
