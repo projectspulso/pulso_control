@@ -391,6 +391,8 @@ async function publicarAgendados(request: NextRequest) {
     const incompletos = pipeTodos.filter((p) => {
       const q = quandoSaiu.get(p.ideia_id)
       if (!q || new Date(q) < limite24h) return false
+      // vídeo que saiu ANTES da hora marcada (o #253 em 11/11) só é completado a partir da hora dele
+      if (horaMarcada(p.data_publicacao_planejada) > agora) return false
       const tem = redesPorIdeia.get(p.ideia_id) || new Set()
       return redesBase.some((r) => !tem.has(r)) // o remendo NÃO entra no teste: não republica vídeo de ontem
     })
