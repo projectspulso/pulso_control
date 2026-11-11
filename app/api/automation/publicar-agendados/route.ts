@@ -163,7 +163,9 @@ async function publicarAgendados(request: NextRequest) {
     return NextResponse.json({ success: true, disparados: 0, motivo: `dia sem publicar: ${hoje}` })
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pubs = (pubQ.data || []) as any[]
+  // Publicação com data no FUTURO é um Facebook agendado pela API (teste do dono, 11/11): ainda não saiu.
+  // Contar como saída fez o remendo soltar o YouTube do #253 às 00h05 em vez das 19h.
+  const pubs = ((pubQ.data || []) as any[]).filter((p) => !p.data_publicacao || new Date(p.data_publicacao).getTime() <= Date.now())
   const ehLongo = new Set(((longosQ.data || []) as Array<{ id: string }>).map((i) => i.id))
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pipeTodos = ((pipeQ.data || []) as any[]).filter((p) => !ehLongo.has(p.ideia_id))
