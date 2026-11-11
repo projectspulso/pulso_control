@@ -588,3 +588,8 @@ O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. 
 - **Rota `publicar-cortes-pulso`:** agenda os cortes nas Páginas Cortes e Bastidores com até 26 h de antecedência, 1 por rodada, sem segurar o YouTube e o IG da mesma rodada. A peça fica `agendado`, com o id do reel.
 - **IG Bastidores:** @bastidorespulsohistorias (17841465395295341) ligado à Página Bastidores e em `cortes_destinos.pulso_bastidores`.
 - **Agenda do E01:** 6 cortes × YouTube + IG + FB, de 11 a 14/11 (Bastidores às 17h, Cortes às 13h).
+
+## 11/11/2026 00h — incidente: YouTube do #253 saiu às 00h05, não às 19h
+- **Causa:** o FB agendado pela API (teste) foi gravado em `metricas_publicacao` com data futura (19h). O `publicar-agendados` contou isso como publicação do dia, e o **remendo** de rede faltante soltou o YouTube na rodada das 00h05.
+- **Conserto:** publicação com data futura não conta como saída (71b7107), e o remendo espera a hora marcada do vídeo (4449bd6). Rodada de conferência às 00h10: nada disparado.
+- **Efeito:** o YouTube do #253 ficou no ar desde 00h05. O IG e o TikTok saem pelo remendo depois das 19h (1 rede por rodada: 19h05 e 20h05). O FB continua agendado para as 19h.
