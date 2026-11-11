@@ -576,3 +576,8 @@ O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. 
   com trava anti-invenção) · 30/07 agenda roteada por desempenho (fim da grade fixa por canal) ·
   31/07 coleta blindada (views nunca retrocede a 0; facebook_views em chamada separada) ·
   31/07 digiai cria `public.v_espelho_pulso` (contrato consumido pelo painel — não quebrar).
+
+## 10/11/2026 (noite) — Instagram dos Cortes PULSO Histórias
+- **Conta:** @corteshistoriaspulso (17841466730849078), liberada da apelação. O MKT ligou à Página Cortes e deu acesso total ao pulso_publisher; conferido pela API (`me/accounts`).
+- **Destino:** `cortes_destinos.pulso_cortes` ganhou `instagram_id` e a rede instagram. Criadas 3 peças IG do E01 (12, 13 e 14/11, às 13h), com o mesmo arquivo da versão dos Cortes.
+- **Publicador:** `publicar-cortes-pulso` publica Reels no Instagram do destino com o token do pulso_publisher. O container pendente fica em `motivo`, para a rodada seguinte não postar 2×. O portão `cortes_pulso.publicar` continua `false`.
