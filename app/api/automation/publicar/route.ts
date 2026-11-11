@@ -110,7 +110,9 @@ async function publicarInstagram(videoUrl: string, caption: string, token: strin
   return { post_id: media.id as string, url: (info.permalink as string) || 'https://www.instagram.com/pulsoprojects/' }
 }
 
-async function publicarFacebook(videoUrl: string, description: string, token: string, pageId: string) {
+// agendarEm: teste do dono (10/11) — o vídeo vai AGENDADO e quem solta é o agendador da Meta (aparece no
+// Planner). A pergunta é se o Facebook trata esse post melhor que o publicado na hora pela API (alcance ~0).
+async function publicarFacebook(videoUrl: string, description: string, token: string, pageId: string, agendarEm?: Date) {
   // Postar vídeo NA PÁGINA exige PAGE ACCESS TOKEN — o token de usuário/system dá
   // "(#200) Subject does not have permission to post videos on this target".
   const ptRes = await fetch(`${GRAPH}/${pageId}?fields=access_token&access_token=${token}`).then((r) => r.json())
@@ -134,7 +136,8 @@ async function publicarFacebook(videoUrl: string, description: string, token: st
 
   const fim = await fetch(
     `${GRAPH}/${pageId}/video_reels?upload_phase=finish&video_id=${start.video_id}` +
-      `&video_state=PUBLISHED&description=${encodeURIComponent(description)}&access_token=${pageToken}`,
+      (agendarEm ? `&video_state=SCHEDULED&scheduled_publish_time=${Math.floor(agendarEm.getTime() / 1000)}` : '&video_state=PUBLISHED') +
+      `&description=${encodeURIComponent(description)}&access_token=${pageToken}`,
     { method: 'POST' }
   ).then((r) => r.json())
   if (fim.success === false) throw new Error(`FB finish: ${JSON.stringify(fim)}`)
@@ -383,9 +386,16 @@ export async function POST(request: NextRequest) {
   const legendaBase = caption || `${ideia?.titulo || 'PULSO'} 👁️ Segue o PULSO.`
   const numeroVideo = typeof item.metadata?.numero === 'number' ? item.metadata.numero : null
   const legenda = withPulsoCodigo(legendaBase, numeroVideo)
-  const agora = new Date().toISOString()
+  const agendarEm = payload.agendar_para ? new Date(payload.agendar_para) : undefined
+  if (agendarEm && (isNaN(agendarEm.getTime()) || agendarEm.getTime() < Date.now() + 20 * 60_000)) {
+    return NextResponse.json({ error: 'agendar_para precisa ser data válida, pelo menos 20 min à frente' }, { status: 400 })
+  }
+  if (agendarEm && plataformas.some((x) => x !== 'facebook')) {
+    return NextResponse.json({ error: 'agendar_para só vale para o Facebook (a API do Instagram não agenda)' }, { status: 400 })
+  }
+  const agora = (agendarEm || new Date()).toISOString()
   // hora real (Brasília, UTC-3) — alimenta o painel de horários do analytics
-  const _br = new Date(Date.now() - 3 * 3600_000)
+  const _br = new Date((agendarEm?.getTime() ?? Date.now()) - 3 * 3600_000)
   const horaPub = _br.toISOString().slice(11, 19)
   const diaSemPub = _br.getUTCDay() === 0 ? 7 : _br.getUTCDay()
   const resultados: Array<{ plataforma: string; status: string; url?: string; post_id?: string; erro?: string }> = []
@@ -451,7 +461,7 @@ export async function POST(request: NextRequest) {
       if (plataforma === 'instagram') {
         res = await publicarInstagram(video_url, legenda, token, igUserId, supabase, item.id, item.metadata, igDeadlineMs)
       } else if (plataforma === 'facebook') {
-        res = await publicarFacebook(video_url, legenda, token, pageId)
+        res = await publicarFacebook(video_url, legenda, token, pageId, agendarEm)
       } else if (plataforma === 'youtube') {
         res = await publicarYouTube(video_url, ideia?.titulo || 'PULSO', legenda, supabase, ideia?.formato === 'longo' ? 'longo' : 'short')
       } else if (plataforma === 'tiktok') {
@@ -472,7 +482,7 @@ export async function POST(request: NextRequest) {
         data_publicacao: agora,
         hora_publicacao: horaPub,
         dia_semana: diaSemPub,
-        metadata: { metodo: payload.metodo === 'api_teste' ? 'api_teste' : 'api' },
+        metadata: { metodo: agendarEm ? 'api_agendado' : payload.metodo === 'api_teste' ? 'api_teste' : 'api', ...(agendarEm ? { agendado_via_api_em: new Date().toISOString() } : {}) },
       }
       let { error: erroRegistro } = await supabase.schema('pulso_content').from('metricas_publicacao').insert(registro)
       if (erroRegistro) {
@@ -490,7 +500,8 @@ export async function POST(request: NextRequest) {
       await trava()
       travada = false
 
-      resultados.push({ plataforma, status: 'PUBLICADO', url: res.url, post_id: res.post_id })
+      // agendado não promove o pipeline: o YouTube e o Instagram das 19h ainda saem pelo fluxo normal
+      resultados.push({ plataforma, status: agendarEm ? 'AGENDADO' : 'PUBLICADO', url: res.url, post_id: res.post_id })
     } catch (err) {
       if (travada) await trava()
       const msg = err instanceof Error ? err.message : 'Erro desconhecido'
@@ -510,7 +521,7 @@ export async function POST(request: NextRequest) {
   // histórico do disparo dizia que o Instagram nunca tinha sido tentado. Foi o que aconteceu com
   // o #120 e o #107 em 31/07: reels publicados, registro sem a linha do IG — e a tela parecia
   // indicar rede faltando. Recuperação funcionava; a memória do que houve é que se perdia.
-  const vaisSalvar = publicou || resultados.some((r) => r.status === 'PROCESSANDO' || r.status === 'ERRO')
+  const vaisSalvar = publicou || resultados.some((r) => r.status === 'PROCESSANDO' || r.status === 'ERRO' || r.status === 'AGENDADO')
   if (vaisSalvar) {
     // MERGE, não sobrescrita: a UI dispara 1 chamada POR REDE em PARALELO, e todas leram a
     // metadata no início. Gravar `{...item.metadata}` fazia a última a terminar APAGAR o que as

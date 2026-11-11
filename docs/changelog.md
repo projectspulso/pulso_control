@@ -581,3 +581,10 @@ O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. 
 - **Conta:** @corteshistoriaspulso (17841466730849078), liberada da apelação. O MKT ligou à Página Cortes e deu acesso total ao pulso_publisher; conferido pela API (`me/accounts`).
 - **Destino:** `cortes_destinos.pulso_cortes` ganhou `instagram_id` e a rede instagram. Criadas 3 peças IG do E01 (12, 13 e 14/11, às 13h), com o mesmo arquivo da versão dos Cortes.
 - **Publicador:** `publicar-cortes-pulso` publica Reels no Instagram do destino com o token do pulso_publisher. O container pendente fica em `motivo`, para a rodada seguinte não postar 2×. O portão `cortes_pulso.publicar` continua `false`.
+
+## 10/11/2026 (noite) — Facebook agendado pela API (teste do dono) + IG Bastidores
+- **Teste do dono:** o Facebook passa a poder ir **agendado** pela API, e quem solta é o agendador da Meta (o post aparece no Planner). A pergunta é se o alcance difere do post publicado na hora pela API, que dá ~0.
+- **Rota `publicar`:** aceita `agendar_para`, só para o Facebook. Grava `metodo=api_agendado`; o vídeo agendado não promove o pipeline a PUBLICADO, então o YouTube e o IG das 19h seguem no fluxo normal.
+- **Rota `publicar-cortes-pulso`:** agenda os cortes nas Páginas Cortes e Bastidores com até 26 h de antecedência, 1 por rodada, sem segurar o YouTube e o IG da mesma rodada. A peça fica `agendado`, com o id do reel.
+- **IG Bastidores:** @bastidorespulsohistorias (17841465395295341) ligado à Página Bastidores e em `cortes_destinos.pulso_bastidores`.
+- **Agenda do E01:** 6 cortes × YouTube + IG + FB, de 11 a 14/11 (Bastidores às 17h, Cortes às 13h).

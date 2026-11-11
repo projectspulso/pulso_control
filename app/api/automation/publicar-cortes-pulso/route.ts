@@ -23,6 +23,17 @@ export async function POST(request: NextRequest) {
   let publicar = false
   try { publicar = JSON.parse(gate?.valor || '{}').publicar === true } catch { publicar = false }
 
+  // Facebook (teste do dono, 10/11): vai AGENDADO pela API com antecedência e quem solta é o agendador da Meta
+  if (publicar) {
+    const { data: fb } = await supabase.schema('pulso_content').from('corte_publicacoes')
+      .select('id, destino, rede, video, titulo, legenda, hashtags, agendado_para')
+      .eq('modo', 'auto').eq('status', 'planejado').eq('rede', 'facebook')
+      .gte('agendado_para', new Date(Date.now() + 25 * 60_000).toISOString())
+      .lte('agendado_para', new Date(Date.now() + 26 * 3600_000).toISOString()).order('agendado_para').limit(1)
+    // não devolve aqui: a mesma rodada segue para o YouTube/Instagram vencido, senão o FB atrasaria os outros
+    if (fb?.length) await agendaFacebook(supabase, fb[0])
+  }
+
   const { data: fila, error } = await supabase.schema('pulso_content').from('corte_publicacoes')
     .select('id, destino, rede, video, titulo, legenda, hashtags, agendado_para, motivo')
     .eq('modo', 'auto').eq('status', 'planejado').in('rede', ['youtube', 'instagram'])
@@ -143,4 +154,48 @@ ${(p.hashtags || []).join(' ')}`.trim().slice(0, 2200)
   if (!pub?.id) throw new Error(`IG publish: ${pub?.error?.message || JSON.stringify(pub)}`)
   const info = await fetch(`${GRAPH}/${pub.id}?fields=permalink&access_token=${token}`).then((r) => r.json())
   return { post_id: pub.id as string, url: info?.permalink || `https://www.instagram.com/${String(dest.instagram_arroba || '').replace('@', '')}/` }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function agendaFacebook(supabase: any, p: any) {
+  try {
+    const { data: cfg } = await supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'cortes_destinos').single()
+    const dest = (JSON.parse(cfg.valor).destinos || []).find((d: { id: string }) => d.id === p.destino)
+    const pageId = dest?.facebook_page_id
+    if (!pageId) throw new Error(`destino ${p.destino} sem facebook_page_id`)
+    if (!p.video) throw new Error('peça sem arquivo')
+    const token = process.env.INSTAGRAM_ACCESS_TOKEN
+    const pt = await fetch(`${GRAPH}/${pageId}?fields=access_token&access_token=${token}`).then((r) => r.json())
+    if (!pt?.access_token) throw new Error(`sem token da Página ${pageId}`)
+    const pageToken = pt.access_token as string
+    const { data: ass, error } = await supabase.storage.from('bastidores').createSignedUrl(p.video, 3600)
+    if (error || !ass?.signedUrl) throw new Error(`link do arquivo: ${error?.message || 'vazio'}`)
+
+    const start = await fetch(`${GRAPH}/${pageId}/video_reels`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ upload_phase: 'start', access_token: pageToken }),
+    }).then((r) => r.json())
+    if (!start?.video_id) throw new Error(`FB start: ${start?.error?.message || JSON.stringify(start)}`)
+    const up = await fetch(start.upload_url || `https://rupload.facebook.com/video_reels/${start.video_id}`, {
+      method: 'POST', headers: { Authorization: `OAuth ${pageToken}`, file_url: ass.signedUrl },
+    }).then((r) => r.json())
+    if (!up?.success) throw new Error(`FB upload: ${JSON.stringify(up).slice(0, 200)}`)
+    const descricao = `${p.legenda || p.titulo || ''}
+
+${(p.hashtags || []).join(' ')}`.trim()
+    const quando = Math.floor(new Date(p.agendado_para).getTime() / 1000)
+    const fim = await fetch(`${GRAPH}/${pageId}/video_reels?upload_phase=finish&video_id=${start.video_id}` +
+      `&video_state=SCHEDULED&scheduled_publish_time=${quando}&description=${encodeURIComponent(descricao)}&access_token=${pageToken}`,
+    { method: 'POST' }).then((r) => r.json())
+    if (fim?.success === false || fim?.error) throw new Error(`FB finish: ${fim?.error?.message || JSON.stringify(fim)}`)
+
+    const url = `https://www.facebook.com/reel/${start.video_id}`
+    await supabase.schema('pulso_content').from('corte_publicacoes')
+      .update({ status: 'agendado', post_id: start.video_id, url, erro: null, motivo: 'agendado pela API no Planner da Meta' }).eq('id', p.id)
+    return registra(supabase, 'sucesso', { peca: p.id, destino: p.destino, rede: 'facebook', agendado_para: p.agendado_para, post_id: start.video_id }, 200)
+  } catch (e) {
+    const msg = (e as Error).message
+    await supabase.schema('pulso_content').from('corte_publicacoes').update({ status: 'erro', erro: msg.slice(0, 500) }).eq('id', p.id)
+    return registra(supabase, 'erro', { peca: p.id, destino: p.destino, rede: 'facebook', erro: msg }, 500)
+  }
 }
