@@ -598,3 +598,9 @@ O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. 
 - **Pedido do dono:** link em legenda de Reel não é garantido clicável; em comentário é.
 - **Como funciona:** depois que o reel agendado entra no ar (conferido por `published=true`), a Página comenta "▶ Episódio completo no PULSO Histórias: https://youtu.be/<id>". O link vem da legenda da peça.
 - **Registro:** a peça vira `publicado` com `motivo=comentado:<id>`. Erro no comentário não derruba o reel: fica em `erro` e a próxima rodada tenta de novo (até 3 por rodada). Permissão usada: `pages_manage_engagement`, já concedida.
+
+## 12/11/2026 — papel "revisor" (só leitura) para o revisor do TikTok
+- **Por quê:** a revisão do app do TikTok (25/08) foi recusada porque o site cai no login. O revisor pediu uma conta de teste. Até aqui todo membro de `usuarios_internos` podia gravar.
+- **Banco (094):** as 31 políticas ALL de membro excluem `papel='revisor'`, e cada tabela ganha SELECT para o revisor. No Storage `bastidores`, o revisor lê mas não envia nem troca. Provado em transação desfeita: revisor lê 320 ideias e o update afeta 0 linhas; admin lê 320 e o update afeta 1.
+- **App:** `allowlist` ganha `revisor.tiktok@digiai.app.br` com papel `revisor`. O `guardApi` devolve 403 a tudo que não é GET para esse papel.
+- **Falta (dono):** criar o usuário no Supabase Auth com esse e-mail e senha. O Pulso então liga o `auth_user_id` em `usuarios_internos` (papel revisor).

@@ -2,7 +2,7 @@ import 'server-only'
 
 import { NextRequest } from 'next/server'
 import { getSupabaseServerSSR } from '@/lib/supabase/server-ssr'
-import { emailAutorizado } from '@/lib/auth/allowlist'
+import { emailAutorizado, papelDoEmail } from '@/lib/auth/allowlist'
 
 /**
  * Guarda das rotas de API de automação. Permite a chamada se houver:
@@ -18,7 +18,13 @@ export async function guardApi(request: NextRequest): Promise<Response | null> {
   try {
     const supabase = await getSupabaseServerSSR()
     const { data } = await supabase.auth.getUser()
-    if (data?.user?.email && emailAutorizado(data.user.email)) return null
+    if (data?.user?.email && emailAutorizado(data.user.email)) {
+      // revisor (só leitura): nada que não seja GET passa, nem que a tela tente
+      if (papelDoEmail(data.user.email) === 'revisor' && request.method !== 'GET') {
+        return new Response(JSON.stringify({ error: 'Acesso só de leitura' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
+      }
+      return null
+    }
   } catch {
     // sem sessão válida — tenta os segredos abaixo
   }

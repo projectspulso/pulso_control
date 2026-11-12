@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react'
 
-import { papelDoEmail } from '@/lib/auth/allowlist'
+import { papelDoEmail, type Papel } from '@/lib/auth/allowlist'
 import { getSupabaseBrowser } from '@/lib/supabase/browser'
 
 export interface UsuarioAtual {
   email: string | null
-  papel: 'admin' | 'operador' | null
+  papel: Papel | null
   carregando: boolean
 }
 
