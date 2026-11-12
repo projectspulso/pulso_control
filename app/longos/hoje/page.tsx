@@ -1,15 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CalendarClock, Check, CheckCircle2, Clock, Copy, Download, Loader2, Power, Send, Smartphone, Zap } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CalendarDays, Check, CheckCircle2, Copy, Download, ExternalLink, Hand, Loader2, Power, Sun, X } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import { supabase } from '@/lib/supabase/client'
 import { useUrlsAssinadas } from '@/lib/hooks/use-longos'
 import { useUsuario } from '@/lib/hooks/use-usuario'
-
-const CARTAO = 'rounded-2xl border border-(--pulso-border) bg-(--pulso-surface)'
+import { Abas, CANAIS, CARTAO, estadoDaPeca, Legenda, Numero, ORDEM_CANAIS, REDES, redeBase, Vazio } from '@/components/longos/ui'
 
 interface Publicacao {
   id: string
@@ -25,33 +24,21 @@ interface Publicacao {
   episodio_cortes: { numero: number; titulo: string; video: string | null; episodios: { codigo: string; titulo: string } | null } | null
 }
 
-const REDE: Record<string, string> = {
-  youtube: 'YouTube Shorts', instagram: 'Instagram Reels', facebook: 'Facebook Reels', tiktok: 'TikTok', kwai: 'Kwai',
-  instagram_story: 'Story do Instagram', facebook_story: 'Story do Facebook', whatsapp_status: 'Status do WhatsApp', fila_mkt: 'Fila do digiai_mkt',
-  instagram_story_antes: 'Story do Instagram (antes)', instagram_story_depois: 'Story do Instagram (depois)',
-  facebook_story_antes: 'Story do Facebook (antes)', facebook_story_depois: 'Story do Facebook (depois)',
-}
-const DESTINO: Record<string, string> = {
-  bastidores: 'Bastidores DIGIAI Cortes', bastidores_cortes: 'Bastidores DIGIAI Cortes', bastidores_digiai: 'Bastidores DIGIAI', digiai: 'DIGIAI', pessoal: 'Pessoal do dono',
-  pulso_cortes: 'Cortes PULSO Histórias', pulso_bastidores: 'Bastidores PULSO Histórias',
-}
-const MODO: Record<Publicacao['modo'], { rotulo: string; Icone: typeof Zap }> = {
-  auto: { rotulo: 'sai sozinho', Icone: Zap },
-  rascunho: { rotulo: 'chega no seu celular como rascunho', Icone: Smartphone },
-  manual: { rotulo: 'você posta', Icone: Send },
-  job: { rotulo: 'o digiai_mkt publica', Icone: Send },
-}
-
 const diaBrt = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+const hora = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
+const somaDias = (d: string, n: number) => diaBrt(new Date(new Date(`${d}T12:00:00-03:00`).getTime() + n * 864e5))
+const rotuloDia = (d: string, op: Intl.DateTimeFormatOptions) => new Date(`${d}T12:00:00-03:00`).toLocaleDateString('pt-BR', op)
+const doCanal = (p: Publicacao, canal: string) => p.destino === canal || (canal === 'bastidores' && p.destino === 'bastidores_cortes')
 
 function useAgenda() {
   return useQuery<Publicacao[]>({
     queryKey: ['longos-agenda'],
     queryFn: async () => {
-      const ate = new Date(Date.now() + 8 * 864e5).toISOString()
+      const de = new Date(Date.now() - 14 * 864e5).toISOString()
+      const ate = new Date(Date.now() + 22 * 864e5).toISOString()
       const { data, error } = await supabase.schema('pulso_content').from('corte_publicacoes')
         .select('id, destino, rede, modo, agendado_para, video, legenda, status, url, erro, episodio_cortes(numero, titulo, video, episodios(codigo, titulo))')
-        .lte('agendado_para', ate).neq('status', 'cancelado')
+        .gte('agendado_para', de).lte('agendado_para', ate).neq('status', 'cancelado')
         .order('agendado_para').order('destino').order('rede')
       if (error) throw error
       return (data || []) as unknown as Publicacao[]
@@ -59,61 +46,178 @@ function useAgenda() {
   })
 }
 
-/** "Hoje" dos Longos (05/11/2026), igual ao dos Shorts: o que sai hoje, o atrasado e a semana. */
-export default function HojeLongosPage() {
+type Aba = 'semana' | 'hoje' | 'atencao'
+
+/** Agenda dos Longos (redesenho de 12/11/2026): calendário canal × dia, hoje e o que pede atenção. */
+export default function AgendaLongosPage() {
   const { data, isLoading, error } = useAgenda()
   const [agora] = useState(() => Date.now())
   const hoje = diaBrt(new Date(agora))
-  const lista = data || []
+  const [aba, setAba] = useState<Aba>('semana')
+  const [inicio, setInicio] = useState(hoje)
+  const [aberta, setAberta] = useState<string | null>(null)
+  const lista = useMemo(() => data || [], [data])
   const urls = useUrlsAssinadas(lista.map((p) => p.video || p.episodio_cortes?.video))
-  const deHoje = lista.filter((p) => p.agendado_para && diaBrt(new Date(p.agendado_para)) === hoje)
-  const atrasadas = lista.filter((p) => p.agendado_para && diaBrt(new Date(p.agendado_para)) < hoje && p.status === 'planejado')
-  const proximas = lista.filter((p) => p.agendado_para && diaBrt(new Date(p.agendado_para)) > hoje)
-  const porDia = proximas.reduce<Record<string, Publicacao[]>>((acc, p) => {
-    const k = diaBrt(new Date(p.agendado_para!)); (acc[k] ||= []).push(p); return acc
-  }, {})
+
+  const dia = (p: Publicacao) => (p.agendado_para ? diaBrt(new Date(p.agendado_para)) : '')
+  const deHoje = lista.filter((p) => dia(p) === hoje)
+  const atencao = lista.filter((p) => p.status === 'erro' || (p.status === 'planejado' && p.modo !== 'job' && (dia(p) < hoje || (dia(p) === hoje && p.modo === 'manual'))))
+  const atrasadasMkt = lista.filter((p) => p.status === 'planejado' && dia(p) < hoje && p.modo === 'job').length
+  const noAr7 = lista.filter((p) => p.status === 'publicado' && dia(p) >= somaDias(hoje, -7)).length
+  const selecionada = lista.find((p) => p.id === aberta) || null
 
   return (
     <div className="space-y-5">
-      <PageHeader titulo="Hoje nos Longos" subtitulo="Os cortes de cada episódio longo: o que sai hoje, em qual canal e quem publica (o PULSO sozinho, o digiai_mkt ou você)" />
-      <PainelAutomatico />
+      <PageHeader titulo="Agenda dos cortes" subtitulo="O que sai, em qual canal e em qual rede" />
+
       {isLoading && <div className={`h-60 animate-pulse ${CARTAO}`} />}
       {error && <p className={`${CARTAO} p-6 text-sm text-(--pulso-danger)`}>Não deu para ler a agenda: {error.message}</p>}
-      {data && lista.length === 0 && (
-        <p className={`${CARTAO} p-6 text-sm text-(--pulso-text-muted)`}>
-          Nada agendado. A agenda de um episódio nasce quando ele ganha data de estreia (<code>planejar_cortes.py</code>). <Link href="/longos" className="text-(--pulso-action) hover:underline">Ver episódios</Link>
-        </p>
+
+      {data && (
+        <>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Numero icone={Sun} rotulo="Saem hoje" valor={deHoje.length} sub={`${deHoje.filter((p) => p.status === 'publicado').length} já no ar`} tom="vl" />
+            <Numero icone={Hand} rotulo="Você posta" valor={lista.filter((p) => p.modo === 'manual' && p.status === 'planejado' && dia(p) <= hoje).length} sub="TikTok, até o app ser aprovado" tom="alerta" />
+            <Numero icone={CalendarClock} rotulo="Agendados na Meta" valor={lista.filter((p) => p.status === 'agendado').length} sub="Facebook, travados" tom="ok" />
+            <Numero icone={CheckCircle2} rotulo="No ar em 7 dias" valor={noAr7} sub={atrasadasMkt ? `${atrasadasMkt} do MKT atrasados` : 'todos os canais'} tom={atrasadasMkt ? 'alerta' : 'ok'} />
+          </div>
+
+          <PainelAutomatico />
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Abas<Aba> ativa={aba} onChange={setAba} abas={[
+              { id: 'semana', rotulo: 'Semana', icone: CalendarDays },
+              { id: 'hoje', rotulo: 'Hoje', icone: Sun, n: deHoje.length },
+              { id: 'atencao', rotulo: 'Atenção', icone: AlertTriangle, n: atencao.length },
+            ]} />
+            <Legenda />
+          </div>
+
+          {aba === 'semana' && <Semana lista={lista} inicio={inicio} hoje={hoje} setInicio={setInicio} aberta={aberta} abrir={setAberta} dia={dia} />}
+          {aba === 'hoje' && <Lista itens={deHoje} vazio="Nada sai hoje." abrir={setAberta} aberta={aberta} />}
+          {aba === 'atencao' && <Lista itens={atencao} vazio="Nada pedindo atenção." abrir={setAberta} aberta={aberta} mostraDia />}
+
+          {selecionada && <Detalhe p={selecionada} url={urls.data?.[selecionada.video || selecionada.episodio_cortes?.video || '']} fechar={() => setAberta(null)} />}
+
+          {lista.length === 0 && (
+            <Vazio>Nada na agenda. Ela nasce quando um episódio ganha data de estreia. <Link href="/longos" className="ml-1 text-(--pulso-action) hover:underline">Ver episódios</Link></Vazio>
+          )}
+        </>
       )}
-
-      {atrasadas.length > 0 && <Bloco titulo={`Atrasadas (${atrasadas.length})`} itens={atrasadas} urls={urls.data} alerta />}
-      {data && <Bloco titulo={`Hoje, ${new Date(agora).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo' })}`} itens={deHoje} urls={urls.data} vazio="Nada sai hoje." />}
-
-      {Object.entries(porDia).map(([dia, itens]) => (
-        <Bloco key={dia} titulo={new Date(`${dia}T12:00:00-03:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} itens={itens} urls={urls.data} compacto />
-      ))}
     </div>
   )
 }
 
-function Bloco({ titulo, itens, urls, alerta, compacto, vazio }: { titulo: string; itens: Publicacao[]; urls?: Record<string, string>; alerta?: boolean; compacto?: boolean; vazio?: string }) {
+const BOTAO_NAV = 'min-h-11 cursor-pointer rounded-lg border border-(--pulso-border) px-3 text-xs text-(--pulso-text-muted) hover:text-(--pulso-text)'
+
+function Semana({ lista, inicio, hoje, setInicio, aberta, abrir, dia }: {
+  lista: Publicacao[]; inicio: string; hoje: string; setInicio: (d: string) => void; aberta: string | null; abrir: (id: string | null) => void; dia: (p: Publicacao) => string
+}) {
+  const dias = Array.from({ length: 7 }, (_, i) => somaDias(inicio, i))
+  const canais = ORDEM_CANAIS.filter((c) => lista.some((p) => doCanal(p, c)))
+  const celula = (canal: string, d: string) => {
+    const porCorte = new Map<number, Publicacao[]>()
+    for (const p of lista.filter((x) => dia(x) === d && doCanal(x, canal))) {
+      const n = p.episodio_cortes?.numero ?? 0
+      porCorte.set(n, [...(porCorte.get(n) || []), p])
+    }
+    return [...porCorte.entries()].sort((a, b) => a[0] - b[0])
+  }
   return (
-    <section className={`${CARTAO} p-5`}>
-      <h2 className={`mb-3 text-sm font-semibold capitalize ${alerta ? 'text-(--pulso-danger)' : 'text-(--pulso-text)'}`}>{titulo}</h2>
-      {itens.length === 0 ? <p className="text-sm text-(--pulso-text-subtle)">{vazio}</p> : (
-        <ul className="space-y-2">{itens.map((p) => <Linha key={p.id} p={p} url={urls?.[p.video || p.episodio_cortes?.video || '']} compacto={compacto} />)}</ul>
-      )}
+    <section className={`${CARTAO} p-4`}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <button type="button" onClick={() => setInicio(somaDias(inicio, -7))} className={BOTAO_NAV}>← anterior</button>
+        <span className="text-sm font-semibold text-(--pulso-text)">{rotuloDia(dias[0], { day: '2-digit', month: 'short' })} a {rotuloDia(dias[6], { day: '2-digit', month: 'short' })}</span>
+        <div className="flex gap-2">
+          {inicio !== hoje && <button type="button" onClick={() => setInicio(hoje)} className={BOTAO_NAV}>hoje</button>}
+          <button type="button" onClick={() => setInicio(somaDias(inicio, 7))} className={BOTAO_NAV}>próxima →</button>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[860px] table-fixed border-separate border-spacing-1">
+          <thead>
+            <tr>
+              <th className="w-28 text-left text-[11px] font-medium text-(--pulso-text-subtle)">Canal</th>
+              {dias.map((d) => (
+                <th key={d} className={`rounded-lg px-1 py-1.5 text-center text-[11px] font-medium capitalize ${d === hoje ? 'bg-(--pulso-vl)/15 text-(--pulso-vl)' : 'text-(--pulso-text-muted)'}`}>
+                  {rotuloDia(d, { weekday: 'short' })} <span className="tabular-nums">{rotuloDia(d, { day: '2-digit' })}</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {canais.map((c) => (
+              <tr key={c}>
+                <th className="pr-2 text-left align-top text-xs font-semibold text-(--pulso-text)">{CANAIS[c]?.curto || c}</th>
+                {dias.map((d) => (
+                  <td key={d} className={`h-20 rounded-lg p-1.5 align-top ${d === hoje ? 'bg-(--pulso-vl)/5' : 'bg-(--pulso-surface-raised)'}`}>
+                    <div className="space-y-1.5">
+                      {celula(c, d).map(([n, pecas]) => (
+                        <div key={n} className="rounded-md bg-(--pulso-surface) p-1.5">
+                          <p className="truncate text-[11px] text-(--pulso-text)" title={pecas[0].episodio_cortes?.titulo}>
+                            <span className="font-semibold">C{n}</span>{' '}
+                            {pecas[0].agendado_para && <span className="tabular-nums text-(--pulso-text-subtle)">{hora(pecas[0].agendado_para)}</span>}
+                          </p>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {pecas.map((p) => {
+                              const e = estadoDaPeca(p)
+                              const R = REDES[redeBase(p.rede)]
+                              const Ic = R?.Icone || e.Icone
+                              const nome = `${R?.nome || p.rede}${p.rede.includes('story') ? ' (story)' : ''}`
+                              return (
+                                <button key={p.id} type="button" onClick={() => abrir(aberta === p.id ? null : p.id)} aria-label={`${nome}: ${e.rotulo}`} title={`${nome} · ${e.rotulo}`}
+                                  className={`inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border ${e.classe} ${aberta === p.id ? 'ring-2 ring-(--pulso-vl)' : ''} ${p.rede.includes('story') ? 'border-dashed' : ''}`}>
+                                  <Ic className="h-3.5 w-3.5" aria-hidden />
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-2 text-[11px] text-(--pulso-text-subtle)">Cada bloco é um corte (C1, C2…) com as redes em que sai. Toque num ícone para ver o vídeo, a legenda e o que fazer. Borda tracejada = story.</p>
     </section>
   )
 }
 
-function Linha({ p, url, compacto }: { p: Publicacao; url?: string; compacto?: boolean }) {
+function Lista({ itens, vazio, abrir, aberta, mostraDia }: { itens: Publicacao[]; vazio: string; abrir: (id: string | null) => void; aberta: string | null; mostraDia?: boolean }) {
+  if (!itens.length) return <Vazio>{vazio}</Vazio>
+  return (
+    <ul className={`${CARTAO} divide-y divide-(--pulso-border)`}>
+      {itens.map((p) => {
+        const e = estadoDaPeca(p)
+        const R = REDES[redeBase(p.rede)]
+        const Ic = R?.Icone || e.Icone
+        return (
+          <li key={p.id}>
+            <button type="button" onClick={() => abrir(aberta === p.id ? null : p.id)} className="flex min-h-12 w-full cursor-pointer items-center gap-3 px-4 py-2 text-left hover:bg-(--pulso-surface-raised)">
+              <Ic className="h-4 w-4 shrink-0 text-(--pulso-text-muted)" aria-label={R?.nome || p.rede} />
+              <span className="w-24 shrink-0 truncate text-xs text-(--pulso-text-muted)">{CANAIS[p.destino]?.curto || p.destino}</span>
+              <span className="min-w-0 flex-1 truncate text-sm text-(--pulso-text)">C{p.episodio_cortes?.numero} · {p.episodio_cortes?.titulo}</span>
+              {p.agendado_para && <span className="shrink-0 text-xs tabular-nums text-(--pulso-text-subtle)">{mostraDia ? `${rotuloDia(diaBrt(new Date(p.agendado_para)), { day: '2-digit', month: '2-digit' })} ` : ''}{hora(p.agendado_para)}</span>}
+              <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${e.classe}`}><e.Icone className="h-3 w-3" aria-hidden />{e.rotulo}</span>
+            </button>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function Detalhe({ p, url, fechar }: { p: Publicacao; url?: string; fechar: () => void }) {
   const qc = useQueryClient()
-  const [aberto, setAberto] = useState(!compacto)
   const [copiado, setCopiado] = useState(false)
   const [link, setLink] = useState('')
   const [ocupado, setOcupado] = useState(false)
-  const M = MODO[p.modo]
-  const c = p.episodio_cortes
+  const e = estadoDaPeca(p)
+  const R = REDES[redeBase(p.rede)]
 
   async function marcar() {
     setOcupado(true)
@@ -124,57 +228,61 @@ function Linha({ p, url, compacto }: { p: Publicacao; url?: string; compacto?: b
   }
 
   return (
-    <li className="rounded-xl bg-(--pulso-surface-raised) p-3">
-      <button type="button" onClick={() => setAberto(!aberto)} className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 text-left">
-        <span className="text-xs font-semibold text-(--pulso-text)">{REDE[p.rede] || p.rede}</span>
-        <span className="text-[11px] text-(--pulso-text-muted)">{DESTINO[p.destino] || p.destino}</span>
-        <span className="min-w-0 flex-1 truncate text-[11px] text-(--pulso-text-subtle)">{c?.episodios?.codigo} · corte {c?.numero} · {c?.titulo}</span>
-        {p.agendado_para && <span className="inline-flex items-center gap-1 text-[11px] text-(--pulso-text-subtle)"><Clock className="h-3 w-3" />{new Date(p.agendado_para).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</span>}
-        {p.status === 'publicado' ? <span className="inline-flex items-center gap-1 text-[11px] text-(--pulso-ok)"><CheckCircle2 className="h-3 w-3" /> publicado</span>
-          : p.status === 'agendado' ? <span className="inline-flex items-center gap-1 text-[11px] text-(--pulso-ok)"><CalendarClock className="h-3 w-3" /> agendado na Meta</span>
-          : p.status === 'erro' ? <span className="inline-flex items-center gap-1 text-[11px] text-(--pulso-danger)"><AlertTriangle className="h-3 w-3" /> erro</span>
-          : p.status === 'aguarda_conta' ? <span className="text-[11px] text-(--pulso-warn)">conta ainda não criada</span>
-          : <span className="inline-flex items-center gap-1 text-[11px] text-(--pulso-text-muted)"><M.Icone className="h-3 w-3" /> {M.rotulo}</span>}
-      </button>
-      {aberto && (
-        <div className="mt-3 space-y-2">
-          {p.status === 'erro' && p.erro && <p className="rounded-lg bg-(--pulso-surface) p-2.5 text-xs text-(--pulso-danger)">{p.erro}</p>}
+    <section className={`${CARTAO} p-4`} aria-label="Detalhe da peça">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-(--pulso-text)">{p.episodio_cortes?.episodios?.codigo} · C{p.episodio_cortes?.numero}: {p.episodio_cortes?.titulo}</p>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-(--pulso-text-muted)">
+            <span>{CANAIS[p.destino]?.nome || p.destino}</span><span aria-hidden>·</span>
+            <span>{R?.nome || p.rede}{p.rede.includes('story') ? ' (story)' : ''}</span>
+            {p.agendado_para && <><span aria-hidden>·</span><span className="tabular-nums">{new Date(p.agendado_para).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })}</span></>}
+            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${e.classe}`}><e.Icone className="h-3 w-3" aria-hidden />{e.rotulo}</span>
+          </p>
+        </div>
+        <button type="button" onClick={fechar} aria-label="Fechar" className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-(--pulso-text-muted) hover:text-(--pulso-text)"><X className="h-4 w-4" /></button>
+      </div>
+      {p.status === 'erro' && p.erro && <p className="mt-3 rounded-lg bg-(--pulso-danger)/10 p-2.5 text-xs text-(--pulso-danger)">{p.erro}</p>}
+      <div className="mt-3 grid gap-3 md:grid-cols-[180px_1fr]">
+        {url ? <video src={url} controls preload="metadata" className="aspect-[9/16] w-full rounded-lg bg-black object-cover" /> : <div className="aspect-[9/16] rounded-lg bg-(--pulso-surface-raised)" />}
+        <div className="space-y-3">
           {p.legenda && (
-            <div className="rounded-lg bg-(--pulso-surface) p-2.5">
-              <div className="mb-1 flex justify-end">
+            <div className="rounded-lg bg-(--pulso-surface-raised) p-3">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-wide text-(--pulso-text-subtle)">Legenda</span>
                 <button type="button" onClick={async () => { await navigator.clipboard.writeText(p.legenda); setCopiado(true); setTimeout(() => setCopiado(false), 1800) }}
-                  className="inline-flex items-center gap-1 text-[11px] text-(--pulso-action) hover:underline">
-                  {copiado ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copiado ? 'copiado' : 'copiar legenda'}
+                  className="inline-flex min-h-8 cursor-pointer items-center gap-1 text-[11px] text-(--pulso-action) hover:underline">
+                  {copiado ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copiado ? 'copiado' : 'copiar'}
                 </button>
               </div>
               <p className="whitespace-pre-line text-xs text-(--pulso-text)">{p.legenda}</p>
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            {url && <a href={url} download className="inline-flex items-center gap-1.5 rounded-lg border border-(--pulso-border) px-3 py-1.5 text-xs text-(--pulso-text-muted) hover:text-(--pulso-text)"><Download className="h-3.5 w-3.5" /> baixar o vídeo</a>}
-            {p.status === 'planejado' && (p.modo === 'manual' || p.modo === 'rascunho') && (
-              <>
-                <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="link do post (opcional)" aria-label="Link do post"
-                  className="min-w-40 flex-1 rounded-lg border border-(--pulso-border) bg-(--pulso-surface) px-2.5 py-1.5 text-xs text-(--pulso-text) placeholder:text-(--pulso-text-subtle) focus:border-(--pulso-action) focus:outline-none" />
-                <button type="button" disabled={ocupado} onClick={marcar}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-(--pulso-ok) px-3 py-1.5 text-xs font-medium text-(--pulso-on-action) disabled:opacity-50">
-                  {ocupado ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Postei
-                </button>
-              </>
-            )}
-            {p.url && <a href={p.url} target="_blank" rel="noreferrer" className="text-xs text-(--pulso-action) hover:underline">ver o post</a>}
+            {url && <a href={url} download className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-(--pulso-border) px-3 text-xs text-(--pulso-text-muted) hover:text-(--pulso-text)"><Download className="h-3.5 w-3.5" /> baixar o vídeo</a>}
+            {p.url && <a href={p.url} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-(--pulso-border) px-3 text-xs text-(--pulso-action)"><ExternalLink className="h-3.5 w-3.5" /> ver o post</a>}
           </div>
+          {p.status === 'planejado' && (p.modo === 'manual' || p.modo === 'rascunho') && (
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="min-w-48 flex-1 text-[11px] text-(--pulso-text-muted)">Link do post (opcional)
+                <input value={link} onChange={(ev) => setLink(ev.target.value)} type="url"
+                  className="mt-1 block min-h-11 w-full rounded-lg border border-(--pulso-border) bg-(--pulso-surface) px-2.5 text-sm text-(--pulso-text) focus:border-(--pulso-action) focus:outline-none" />
+              </label>
+              <button type="button" disabled={ocupado} onClick={marcar}
+                className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg bg-(--pulso-ok) px-4 text-xs font-medium text-(--pulso-on-action) disabled:opacity-50">
+                {ocupado ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Postei
+              </button>
+            </div>
+          )}
         </div>
-      )}
-    </li>
+      </div>
+    </section>
   )
 }
 
-// Cortes dos canais DO PULSO (dono, 10-12/11/2026): o liga/desliga da publicação automática e se cada
-// canal tem conta e acesso. O portão é configuracoes.cortes_pulso.publicar; só o admin troca.
-const CANAIS = [
-  { id: 'pulso_cortes', nome: 'Cortes PULSO Histórias', yt: 'youtube_oauth:cortes', tt: 'tiktok_oauth:cortes' },
-  { id: 'pulso_bastidores', nome: 'Bastidores PULSO Histórias', yt: 'youtube_oauth:bastidores', tt: 'tiktok_oauth:bastidores' },
+// liga/desliga da publicação dos canais do PULSO e se cada canal tem conta e acesso (só o admin troca)
+const CANAIS_PULSO = [
+  { id: 'pulso_cortes', yt: 'youtube_oauth:cortes', tt: 'tiktok_oauth:cortes' },
+  { id: 'pulso_bastidores', yt: 'youtube_oauth:bastidores', tt: 'tiktok_oauth:bastidores' },
 ]
 
 function usePainel() {
@@ -198,10 +306,6 @@ function usePainel() {
   })
 }
 
-function Selo({ ok, sim, nao }: { ok: boolean; sim: string; nao: string }) {
-  return <span className={`text-[11px] ${ok ? 'text-(--pulso-ok)' : 'text-(--pulso-warn)'}`}>{ok ? '✓' : '·'} {ok ? sim : nao}</span>
-}
-
 function PainelAutomatico() {
   const qc = useQueryClient()
   const { papel } = useUsuario()
@@ -213,46 +317,49 @@ function PainelAutomatico() {
     if (!data) return
     setOcupado(true)
     await supabase.schema('pulso_core').from('configuracoes')
-      .update({ valor: JSON.stringify({ publicar: !data.ligado, mudado_em: new Date().toISOString(), mudado_por: 'app (Hoje nos Longos)' }) })
+      .update({ valor: JSON.stringify({ publicar: !data.ligado, mudado_em: new Date().toISOString(), mudado_por: 'app (Agenda dos cortes)' }) })
       .eq('chave', 'cortes_pulso')
     setOcupado(false)
     await qc.invalidateQueries({ queryKey: ['longos-painel-auto'] })
   }
 
   return (
-    <section className={`${CARTAO} p-5`}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section className={`${CARTAO} flex flex-wrap items-center gap-x-8 gap-y-3 p-4`}>
+      <div className="flex items-center gap-3">
+        <span className={`rounded-lg p-2 ${data.ligado ? 'bg-(--pulso-ok)/10 text-(--pulso-ok)' : 'bg-(--pulso-warn)/10 text-(--pulso-warn)'}`}><Power className="h-4 w-4" aria-hidden /></span>
         <div>
-          <h2 className="text-sm font-semibold text-(--pulso-text)">Publicação automática dos cortes do PULSO</h2>
-          <p className="text-xs text-(--pulso-text-muted)">
-            {data.ligado
-              ? 'Ligada: cada corte sai sozinho na hora marcada (YouTube e Instagram de hora em hora; Facebook agendado na Meta, com o link do episódio no comentário).'
-              : 'Desligada: nada dos canais do PULSO sai sozinho.'}
-          </p>
+          <p className="text-sm font-semibold text-(--pulso-text)">Automático {data.ligado ? 'ligado' : 'desligado'}</p>
+          <p className="text-[11px] text-(--pulso-text-subtle)">canais do PULSO</p>
         </div>
         {papel === 'admin' && (
           <button type="button" disabled={ocupado} onClick={alternar}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${data.ligado ? 'border border-(--pulso-border) text-(--pulso-text-muted)' : 'bg-(--pulso-ok) text-(--pulso-on-action)'}`}>
+            className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-xs font-medium disabled:opacity-50 ${data.ligado ? 'border border-(--pulso-border) text-(--pulso-text-muted)' : 'bg-(--pulso-ok) text-(--pulso-on-action)'}`}>
             {ocupado ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Power className="h-3.5 w-3.5" />} {data.ligado ? 'Desligar' : 'Ligar'}
           </button>
         )}
       </div>
-      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-        {CANAIS.map((c) => {
-          const d = data.destinos[c.id]
-          return (
-            <li key={c.id} className="rounded-xl bg-(--pulso-surface-raised) p-3">
-              <p className="mb-1 text-xs font-semibold text-(--pulso-text)">{c.nome}</p>
-              <div className="flex flex-wrap gap-x-3 gap-y-1">
-                <Selo ok={data.tokens.has(c.yt)} sim="YouTube" nao="YouTube sem acesso" />
-                <Selo ok={!!d?.instagram_id} sim="Instagram" nao="Instagram sem conta" />
-                <Selo ok={!!d?.facebook_page_id} sim="Facebook" nao="Facebook sem Página" />
-                <Selo ok={data.tokens.has(c.tt)} sim="TikTok" nao="TikTok: você posta (app em revisão)" />
-              </div>
-            </li>
-          )
-        })}
-      </ul>
+      {CANAIS_PULSO.map((c) => {
+        const d = data.destinos[c.id]
+        const redes = [
+          { r: 'youtube', ok: data.tokens.has(c.yt) }, { r: 'instagram', ok: !!d?.instagram_id },
+          { r: 'facebook', ok: !!d?.facebook_page_id }, { r: 'tiktok', ok: data.tokens.has(c.tt) },
+        ]
+        return (
+          <div key={c.id} className="flex items-center gap-2">
+            <span className="text-xs font-medium text-(--pulso-text)">{CANAIS[c.id].curto}</span>
+            {redes.map(({ r, ok }) => {
+              const R = REDES[r]
+              const txt = `${R.nome}: ${ok ? 'ligado' : r === 'tiktok' ? 'você posta (app em revisão)' : 'sem acesso'}`
+              return (
+                <span key={r} title={txt} aria-label={txt}
+                  className={`inline-flex h-7 w-7 items-center justify-center rounded-md border ${ok ? 'border-(--pulso-ok)/30 bg-(--pulso-ok)/10 text-(--pulso-ok)' : 'border-(--pulso-warn)/30 bg-(--pulso-warn)/10 text-(--pulso-warn)'}`}>
+                  <R.Icone className="h-3.5 w-3.5" aria-hidden />
+                </span>
+              )
+            })}
+          </div>
+        )
+      })}
     </section>
   )
 }

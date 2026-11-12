@@ -11,6 +11,9 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useCortes, useEpisodio, useUrlsAssinadas, type Corte, type Episodio } from '@/lib/hooks/use-longos'
+import { Abas } from '@/components/longos/ui'
+
+type AbaFicha = 'visao' | 'cortes' | 'youtube' | 'roteiro'
 
 const CARTAO = 'rounded-2xl border border-(--pulso-border) bg-(--pulso-surface)'
 const minseg = (s?: number) => (s == null ? '—' : `${Math.floor(s / 60)} min ${String(Math.round(s % 60)).padStart(2, '0')} s`)
@@ -106,6 +109,7 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
   const qc = useQueryClient()
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [aba, setAba] = useState<AbaFicha>('visao')
 
   async function mudar(campos: Partial<Episodio>) {
     setOcupado(true); setErro(null)
@@ -156,6 +160,12 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
         </div>
       </header>
 
+      <Abas<AbaFicha> ativa={aba} onChange={setAba} abas={[
+        { id: 'visao', rotulo: 'Visão geral', icone: Film }, { id: 'cortes', rotulo: 'Cortes', icone: Scissors, n: cortes.data?.length },
+        { id: 'youtube', rotulo: 'Publicar no YouTube', icone: Send }, { id: 'roteiro', rotulo: 'Roteiro e fontes', icone: Clapperboard },
+      ]} />
+
+      {aba === 'visao' && (
       <Secao icone={<Film className="h-4 w-4" />} titulo="O episódio"
         acao={m.montagem?.legenda && urls.data?.[m.montagem.legenda] ? (
           <a href={urls.data[m.montagem.legenda]} download="legenda.srt" className="inline-flex items-center gap-1 text-xs text-(--pulso-action) hover:underline"><Download className="h-3.5 w-3.5" /> legenda .srt</a>
@@ -175,7 +185,9 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
           </div>
         ) : <Vazio>Ainda não montado. A montagem sai depois do roteiro aprovado e da narração.</Vazio>}
       </Secao>
+      )}
 
+      {aba === 'youtube' && (
       <Secao icone={<Send className="h-4 w-4" />} titulo="Pronto para publicar no YouTube">
         {m.textos?.youtube?.titulo ? (
           <div className="space-y-3">
@@ -213,7 +225,9 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
           </div>
         ) : <Vazio>Os textos de publicação entram quando a ficha é fechada pelo motor.</Vazio>}
       </Secao>
+      )}
 
+      {aba === 'cortes' && (
       <Secao icone={<Scissors className="h-4 w-4" />} titulo="Cortes verticais (Reels, Shorts, TikTok, stories, status)">
         {cortes.data?.length ? (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -221,11 +235,15 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
           </ul>
         ) : <Vazio>{nCortes ? `${nCortes} trechos marcados no roteiro; os cortes saem depois da montagem.` : 'Nenhum corte marcado no roteiro.'}</Vazio>}
       </Secao>
+      )}
 
+      {aba === 'cortes' && (
       <Secao icone={<Send className="h-4 w-4" />} titulo="Onde cada corte saiu e quanto fez">
         <CortesPublicados cortes={cortes.data || []} />
       </Secao>
+      )}
 
+      {aba === 'roteiro' && (
       <Secao icone={<BookOpen className="h-4 w-4" />} titulo="Pauta e fontes">
         {m.fontes ? (
           <div className="space-y-3 text-sm">
@@ -244,7 +262,9 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
           </div>
         ) : <Vazio>As fontes entram quando a ficha é fechada pelo motor.</Vazio>}
       </Secao>
+      )}
 
+      {aba === 'roteiro' && (
       <Secao icone={<ShieldCheck className="h-4 w-4" />} titulo="Trava do segredo (interno)">
         {m.trava ? (
           <p className={`flex items-start gap-2 text-sm ${m.trava.passou ? 'text-(--pulso-ok)' : 'text-(--pulso-danger)'}`}>
@@ -256,7 +276,9 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
           </p>
         ) : <Vazio>A trava roda antes de subir a montagem.</Vazio>}
       </Secao>
+      )}
 
+      {aba === 'roteiro' && (
       <Secao icone={<Mic className="h-4 w-4" />} titulo="Narração">
         {m.narracao ? (
           <div className="space-y-3">
@@ -274,7 +296,9 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
           </div>
         ) : <Vazio>Sem narração ainda.</Vazio>}
       </Secao>
+      )}
 
+      {aba === 'roteiro' && (
       <Secao icone={<Clapperboard className="h-4 w-4" />} titulo="Roteiro">
         <details className="group">
           <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs text-(--pulso-action)">
@@ -285,7 +309,9 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
           </div>
         </details>
       </Secao>
+      )}
 
+      {aba === 'visao' && (
       <Secao icone={<Calendar className="h-4 w-4" />} titulo="Publicação">
         <dl className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-3">
           <Dado rot="Canal do YouTube" val={m.publicacao?.canal || 'a decidir pelo dono'} />
@@ -294,11 +320,14 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
         </dl>
         <p className="mt-3 flex items-center gap-1.5 text-[11px] text-(--pulso-text-subtle)"><Send className="h-3.5 w-3.5" /> Quem publica é o dono (R-011). Depois de publicado, o endereço entra aqui e a medição começa.</p>
       </Secao>
+      )}
 
+      {aba === 'visao' && (
       <Secao icone={<BarChart3 className="h-4 w-4" />} titulo="Números">
         {e.status === 'publicado' ? <Vazio>A medição do longo (horas de exibição e retenção) entra com a coleta do YouTube.</Vazio>
           : <Vazio>Quando o episódio for ao ar: horas de exibição, retenção minuto a minuto, de onde veio o público e quanto cada corte trouxe de volta.</Vazio>}
       </Secao>
+      )}
     </article>
   )
 }

@@ -632,3 +632,12 @@ O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. 
 - **Planner:** os canais do PULSO recebem todos os cortes. Cada canal começa num ponto diferente da lista, e o mesmo corte nunca cai no mesmo dia em dois canais. O TikTok manual leva a legenda com as hashtags. O link do episódio vai completo (https://youtu.be/…).
 - **E01:** os 6 cortes que faltavam foram gerados e agendados (24 peças). Cortes ganhou os cortes 3, 4 e 6 em 16, 17 e 18/11, às 13h; Bastidores ganhou os cortes 1, 2 e 5 em 14, 16 e 17/11, às 17h.
 - **Facebook com agenda travada:** sobe já agendado na Meta até 28 dias à frente (era 26 h), até 4 por rodada. O Planner do Business Suite mostra tudo.
+
+## 12/11/2026 — redesenho do VL: menos texto, mais visual (pedido do dono)
+- **Kit `components/longos/ui.tsx`:** cartão de número (ícone em chip + número tabular), abas, rede com ícone lucide, estado da peça com cor + ícone + texto (nunca só cor), legenda dos estados.
+- **Agenda (ex-"Hoje", /longos/hoje):** números do dia no topo, o automático em uma faixa com os ícones das redes por canal, e 3 abas:
+  - **Semana:** calendário canal × dia; cada corte (C1, C2…) mostra as redes coloridas pelo estado, e um toque abre o detalhe com vídeo, legenda, baixar e "Postei";
+  - **Hoje**;
+  - **Atenção:** atrasadas, erros e o que você posta hoje.
+- **Episódios (/longos):** números no topo, a fábrica em barra de progresso com chips, e a temporada em **kanban** por etapa (Roteiro, Aprovado, Narração e imagens, Montagem e revisão, No ar), com duração e nº de cortes em cada card.
+- **Ficha do episódio:** 4 abas (Visão geral, Cortes, Publicar no YouTube, Roteiro e fontes) no lugar da rolagem com 11 seções.
