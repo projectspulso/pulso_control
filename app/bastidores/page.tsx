@@ -20,7 +20,9 @@ export default function BastidoresPage() {
   const { data, isLoading, isError, error } = useBastidores()
   const [tipo, setTipo] = useState<TipoAssunto | 'todos'>('todos')
   // abre em "aguardando": é a fila de trabalho de quem aprova
-  const [situacao, setSituacao] = useState<'todos' | Assunto['status']>('rascunho')
+  // sem nada aguardando, abre em "todos" (12/11: a aba vazia parecia tela quebrada)
+  const [escolha, setSituacao] = useState<'todos' | Assunto['status'] | null>(null)
+  const situacao = escolha ?? ((data || []).some((a) => a.status === 'rascunho') ? 'rascunho' : 'todos')
 
   const grupos = useMemo(() => {
     const m = new Map<string, NonNullable<typeof data>>()
