@@ -604,3 +604,12 @@ O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. 
 - **Banco (094):** as 31 políticas ALL de membro excluem `papel='revisor'`, e cada tabela ganha SELECT para o revisor. No Storage `bastidores`, o revisor lê mas não envia nem troca. Provado em transação desfeita: revisor lê 320 ideias e o update afeta 0 linhas; admin lê 320 e o update afeta 1.
 - **App:** `allowlist` ganha `revisor.tiktok@digiai.app.br` com papel `revisor`. O `guardApi` devolve 403 a tudo que não é GET para esse papel.
 - **Falta (dono):** criar o usuário no Supabase Auth com esse e-mail e senha. O Pulso então liga o `auth_user_id` em `usuarios_internos` (papel revisor).
+
+## 12/11/2026 — Longos (VL): cortes do PULSO no "Hoje" e publicador mais rápido
+- **Hoje nos Longos:**
+  - novo painel "Publicação automática dos cortes do PULSO", com o liga/desliga de `cortes_pulso.publicar` (só para admin) e, por canal, se o YouTube, o Instagram, o Facebook e o TikTok estão ligados;
+  - os nomes dos canais do PULSO aparecem;
+  - estados "agendado na Meta" e "erro", com a mensagem do erro;
+  - o subtítulo não diz mais que tudo é do digiai_mkt.
+- **TikTok dos cortes:** até o app ser aprovado (revisão reenviada em 12/11), 6 peças `modo=manual`. O dono baixa o vídeo, copia a legenda e marca "Postei" na tela.
+- **`publicar-cortes-pulso`:** faz todas as peças vencidas da rodada (até 6, começando outra só até os 60 s). Em 11/11 o IG do 1º corte saiu 1 h depois do YouTube porque cada rodada fazia uma só.

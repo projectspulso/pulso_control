@@ -44,15 +44,33 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const { data: fila, error } = await supabase.schema('pulso_content').from('corte_publicacoes')
+  const vencidas = () => supabase.schema('pulso_content').from('corte_publicacoes')
     .select('id, destino, rede, video, titulo, legenda, hashtags, agendado_para, motivo')
     .eq('modo', 'auto').eq('status', 'planejado').in('rede', ['youtube', 'instagram'])
     .lte('agendado_para', new Date().toISOString()).order('agendado_para').limit(1)
+  const { data: fila, error } = await vencidas()
   if (error) return registra(supabase, 'erro', { erro: error.message }, 500)
   if (!fila?.length) return registra(supabase, 'ocioso', { motivo: 'nada vencido' }, 200)
   if (!publicar) return registra(supabase, 'ocioso', { motivo: 'aguarda o pode do dono (cortes_pulso.publicar)', vencidas: fila.length }, 200)
 
-  const p = fila[0]
+  // todas as peças vencidas que couberem no tempo (11/11: o IG do 1º corte saiu 1 h depois do YouTube
+  // porque cada rodada fazia uma só). O IG pode esperar até 200 s, então só começa outra até os 60 s.
+  const inicio = Date.now()
+  const feitas: unknown[] = []
+  let atual = fila[0]
+  let ultima: Response = new Response(null)
+  for (let i = 0; i < 6 && atual; i++) {
+    ultima = await umaPeca(supabase, atual)
+    feitas.push(atual.id)
+    if (ultima.status !== 200 || Date.now() - inicio > 60_000) break
+    const { data: prox } = await vencidas()
+    atual = prox?.[0] && !feitas.includes(prox[0].id) ? prox[0] : null
+  }
+  return ultima
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function umaPeca(supabase: any, p: any): Promise<Response> {
   try {
     const { data: cfg } = await supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'cortes_destinos').single()
     const dest = (JSON.parse(cfg.valor).destinos || []).find((d: { id: string }) => d.id === p.destino)
