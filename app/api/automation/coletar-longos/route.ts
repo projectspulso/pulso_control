@@ -9,9 +9,15 @@ import { fetchYoutubeRetention } from '@/lib/youtube/retention'
  * o longo no canal principal (id do vídeo no link que o digiai_mkt devolveu, ou no post_id) e os cortes
  * que saíram no YouTube do canal de cortes. As outras redes chegam pelo digiai_mkt (rpc leitura_peca_bastidores).
  * Horas de exibição e retenção do longo pedem o OAuth do canal principal (ainda não existe): ficam nulas.
+ * Desde 12/11/2026 lê também os cortes nos canais DO PULSO (Cortes e Bastidores PULSO Histórias): YouTube
+ * pela chave pública, Instagram e Facebook pelo token do pulso_publisher, e os seguidores de cada canal.
  * Registra TODA rodada, inclusive a ociosa (cron nunca falha em silêncio).
  */
-export const maxDuration = 60
+export const maxDuration = 300
+
+const GRAPH = 'https://graph.facebook.com/v21.0'
+const CANAIS_PULSO = ['pulso_cortes', 'pulso_bastidores']
+const canalDe = (destino: string) => (destino === 'digiai' ? 'digiai' : CANAIS_PULSO.includes(destino) ? destino : 'cortes')
 
 const idDoYoutube = (s: string | null | undefined) => {
   if (!s) return null
@@ -42,7 +48,7 @@ export async function POST(request: NextRequest) {
   if (e2) return registra(supabase, 'erro', { erro: e2.message }, 500)
   for (const p of pecas || []) {
     const id = idDoYoutube(p.post_id) || idDoYoutube(p.url)
-    if (id) alvos.push({ episodio_id: p.episodio_cortes.episodio_id, peca_id: p.id, canal: p.destino === 'digiai' ? 'digiai' : 'cortes', rede: 'youtube', tipo: p.tipo, post_id: id })
+    if (id) alvos.push({ episodio_id: p.episodio_cortes.episodio_id, peca_id: p.id, canal: canalDe(p.destino), rede: 'youtube', tipo: p.tipo, post_id: id })
   }
 
   const falhas: string[] = []
@@ -80,14 +86,86 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // inscritos do principal e do canal de cortes no YouTube, quando o id do canal estiver na config
   const { data: cfg } = await supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'cortes_destinos').maybeSingle()
+  const { data: cfgYt } = await supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'youtube_canais').maybeSingle()
+  let destinos: Array<{ id: string; youtube_canal?: string; youtube_channel_id?: string; instagram_id?: string; facebook_page_id?: string }> = []
+  let ytCanais: Record<string, { channel_id?: string }> = {}
+  try { destinos = JSON.parse(cfg?.valor || '{}').destinos || [] } catch { destinos = [] }
+  try { ytCanais = JSON.parse(cfgYt?.valor || '{}') } catch { ytCanais = {} }
+
+  // Instagram e Facebook dos cortes nos canais do PULSO (o token do pulso_publisher só alcança esses)
+  const metaToken = process.env.INSTAGRAM_ACCESS_TOKEN
+  const pageTokens = new Map<string, string>()
+  const tokenDaPagina = async (pageId: string) => {
+    if (!pageTokens.has(pageId)) {
+      const r = await fetch(`${GRAPH}/${pageId}?fields=access_token&access_token=${metaToken}`).then((x) => x.json()).catch(() => ({}))
+      pageTokens.set(pageId, r?.access_token || '')
+    }
+    return pageTokens.get(pageId) || ''
+  }
+  let lidasMeta = 0
+  if (metaToken) {
+    const { data: meta } = await supabase.schema('pulso_content').from('corte_publicacoes')
+      .select('id, rede, tipo, destino, post_id, episodio_cortes!inner(episodio_id)')
+      .eq('status', 'publicado').in('rede', ['instagram', 'facebook']).in('destino', CANAIS_PULSO).not('post_id', 'is', null)
+    for (const p of meta || []) {
+      const dest = destinos.find((d) => d.id === p.destino)
+      const base = { episodio_id: p.episodio_cortes.episodio_id, peca_id: p.id, canal: p.destino, rede: p.rede, tipo: p.tipo, post_id: p.post_id, data_ref, fonte: 'pulso', coletado_em: new Date().toISOString() }
+      try {
+        let m: { views: number; likes: number; comentarios: number; compartilhamentos: number }
+        if (p.rede === 'instagram') {
+          const info = await fetch(`${GRAPH}/${p.post_id}?fields=like_count,comments_count&access_token=${metaToken}`).then((x) => x.json())
+          const ins = await fetch(`${GRAPH}/${p.post_id}/insights?metric=views,shares&access_token=${metaToken}`).then((x) => x.json())
+          if (info?.error) throw new Error(info.error.message)
+          const val = (nome: string) => Number((ins?.data || []).find((x: { name: string }) => x.name === nome)?.values?.[0]?.value || 0)
+          m = { views: val('views'), likes: Number(info.like_count || 0), comentarios: Number(info.comments_count || 0), compartilhamentos: val('shares') }
+        } else {
+          const pt = dest?.facebook_page_id ? await tokenDaPagina(dest.facebook_page_id) : ''
+          if (!pt) throw new Error('sem token da Página')
+          const ins = await fetch(`${GRAPH}/${p.post_id}/video_insights?metric=fb_reels_total_plays&access_token=${pt}`).then((x) => x.json())
+          const info = await fetch(`${GRAPH}/${p.post_id}?fields=likes.summary(true).limit(0),comments.summary(true).limit(0)&access_token=${pt}`).then((x) => x.json())
+          if (ins?.error) throw new Error(ins.error.message)
+          m = { views: Number(ins?.data?.[0]?.values?.[0]?.value || 0), likes: Number(info?.likes?.summary?.total_count || 0),
+            comentarios: Number(info?.comments?.summary?.total_count || 0), compartilhamentos: 0 }
+        }
+        await supabase.schema('pulso_analytics').from('leituras_longos').delete().eq('peca_id', p.id).eq('rede', p.rede).eq('data_ref', data_ref)
+        const { error: w } = await supabase.schema('pulso_analytics').from('leituras_longos').insert({ ...base, ...m })
+        if (w) falhas.push(`${p.rede} ${p.post_id}: ${w.message}`)
+        else { gravadas += 1; lidasMeta += 1 }
+      } catch (e) {
+        falhas.push(`${p.rede} ${p.post_id}: ${(e as Error).message}`)
+      }
+    }
+  }
+
+  // seguidores: principal e canais de cortes no YouTube; Instagram e Facebook dos canais do PULSO
   let inscritos = 0
+  const grava = async (canal: string, rede: string, seguidores: number) => {
+    const { error } = await supabase.schema('pulso_analytics').from('seguidores_longos')
+      .upsert({ canal, rede, data_ref, seguidores, fonte: 'pulso', coletado_em: new Date().toISOString() }, { onConflict: 'canal,rede,data_ref' })
+    if (error) falhas.push(`seguidores ${canal}/${rede}: ${error.message}`)
+    else inscritos += 1
+  }
+  for (const d of destinos.filter((x) => CANAIS_PULSO.includes(x.id))) {
+    if (!metaToken) break
+    if (d.instagram_id) {
+      const r = await fetch(`${GRAPH}/${d.instagram_id}?fields=followers_count&access_token=${metaToken}`).then((x) => x.json()).catch(() => ({}))
+      if (r?.followers_count != null) await grava(d.id, 'instagram', Number(r.followers_count))
+      else falhas.push(`seguidores ${d.id}/instagram: ${r?.error?.message || 'sem leitura'}`)
+    }
+    if (d.facebook_page_id) {
+      const pt = await tokenDaPagina(d.facebook_page_id)
+      const r = await fetch(`${GRAPH}/${d.facebook_page_id}?fields=followers_count&access_token=${pt || metaToken}`).then((x) => x.json()).catch(() => ({}))
+      if (r?.followers_count != null) await grava(d.id, 'facebook', Number(r.followers_count))
+      else falhas.push(`seguidores ${d.id}/facebook: ${r?.error?.message || 'sem leitura'}`)
+    }
+  }
   try {
     const v = JSON.parse(cfg?.valor || '{}')
     const canais = [
-      { canal: 'principal', id: v.principal?.channel_id },
-      { canal: 'cortes', id: (v.destinos || []).find((d: { id: string }) => d.id === 'bastidores')?.youtube_channel_id },
+      { canal: 'principal', id: v.principal?.channel_id || ytCanais.principal?.channel_id },
+      { canal: 'cortes', id: destinos.find((d) => d.id === 'bastidores')?.youtube_channel_id },
+      ...destinos.filter((d) => CANAIS_PULSO.includes(d.id)).map((d) => ({ canal: d.id, id: ytCanais[d.youtube_canal || '']?.channel_id })),
     ].filter((c) => c.id)
     if (canais.length) {
       const url = new URL('https://www.googleapis.com/youtube/v3/channels')
@@ -99,10 +177,7 @@ export async function POST(request: NextRequest) {
       for (const c of canais) {
         const it = (j.items || []).find((x: { id: string }) => x.id === c.id)
         if (!it) { falhas.push(`canal ${c.canal}: não achado`); continue }
-        const { error } = await supabase.schema('pulso_analytics').from('seguidores_longos')
-          .upsert({ canal: c.canal, rede: 'youtube', data_ref, seguidores: Number(it.statistics.subscriberCount || 0), fonte: 'pulso', coletado_em: new Date().toISOString() }, { onConflict: 'canal,rede,data_ref' })
-        if (error) falhas.push(`canal ${c.canal}: ${error.message}`)
-        else inscritos += 1
+        await grava(c.canal, 'youtube', Number(it.statistics.subscriberCount || 0))
       }
     }
   } catch (e) {
@@ -110,7 +185,7 @@ export async function POST(request: NextRequest) {
   }
 
   const status = !alvos.length && !inscritos ? 'ocioso' : falhas.length ? 'parcial' : 'sucesso'
-  return registra(supabase, status, { data_ref, alvos: alvos.length, gravadas, canais_lidos: inscritos, falhas }, 200)
+  return registra(supabase, status, { data_ref, alvos: alvos.length, lidas_instagram_facebook: lidasMeta, gravadas, canais_lidos: inscritos, falhas }, 200)
 }
 
 /** Horas, retenção média, curva e origens do longo. O Analytics atrasa ~48 h: vídeo novo volta vazio e fica nulo. */

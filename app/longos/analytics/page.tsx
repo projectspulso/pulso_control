@@ -25,7 +25,10 @@ const ORIGEM: Record<string, string> = {
   PLAYLIST: 'Playlists', YT_OTHER_PAGE: 'Outras páginas do YouTube', END_SCREEN: 'Tela final', NO_LINK_OTHER: 'Direto ou desconhecido',
   HASHTAGS: 'Hashtags', ANNOTATION: 'Cards',
 }
-const CANAL: Record<string, string> = { principal: 'PULSO Histórias (o longo)', cortes: 'Canal de cortes', digiai: 'DIGIAI' }
+const CANAL: Record<string, string> = {
+  principal: 'PULSO Histórias (o longo)', cortes: 'Bastidores DIGIAI Cortes', digiai: 'DIGIAI',
+  pulso_cortes: 'Cortes PULSO Histórias', pulso_bastidores: 'Bastidores PULSO Histórias',
+}
 
 const ABAS = [
   { id: 'geral', label: 'Visão geral' }, { id: 'episodios', label: 'Episódios' }, { id: 'cortes', label: 'Cortes' },
@@ -117,6 +120,11 @@ function calcular(d: AnalyticsLongos) {
   }
   const porRede = agrupa(pecasLidas, (l) => REDE[l.rede] || l.rede)
   const porCanal = agrupa(ult, (l) => CANAL[l.canal] || l.canal)
+  const porCanalCortes = agrupa(pecasLidas, (l) => CANAL[l.canal] || l.canal)
+  const corteACorte = [...pecasLidas].sort((a, b) => b.views - a.views).map((l) => {
+    const p = pecaPorId.get(l.peca_id || '')
+    return { l, p, ep: p ? epPorId.get(p.episodio_id)?.codigo || '' : '' }
+  })
   const porTipoCorte = agrupa(pecasLidas.filter((l) => l.tipo === 'corte'), (l) => TIPO_CORTE[pecaPorId.get(l.peca_id || '')?.corte_tipo || ''] || 'sem tipo')
   const campeoes = [...pecasLidas].sort((a, b) => b.views - a.views).slice(0, 8).map((l) => {
     const p = pecaPorId.get(l.peca_id || '')
@@ -134,7 +142,7 @@ function calcular(d: AnalyticsLongos) {
     return [...m.values()]
   })()
   const inscritosPrincipal = seguidoresAtual.find((s) => s.canal === 'principal' && s.rede === 'youtube')?.seguidores ?? null
-  return { ult, longos, pecasLidas, horas, porRede, porCanal, porTipoCorte, campeoes, porEpisodio, seguidoresAtual, inscritosPrincipal,
+  return { ult, longos, pecasLidas, horas, porRede, porCanal, porCanalCortes, corteACorte, porTipoCorte, campeoes, porEpisodio, seguidoresAtual, inscritosPrincipal,
     views: soma(ult, (l) => l.views), viewsLongo: soma(longos, (l) => l.views), viewsPecas: soma(pecasLidas, (l) => l.views),
     cliques: soma(pecasLidas, (l) => Number(l.cliques_episodio || 0)),
     serie: serieDiaria(d.leituras), serieHoras: serieDiaria(d.leituras.filter((l) => l.tipo === 'longo'), 'horas_exibicao') }
@@ -297,6 +305,15 @@ export default function LongosAnalyticsPage() {
 
           {aba === 'cortes' && (
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <Kpi rotulo="Views dos cortes" valor={n(c.viewsPecas)} sub="todos os canais e redes" />
+                <Kpi rotulo="Cortes no ar" valor={String(data.pecas.filter((p) => p.status === 'publicado' && p.tipo === 'corte').length)} sub="publicações" />
+                <Kpi rotulo="Com leitura" valor={String(c.pecasLidas.length)} sub="coleta diária" />
+                <Kpi rotulo="Levados ao episódio" valor={c.cliques ? n(c.cliques) : '—'} sub="quando a rede informa" />
+              </div>
+              <Card titulo="Por canal de cortes" sub="Cortes PULSO Histórias, Bastidores PULSO Histórias e o canal de cortes da DIGIAI">
+                {c.porCanalCortes.length ? <Barras dados={c.porCanalCortes} rotulo="views" /> : <Vazio>Aparece quando os cortes publicados tiverem leitura.</Vazio>}
+              </Card>
               <div className="grid gap-4 lg:grid-cols-2">
                 <Card titulo="Por tipo de corte" sub="gancho, história, lição e técnico: views somadas" rodape="O tipo vem da marcação no roteiro (CORTE). É o dado que decide o que marcar no próximo episódio.">
                   {c.porTipoCorte.length ? <Barras dados={c.porTipoCorte} rotulo="views" /> : <Vazio>Aparece quando os cortes publicados tiverem leitura.</Vazio>}
@@ -318,6 +335,48 @@ export default function LongosAnalyticsPage() {
                     ))}
                   </ol>
                 ) : <Vazio>Os campeões aparecem depois da primeira semana de cortes no ar.</Vazio>}
+              </Card>
+              <Card titulo="Corte a corte" sub="cada corte em cada canal e rede, pela última leitura"
+                rodape="O PULSO lê YouTube, Instagram e Facebook dos canais dele; o canal de cortes da DIGIAI vem pelo YouTube e pelo que o digiai_mkt devolver. TikTok entra quando o app for aprovado.">
+                {c.corteACorte.length ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[680px] text-sm">
+                      <thead><tr className="text-left text-xs text-(--pulso-text-muted)">
+                        <th className="py-2 pr-3 font-medium">Corte</th><th className="pr-3 font-medium">Canal</th><th className="pr-3 font-medium">Rede</th>
+                        <th className="pr-3 text-right font-medium">Views</th><th className="pr-3 text-right font-medium">Curtidas</th>
+                        <th className="pr-3 text-right font-medium">Coment.</th><th className="font-medium">Lido em</th>
+                      </tr></thead>
+                      <tbody className="divide-y divide-(--pulso-border)">
+                        {c.corteACorte.map(({ l, p, ep }) => (
+                          <tr key={`${l.peca_id}|${l.rede}`} className="text-(--pulso-text)">
+                            <td className="py-2 pr-3">{p ? <>{ep} · corte {p.corte_numero}: {p.corte_titulo}</> : '—'}{p?.url && <a href={p.url} target="_blank" rel="noreferrer" className="ml-2 text-xs text-(--pulso-action) hover:underline">abrir</a>}</td>
+                            <td className="pr-3 text-xs text-(--pulso-text-muted)">{CANAL[l.canal] || l.canal}</td>
+                            <td className="pr-3 text-xs text-(--pulso-text-muted)">{REDE[l.rede] || l.rede}</td>
+                            <td className="pr-3 text-right tabular-nums">{n(l.views)}</td>
+                            <td className="pr-3 text-right tabular-nums">{n(l.likes || 0)}</td>
+                            <td className="pr-3 text-right tabular-nums">{n(l.comentarios || 0)}</td>
+                            <td className="text-xs text-(--pulso-text-muted)">{dia(l.data_ref)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : <Vazio>Aparece depois da primeira coleta com cortes no ar. Use “Atualizar dados” no topo.</Vazio>}
+              </Card>
+              <Card titulo="Seguidores dos canais de cortes" sub="última leitura de cada canal em cada rede">
+                {(() => {
+                  const linhas = c.seguidoresAtual.filter((x) => x.canal !== 'principal')
+                  return linhas.length ? (
+                    <ul className="grid gap-2 sm:grid-cols-2">
+                      {linhas.map((x) => (
+                        <li key={`${x.canal}|${x.rede}`} className="flex items-baseline justify-between rounded-xl bg-(--pulso-bg) px-3 py-2 text-sm">
+                          <span className="text-(--pulso-text)">{CANAL[x.canal] || x.canal} · <span className="text-(--pulso-text-muted)">{REDE[x.rede] || x.rede}</span></span>
+                          <span className="tabular-nums text-(--pulso-text)">{n(x.seguidores)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <Vazio>Aparece depois da primeira coleta.</Vazio>
+                })()}
               </Card>
             </div>
           )}

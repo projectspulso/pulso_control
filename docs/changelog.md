@@ -613,3 +613,12 @@ O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. 
   - o subtítulo não diz mais que tudo é do digiai_mkt.
 - **TikTok dos cortes:** até o app ser aprovado (revisão reenviada em 12/11), 6 peças `modo=manual`. O dono baixa o vídeo, copia a legenda e marca "Postei" na tela.
 - **`publicar-cortes-pulso`:** faz todas as peças vencidas da rodada (até 6, começando outra só até os 60 s). Em 11/11 o IG do 1º corte saiu 1 h depois do YouTube porque cada rodada fazia uma só.
+
+## 12/11/2026 — coleta dos cortes nos canais do PULSO + aba Cortes
+- **`coletar-longos`** (timer pg_cron `pulso-coletar-longos`, todo dia 06h45 BRT, + botão "Atualizar dados" no Analytics dos Longos) passa a ler:
+  - YouTube dos cortes com o canal certo: antes, os do PULSO caíam como "cortes" da DIGIAI;
+  - **Instagram** (views, curtidas, comentários, compartilhamentos) e **Facebook** (fb_reels_total_plays, curtidas, comentários) dos cortes nos canais Cortes e Bastidores PULSO Histórias;
+  - seguidores dos 2 canais do PULSO em YouTube, Instagram e Facebook.
+  - `maxDuration` passou a 300.
+- **095:** `leituras_longos` e `seguidores_longos` aceitam os canais `pulso_cortes` e `pulso_bastidores`. A leitura de 11/11 foi corrigida.
+- **Aba Cortes:** KPIs, views por canal de cortes, tabela corte a corte (canal, rede, views, curtidas, comentários) e seguidores dos canais de cortes.
