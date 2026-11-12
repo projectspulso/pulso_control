@@ -4,7 +4,7 @@ import { use, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, BookOpen, Calendar, Check, CheckCircle2, ChevronDown, Clapperboard, Copy, Download, Film, Loader2, Lock, Mic,
   Scissors, Send, ShieldCheck, Video, BarChart3, Image as ImagemIcone, TriangleAlert,
@@ -222,6 +222,10 @@ export default function EpisodioPage({ params }: { params: Promise<{ codigo: str
         ) : <Vazio>{nCortes ? `${nCortes} trechos marcados no roteiro; os cortes saem depois da montagem.` : 'Nenhum corte marcado no roteiro.'}</Vazio>}
       </Secao>
 
+      <Secao icone={<Send className="h-4 w-4" />} titulo="Onde cada corte saiu e quanto fez">
+        <CortesPublicados cortes={cortes.data || []} />
+      </Secao>
+
       <Secao icone={<BookOpen className="h-4 w-4" />} titulo="Pauta e fontes">
         {m.fontes ? (
           <div className="space-y-3 text-sm">
@@ -358,5 +362,71 @@ function CardCorte({ c, url, legenda }: { c: Corte; url?: string; legenda?: stri
         {c.status !== 'descartado' && c.status !== 'publicado' && <button type="button" disabled={ocupado} onClick={() => status('descartado')} className="text-[11px] text-(--pulso-text-subtle) hover:text-(--pulso-danger) disabled:opacity-50">descartar</button>}
       </div>
     </li>
+  )
+}
+
+const CANAL_CORTE: Record<string, string> = {
+  pulso_cortes: 'Cortes PULSO Histórias', pulso_bastidores: 'Bastidores PULSO Histórias',
+  bastidores: 'Bastidores DIGIAI Cortes', bastidores_cortes: 'Bastidores DIGIAI Cortes', digiai: 'DIGIAI',
+}
+const REDE_CORTE: Record<string, string> = { youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', kwai: 'Kwai', linkedin: 'LinkedIn' }
+const ESTADO_CORTE: Record<string, string> = {
+  planejado: 'na agenda', agendado: 'agendado', publicado: 'no ar', erro: 'erro', recusado: 'recusado', aguarda_conta: 'sem conta',
+}
+
+/** Cada corte do episódio em cada canal e rede (dono, 12/11/2026): agenda + última leitura da coleta dos Longos. */
+function CortesPublicados({ cortes }: { cortes: Corte[] }) {
+  const ids = cortes.map((c) => c.id)
+  const { data, isLoading } = useQuery({
+    queryKey: ['longos-ficha-cortes', ids.join(',')],
+    enabled: ids.length > 0,
+    queryFn: async () => {
+      const { data: pecas, error } = await supabase.schema('pulso_content').from('corte_publicacoes')
+        .select('id, corte_id, destino, rede, tipo, status, url, agendado_para')
+        .in('corte_id', ids).eq('tipo', 'corte').neq('status', 'cancelado')
+      if (error) throw error
+      const pids = (pecas || []).map((x) => x.id)
+      const { data: leituras } = pids.length
+        ? await supabase.schema('pulso_analytics').from('leituras_longos').select('peca_id, rede, data_ref, views, likes').in('peca_id', pids).order('data_ref')
+        : { data: [] }
+      const ultima = new Map<string, { views: number; likes: number; data_ref: string }>()
+      for (const l of leituras || []) ultima.set(`${l.peca_id}|${l.rede}`, l)
+      return (pecas || []).map((x) => ({ ...x, leitura: ultima.get(`${x.id}|${x.rede}`) || null }))
+    },
+  })
+  if (!ids.length) return <Vazio>Os cortes aparecem aqui depois da montagem.</Vazio>
+  if (isLoading) return <div className="h-24 animate-pulse rounded-xl bg-(--pulso-surface-raised)" />
+  if (!data?.length) return <Vazio>Nenhum corte na agenda ainda. A agenda nasce quando o episódio ganha data de estreia.</Vazio>
+  return (
+    <div className="space-y-4">
+      {cortes.map((c) => {
+        const deste = data.filter((x) => x.corte_id === c.id).sort((a, b) => (a.destino + a.rede).localeCompare(b.destino + b.rede))
+        if (!deste.length) return null
+        const total = deste.reduce((s, x) => s + (x.leitura?.views || 0), 0)
+        return (
+          <div key={c.id}>
+            <div className="mb-1.5 flex items-baseline justify-between gap-2">
+              <p className="text-xs font-semibold text-(--pulso-text)">{c.numero}. {c.titulo}</p>
+              <p className="text-[11px] tabular-nums text-(--pulso-text-muted)">{total.toLocaleString('pt-BR')} views</p>
+            </div>
+            <ul className="grid gap-1.5 sm:grid-cols-2">
+              {deste.map((x) => (
+                <li key={x.id} className="flex items-center justify-between gap-2 rounded-lg bg-(--pulso-surface-raised) px-2.5 py-1.5 text-[11px]">
+                  <span className="min-w-0 truncate text-(--pulso-text)">{CANAL_CORTE[x.destino] || x.destino} · <span className="text-(--pulso-text-muted)">{REDE_CORTE[x.rede] || x.rede}</span></span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className={x.status === 'publicado' ? 'text-(--pulso-ok)' : x.status === 'erro' ? 'text-(--pulso-danger)' : 'text-(--pulso-text-subtle)'}>
+                      {ESTADO_CORTE[x.status] || x.status}{x.status !== 'publicado' && x.agendado_para ? ` ${new Date(x.agendado_para).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })}` : ''}
+                    </span>
+                    {x.leitura && <span className="tabular-nums text-(--pulso-text)">{x.leitura.views.toLocaleString('pt-BR')}</span>}
+                    {x.url && <a href={x.url} target="_blank" rel="noreferrer" className="text-(--pulso-action) hover:underline">abrir</a>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      })}
+      <p className="text-[11px] text-(--pulso-text-subtle)">Views da última leitura da coleta dos Longos (todo dia às 06h45, ou “Atualizar dados” no Analytics dos Longos).</p>
+    </div>
   )
 }

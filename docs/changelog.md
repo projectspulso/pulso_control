@@ -622,3 +622,6 @@ O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. 
   - `maxDuration` passou a 300.
 - **095:** `leituras_longos` e `seguidores_longos` aceitam os canais `pulso_cortes` e `pulso_bastidores`. A leitura de 11/11 foi corrigida.
 - **Aba Cortes:** KPIs, views por canal de cortes, tabela corte a corte (canal, rede, views, curtidas, comentários) e seguidores dos canais de cortes.
+
+## 12/11/2026 — ficha do episódio: onde cada corte saiu e quanto fez
+- **Nova seção em /longos/[codigo]:** para cada corte, as publicações em cada canal (Cortes e Bastidores PULSO Histórias, Bastidores DIGIAI Cortes, DIGIAI) e em cada rede. Mostra o estado (na agenda, agendado, no ar, erro, sem conta), a data, o link e as views da última leitura da coleta dos Longos, com o total do corte.
