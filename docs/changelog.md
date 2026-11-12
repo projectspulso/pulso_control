@@ -641,3 +641,13 @@ O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. 
   - **Atenção:** atrasadas, erros e o que você posta hoje.
 - **Episódios (/longos):** números no topo, a fábrica em barra de progresso com chips, e a temporada em **kanban** por etapa (Roteiro, Aprovado, Narração e imagens, Montagem e revisão, No ar), com duração e nº de cortes em cada card.
 - **Ficha do episódio:** 4 abas (Visão geral, Cortes, Publicar no YouTube, Roteiro e fontes) no lugar da rolagem com 11 seções.
+
+## 12/11/2026 — limpeza das outras telas do VL
+- **Configurações dos Longos:** 4 abas.
+  - **Canais dos cortes:** cards por canal com as redes em ícone (manual em destaque), horário, tipos de corte e hashtag.
+  - **Voz:** em números.
+  - **Embalagem:** em blocos.
+  - **Fábrica:** em cards com estado.
+- **Assets dos Longos:** seletor de episódio, números (arquivos, cortes, capas, stories), abas por tipo e cortes separados por canal (versão base, Cortes, Bastidores, DIGIAI Cortes). Os vídeos aparecem com prévia.
+- **Bastidores:** números no topo (aguardando, aprovados, já em episódio, total), abas de situação e cards em 2 colunas, mais compactos.
+- **Analytics dos Longos:** os textos explicativos dos cards ficam recolhidos em "como ler". Subtítulo e aviso de topo mais curtos.

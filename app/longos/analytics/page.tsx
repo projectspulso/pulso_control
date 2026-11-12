@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { Info, Loader2, RefreshCw } from 'lucide-react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { PageHeader } from '@/components/layout/page-header'
 import { mediana, serieDiaria, ultimas, useAnalyticsLongos, type AnalyticsLongos, type Leitura } from '@/lib/hooks/use-analytics-longos'
@@ -12,7 +12,7 @@ import { mediana, serieDiaria, ultimas, useAnalyticsLongos, type AnalyticsLongos
  * do longo: horas de exibição, retenção ao longo do vídeo e quanto cada corte trouxe de volta ao episódio.
  * Nada aqui soma nos Curtos. Sem leitura, cada card diz o que falta para ter número, nunca inventa.
  */
-const CARTAO = 'rounded-2xl border border-(--pulso-border) bg-(--pulso-surface)'
+const CARTAO = 'rounded-xl border border-(--pulso-border) bg-(--pulso-surface) shadow-sm'
 const COR = 'var(--pulso-vl)'
 const n = (v: number) => (v >= 1e6 ? `${(v / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mi` : v >= 1e3 ? `${(v / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil` : Math.round(v).toLocaleString('pt-BR'))
 const pct = (v: number) => `${(v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%`
@@ -43,12 +43,20 @@ function Card({ titulo, sub, children, rodape }: { titulo: string; sub?: string;
       <h2 className="text-sm font-semibold text-(--pulso-text)">{titulo}</h2>
       {sub && <p className="mt-0.5 text-xs text-(--pulso-text-muted)">{sub}</p>}
       <div className="mt-4">{children}</div>
-      {rodape && <p className="mt-3 border-t border-(--pulso-border) pt-3 text-xs leading-relaxed text-(--pulso-text-muted)">{rodape}</p>}
+      {rodape && (
+        // o texto explicativo fica recolhido (dono 12/11: muito texto na tela)
+        <details className="group mt-3 border-t border-(--pulso-border) pt-2">
+          <summary className="inline-flex min-h-8 cursor-pointer list-none items-center gap-1 text-[11px] text-(--pulso-text-subtle) hover:text-(--pulso-text-muted)">
+            <Info className="h-3.5 w-3.5" aria-hidden /> como ler
+          </summary>
+          <p className="mt-1 text-xs leading-relaxed text-(--pulso-text-muted)">{rodape}</p>
+        </details>
+      )}
     </section>
   )
 }
 const Vazio = ({ children }: { children: ReactNode }) => (
-  <div className="flex min-h-28 items-center justify-center rounded-xl border border-dashed border-(--pulso-border) px-4 text-center text-xs leading-relaxed text-(--pulso-text-muted)">{children}</div>
+  <div className="flex min-h-24 items-center justify-center rounded-xl border border-dashed border-(--pulso-border) px-4 text-center text-xs leading-relaxed text-(--pulso-text-muted)">{children}</div>
 )
 function Kpi({ rotulo, valor, sub }: { rotulo: string; valor: string; sub?: string }) {
   return (
@@ -194,16 +202,13 @@ export default function LongosAnalyticsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader titulo="Analytics dos Longos" subtitulo="Horas de exibição, retenção, o que cada corte trouxe de volta ao episódio e o que fazer a seguir" />
+      <PageHeader titulo="Analytics dos Longos" subtitulo="Episódios, cortes e canais em números" />
       {isLoading && <div className={`h-40 animate-pulse ${CARTAO}`} />}
       {error && <p className={`${CARTAO} p-6 text-sm text-(--pulso-danger)`}>Não deu para ler: {(error as Error).message}</p>}
       {data && c && (
         <>
           {semLeitura && (
-            <p className={`${CARTAO} p-4 text-sm text-(--pulso-text-muted)`}>
-              Ainda sem leitura: os números começam no dia em que o primeiro episódio estrear. A coleta roda todo dia (o Pulso lê o YouTube,
-              o digiai_mkt devolve as outras redes). Até lá, cada card diz o que vai mostrar.
-            </p>
+            <p className={`${CARTAO} p-4 text-sm text-(--pulso-text-muted)`}>Ainda sem leitura: os números começam na estreia do primeiro episódio.</p>
           )}
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={atualizar} disabled={atualizando}

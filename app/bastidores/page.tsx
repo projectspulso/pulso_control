@@ -3,12 +3,13 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, CheckCircle2, Clapperboard, Loader2 } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Clapperboard, Hourglass, Layers, Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import { BastidoresAbas } from '@/components/bastidores-abas'
 import { supabase } from '@/lib/supabase/client'
 import { useBastidores, type Assunto, type TipoAssunto } from '@/lib/hooks/use-bastidores'
 import { TIPOS, dataLonga, mesAno } from '@/lib/bastidores/tipos'
+import { Abas, Numero, Vazio } from '@/components/longos/ui'
 
 /**
  * LINHA DO TEMPO DOS BASTIDORES (04/11/2026) — a história do PULSO por assunto, não por commit.
@@ -36,16 +37,23 @@ export default function BastidoresPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader titulo="Bastidores" subtitulo="A história do PULSO por assunto: o que aconteceu, com os números e as telas da época" />
+      <PageHeader titulo="Bastidores" subtitulo="A matéria-prima dos episódios: cada assunto com números e telas da época" />
       <BastidoresAbas />
 
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrar por situação">
-        <Chip ativo={situacao === 'rascunho'} onClick={() => setSituacao('rascunho')}>Aguardando aprovação ({porStatus('rascunho')})</Chip>
-        <Chip ativo={situacao === 'aprovado'} onClick={() => setSituacao('aprovado')}>
-          <CheckCircle2 className="h-3.5 w-3.5 text-(--pulso-ok)" /> Aprovados ({porStatus('aprovado')})
-        </Chip>
-        <Chip ativo={situacao === 'todos'} onClick={() => setSituacao('todos')}>Todos ({data?.length ?? 0})</Chip>
-      </div>
+      {data && (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <Numero icone={Hourglass} rotulo="Aguardando você" valor={porStatus('rascunho')} sub="para aprovar" tom="alerta" />
+          <Numero icone={CheckCircle2} rotulo="Aprovados" valor={porStatus('aprovado')} sub="prontos para roteiro" tom="ok" />
+          <Numero icone={Clapperboard} rotulo="Já em episódio" valor={data.filter((a) => a.episodio).length} sub="usados num roteiro" tom="vl" />
+          <Numero icone={Layers} rotulo="Total" valor={data.length} sub="assuntos na linha do tempo" />
+        </div>
+      )}
+
+      <Abas<'todos' | Assunto['status']> ativa={situacao} onChange={setSituacao} abas={[
+        { id: 'rascunho', rotulo: 'Aguardando', icone: Hourglass, n: porStatus('rascunho') },
+        { id: 'aprovado', rotulo: 'Aprovados', icone: CheckCircle2, n: porStatus('aprovado') },
+        { id: 'todos', rotulo: 'Todos', icone: Layers, n: data?.length ?? 0 },
+      ]} />
 
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrar por tipo">
         <Chip ativo={tipo === 'todos'} onClick={() => setTipo('todos')}>Todos os tipos ({naSituacao.length})</Chip>
@@ -65,16 +73,12 @@ export default function BastidoresPage() {
           Não deu para ler os bastidores: {error instanceof Error ? error.message : 'erro'}
         </p>
       )}
-      {data && grupos.length === 0 && (
-        <p className="rounded-2xl border border-(--pulso-border) bg-(--pulso-surface) p-10 text-center text-sm text-(--pulso-text-subtle)">
-          Nenhum assunto neste filtro.
-        </p>
-      )}
+      {data && grupos.length === 0 && <Vazio>Nenhum assunto neste filtro.</Vazio>}
 
       {grupos.map(([mes, assuntos]) => (
         <section key={mes}>
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-(--pulso-text-subtle)">{mesAno(`${mes}-01`)}</h2>
-          <ol className="relative space-y-3 border-l border-(--pulso-border) pl-5">
+          <ol className="relative grid gap-3 border-l border-(--pulso-border) pl-5 xl:grid-cols-2">
             {assuntos.map((a) => {
               const T = TIPOS[a.tipo]
               return (
@@ -121,9 +125,9 @@ function CardAssunto({ a }: { a: Assunto & { capa: string | null } }) {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-(--pulso-border) bg-(--pulso-surface) sm:flex-row">
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-(--pulso-border) bg-(--pulso-surface) shadow-sm sm:flex-row">
       <Link href={`/bastidores/${a.slug}`} tabIndex={-1} aria-hidden="true"
-        className="relative h-36 shrink-0 bg-(--pulso-surface-raised) sm:h-auto sm:min-h-28 sm:w-56">
+        className="relative h-32 shrink-0 bg-(--pulso-surface-raised) sm:h-auto sm:min-h-28 sm:w-40">
         {a.capa ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={a.capa} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
@@ -149,13 +153,13 @@ function CardAssunto({ a }: { a: Assunto & { capa: string | null } }) {
               <CheckCircle2 className="h-3 w-3" /> aprovado
             </span>
           ) : (
-            <span className="rounded-full border border-dashed border-(--pulso-border) px-2 py-0.5 text-(--pulso-text-subtle)">aguardando aprovação</span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-(--pulso-warn)/40 px-2 py-0.5 text-(--pulso-warn)"><Hourglass className="h-3 w-3" /> aguardando</span>
           )}
         </div>
         <Link href={`/bastidores/${a.slug}`} className="text-base font-semibold leading-snug text-(--pulso-text) hover:text-(--pulso-action)">
           {a.titulo}
         </Link>
-        <p className="mt-1 line-clamp-2 text-sm text-(--pulso-text-muted)">{a.resumo}</p>
+        <p className="mt-1 line-clamp-2 text-xs text-(--pulso-text-muted)">{a.resumo}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {a.status === 'rascunho' ? (
             <button type="button" disabled={ocupado} onClick={() => mudarStatus('aprovado')}
@@ -170,7 +174,7 @@ function CardAssunto({ a }: { a: Assunto & { capa: string | null } }) {
           )}
           <Link href={`/bastidores/${a.slug}`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-(--pulso-border) px-3 py-1.5 text-xs text-(--pulso-text-muted) hover:text-(--pulso-text)">
-            Ver detalhes <ArrowRight className="h-3.5 w-3.5" />
+            Abrir <ArrowRight className="h-3.5 w-3.5" />
           </Link>
           {erro && <span className="text-xs text-(--pulso-danger)">Não salvou: {erro}</span>}
         </div>
