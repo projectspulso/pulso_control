@@ -651,3 +651,7 @@ O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. 
 - **Assets dos Longos:** seletor de episódio, números (arquivos, cortes, capas, stories), abas por tipo e cortes separados por canal (versão base, Cortes, Bastidores, DIGIAI Cortes). Os vídeos aparecem com prévia.
 - **Bastidores:** números no topo (aguardando, aprovados, já em episódio, total), abas de situação e cards em 2 colunas, mais compactos.
 - **Analytics dos Longos:** os textos explicativos dos cards ficam recolhidos em "como ler". Subtítulo e aviso de topo mais curtos.
+
+## 12/11/2026 — Kit de mídia mais limpo
+- **Tela de trabalho (/analytics/kit):** números no topo (links ativos, aberturas, envios, data da prévia) e 3 abas: Prévia, Novo envio e Envios. Ao congelar um envio, a tela vai direto para Envios. Os textos ficaram mais curtos.
+- **Visão do patrocinador (/kit/<token>):** não mudou.
