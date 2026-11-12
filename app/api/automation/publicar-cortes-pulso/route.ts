@@ -23,15 +23,16 @@ export async function POST(request: NextRequest) {
   let publicar = false
   try { publicar = JSON.parse(gate?.valor || '{}').publicar === true } catch { publicar = false }
 
-  // Facebook (teste do dono, 10/11): vai AGENDADO pela API com antecedência e quem solta é o agendador da Meta
+  // Facebook: agenda TRAVADA (dono, 12/11). A peça sobe já agendada na Meta assim que entra na agenda (até 28
+  // dias à frente; a Meta aceita de 10 min a ~30 dias) e o Planner do Business Suite mostra tudo. Até 4 por rodada.
   if (publicar) {
     const { data: fb } = await supabase.schema('pulso_content').from('corte_publicacoes')
       .select('id, destino, rede, video, titulo, legenda, hashtags, agendado_para')
       .eq('modo', 'auto').eq('status', 'planejado').eq('rede', 'facebook')
       .gte('agendado_para', new Date(Date.now() + 25 * 60_000).toISOString())
-      .lte('agendado_para', new Date(Date.now() + 26 * 3600_000).toISOString()).order('agendado_para').limit(1)
+      .lte('agendado_para', new Date(Date.now() + 28 * 86_400_000).toISOString()).order('agendado_para').limit(4)
     // não devolve aqui: a mesma rodada segue para o YouTube/Instagram vencido, senão o FB atrasaria os outros
-    if (fb?.length) await agendaFacebook(supabase, fb[0])
+    for (const p of fb || []) await agendaFacebook(supabase, p)
 
     // depois que o reel agendado entra no ar, a Página comenta o link do episódio completo (dono, 11/11):
     // link em legenda de Reel não é garantido clicável; em comentário é

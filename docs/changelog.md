@@ -625,3 +625,10 @@ O dono decidiu ter canais de cortes do próprio PULSO, e o PULSO publica neles. 
 
 ## 12/11/2026 — ficha do episódio: onde cada corte saiu e quanto fez
 - **Nova seção em /longos/[codigo]:** para cada corte, as publicações em cada canal (Cortes e Bastidores PULSO Histórias, Bastidores DIGIAI Cortes, DIGIAI) e em cada rede. Mostra o estado (na agenda, agendado, no ar, erro, sem conta), a data, o link e as views da última leitura da coleta dos Longos, com o total do corte.
+
+## 12/11/2026 — regra do dono: todo corte em todos os canais + agenda travada
+- **Regra (dono, "lembrar sempre"):** cada corte do longo sai nos **4 canais**: Cortes e Bastidores PULSO Histórias, mais os 2 da DIGIAI. Também: o máximo de cortes por vídeo, e a agenda travada.
+- **`cortes_destinos`:** `pulso_cortes` e `pulso_bastidores` com todos os tipos (gancho, história, técnico, lição) e o TikTok como `manual` até o app ser aprovado.
+- **Planner:** os canais do PULSO recebem todos os cortes. Cada canal começa num ponto diferente da lista, e o mesmo corte nunca cai no mesmo dia em dois canais. O TikTok manual leva a legenda com as hashtags. O link do episódio vai completo (https://youtu.be/…).
+- **E01:** os 6 cortes que faltavam foram gerados e agendados (24 peças). Cortes ganhou os cortes 3, 4 e 6 em 16, 17 e 18/11, às 13h; Bastidores ganhou os cortes 1, 2 e 5 em 14, 16 e 17/11, às 17h.
+- **Facebook com agenda travada:** sobe já agendado na Meta até 28 dias à frente (era 26 h), até 4 por rodada. O Planner do Business Suite mostra tudo.

@@ -15,7 +15,7 @@ do longo. Replanejar apaga só o que ainda não saiu (planejado/aguarda_conta) e
 Uso: python D:/tmp/planejar_cortes.py T01E01 --estreia 2026-11-12 [--sem-video]
      (episódio já publicado: --estreia é o dia do 1º corte; não há véspera e a data real fica)
 """
-import argparse, json, os, sys
+import argparse, json, os, re, sys
 from datetime import date, datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -161,28 +161,42 @@ def planejar(codigo, estreia, com_video=True):
                                "hashtags": [dd["hashtag_fixa"]] + dd.get("hashtags", []), "status": "planejado"})
             print(f"DIGIAI {pc['rede']:9s} {dia.strftime('%a %d/%m')} {pc['hora']}  {pc['tipo']} do corte {n}")
 
-    # canais de cortes DO PULSO (dono 10/11): o PULSO publica (modo=auto, fora da view do MKT, que só lê job), versão
-    # própria por canal e nunca no mesmo dia em que aquele corte sai no canal de cortes da DIGIAI
-    for dp in [x for x in cfg["destinos"] if x.get("publica") == "pulso"]:
+    # canais de cortes DO PULSO (dono 10/11; regra de 12/11: TODO corte em TODOS os canais). O PULSO publica
+    # (modo=auto; o TikTok é "manual" até o app ser aprovado), versão própria por canal, e o mesmo corte nunca
+    # sai no mesmo dia em dois canais: cada canal começa num ponto diferente da lista de cortes
+    ocupado = {}
+    for c, dia, _ in agenda:
+        ocupado.setdefault(c["numero"], set()).add(dia)
+    m = re.search(r"(?:v=|youtu\.be/|shorts/)([A-Za-z0-9_-]{11})", link_ep or "")
+    link_curto = f"https://youtu.be/{m.group(1)}" if m else None
+    canais_pulso = [x for x in cfg["destinos"] if x.get("publica") == "pulso"]
+    for k, dp in enumerate(canais_pulso):
         arquivos = {}
         if com_video:
             for f in cortes_longo.gerar(codigo, None, dp["id"]):
                 arquivos[f["numero"]] = ficha_longo.sobe(f"{pasta}/cortes/{dp['id']}/{f['arquivo']}", f"episodios/{codigo}/cortes/{dp['id']}/{f['arquivo']}", "video/mp4")
         tdp = (json.load(open(td, encoding="utf-8")) if os.path.exists(td) else {}).get(dp["id"], {})
+        lista = [c for c in cortes if c.get("tipo") in dp["tipos"]]
+        giro = (k * len(lista)) // max(1, len(canais_pulso))
+        lista = lista[giro:] + lista[:giro]
         dia = D
-        for c in [c for c in cortes if c.get("tipo") in dp["tipos"]]:
-            dia = proximo_util(dia)
-            while dia == dia_no_canal.get(c["numero"]):
-                dia = proximo_util(dia + timedelta(days=1))
+        for c in lista:
             n = c["numero"]
+            dia = proximo_util(dia)
+            while dia in ocupado.get(n, set()):
+                dia = proximo_util(dia + timedelta(days=1))
+            ocupado.setdefault(n, set()).add(dia)
             titulo, legenda, tags = textos_da_peca(principal, dp, tdp, tbase, n)
-            for rede in dp["redes"]:
+            if link_curto:
+                legenda = legenda.replace(f"Episódio completo: {principal['url']}", f"Episódio completo no PULSO Histórias: {link_curto}")
+            for rede, quem in dp["redes"].items():
                 arq = arquivos.get(n)
-                linhas.append({"corte_id": c["id"], "destino": dp["id"], "rede": rede, "modo": "auto", "tipo": "corte",
+                manual = quem == "manual"
+                linhas.append({"corte_id": c["id"], "destino": dp["id"], "rede": rede, "modo": "manual" if manual else "auto", "tipo": "corte",
                                "agendado_para": quando(dia, dp["cadencia"].get("hora", "13:00")), "video": arq,
-                               "titulo": titulo or c["titulo"], "legenda": legenda, "hashtags": tags,
-                               "video_url_assinada": ficha_longo.assina(arq) if arq else None, "url_expira": expira if arq else None,
-                               "status": "planejado"})
+                               "titulo": titulo or c["titulo"], "legenda": f"{legenda}\n\n{' '.join(tags)}".strip() if manual else legenda,
+                               "hashtags": tags, "video_url_assinada": ficha_longo.assina(arq) if arq else None,
+                               "url_expira": expira if arq else None, "status": "planejado"})
             print(f"PULSO {dp['id']:16s} {dia.strftime('%a %d/%m')} {dp['cadencia'].get('hora')}  corte {n} · {c['titulo']}")
             dia += timedelta(days=1)
 
