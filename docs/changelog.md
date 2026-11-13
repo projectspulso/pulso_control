@@ -2,6 +2,12 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplificado.
 
+
+## 2026-11-12 — De onde vêm as views (096)
+- Coleta dos Longos grava o tipo de tráfego e o detalhe (site externo, vídeo que levou) do episódio e dos cortes nos 2 canais do PULSO no YouTube (`origens_detalhe`, migration 096).
+- Alerta na coleta quando um corte da DIGIAI fora do YouTube passa 2 dias sem a leitura do digiai_mkt.
+- Analytics dos Longos: card "De onde vêm as views dos cortes" na aba Cortes e "Quem trouxe" no Funil.
+
 ## 2026-10-31
 
 - #242 saiu às 19h05 com render de 24/09 (mascote grande de ~8s até o fim, clipes fora do assunto e com pessoas): vídeo errado privado no YouTube e arquivado no Instagram; clipes refeitos com o filtro, remontado no montador atual (`chineses_piso_escala_242_v2.mp4`, CTA aos 82,9 s) e republicado às 19h58. Registros antigos guardados em `ideias.metadata.publicacoes_erradas_31_10`.

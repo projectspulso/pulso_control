@@ -30,6 +30,24 @@ const CANAL: Record<string, string> = {
   pulso_cortes: 'Cortes PULSO Histórias', pulso_bastidores: 'Bastidores PULSO Histórias',
 }
 
+type LeituraOrigem = { canal: string; rede: string; tipo: string; post_id: string | null; origens: Record<string, number> | null; origens_detalhe: Record<string, Record<string, number>> | null }
+const SITE = (d: string) => d.replace(/^www\./, '').replace(/^m\./, '').replace(/^l\./, '').replace(/^lm\./, '')
+function deOnde(ls: LeituraOrigem[], todas: LeituraOrigem[]) {
+  const tipos: Record<string, number> = {}
+  const quem: Record<string, number> = {}
+  const porVideo = new Map(todas.filter((l) => l.rede === 'youtube' && l.post_id).map((l) => [l.post_id as string, l]))
+  for (const l of ls) {
+    for (const [k, v] of Object.entries(l.origens || {})) tipos[k] = (tipos[k] || 0) + v
+    for (const [t, det] of Object.entries(l.origens_detalhe || {})) for (const [d, v] of Object.entries(det)) {
+      const vid = porVideo.get(d)
+      const nome = t === 'EXT_URL' ? SITE(d) : vid ? `${vid.tipo === 'longo' ? 'o episódio' : 'corte'} · ${CANAL[vid.canal] || vid.canal}` : `${ORIGEM[t] || t}: ${d}`
+      quem[nome] = (quem[nome] || 0) + v
+    }
+  }
+  const lista = (o: Record<string, number>, rot?: Record<string, string>) => Object.entries(o).map(([k, v]) => ({ nome: rot?.[k] || k, valor: v })).sort((a, b) => b.valor - a.valor).slice(0, 10)
+  return { tipos: lista(tipos, ORIGEM), quem: lista(quem) }
+}
+
 const ABAS = [
   { id: 'geral', label: 'Visão geral' }, { id: 'episodios', label: 'Episódios' }, { id: 'cortes', label: 'Cortes' },
   { id: 'qualidade', label: 'Retenção' }, { id: 'funil', label: 'Funil' }, { id: 'audiencia', label: 'Audiência' },
@@ -316,6 +334,15 @@ export default function LongosAnalyticsPage() {
                 <Kpi rotulo="Com leitura" valor={String(c.pecasLidas.length)} sub="coleta diária" />
                 <Kpi rotulo="Levados ao episódio" valor={c.cliques ? n(c.cliques) : '—'} sub="quando a rede informa" />
               </div>
+              {(() => {
+                const o = deOnde(c.ult.filter((l) => l.tipo !== 'longo' && l.rede === 'youtube'), c.ult)
+                return (
+                  <Card titulo="De onde vêm as views dos cortes" sub="YouTube Analytics dos canais do PULSO"
+                    rodape="Só o YouTube informa a origem. Instagram, Facebook e TikTok não abrem esse dado pela API. Os cortes do canal da DIGIAI entram quando o MKT mandar a origem junto com as views.">
+                    {o.tipos.length ? <Barras dados={o.tipos} rotulo="views" /> : <Vazio>O YouTube leva cerca de 48 h para mostrar a origem de um vídeo novo.</Vazio>}
+                  </Card>
+                )
+              })()}
               <Card titulo="Por canal de cortes" sub="Cortes PULSO Histórias, Bastidores PULSO Histórias e o canal de cortes da DIGIAI">
                 {c.porCanalCortes.length ? <Barras dados={c.porCanalCortes} rotulo="views" /> : <Vazio>Aparece quando os cortes publicados tiverem leitura.</Vazio>}
               </Card>
@@ -423,12 +450,20 @@ export default function LongosAnalyticsPage() {
                 <Kpi rotulo="Levados ao episódio" valor={c.cliques ? n(c.cliques) : '—'} sub={c.cliques && c.viewsPecas ? `${((c.cliques / c.viewsPecas) * 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} a cada mil views` : undefined} />
                 <Kpi rotulo="Views do longo" valor={c.viewsLongo ? n(c.viewsLongo) : '—'} />
               </div>
-              <h3 className="mt-5 text-xs font-semibold text-(--pulso-text)">De onde vieram as views do episódio</h3>
               {(() => {
-                const o: Record<string, number> = {}
-                for (const l of c.longos) for (const [k, v] of Object.entries(l.origens || {})) o[k] = (o[k] || 0) + v
-                const dados = Object.entries(o).map(([k, v]) => ({ nome: ORIGEM[k] || k, valor: v })).sort((x, y) => y.valor - x.valor)
-                return dados.length ? <Barras dados={dados} rotulo="views" /> : <div className="mt-2"><Vazio>O YouTube Analytics leva cerca de 48 h para mostrar as origens de um vídeo novo.</Vazio></div>
+                const o = deOnde(c.longos, c.ult)
+                return (
+                  <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                    <div>
+                      <h3 className="text-xs font-semibold text-(--pulso-text)">De onde vieram as views do episódio</h3>
+                      {o.tipos.length ? <Barras dados={o.tipos} rotulo="views" /> : <div className="mt-2"><Vazio>O YouTube Analytics leva cerca de 48 h para mostrar as origens de um vídeo novo.</Vazio></div>}
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-semibold text-(--pulso-text)">Quem trouxe</h3>
+                      {o.quem.length ? <Barras dados={o.quem} rotulo="views" /> : <div className="mt-2"><Vazio>Ainda nenhum site ou corte trouxe gente ao episódio.</Vazio></div>}
+                    </div>
+                  </div>
+                )
               })()}
             </Card>
           )}
