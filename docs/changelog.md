@@ -6,6 +6,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 
 
+## 2026-11-13 — TikTok entra na coleta dos cortes
+
+- `coletar-longos` lê o TikTok dos canais Cortes e Bastidores PULSO Histórias: troca o publish_id do rascunho pelo id do post (status/fetch), lê views/curtidas/comentários/partilhas (video/query) e seguidores (user/info) com o token de cada conta. Antes só YouTube, Instagram e Facebook. `tokenTikTokConta` extraído de `tiktok-rascunho-cortes.ts`.
+
 ## 2026-11-13 — Longo sobe agendado no YouTube (motor/publicar_longo.py)
 - O episódio completo sobe no PULSO Histórias já agendado: privado com hora de estreia, título, descrição com capítulos, tags, pt-BR, conteúdo sintético declarado, capa, legenda .srt e a playlist "Bastidores do PULSO" (criada no 1º envio). Tela final e cards continuam no Studio, porque a API não faz.
 - Ensaio por padrão; `--enviar` sobe de verdade. Recusa episódio já publicado, episódio sem montagem, capa ou textos, e estreia com menos de 1 h de antecedência.

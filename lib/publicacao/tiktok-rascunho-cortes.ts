@@ -7,7 +7,7 @@ import { credenciaisTikTok } from '@/lib/publicacao/tiktok-chave'
  * Devolve null quando a conta ainda não foi autorizada: a peça fica para o dono postar como antes.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function enviaRascunhoTikTok(supabase: any, conta: string, video: Buffer): Promise<string | null> {
+export async function tokenTikTokConta(supabase: any, conta: string): Promise<string | null> {
   const chave = `tiktok_oauth:${conta}`
   const { data: cfg } = await supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', chave).maybeSingle()
   if (!cfg?.valor) return null
@@ -23,9 +23,16 @@ export async function enviaRascunhoTikTok(supabase: any, conta: string, video: B
     oauth = { ...oauth, access_token: r.access_token, refresh_token: r.refresh_token, expires_at: Date.now() + (r.expires_in || 86400) * 1000 }
     await supabase.schema('pulso_core').from('configuracoes').update({ valor: JSON.stringify(oauth) }).eq('chave', chave)
   }
+  return oauth.access_token as string
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function enviaRascunhoTikTok(supabase: any, conta: string, video: Buffer): Promise<string | null> {
+  const token = await tokenTikTokConta(supabase, conta)
+  if (!token) return null
   const init = await fetch('https://open.tiktokapis.com/v2/post/publish/inbox/video/init/', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${oauth.access_token}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ source_info: { source: 'FILE_UPLOAD', video_size: video.length, chunk_size: video.length, total_chunk_count: 1 } }),
   }).then((x) => x.json())
   const upload = init?.data?.upload_url

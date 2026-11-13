@@ -3,6 +3,7 @@ import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { getYoutubeAccessToken } from '@/lib/youtube/oauth'
 import { fetchYoutubeRetention } from '@/lib/youtube/retention'
+import { tokenTikTokConta } from '@/lib/publicacao/tiktok-rascunho-cortes'
 
 /**
  * Coleta diária dos Longos (091, 06/11/2026). O Pulso lê pela API pública do YouTube o que é dele ler:
@@ -19,6 +20,8 @@ export const maxDuration = 300
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
 const CANAIS_PULSO = ['pulso_cortes', 'pulso_bastidores']
+const CONTA_TIKTOK: Record<string, string> = { pulso_cortes: 'cortes', pulso_bastidores: 'bastidores' }
+const TT = 'https://open.tiktokapis.com/v2'
 const canalDe = (destino: string) => (destino === 'digiai' ? 'digiai' : CANAIS_PULSO.includes(destino) ? destino : 'cortes')
 
 const idDoYoutube = (s: string | null | undefined) => {
@@ -155,7 +158,69 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // seguidores: principal e canais de cortes no YouTube; Instagram e Facebook dos canais do PULSO
+  // TikTok dos canais do PULSO (13/11): o corte sai como rascunho e o dono publica no celular. Primeiro troca o
+  // publish_id do rascunho pelo id do post (status/fetch), depois lê views, curtidas, comentários e partilhas
+  // (video/query) com o token de cada conta. O id tem 19 dígitos: lê como texto, nunca .json() direto.
+  let lidasTikTok = 0
+  const ttTokens = new Map<string, string | null>()
+  const ttToken = async (destino: string) => {
+    const conta = CONTA_TIKTOK[destino]
+    if (!ttTokens.has(conta)) ttTokens.set(conta, await tokenTikTokConta(supabase, conta).catch((e) => { falhas.push(`TikTok ${conta}: ${(e as Error).message}`); return null }))
+    return ttTokens.get(conta) || null
+  }
+  const ttJson = (t: string) => JSON.parse(t.replace(/"id"\s*:\s*(\d{15,})/g, '"id":"$1"'))
+  const { data: rasc } = await supabase.schema('pulso_content').from('corte_publicacoes')
+    .select('id, destino, motivo, publicado_em').eq('rede', 'tiktok').in('destino', CANAIS_PULSO).in('status', ['agendado', 'publicado'])
+    .is('post_id', null).like('motivo', 'rascunho_tiktok:%')
+  for (const p of rasc || []) {
+    const tk = await ttToken(p.destino)
+    if (!tk) continue
+    const bruto = await fetch(`${TT}/post/publish/status/fetch/`, {
+      method: 'POST', headers: { Authorization: `Bearer ${tk}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ publish_id: p.motivo.slice('rascunho_tiktok:'.length) }),
+    }).then((x) => x.text()).catch(() => '')
+    const id = bruto.match(/"publ[a-z]*_available_post_id"\s*:\s*\[?\s*"?(\d+)"?/)?.[1]
+    if (!id) continue
+    await supabase.schema('pulso_content').from('corte_publicacoes')
+      .update({ post_id: id, status: 'publicado', publicado_em: p.publicado_em || new Date().toISOString() }).eq('id', p.id)
+  }
+  const { data: tts } = await supabase.schema('pulso_content').from('corte_publicacoes')
+    .select('id, tipo, destino, post_id, episodio_cortes!inner(episodio_id)')
+    .eq('status', 'publicado').eq('rede', 'tiktok').in('destino', CANAIS_PULSO).not('post_id', 'is', null)
+  for (const destino of CANAIS_PULSO) {
+    const pecas = (tts || []).filter((p: { destino: string }) => p.destino === destino)
+    if (!pecas.length) continue
+    const tk = await ttToken(destino)
+    if (!tk) { falhas.push(`TikTok ${destino}: conta sem autorização`); continue }
+    for (let i = 0; i < pecas.length; i += 20) {
+      const lote = pecas.slice(i, i + 20)
+      try {
+        const t = await fetch(`${TT}/video/query/?fields=id,view_count,like_count,comment_count,share_count`, {
+          method: 'POST', headers: { Authorization: `Bearer ${tk}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filters: { video_ids: lote.map((p: { post_id: string }) => p.post_id) } }),
+        }).then((x) => x.text())
+        const j = ttJson(t)
+        if (j?.error?.code && j.error.code !== 'ok') throw new Error(`${j.error.code}: ${j.error.message}`)
+        const vids: Array<{ id: string; view_count?: number; like_count?: number; comment_count?: number; share_count?: number }> = j?.data?.videos || []
+        for (const p of lote) {
+          const v = vids.find((x) => String(x.id) === p.post_id)
+          if (!v) { falhas.push(`tiktok ${p.post_id}: não voltou na consulta`); continue }
+          await supabase.schema('pulso_analytics').from('leituras_longos').delete().eq('peca_id', p.id).eq('rede', 'tiktok').eq('data_ref', data_ref)
+          const { error: w } = await supabase.schema('pulso_analytics').from('leituras_longos').insert({
+            episodio_id: p.episodio_cortes.episodio_id, peca_id: p.id, canal: p.destino, rede: 'tiktok', tipo: p.tipo, post_id: p.post_id,
+            data_ref, fonte: 'pulso', coletado_em: new Date().toISOString(),
+            views: Number(v.view_count || 0), likes: Number(v.like_count || 0), comentarios: Number(v.comment_count || 0), compartilhamentos: Number(v.share_count || 0),
+          })
+          if (w) falhas.push(`tiktok ${p.post_id}: ${w.message}`)
+          else { gravadas += 1; lidasTikTok += 1 }
+        }
+      } catch (e) {
+        falhas.push(`TikTok ${destino}: ${(e as Error).message}`)
+      }
+    }
+  }
+
+  // seguidores: principal e canais de cortes no YouTube; Instagram, Facebook e TikTok dos canais do PULSO
   let inscritos = 0
   const grava = async (canal: string, rede: string, seguidores: number) => {
     const { error } = await supabase.schema('pulso_analytics').from('seguidores_longos')
@@ -164,7 +229,13 @@ export async function POST(request: NextRequest) {
     else inscritos += 1
   }
   for (const d of destinos.filter((x) => CANAIS_PULSO.includes(x.id))) {
-    if (!metaToken) break
+    const tk = await ttToken(d.id)
+    if (tk) {
+      const r = await fetch(`${TT}/user/info/?fields=follower_count`, { headers: { Authorization: `Bearer ${tk}` } }).then((x) => x.json()).catch(() => ({}))
+      if (r?.data?.user?.follower_count != null) await grava(d.id, 'tiktok', Number(r.data.user.follower_count))
+      else falhas.push(`seguidores ${d.id}/tiktok: ${r?.error?.message || 'sem leitura'}`)
+    }
+    if (!metaToken) continue
     if (d.instagram_id) {
       const r = await fetch(`${GRAPH}/${d.instagram_id}?fields=followers_count&access_token=${metaToken}`).then((x) => x.json()).catch(() => ({}))
       if (r?.followers_count != null) await grava(d.id, 'instagram', Number(r.followers_count))
@@ -213,7 +284,7 @@ export async function POST(request: NextRequest) {
   }
 
   const status = !alvos.length && !inscritos ? 'ocioso' : falhas.length ? 'parcial' : 'sucesso'
-  return registra(supabase, status, { data_ref, alvos: alvos.length, lidas_instagram_facebook: lidasMeta, gravadas, canais_lidos: inscritos, falhas }, 200)
+  return registra(supabase, status, { data_ref, alvos: alvos.length, lidas_instagram_facebook: lidasMeta, lidas_tiktok: lidasTikTok, gravadas, canais_lidos: inscritos, falhas }, 200)
 }
 
 // tipos de tráfego em que o YouTube informa o detalhe (o site externo, o vídeo de origem, a busca)
