@@ -6,6 +6,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 
 
+## 2026-11-13 — Canal 2 de cortes da DIGIAI e analytics canal × rede
+
+- Migração 097: destino `bastidores2` (@bastidoresdigiai) → canal `cortes2` nas leituras/seguidores; `estado_peca_bastidores` ganha `p_quando` (data real do robô do MKT); a ficha do longo sai da view do MKT quando o Pulso já subiu (evita subir 2×).
+- `planejar_cortes.py --destino X`: planeja só um canal novo sem tocar nos outros; destinos `todo_corte` recebem todo corte em `modo=job`. E01: 24 peças do canal 2 (16–21/11, 15h).
+- Analytics, aba Cortes: tabela Canal × rede (2 canais PULSO + 2 DIGIAI).
+
 ## 2026-11-13 — TikTok entra na coleta dos cortes
 
 - `coletar-longos` lê o TikTok dos canais Cortes e Bastidores PULSO Histórias: troca o publish_id do rascunho pelo id do post (status/fetch), lê views/curtidas/comentários/partilhas (video/query) e seguidores (user/info) com o token de cada conta. Antes só YouTube, Instagram e Facebook. `tokenTikTokConta` extraído de `tiktok-rascunho-cortes.ts`.

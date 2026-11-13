@@ -16,7 +16,7 @@ Uso: python D:/tmp/planejar_cortes.py T01E01 --estreia 2026-11-12 [--sem-video]
      (episódio já publicado: --estreia é o dia do 1º corte; não há véspera e a data real fica)
 """
 import argparse, json, os, re, sys
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pulso_guard as g  # noqa: E402
@@ -57,7 +57,7 @@ def textos_da_peca(principal, dest, tdest, tbase, n):
     return titulo, legenda, tags
 
 
-def planejar(codigo, estreia, com_video=True):
+def planejar(codigo, estreia, com_video=True, so_destino=None):
     ep = g._db("GET", f"/rest/v1/episodios?codigo=eq.{codigo}&select=id,numero,metadata", schema="pulso_content")[0]
     nn = int(ep["numero"])
     pasta = f"{ONEDRIVE}/bastidores_ep{nn:02d}"
@@ -76,18 +76,21 @@ def planejar(codigo, estreia, com_video=True):
     D = date.fromisoformat(estreia)
 
     ids = ",".join(c["id"] for c in cortes)
-    g._db("DELETE", f"/rest/v1/corte_publicacoes?corte_id=in.({ids})&status=in.(planejado,aguarda_conta)", schema="pulso_content")
+    filtro_destino = f"&destino=eq.{so_destino}" if so_destino else ""
+    g._db("DELETE", f"/rest/v1/corte_publicacoes?corte_id=in.({ids})&status=in.(planejado,aguarda_conta){filtro_destino}", schema="pulso_content")
 
     elegiveis = [c for c in cortes if c.get("tipo") in dest["tipos"]]
     gancho = next((c for c in elegiveis if c["tipo"] == "gancho"), None)
     resto = [c for c in elegiveis if c is not gancho]
     agenda = []  # (corte, dia, hora do corte)
+    if so_destino:  # só um canal novo (13/11): os outros ficam como estão
+        gancho, resto = None, []
     # episódio já no ar (E01, 06/11): sem véspera nem noite de estreia; a agenda começa em D, pelo gancho,
     # e a data real da publicação não é tocada
     ja_no_ar = ((ep.get("metadata") or {}).get("publicacao") or {}).get("estado") == "publicado"
     if ja_no_ar:
         gancho, resto = None, ([gancho] if gancho else []) + resto
-    if gancho:
+    if gancho and not so_destino:
         v = D - timedelta(days=1)
         while v.isoweekday() == 7:
             v -= timedelta(days=1)
@@ -99,7 +102,7 @@ def planejar(codigo, estreia, com_video=True):
         d += timedelta(days=1)
 
     video, story = {}, {}
-    if com_video:
+    if com_video and not so_destino:
         for f in cortes_longo.gerar(codigo, None, dest["id"]):
             video[f["numero"]] = ficha_longo.sobe(f"{pasta}/cortes/{dest['id']}/{f['arquivo']}", f"episodios/{codigo}/cortes/{dest['id']}/{f['arquivo']}", "video/mp4")
         for n, s in stories_longo.gerar(codigo).items():
@@ -130,7 +133,7 @@ def planejar(codigo, estreia, com_video=True):
     dia_no_canal = {c["numero"]: dia for c, dia, _ in agenda}
     por_numero = {c["numero"]: c for c in cortes}
     for dd in cfg["destinos"][1:]:
-        if dd["id"] != "digiai":
+        if dd["id"] != "digiai" or so_destino:
             continue
         pecas = digiai_pecas.gerar(codigo) if com_video else {}
         for pc in dd.get("pecas", []):
@@ -167,9 +170,18 @@ def planejar(codigo, estreia, com_video=True):
     ocupado = {}
     for c, dia, _ in agenda:
         ocupado.setdefault(c["numero"], set()).add(dia)
+    if so_destino:  # o que já está marcado nos outros canais também ocupa o dia
+        num = {c["id"]: c["numero"] for c in cortes}
+        for x in g._db("GET", f"/rest/v1/corte_publicacoes?corte_id=in.({ids})&destino=neq.{so_destino}&tipo=eq.corte&select=corte_id,agendado_para", schema="pulso_content"):
+            ocupado.setdefault(num[x["corte_id"]], set()).add(datetime.fromisoformat(x["agendado_para"]).astimezone(timezone(timedelta(hours=-3))).date())
     m = re.search(r"(?:v=|youtu\.be/|shorts/)([A-Za-z0-9_-]{11})", link_ep or "")
     link_curto = f"https://youtu.be/{m.group(1)}" if m else None
-    canais_pulso = [x for x in cfg["destinos"] if x.get("publica") == "pulso"]
+    # todo_corte (13/11): o canal 2 da DIGIAI recebe todo corte como os do PULSO, mas quem publica é o robô do MKT (modo job)
+    canais_pulso = [x for x in cfg["destinos"] if x.get("publica") == "pulso" or x.get("todo_corte")]
+    if so_destino:
+        canais_pulso = [x for x in canais_pulso if x["id"] == so_destino]
+        if not canais_pulso:
+            raise SystemExit(f"{so_destino} não é canal de todo corte")
     for k, dp in enumerate(canais_pulso):
         arquivos = {}
         if com_video:
@@ -193,12 +205,13 @@ def planejar(codigo, estreia, com_video=True):
                 arq = arquivos.get(n)
                 # "rascunho" (12/11): o app manda à caixa do TikTok e o dono finaliza; legenda leva as hashtags como no manual
                 manual = quem in ("manual", "rascunho")
-                linhas.append({"corte_id": c["id"], "destino": dp["id"], "rede": rede, "modo": quem if manual else "auto", "tipo": "corte",
+                modo = "job" if quem == "job" else quem if manual else "auto"
+                linhas.append({"corte_id": c["id"], "destino": dp["id"], "rede": rede, "modo": modo, "tipo": "corte",
                                "agendado_para": quando(dia, dp["cadencia"].get("hora", "13:00")), "video": arq,
                                "titulo": titulo or c["titulo"], "legenda": f"{legenda}\n\n{' '.join(tags)}".strip() if manual else legenda,
                                "hashtags": tags, "video_url_assinada": ficha_longo.assina(arq) if arq else None,
                                "url_expira": expira if arq else None, "status": "planejado"})
-            print(f"PULSO {dp['id']:16s} {dia.strftime('%a %d/%m')} {dp['cadencia'].get('hora')}  corte {n} · {c['titulo']}")
+            print(f"{dp['id']:20s} {dia.strftime('%a %d/%m')} {dp['cadencia'].get('hora')}  corte {n} · {c['titulo']}")
             dia += timedelta(days=1)
 
     if linhas:
@@ -211,7 +224,7 @@ def planejar(codigo, estreia, com_video=True):
     # a ficha do longo entra na view quando o dono aprovar a montagem (pronto_publicacao); aqui vai a data
     meta = dict(ep.get("metadata") or {})
     pub = dict(meta.get("publicacao") or {})
-    if ja_no_ar:
+    if ja_no_ar or so_destino:
         print(f"{len(linhas)} peças planejadas a partir de {D} · longo já no ar desde {pub.get('data')}")
         return linhas
     pub["data"] = quando(D, dest["cadencia"].get("estreia_hora", "18:00"))
@@ -226,5 +239,6 @@ if __name__ == "__main__":
     ap.add_argument("codigo")
     ap.add_argument("--estreia", required=True, help="dia em que o longo vai ao ar no principal (AAAA-MM-DD)")
     ap.add_argument("--sem-video", action="store_true", help="só a agenda, sem gerar e subir as versões")
+    ap.add_argument("--destino", help="planeja só este canal (canal novo num episódio já planejado); os outros não são tocados")
     a = ap.parse_args()
-    planejar(a.codigo, a.estreia, not a.sem_video)
+    planejar(a.codigo, a.estreia, not a.sem_video, a.destino)

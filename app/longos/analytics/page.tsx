@@ -26,7 +26,7 @@ const ORIGEM: Record<string, string> = {
   HASHTAGS: 'Hashtags', ANNOTATION: 'Cards',
 }
 const CANAL: Record<string, string> = {
-  principal: 'PULSO Histórias (o longo)', cortes: 'Bastidores DIGIAI Cortes', digiai: 'DIGIAI',
+  principal: 'PULSO Histórias (o longo)', cortes: 'Bastidores DIGIAI Cortes', cortes2: 'Bastidores DIGIAI', digiai: 'DIGIAI',
   pulso_cortes: 'Cortes PULSO Histórias', pulso_bastidores: 'Bastidores PULSO Histórias',
 }
 
@@ -343,9 +343,48 @@ export default function LongosAnalyticsPage() {
                   </Card>
                 )
               })()}
-              <Card titulo="Por canal de cortes" sub="Cortes PULSO Histórias, Bastidores PULSO Histórias e o canal de cortes da DIGIAI">
+              <Card titulo="Por canal de cortes" sub="os 2 canais do PULSO e os 2 da DIGIAI">
                 {c.porCanalCortes.length ? <Barras dados={c.porCanalCortes} rotulo="views" /> : <Vazio>Aparece quando os cortes publicados tiverem leitura.</Vazio>}
               </Card>
+              {(() => {
+                const canais = ['pulso_cortes', 'pulso_bastidores', 'cortes', 'cortes2']
+                const redes = ['youtube', 'tiktok', 'instagram', 'facebook']
+                const cel = (cn: string, r: string) => {
+                  const ls = c.pecasLidas.filter((l) => l.canal === cn && l.rede === r)
+                  return ls.length ? { views: ls.reduce((s, l) => s + l.views, 0), n: ls.length } : null
+                }
+                return (
+                  <Card titulo="Canal × rede" sub="views da última leitura de cada corte, separadas por canal e por rede"
+                    rodape="Canais do PULSO: o Pulso lê. Canais da DIGIAI: o MKT lê e manda pela leitura_peca_bastidores. Traço = ainda nada publicado ali.">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[560px] text-sm">
+                        <thead><tr className="text-left text-xs text-(--pulso-text-muted)">
+                          <th className="py-2 pr-3 font-medium">Canal</th>
+                          {redes.map((r) => <th key={r} className="pr-3 text-right font-medium">{REDE[r]}</th>)}
+                          <th className="text-right font-medium">Total</th>
+                        </tr></thead>
+                        <tbody className="divide-y divide-(--pulso-border)">
+                          {canais.map((cn) => {
+                            const linha = redes.map((r) => cel(cn, r))
+                            const total = linha.reduce((s, x) => s + (x?.views || 0), 0)
+                            return (
+                              <tr key={cn} className="text-(--pulso-text)">
+                                <td className="py-2 pr-3">{CANAL[cn] || cn}</td>
+                                {linha.map((x, i) => (
+                                  <td key={redes[i]} className="pr-3 text-right tabular-nums">
+                                    {x ? <>{n(x.views)}<span className="ml-1 text-xs text-(--pulso-text-muted)">· {x.n}</span></> : <span className="text-(--pulso-text-muted)">—</span>}
+                                  </td>
+                                ))}
+                                <td className="text-right font-semibold tabular-nums">{total ? n(total) : '—'}</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                )
+              })()}
               <div className="grid gap-4 lg:grid-cols-2">
                 <Card titulo="Por tipo de corte" sub="gancho, história, lição e técnico: views somadas" rodape="O tipo vem da marcação no roteiro (CORTE). É o dado que decide o que marcar no próximo episódio.">
                   {c.porTipoCorte.length ? <Barras dados={c.porTipoCorte} rotulo="views" /> : <Vazio>Aparece quando os cortes publicados tiverem leitura.</Vazio>}

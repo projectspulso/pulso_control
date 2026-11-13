@@ -53,9 +53,10 @@ export const CANAIS: Record<string, { nome: string; curto: string }> = {
   pulso_bastidores: { nome: 'Bastidores PULSO Histórias', curto: 'Bastidores' },
   bastidores: { nome: 'Bastidores DIGIAI Cortes', curto: 'DIGIAI Cortes' },
   bastidores_cortes: { nome: 'Bastidores DIGIAI Cortes', curto: 'DIGIAI Cortes' },
+  bastidores2: { nome: 'Bastidores DIGIAI', curto: 'DIGIAI 2' },
   digiai: { nome: 'DIGIAI', curto: 'DIGIAI' },
 }
-export const ORDEM_CANAIS = ['pulso_cortes', 'pulso_bastidores', 'bastidores', 'digiai']
+export const ORDEM_CANAIS = ['pulso_cortes', 'pulso_bastidores', 'bastidores', 'bastidores2', 'digiai']
 
 /** estado de uma peça da agenda: quem publica + em que pé está */
 export function estadoDaPeca(p: { status: string; modo: string }) {

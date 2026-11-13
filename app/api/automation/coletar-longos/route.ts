@@ -22,7 +22,7 @@ const GRAPH = 'https://graph.facebook.com/v21.0'
 const CANAIS_PULSO = ['pulso_cortes', 'pulso_bastidores']
 const CONTA_TIKTOK: Record<string, string> = { pulso_cortes: 'cortes', pulso_bastidores: 'bastidores' }
 const TT = 'https://open.tiktokapis.com/v2'
-const canalDe = (destino: string) => (destino === 'digiai' ? 'digiai' : CANAIS_PULSO.includes(destino) ? destino : 'cortes')
+const canalDe = (destino: string) => (destino === 'digiai' ? 'digiai' : destino === 'bastidores2' ? 'cortes2' : CANAIS_PULSO.includes(destino) ? destino : 'cortes')
 
 const idDoYoutube = (s: string | null | undefined) => {
   if (!s) return null
