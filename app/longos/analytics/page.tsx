@@ -408,7 +408,7 @@ export default function LongosAnalyticsPage() {
                 ) : <Vazio>Os campeões aparecem depois da primeira semana de cortes no ar.</Vazio>}
               </Card>
               <Card titulo="Corte a corte" sub="cada corte em cada canal e rede, pela última leitura"
-                rodape="O PULSO lê YouTube, Instagram e Facebook dos canais dele; o canal de cortes da DIGIAI vem pelo YouTube e pelo que o digiai_mkt devolver. TikTok entra quando o app for aprovado.">
+                rodape="O PULSO lê YouTube, TikTok, Instagram e Facebook dos 2 canais dele; os 2 canais da DIGIAI vêm pelo que o digiai_mkt devolver.">
                 {c.corteACorte.length ? (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[680px] text-sm">
