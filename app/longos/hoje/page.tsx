@@ -261,7 +261,7 @@ function Detalhe({ p, url, fechar }: { p: Publicacao; url?: string; fechar: () =
             {url && <a href={url} download className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-(--pulso-border) px-3 text-xs text-(--pulso-text-muted) hover:text-(--pulso-text)"><Download className="h-3.5 w-3.5" /> baixar o vídeo</a>}
             {p.url && <a href={p.url} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-(--pulso-border) px-3 text-xs text-(--pulso-action)"><ExternalLink className="h-3.5 w-3.5" /> ver o post</a>}
           </div>
-          {p.status === 'planejado' && (p.modo === 'manual' || p.modo === 'rascunho') && (
+          {(p.status === 'planejado' || p.status === 'agendado') && (p.modo === 'manual' || p.modo === 'rascunho') && (
             <div className="flex flex-wrap items-end gap-2">
               <label className="min-w-48 flex-1 text-[11px] text-(--pulso-text-muted)">Link do post (opcional)
                 <input value={link} onChange={(ev) => setLink(ev.target.value)} type="url"

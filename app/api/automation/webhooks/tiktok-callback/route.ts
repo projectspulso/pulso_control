@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   // o prefixo do `state` diz qual app pediu a autorização (o /api/tiktok/oauth/start manda 'producao.<aleatório>')
   const prefixo = (request.nextUrl.searchParams.get('state') || '').split('.')[0]
   const app = prefixo.startsWith('producao') ? 'producao' : 'sandbox'
-  const conta = prefixo.startsWith('producao-') ? prefixo.slice('producao-'.length) : 'principal'
+  const conta = prefixo.startsWith(`${app}-`) ? prefixo.slice(app.length + 1) : 'principal'
   const { key: clientKey, secret: clientSecret } = credenciaisTikTok(app)
   if (!clientKey || !clientSecret) {
     return new NextResponse('TIKTOK_CLIENT_KEY/SECRET não configuradas', { status: 500 })

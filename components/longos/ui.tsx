@@ -59,6 +59,7 @@ export const ORDEM_CANAIS = ['pulso_cortes', 'pulso_bastidores', 'bastidores', '
 
 /** estado de uma peça da agenda: quem publica + em que pé está */
 export function estadoDaPeca(p: { status: string; modo: string }) {
+  if (p.status === 'agendado' && p.modo === 'rascunho') return { rotulo: 'rascunho no TikTok', Icone: Hand, classe: 'text-(--pulso-warn) bg-(--pulso-warn)/10 border-(--pulso-warn)/30' }
   if (p.status === 'publicado') return { rotulo: 'no ar', Icone: CheckCircle2, classe: 'text-(--pulso-ok) bg-(--pulso-ok)/12 border-(--pulso-ok)/30' }
   if (p.status === 'agendado') return { rotulo: 'agendado na Meta', Icone: CalendarClock, classe: 'text-(--pulso-ok) bg-(--pulso-ok)/8 border-(--pulso-ok)/25' }
   if (p.status === 'erro') return { rotulo: 'erro', Icone: AlertTriangle, classe: 'text-(--pulso-danger) bg-(--pulso-danger)/10 border-(--pulso-danger)/30' }

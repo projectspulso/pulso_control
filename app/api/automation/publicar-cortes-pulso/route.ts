@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { enviaRascunhoTikTok } from '@/lib/publicacao/tiktok-rascunho-cortes'
 import { guardApi } from '@/lib/auth/api-guard'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { canaisYoutube, getYoutubeAccessToken } from '@/lib/youtube/oauth'
@@ -45,6 +46,8 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  await rascunhosTikTok(supabase)
+
   const vencidas = () => supabase.schema('pulso_content').from('corte_publicacoes')
     .select('id, destino, rede, video, titulo, legenda, hashtags, agendado_para, motivo')
     .eq('modo', 'auto').eq('status', 'planejado').in('rede', ['youtube', 'instagram'])
@@ -70,6 +73,34 @@ export async function POST(request: NextRequest) {
     atual = prox?.[0] && !feitas.includes(prox[0].id) ? prox[0] : null
   }
   return ultima
+}
+
+// conta do TikTok de cada canal de cortes do PULSO (tiktok_contas)
+const CONTA_TIKTOK: Record<string, string> = { pulso_cortes: 'cortes', pulso_bastidores: 'bastidores' }
+
+/** Cortes do TikTok na hora marcada: rascunho na caixa da conta; o dono finaliza no celular e marca "Postei". */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function rascunhosTikTok(supabase: any) {
+  const { data: pecas } = await supabase.schema('pulso_content').from('corte_publicacoes')
+    .select('id, destino, video, agendado_para').eq('rede', 'tiktok').eq('modo', 'rascunho').eq('status', 'planejado')
+    .in('destino', Object.keys(CONTA_TIKTOK)).lte('agendado_para', new Date().toISOString()).order('agendado_para').limit(2)
+  for (const p of pecas || []) {
+    try {
+      if (!p.video) throw new Error('peça sem arquivo')
+      const { data: ass } = await supabase.storage.from('bastidores').createSignedUrl(p.video, 600)
+      if (!ass?.signedUrl) throw new Error('link do arquivo vazio')
+      const vid = await fetch(ass.signedUrl)
+      if (!vid.ok) throw new Error(`não baixei o vídeo (${vid.status})`)
+      const id = await enviaRascunhoTikTok(supabase, CONTA_TIKTOK[p.destino], Buffer.from(await vid.arrayBuffer()))
+      if (!id) continue // conta ainda sem autorização: segue para o dono postar
+      await supabase.schema('pulso_content').from('corte_publicacoes')
+        .update({ status: 'agendado', motivo: `rascunho_tiktok:${id}`, erro: null }).eq('id', p.id)
+      await registra(supabase, 'sucesso', { peca: p.id, destino: p.destino, rede: 'tiktok', rascunho: id }, 200)
+    } catch (e) {
+      await supabase.schema('pulso_content').from('corte_publicacoes').update({ erro: (e as Error).message.slice(0, 500) }).eq('id', p.id)
+      await registra(supabase, 'erro', { peca: p.id, destino: p.destino, rede: 'tiktok', erro: (e as Error).message }, 500)
+    }
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

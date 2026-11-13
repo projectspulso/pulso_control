@@ -191,8 +191,9 @@ def planejar(codigo, estreia, com_video=True):
                 legenda = legenda.replace(f"Episódio completo: {principal['url']}", f"Episódio completo no PULSO Histórias: {link_curto}")
             for rede, quem in dp["redes"].items():
                 arq = arquivos.get(n)
-                manual = quem == "manual"
-                linhas.append({"corte_id": c["id"], "destino": dp["id"], "rede": rede, "modo": "manual" if manual else "auto", "tipo": "corte",
+                # "rascunho" (12/11): o app manda à caixa do TikTok e o dono finaliza; legenda leva as hashtags como no manual
+                manual = quem in ("manual", "rascunho")
+                linhas.append({"corte_id": c["id"], "destino": dp["id"], "rede": rede, "modo": quem if manual else "auto", "tipo": "corte",
                                "agendado_para": quando(dia, dp["cadencia"].get("hora", "13:00")), "video": arq,
                                "titulo": titulo or c["titulo"], "legenda": f"{legenda}\n\n{' '.join(tags)}".strip() if manual else legenda,
                                "hashtags": tags, "video_url_assinada": ficha_longo.assina(arq) if arq else None,

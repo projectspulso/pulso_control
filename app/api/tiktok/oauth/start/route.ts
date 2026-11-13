@@ -10,7 +10,10 @@ import { credenciaisTikTok, TIKTOK_ESCOPOS, TIKTOK_REDIRECT_URI } from '@/lib/pu
 export async function GET(request: NextRequest) {
   const denied = await guardApi(request)
   if (denied) return denied
-  const { key } = credenciaisTikTok('producao')
+  // ?app=sandbox (12/11): enquanto o app de produção não é aprovado, as contas de cortes só entram pelo
+  // app de teste, como contas de teste (Target Users), e mandam rascunho igual ao @pulsohistorias
+  const app = request.nextUrl.searchParams.get('app') === 'sandbox' ? 'sandbox' : 'producao'
+  const { key } = credenciaisTikTok(app)
   if (!key) return new NextResponse('TIKTOK_CLIENT_KEY não configurada na Vercel', { status: 500 })
   const u = new URL('https://www.tiktok.com/v2/auth/authorize/')
   u.searchParams.set('client_key', key)
@@ -21,7 +24,7 @@ export async function GET(request: NextRequest) {
   // isso, autorizar uma delas apagava o token do @pulsoprojects e parava a publicação diária
   const conta = request.nextUrl.searchParams.get('conta') || 'principal'
   if (!/^[a-z0-9_]{1,40}$/.test(conta)) return new NextResponse('conta inválida', { status: 400 })
-  const estado = novoEstado(conta === 'principal' ? 'producao' : `producao-${conta}`)
+  const estado = novoEstado(conta === 'principal' ? app : `${app}-${conta}`)
   u.searchParams.set('state', estado)
   return gravarEstado(NextResponse.redirect(u.toString()), estado)
 }

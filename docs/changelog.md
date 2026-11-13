@@ -4,6 +4,13 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 
 
+
+## 2026-11-12 — Cortes no TikTok como rascunho
+- As contas de cortes do PULSO (@cortespulsohistorias e @bastidorespulsohis) passam a receber o corte como rascunho na caixa do TikTok na hora marcada, igual ao @pulsohistorias. O dono finaliza no celular e marca "Postei" na Agenda.
+- `/api/tiktok/oauth/start?conta=<conta>&app=sandbox` autoriza a conta no app de teste, onde ela entra como conta de teste até a revisão do app de produção sair.
+- Modo `rascunho` no planejador e na Agenda: a peça mostra "rascunho no TikTok" quando o rascunho já foi enviado.
+- Sem autorização da conta, nada muda: a peça segue para o dono postar.
+
 ## 2026-11-12 — Cortes: nova tentativa quando o acesso do YouTube falha
 - O corte das 13h no YouTube Cortes caiu por falha passageira na renovação do acesso e só saiu às 23h35, publicado na mão. Agora, até 6 h depois da hora marcada, a peça continua planejada e a próxima rodada tenta de novo. Peça em nova tentativa vai por último na fila e não segura as do horário.
 
