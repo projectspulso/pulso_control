@@ -38,9 +38,16 @@ export async function POST(request: NextRequest) {
   const data_ref = hojeBrt()
 
   const alvos: { episodio_id: string; peca_id: string | null; canal: string; rede: string; tipo: string; post_id: string }[] = []
-  const { data: eps, error: e1 } = await supabase.schema('pulso_content').from('episodios').select('id, metadata').eq('status', 'publicado')
+  const { data: eps, error: e1 } = await supabase.schema('pulso_content').from('episodios').select('id, status, metadata').in('status', ['publicado', 'pronto_publicacao'])
   if (e1) return registra(supabase, 'erro', { erro: e1.message }, 500)
   for (const ep of eps || []) {
+    // episódio agendado pelo motor/publicar_longo.py (13/11): vira publicado quando passa a hora da estreia
+    if (ep.status === 'pronto_publicacao') {
+      const pub = ep.metadata?.publicacao
+      if (pub?.estado !== 'agendado' || !pub?.agendado_para || new Date(pub.agendado_para) > new Date()) continue
+      await supabase.schema('pulso_content').from('episodios')
+        .update({ status: 'publicado', metadata: { ...ep.metadata, publicacao: { ...pub, estado: 'publicado' } } }).eq('id', ep.id)
+    }
     const id = idDoYoutube(ep.metadata?.publicacao?.post_id) || idDoYoutube(ep.metadata?.publicacao?.url)
     if (id) alvos.push({ episodio_id: ep.id, peca_id: null, canal: 'principal', rede: 'youtube', tipo: 'longo', post_id: id })
   }

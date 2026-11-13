@@ -5,6 +5,12 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 
 
+
+## 2026-11-13 — Longo sobe agendado no YouTube (motor/publicar_longo.py)
+- O episódio completo sobe no PULSO Histórias já agendado: privado com hora de estreia, título, descrição com capítulos, tags, pt-BR, conteúdo sintético declarado, capa, legenda .srt e a playlist "Bastidores do PULSO" (criada no 1º envio). Tela final e cards continuam no Studio, porque a API não faz.
+- Ensaio por padrão; `--enviar` sobe de verdade. Recusa episódio já publicado, episódio sem montagem, capa ou textos, e estreia com menos de 1 h de antecedência.
+- O episódio fica `pronto_publicacao` com `publicacao.estado=agendado`; a coleta diária o vira `publicado` depois da hora e passa a ler os números dele.
+
 ## 2026-11-12 — Cortes no TikTok como rascunho
 - As contas de cortes do PULSO (@cortespulsohistorias e @bastidorespulsohis) passam a receber o corte como rascunho na caixa do TikTok na hora marcada, igual ao @pulsohistorias. O dono finaliza no celular e marca "Postei" na Agenda.
 - `/api/tiktok/oauth/start?conta=<conta>&app=sandbox` autoriza a conta no app de teste, onde ela entra como conta de teste até a revisão do app de produção sair.
