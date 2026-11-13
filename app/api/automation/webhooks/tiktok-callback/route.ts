@@ -67,11 +67,18 @@ export async function GET(request: NextRequest) {
   } else {
     const { data: lista } = await supabase.schema('pulso_core').from('configuracoes').select('valor').eq('chave', 'tiktok_contas').maybeSingle()
     let esperado = ''
-    try { esperado = JSON.parse(lista?.valor || '{}')?.[conta]?.nome || '' } catch { esperado = '' }
+    let final = ''
+    try {
+      const c = JSON.parse(lista?.valor || '{}')?.[conta] || {}
+      esperado = c.nome || ''
+      // o nome exibido pode já ter mudado para o nome final (13/11: a Cortes trocou e a autorização era recusada)
+      final = String(c.nome_final || '').replace(/\s*\(.*\)\s*$/, '')
+    } catch { esperado = '' }
     if (!esperado) return new NextResponse(`Conta ${conta} não está em tiktok_contas. Nada foi gravado.`, { status: 400 })
     const ocupada = [...openIds.entries()].find(([k, id]) => k !== chave && id && id === tok.open_id)
     if (ocupada) return new NextResponse(`Conta errada: "${usuario || '?'}" já está ligada em ${ocupada[0]}. Nada foi gravado.`, { status: 409 })
-    if (usuario.trim().toLowerCase() !== esperado.trim().toLowerCase()) {
+    const nomes = [esperado, final].filter(Boolean).map((x) => x.trim().toLowerCase())
+    if (!nomes.includes(usuario.trim().toLowerCase())) {
       return new NextResponse(`Conta errada: esperava "${esperado}", veio "${usuario || '?'}". Nada foi gravado.`, { status: 409 })
     }
   }
