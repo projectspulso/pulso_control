@@ -3,6 +3,10 @@
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplificado.
 
 
+
+## 2026-11-12 — Cortes: nova tentativa quando o acesso do YouTube falha
+- O corte das 13h no YouTube Cortes caiu por falha passageira na renovação do acesso e só saiu às 23h35, publicado na mão. Agora, até 6 h depois da hora marcada, a peça continua planejada e a próxima rodada tenta de novo. Peça em nova tentativa vai por último na fila e não segura as do horário.
+
 ## 2026-11-12 — De onde vêm as views (096)
 - Coleta dos Longos grava o tipo de tráfego e o detalhe (site externo, vídeo que levou) do episódio e dos cortes nos 2 canais do PULSO no YouTube (`origens_detalhe`, migration 096).
 - Alerta na coleta quando um corte da DIGIAI fora do YouTube passa 2 dias sem a leitura do digiai_mkt.

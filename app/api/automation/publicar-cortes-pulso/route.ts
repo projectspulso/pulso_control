@@ -48,7 +48,9 @@ export async function POST(request: NextRequest) {
   const vencidas = () => supabase.schema('pulso_content').from('corte_publicacoes')
     .select('id, destino, rede, video, titulo, legenda, hashtags, agendado_para, motivo')
     .eq('modo', 'auto').eq('status', 'planejado').in('rede', ['youtube', 'instagram'])
-    .lte('agendado_para', new Date().toISOString()).order('agendado_para').limit(1)
+    .lte('agendado_para', new Date().toISOString())
+    // peça em nova tentativa (erro preenchido) vai por último: não segura as do horário
+    .order('erro', { ascending: true, nullsFirst: true }).order('agendado_para').limit(1)
   const { data: fila, error } = await vencidas()
   if (error) return registra(supabase, 'erro', { erro: error.message }, 500)
   if (!fila?.length) return registra(supabase, 'ocioso', { motivo: 'nada vencido' }, 200)
@@ -120,6 +122,13 @@ async function umaPeca(supabase: any, p: any): Promise<Response> {
     return registra(supabase, 'sucesso', { peca: p.id, destino: p.destino, canal: canal.nome, post_id: d.id, url }, 200)
   } catch (e) {
     const msg = (e as Error).message
+    // falha de renovação do acesso do YouTube costuma ser passageira (12/11: o corte das 13h caiu e saiu
+    // na mão às 23h35). Até 6 h depois da hora marcada a peça fica planejada e a próxima rodada tenta de novo.
+    const recente = p.agendado_para && Date.now() - new Date(p.agendado_para).getTime() < 6 * 3_600_000
+    if (recente && msg.includes('sem autorização')) {
+      await supabase.schema('pulso_content').from('corte_publicacoes').update({ erro: msg.slice(0, 500) }).eq('id', p.id)
+      return registra(supabase, 'parcial', { peca: p.id, destino: p.destino, erro: msg, nova_tentativa: 'próxima rodada' }, 200)
+    }
     await supabase.schema('pulso_content').from('corte_publicacoes').update({ status: 'erro', erro: msg.slice(0, 500) }).eq('id', p.id)
     return registra(supabase, 'erro', { peca: p.id, destino: p.destino, erro: msg }, 500)
   }
