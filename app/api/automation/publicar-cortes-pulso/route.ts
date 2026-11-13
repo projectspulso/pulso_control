@@ -81,9 +81,13 @@ const CONTA_TIKTOK: Record<string, string> = { pulso_cortes: 'cortes', pulso_bas
 /** Cortes do TikTok na hora marcada: rascunho na caixa da conta; o dono finaliza no celular e marca "Postei". */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function rascunhosTikTok(supabase: any) {
+  // só as contas já autorizadas: peça de conta sem token não pode ocupar a vez das outras
+  const { data: toks } = await supabase.schema('pulso_core').from('configuracoes').select('chave').like('chave', 'tiktok_oauth:%')
+  const autorizadas = Object.entries(CONTA_TIKTOK).filter(([, c]) => (toks || []).some((t: { chave: string }) => t.chave === `tiktok_oauth:${c}`)).map(([d]) => d)
+  if (!autorizadas.length) return
   const { data: pecas } = await supabase.schema('pulso_content').from('corte_publicacoes')
     .select('id, destino, video, agendado_para').eq('rede', 'tiktok').eq('modo', 'rascunho').eq('status', 'planejado')
-    .in('destino', Object.keys(CONTA_TIKTOK)).lte('agendado_para', new Date().toISOString()).order('agendado_para').limit(2)
+    .in('destino', autorizadas).lte('agendado_para', new Date().toISOString()).order('agendado_para').limit(3)
   for (const p of pecas || []) {
     try {
       if (!p.video) throw new Error('peça sem arquivo')
