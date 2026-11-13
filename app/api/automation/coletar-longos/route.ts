@@ -253,6 +253,7 @@ export async function POST(request: NextRequest) {
     const canais = [
       { canal: 'principal', id: v.principal?.channel_id || ytCanais.principal?.channel_id },
       { canal: 'cortes', id: destinos.find((d) => d.id === 'bastidores')?.youtube_channel_id },
+      { canal: 'cortes2', id: destinos.find((d) => d.id === 'bastidores2')?.youtube_channel_id },
       ...destinos.filter((d) => CANAIS_PULSO.includes(d.id)).map((d) => ({ canal: d.id, id: ytCanais[d.youtube_canal || '']?.channel_id })),
     ].filter((c) => c.id)
     if (canais.length) {
