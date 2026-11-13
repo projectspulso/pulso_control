@@ -6,6 +6,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), simplifica
 
 
 
+## 2026-11-13 — Origem das views dos cortes da DIGIAI
+
+- Migração 098: `leitura_peca_bastidores` aceita `p_origens` e `p_origens_detalhe` (opcionais; leitura sem origem não apaga a gravada).
+- Analytics › Cortes: "De onde vêm as views" separado canal a canal (tipo de tráfego + quem trouxe). Inscritos do YouTube do canal 2 (cortes2) na coleta.
+
 ## 2026-11-13 — Canal 2 de cortes da DIGIAI e analytics canal × rede
 
 - Migração 097: destino `bastidores2` (@bastidoresdigiai) → canal `cortes2` nas leituras/seguidores; `estado_peca_bastidores` ganha `p_quando` (data real do robô do MKT); a ficha do longo sai da view do MKT quando o Pulso já subiu (evita subir 2×).

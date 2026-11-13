@@ -335,11 +335,23 @@ export default function LongosAnalyticsPage() {
                 <Kpi rotulo="Levados ao episódio" valor={c.cliques ? n(c.cliques) : '—'} sub="quando a rede informa" />
               </div>
               {(() => {
-                const o = deOnde(c.ult.filter((l) => l.tipo !== 'longo' && l.rede === 'youtube'), c.ult)
+                const yt = c.ult.filter((l) => l.tipo !== 'longo' && l.rede === 'youtube')
+                const porCanal = ['pulso_cortes', 'pulso_bastidores', 'cortes', 'cortes2']
+                  .map((cn) => ({ cn, o: deOnde(yt.filter((l) => l.canal === cn), c.ult) })).filter((x) => x.o.tipos.length)
                 return (
-                  <Card titulo="De onde vêm as views dos cortes" sub="YouTube Analytics dos canais do PULSO"
-                    rodape="Só o YouTube informa a origem. Instagram, Facebook e TikTok não abrem esse dado pela API. Os cortes do canal da DIGIAI entram quando o MKT mandar a origem junto com as views.">
-                    {o.tipos.length ? <Barras dados={o.tipos} rotulo="views" /> : <Vazio>O YouTube leva cerca de 48 h para mostrar a origem de um vídeo novo.</Vazio>}
+                  <Card titulo="De onde vêm as views dos cortes" sub="YouTube Analytics, canal a canal: o tipo de tráfego e quem trouxe"
+                    rodape="Só o YouTube informa a origem. Instagram, Facebook e TikTok não abrem esse dado pela API. Canais do PULSO: o Pulso lê; canais da DIGIAI: o MKT manda junto com as views (098).">
+                    {porCanal.length ? (
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        {porCanal.map(({ cn, o }) => (
+                          <div key={cn}>
+                            <h3 className="text-xs font-semibold text-(--pulso-text)">{CANAL[cn] || cn}</h3>
+                            <Barras dados={o.tipos} rotulo="views" />
+                            {o.quem.length > 0 && <><p className="mt-2 text-xs text-(--pulso-text-muted)">quem trouxe</p><Barras dados={o.quem} rotulo="views" /></>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : <Vazio>O YouTube leva cerca de 48 h para mostrar a origem de um vídeo novo.</Vazio>}
                   </Card>
                 )
               })()}
