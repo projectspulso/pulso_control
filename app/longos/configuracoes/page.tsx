@@ -77,9 +77,9 @@ export default function LongosConfiguracoesPage() {
                         <ul className="mt-3 flex flex-wrap gap-1.5">
                           {redes.map(([r, quem]) => {
                             const R = REDES[r.replace(/_story.*$/, '')]
-                            const manual = quem === 'manual'
+                            const manual = quem === 'manual' || quem === 'rascunho'
                             return (
-                              <li key={r} title={`${R?.nome || r}${r.includes('story') ? ' (story)' : ''}${manual ? ': você posta' : ''}`}
+                              <li key={r} title={`${R?.nome || r}${r.includes('story') ? ' (story)' : ''}${manual ? (quem === 'rascunho' ? ': rascunho, você finaliza' : ': você posta') : ''}`}
                                 className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] ${manual ? 'border-(--pulso-warn)/30 bg-(--pulso-warn)/10 text-(--pulso-warn)' : 'border-(--pulso-border) bg-(--pulso-surface-raised) text-(--pulso-text-muted)'} ${r.includes('story') ? 'border-dashed' : ''}`}>
                                 {R && <R.Icone className="h-3.5 w-3.5" aria-hidden />}{R?.nome || r}{r.includes('story') ? ' story' : ''}
                               </li>
